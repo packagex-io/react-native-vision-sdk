@@ -7,8 +7,10 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		5E555C0D2413F4C50049A1A2 /* VisionSdk.m in Sources */ = {isa = PBXBuildFile; fileRef = B3E7B5891CC2AC0600A0062D /* VisionSdk.m */; };
-		F4FF95D7245B92E800C19C63 /*  VisionSdk.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4FF95D6245B92E800C19C63 /*  VisionSdk.swift */; };
+		4F1A692435136E9A19B19317 /* libPods-VisionSdk.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D9BC17DAA2D07EDD934E5EB3 /* libPods-VisionSdk.a */; };
+		DF3F2BF2292F507000DD0EAC /* VisionSdkViewManager.m in Sources */ = {isa = PBXBuildFile; fileRef = DF3F2BF1292F507000DD0EAC /* VisionSdkViewManager.m */; };
+		DF3F2BF4292F507900DD0EAC /* VisionSdkViewManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF3F2BF3292F507900DD0EAC /* VisionSdkViewManager.swift */; };
+		DF3F2BF6292F50B500DD0EAC /* RNCodeScannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF3F2BF5292F50B500DD0EAC /* RNCodeScannerView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -25,9 +27,13 @@
 
 /* Begin PBXFileReference section */
 		134814201AA4EA6300B7C361 /* libVisionSdk.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libVisionSdk.a; sourceTree = BUILT_PRODUCTS_DIR; };
-		B3E7B5891CC2AC0600A0062D /* VisionSdk.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = VisionSdk.m; sourceTree = "<group>"; };
+		CA8858A9CFF0615EE4EF6360 /* Pods-VisionSdk.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-VisionSdk.release.xcconfig"; path = "Target Support Files/Pods-VisionSdk/Pods-VisionSdk.release.xcconfig"; sourceTree = "<group>"; };
+		D5E0B88B049D0F052514A169 /* Pods-VisionSdk.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-VisionSdk.debug.xcconfig"; path = "Target Support Files/Pods-VisionSdk/Pods-VisionSdk.debug.xcconfig"; sourceTree = "<group>"; };
+		D9BC17DAA2D07EDD934E5EB3 /* libPods-VisionSdk.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-VisionSdk.a"; sourceTree = BUILT_PRODUCTS_DIR; };
+		DF3F2BF1292F507000DD0EAC /* VisionSdkViewManager.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = VisionSdkViewManager.m; sourceTree = "<group>"; };
+		DF3F2BF3292F507900DD0EAC /* VisionSdkViewManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = VisionSdkViewManager.swift; sourceTree = "<group>"; };
+		DF3F2BF5292F50B500DD0EAC /* RNCodeScannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RNCodeScannerView.swift; sourceTree = "<group>"; };
 		F4FF95D5245B92E700C19C63 /* VisionSdk-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "VisionSdk-Bridging-Header.h"; sourceTree = "<group>"; };
-		F4FF95D6245B92E800C19C63 /* VisionSdk.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VisionSdk.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -35,6 +41,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				4F1A692435136E9A19B19317 /* libPods-VisionSdk.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -52,11 +59,32 @@
 		58B511D21A9E6C8500147676 = {
 			isa = PBXGroup;
 			children = (
-				F4FF95D6245B92E800C19C63 /* VisionSdk.swift */,
-				B3E7B5891CC2AC0600A0062D /* VisionSdk.m */,
+				DF3F2BF5292F50B500DD0EAC /* RNCodeScannerView.swift */,
+				DF3F2BF3292F507900DD0EAC /* VisionSdkViewManager.swift */,
+				DF3F2BF1292F507000DD0EAC /* VisionSdkViewManager.m */,
 				F4FF95D5245B92E700C19C63 /* VisionSdk-Bridging-Header.h */,
 				134814211AA4EA7D00B7C361 /* Products */,
+				607F4C5BF867373EDF7B6BE3 /* Pods */,
+				B799E3868C8F9829A352E6E8 /* Frameworks */,
 			);
+			sourceTree = "<group>";
+		};
+		607F4C5BF867373EDF7B6BE3 /* Pods */ = {
+			isa = PBXGroup;
+			children = (
+				D5E0B88B049D0F052514A169 /* Pods-VisionSdk.debug.xcconfig */,
+				CA8858A9CFF0615EE4EF6360 /* Pods-VisionSdk.release.xcconfig */,
+			);
+			name = Pods;
+			path = Pods;
+			sourceTree = "<group>";
+		};
+		B799E3868C8F9829A352E6E8 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				D9BC17DAA2D07EDD934E5EB3 /* libPods-VisionSdk.a */,
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -66,6 +94,7 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 58B511EF1A9E6C8500147676 /* Build configuration list for PBXNativeTarget "VisionSdk" */;
 			buildPhases = (
+				DE6191A5906C55C004CB16CB /* [CP] Check Pods Manifest.lock */,
 				58B511D71A9E6C8500147676 /* Sources */,
 				58B511D81A9E6C8500147676 /* Frameworks */,
 				58B511D91A9E6C8500147676 /* CopyFiles */,
@@ -111,13 +140,39 @@
 		};
 /* End PBXProject section */
 
+/* Begin PBXShellScriptBuildPhase section */
+		DE6191A5906C55C004CB16CB /* [CP] Check Pods Manifest.lock */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"${PODS_PODFILE_DIR_PATH}/Podfile.lock",
+				"${PODS_ROOT}/Manifest.lock",
+			);
+			name = "[CP] Check Pods Manifest.lock";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(DERIVED_FILE_DIR)/Pods-VisionSdk-checkManifestLockResult.txt",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
+			showEnvVarsInLog = 0;
+		};
+/* End PBXShellScriptBuildPhase section */
+
 /* Begin PBXSourcesBuildPhase section */
 		58B511D71A9E6C8500147676 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				F4FF95D7245B92E800C19C63 /* VisionSdk.swift in Sources */,
-				B3E7B58A1CC2AC0600A0062D /* VisionSdk.m in Sources */,
+				DF3F2BF2292F507000DD0EAC /* VisionSdkViewManager.m in Sources */,
+				DF3F2BF6292F50B500DD0EAC /* RNCodeScannerView.swift in Sources */,
+				DF3F2BF4292F507900DD0EAC /* VisionSdkViewManager.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -128,7 +183,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LANGUAGE_STANDARD = "c++17";
 				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
@@ -153,6 +208,7 @@
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
 				"EXCLUDED_ARCHS[sdk=*]" = arm64;
+				"EXCLUDED_ARCHS[sdk=iphonesimulator*]" = i386;
 				GCC_C_LANGUAGE_STANDARD = gnu99;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_NO_COMMON_BLOCKS = YES;
@@ -171,6 +227,7 @@
 				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				MTL_ENABLE_DEBUG_INFO = YES;
 				ONLY_ACTIVE_ARCH = YES;
+				REACT_NATIVE_PATH = "${PODS_ROOT}/../../node_modules/react-native";
 				SDKROOT = iphoneos;
 			};
 			name = Debug;
@@ -179,7 +236,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LANGUAGE_STANDARD = "c++17";
 				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
@@ -204,6 +261,7 @@
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				"EXCLUDED_ARCHS[sdk=*]" = arm64;
+				"EXCLUDED_ARCHS[sdk=iphonesimulator*]" = i386;
 				GCC_C_LANGUAGE_STANDARD = gnu99;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
@@ -214,6 +272,7 @@
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
+				REACT_NATIVE_PATH = "${PODS_ROOT}/../../node_modules/react-native";
 				SDKROOT = iphoneos;
 				VALIDATE_PRODUCT = YES;
 			};
@@ -221,6 +280,7 @@
 		};
 		58B511F01A9E6C8500147676 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = D5E0B88B049D0F052514A169 /* Pods-VisionSdk.debug.xcconfig */;
 			buildSettings = {
 				HEADER_SEARCH_PATHS = (
 					"$(inherited)",
@@ -228,7 +288,7 @@
 					"$(SRCROOT)/../../../React/**",
 					"$(SRCROOT)/../../react-native/React/**",
 				);
-				LIBRARY_SEARCH_PATHS = "$(inherited)";
+				LIBRARY_SEARCH_PATHS = "$(SDKROOT)/usr/lib/swift$(inherited)";
 				OTHER_LDFLAGS = "-ObjC";
 				PRODUCT_NAME = VisionSdk;
 				SKIP_INSTALL = YES;
@@ -240,6 +300,7 @@
 		};
 		58B511F11A9E6C8500147676 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = CA8858A9CFF0615EE4EF6360 /* Pods-VisionSdk.release.xcconfig */;
 			buildSettings = {
 				HEADER_SEARCH_PATHS = (
 					"$(inherited)",
@@ -247,7 +308,7 @@
 					"$(SRCROOT)/../../../React/**",
 					"$(SRCROOT)/../../react-native/React/**",
 				);
-				LIBRARY_SEARCH_PATHS = "$(inherited)";
+				LIBRARY_SEARCH_PATHS = "$(SDKROOT)/usr/lib/swift$(inherited)";
 				OTHER_LDFLAGS = "-ObjC";
 				PRODUCT_NAME = VisionSdk;
 				SKIP_INSTALL = YES;

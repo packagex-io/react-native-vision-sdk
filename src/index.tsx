@@ -1,26 +1,92 @@
+import React, { useImperativeHandle, useRef, useState } from 'react';
 import {
-  requireNativeComponent,
+  View,
   UIManager,
+  findNodeHandle,
+  Text,
   Platform,
-  ViewStyle,
+  StyleSheet,
 } from 'react-native';
+import { VisionSdkView } from './VisionSdkViewManager';
 
-const LINKING_ERROR =
-  `The package 'react-native-vision-sdk' doesn't seem to be linked. Make sure: \n\n` +
-  Platform.select({ ios: "- You have run 'pod install'\n", default: '' }) +
-  '- You rebuilt the app after installing the package\n' +
-  '- You are not using Expo Go\n';
+enum ScanMode {
+  OCR = 'ocr',
+  BARCODE = 'barcode',
+  QRCODE = 'qrcode',
+}
 
-type VisionSdkProps = {
-  color: string;
-  style: ViewStyle;
+type Props = {
+  children: React.ReactNode;
+  refProp: any;
+  BarCodeScanHandler: (_e: any) => void;
+  OCRScanHandler: (_e: any) => void;
+  OnDetectedHandler: (_e: any) => void;
 };
 
-const ComponentName = 'VisionSdkView';
+const Camera: React.FC<Props> = ({
+  children,
+  refProp,
+  BarCodeScanHandler = (_e: any) => {},
+  OCRScanHandler = (_e: any) => {},
+  OnDetectedHandler = (_e: any) => {},
+}: Props) => {
+  const defaultScanMode = ScanMode.OCR;
+  const [mode, setMode] = useState<ScanMode>(defaultScanMode);
+  const VisionSDKViewRef = useRef(null);
 
-export const VisionSdkView =
-  UIManager.getViewManagerConfig(ComponentName) != null
-    ? requireNativeComponent<VisionSdkProps>(ComponentName)
-    : () => {
-        throw new Error(LINKING_ERROR);
-      };
+  useImperativeHandle(refProp, () => ({
+    cameraCaptureHandler: () => {
+      onPressCapture();
+    },
+    changeModeHandler: (input: React.SetStateAction<ScanMode>) => {
+      onChangeMode(input);
+    },
+  }));
+
+  const onPressCapture = () => {
+    UIManager.dispatchViewManagerCommand(
+      findNodeHandle(VisionSDKViewRef.current),
+      (UIManager.hasViewManagerConfig('VisionSDKView') &&
+        UIManager.getViewManagerConfig('VisionSDKView').Commands
+          .captureImage) ||
+        0,
+      []
+    );
+  };
+
+  const onChangeMode = (input: React.SetStateAction<ScanMode>) => {
+    setMode(input);
+  };
+
+  return Platform.OS === 'ios' ? (
+    <VisionSdkView
+      style={styles.flex}
+      onBarcodeScanSuccess={BarCodeScanHandler}
+      onOCRDataReceived={OCRScanHandler}
+      mode={mode}
+      onDetected={OnDetectedHandler}
+      ref={VisionSDKViewRef}
+    >
+      <View style={styles.childrenContainer}>{children}</View>
+    </VisionSdkView>
+  ) : (
+    <View style={styles.flex}>
+      <Text>NOT IMPLEMENTED FOR ANDROID YET.</Text>
+    </View>
+  );
+};
+
+export default Camera;
+
+const styles = StyleSheet.create({
+  flex: {
+    flex: 1,
+  },
+  childrenContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    height: '100%',
+    width: '100%',
+  },
+});
