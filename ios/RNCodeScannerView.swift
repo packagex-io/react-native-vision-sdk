@@ -117,7 +117,7 @@ extension RNCodeScannerView {
 //
 //            [weak self] data, response, error in
       
-      VisionAPIManager.shared.callScanAPIWith(image, andBarcodes: barcodes, andApiKey: !Constants.apiKey.isEmpty ? Constants.apiKey : "XRI8HaRVOM5P9OS2Mhakq3voRSOs66hK6j7CSWUG") {
+      VisionAPIManager.shared.callScanAPIWith(image, andApiKey: !Constants.apiKey.isEmpty ? Constants.apiKey : "XRI8HaRVOM5P9OS2Mhakq3voRSOs66hK6j7CSWUG") {
 
               [weak self] data, response, error in
             
