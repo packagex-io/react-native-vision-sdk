@@ -17,9 +17,11 @@ type VisionSdkProps = {
   style: ViewStyle;
   mode: String;
   ref: any;
+  apiKey?: String;
   onBarcodeScanSuccess: (e: { nativeEvent: { code: any } }) => void;
   onOCRDataReceived: (e: { nativeEvent: { code: any } }) => void;
   onDetected: (e: { nativeEvent: { code: any } }) => void;
+  onError: (e: { nativeEvent: { message: string } }) => void;
 };
 
 const ComponentName = 'VisionSdkView';

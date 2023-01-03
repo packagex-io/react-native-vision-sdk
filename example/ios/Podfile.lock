@@ -302,7 +302,7 @@ PODS:
   - React-jsinspector (0.70.6)
   - React-logger (0.70.6):
     - glog
-  - react-native-vision-sdk (0.1.0):
+  - react-native-vision-sdk (0.1.1):
     - React-Core
     - VisionSDK
   - React-perflogger (0.70.6)
@@ -372,7 +372,7 @@ PODS:
     - React-logger (= 0.70.6)
     - React-perflogger (= 0.70.6)
   - SocketRocket (0.6.0)
-  - VisionSDK (1.0.3)
+  - VisionSDK (1.0.4)
   - Yoga (1.14.0)
   - YogaKit (1.18.1):
     - Yoga (~> 1.14)
@@ -565,7 +565,7 @@ SPEC CHECKSUMS:
   React-jsiexecutor: b4a65947391c658450151275aa406f2b8263178f
   React-jsinspector: 60769e5a0a6d4b32294a2456077f59d0266f9a8b
   React-logger: 1623c216abaa88974afce404dc8f479406bbc3a0
-  react-native-vision-sdk: a872c9b535dd8b4ef8bf1e11572d53efcb006adb
+  react-native-vision-sdk: fe7582c7156a5098ae73efd25f83dc943995ca27
   React-perflogger: 8c79399b0500a30ee8152d0f9f11beae7fc36595
   React-RCTActionSheet: 7316773acabb374642b926c19aef1c115df5c466
   React-RCTAnimation: 5341e288375451297057391227f691d9b2326c3d
@@ -579,7 +579,7 @@ SPEC CHECKSUMS:
   React-runtimeexecutor: 15437b576139df27635400de0599d9844f1ab817
   ReactCommon: 349be31adeecffc7986a0de875d7fb0dcf4e251c
   SocketRocket: fccef3f9c5cedea1353a9ef6ada904fde10d6608
-  VisionSDK: 91d15b527fbc72c021cb9651687b165c39e336ad
+  VisionSDK: 272e1e394ecc918dc3c6a55bf67e8bf19ddad010
   Yoga: 99caf8d5ab45e9d637ee6e0174ec16fbbb01bcfc
   YogaKit: f782866e155069a2cca2517aafea43200b01fd5a
 

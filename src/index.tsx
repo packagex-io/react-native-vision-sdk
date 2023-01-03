@@ -6,6 +6,7 @@ import {
   Text,
   Platform,
   StyleSheet,
+  TouchableOpacity,
 } from 'react-native';
 import { VisionSdkView } from './VisionSdkViewManager';
 
@@ -14,6 +15,7 @@ enum ScanMode {
   BARCODE = 'barcode',
   QRCODE = 'qrcode',
 }
+// enum AutoMode  ["auto", "manual"]
 
 type Props = {
   children: React.ReactNode;
@@ -21,6 +23,7 @@ type Props = {
   BarCodeScanHandler: (_e: any) => void;
   OCRScanHandler: (_e: any) => void;
   OnDetectedHandler: (_e: any) => void;
+  onError: (e: { nativeEvent: { code: any } }) => void;
 };
 
 const Camera: React.FC<Props> = ({
@@ -29,21 +32,25 @@ const Camera: React.FC<Props> = ({
   BarCodeScanHandler = (_e: any) => {},
   OCRScanHandler = (_e: any) => {},
   OnDetectedHandler = (_e: any) => {},
+  onError = (_e: any) => {},
 }: Props) => {
   const defaultScanMode = ScanMode.OCR;
   const [mode, setMode] = useState<ScanMode>(defaultScanMode);
+  // const [captureMode, setCaptureMode] = useState<String>('auto');
+  // const [apiKey, setAPIKey] = useState < String > ('key_stag_7da7b5e917tq2eCckhc5QnTr1SfpvFGjwbTfpu1SQYy242xPjBz2mk3hbtzN6eB85MftxVw1zj5K5XBF')
+
   const VisionSDKViewRef = useRef(null);
 
   useImperativeHandle(refProp, () => ({
     cameraCaptureHandler: () => {
-      onPressCapture();
+      onPressCaptures();
     },
     changeModeHandler: (input: React.SetStateAction<ScanMode>) => {
       onChangeMode(input);
     },
   }));
 
-  const onPressCapture = () => {
+  const onPressCaptures = () => {
     UIManager.dispatchViewManagerCommand(
       findNodeHandle(VisionSDKViewRef.current),
       (UIManager.hasViewManagerConfig('VisionSDKView') &&
@@ -63,11 +70,38 @@ const Camera: React.FC<Props> = ({
       style={styles.flex}
       onBarcodeScanSuccess={BarCodeScanHandler}
       onOCRDataReceived={OCRScanHandler}
+      OnDetectedHandler={OnDetectedHandler}
+      // onOCRDataReceived={({ nativeEvent }) =>
+      //   console.log('onOCRDataReceived', nativeEvent)
+      // }
+      // onBarcodeScanSuccess={({ nativeEvent }) =>
+      //   console.log('onBarcodeScanSuccess', nativeEvent)
+      // }
       mode={mode}
-      onDetected={OnDetectedHandler}
+      apiKey={
+        'key_stag_7da7b5e917tq2eCckhc5QnTr1SfpvFGjwbTfpu1SQYy242xPjBz2mk3hbtzN6eB85MftxVw1zj5K5XBF'
+      }
+      captureMode={'auto'}
+      onError={onError}
+      onDetected={onDetected}
       ref={VisionSDKViewRef}
     >
-      <View style={styles.childrenContainer}>{children}</View>
+      <View style={styles.childrenContainer}>
+        <TouchableOpacity
+          // onPress={() => setCaptureMode('manual')}
+          onPress={() => setMode(ScanMode.OCR)}
+          // style={{ position: 'absolute', bottom: 50, alignSelf: 'center' }}
+        >
+          <Text>'change Mode'</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={() => onPressCaptures()}
+          // style={{ position: 'absolute', bottom: 100, alignSelf: 'center' }}
+        >
+          <Text>'Clink'</Text>
+        </TouchableOpacity>
+      </View>
+      {children}
     </VisionSdkView>
   ) : (
     <View style={styles.flex}>
