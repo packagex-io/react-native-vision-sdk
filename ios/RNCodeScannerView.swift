@@ -49,6 +49,7 @@ class RNCodeScannerView : UIView, CodeScannerViewDelegate {
 ////        codeScannerView!.setCaptureModeTo(.manual)
 ////    }
 //   }
+
     @objc func setCaptureMode(_ captureMode: NSString){
         if(captureMode == "auto"){
             codeScannerView?.setCaptureModeTo(.auto)
