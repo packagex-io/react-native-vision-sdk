@@ -118,7 +118,7 @@ const Camera: React.FC<Props> = ({
               </View>
             )}
 
-            {mode != ScanMode.OCR && (
+            {mode !== ScanMode.OCR && (
               <View style={styles.autoManualBlock}>
                 <ActionButton
                   text={'Manual'}
@@ -189,7 +189,7 @@ const Camera: React.FC<Props> = ({
                 />
               </View>
             ) : (
-             <View/>
+              <View />
             )}
           </View>
         </View>
