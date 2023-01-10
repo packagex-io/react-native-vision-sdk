@@ -19,12 +19,12 @@ enum ScanMode {
 // enum AutoMode  ["auto", "manual"]
 
 type Props = {
-  children: React.ReactNode;
-  refProp: any;
-  BarCodeScanHandler: (_e: any) => void;
-  OCRScanHandler: (_e: any) => void;
-  OnDetectedHandler: (_e: any) => void;
-  onError: (e: { nativeEvent: { code: any } }) => void;
+  children?: React.ReactNode;
+  refProp?: any;
+  BarCodeScanHandler?: (_e: any) => void;
+  OCRScanHandler?: (_e: any) => void;
+  OnDetectedHandler?: (_e: any) => void;
+  onError?: (e: { nativeEvent: { message: any } }) => void;
 };
 
 const Camera: React.FC<Props> = ({
@@ -32,8 +32,7 @@ const Camera: React.FC<Props> = ({
   refProp,
   BarCodeScanHandler = (_e: any) => {},
   OCRScanHandler = (_e: any) => {},
-  OnDetectedHandler = (_e: any) => {},
-  onError = (_e: any) => {},
+  onError = (_e: any): void => {},
 }: Props) => {
   const defaultScanMode = ScanMode.OCR;
   const [mode, setMode] = useState<ScanMode>(defaultScanMode);
@@ -71,7 +70,8 @@ const Camera: React.FC<Props> = ({
       style={styles.flex}
       onBarcodeScanSuccess={BarCodeScanHandler}
       onOCRDataReceived={OCRScanHandler}
-      OnDetectedHandler={OnDetectedHandler}
+      // onDetected={onDetected}
+      // OnDetectedHandler={OnDetectedHandler}
       // onOCRDataReceived={({ nativeEvent }) =>
       //   console.log('onOCRDataReceived', nativeEvent)
       // }
@@ -123,15 +123,15 @@ const Camera: React.FC<Props> = ({
                 <ActionButton
                   text={'Manual'}
                   textColor={'#000'}
-                  style={styles.autoManualButton(captureMode === 'manual')}
-                  isSeleted={mode === ScanMode.OCR}
+                  style={captureMode === 'manual' && styles.unautoManualButton}
+                  // isSeleted={mode === ScanMode.OCR}
                   onPress={() => setCaptureMode('manual')}
                 />
                 <ActionButton
                   text={'Auto'}
                   textColor={'#000'}
-                  style={styles.autoManualButton(captureMode === 'auto')}
-                  isSeleted={mode === ScanMode.OCR}
+                  style={captureMode === 'auto' && styles.autoManualButton}
+                  // isSeleted={mode === ScanMode.OCR}
                   onPress={() => setCaptureMode('auto')}
                 />
               </View>
@@ -206,12 +206,27 @@ const Camera: React.FC<Props> = ({
 
 export default Camera;
 
-const ActionButton = ({ text, onPress, isSeleted, icon, style, textColor }) => {
+type ActionButtonType = {
+  text?: string;
+  onPress?: () => void | undefined;
+  isSeleted?: boolean | undefined;
+  icon?: string | undefined;
+  style?: any;
+  textColor?: string | undefined | null | any;
+};
+const ActionButton = ({
+  text,
+  onPress,
+  isSeleted,
+  icon,
+  style,
+  textColor,
+}: ActionButtonType) => {
   return (
     <TouchableOpacity style={[style && style]} onPress={onPress}>
       <Text
         style={[
-          styles.buttonText(isSeleted),
+          isSeleted ? styles.buttonText : styles.unbuttonText,
           textColor && { color: textColor },
         ]}
       >
@@ -231,10 +246,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  buttonText: (isSelected: any) => ({
+  buttonText: {
     fontSize: 15,
-    color: isSelected ? 'yellow' : 'white',
-  }),
+    color: 'yellow',
+  },
+  unbuttonText: {
+    fontSize: 15,
+    color: 'white',
+  },
   zoomBlock: {
     paddingHorizontal: 5,
     borderRadius: 30,
@@ -253,8 +272,8 @@ const styles = StyleSheet.create({
     backgroundColor: 'grey',
     justifyContent: 'space-between',
   },
-  autoManualButton: (isSelected) => ({
-    backgroundColor: isSelected ? '#fff' : 'grey',
+  autoManualButton: {
+    backgroundColor: '#fff',
     width: 80,
     borderRadius: 4,
     height: 30,
@@ -262,7 +281,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     alignItems: 'center',
     justifyContent: 'center',
-  }),
+  },
+  unautoManualButton: {
+    backgroundColor: 'grey',
+    width: 80,
+    borderRadius: 4,
+    height: 30,
+    marginHorizontal: 4,
+    paddingHorizontal: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   circle: {
     width: 30,
     height: 30,

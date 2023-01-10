@@ -13,15 +13,16 @@ const LINKING_ERROR =
   '- You are not using Expo Go\n';
 
 type VisionSdkProps = {
-  children: ReactNode;
-  style: ViewStyle;
-  mode: String;
-  ref: any;
+  children?: ReactNode;
+  style?: ViewStyle;
+  mode?: String;
+  ref?: any;
   apiKey?: String;
-  onBarcodeScanSuccess: (e: { nativeEvent: { code: any } }) => void;
-  onOCRDataReceived: (e: { nativeEvent: { code: any } }) => void;
-  onDetected: (e: { nativeEvent: { code: any } }) => void;
-  onError: (e: { nativeEvent: { message: string } }) => void;
+  captureMode?: String;
+  onBarcodeScanSuccess?:  (e:any) => void;
+  onOCRDataReceived?: (e: any) => void;
+  onDetected?:  (e: any) => void;
+  onError?: (e: { nativeEvent: { message: any } }) => void;
 };
 
 const ComponentName = 'VisionSdkView';
