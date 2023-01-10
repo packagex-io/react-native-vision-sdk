@@ -4,17 +4,13 @@ import VisionSdkView from 'react-native-vision-sdk';
 export default function App() {
   return (
     <VisionSdkView
-      BarCodeScanHandler={(e) =>
+      BarCodeScanHandler={(e: { nativeEvent: { code: any } }) =>
         console.log('BarCodeScanHandler', e?.nativeEvent?.code)
       }
-      OCRScanHandler={(e) => console.log('OCRScanHandler', e)}
-      OnDetectedHandler={(e) =>
+      OCRScanHandler={(e: any) => console.log('OCRScanHandler', e)}
+      OnDetectedHandler={(e: { nativeEvent: any }) =>
         console.log('OnDetectedHandler', e?.nativeEvent)
       }
-    />
-  );
-        throw new Error('Function not implemented.');
-      }}
     />
   );
 }
