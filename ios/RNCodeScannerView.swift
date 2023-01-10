@@ -5,14 +5,14 @@ import VisionSDK
 class RNCodeScannerView : UIView, CodeScannerViewDelegate {
     
   // events from swift to Js
-  @objc var onBarcodeScanSuccess : RCTBubblingEventBlock?
+  @objc var onBarcodeScanSuccess : RCTDirectEventBlock?
   
-  @objc var onOCRDataReceived : RCTBubblingEventBlock?
+  @objc var onOCRDataReceived : RCTDirectEventBlock?
 
-  @objc var onDetected : RCTBubblingEventBlock?
+  @objc var onDetected : RCTDirectEventBlock?
   
   var codeScannerView : CodeScannerView?
-  @objc var onError : RCTBubblingEventBlock?
+  @objc var onError : RCTDirectEventBlock?
 
 
 
