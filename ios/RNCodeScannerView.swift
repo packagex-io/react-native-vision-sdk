@@ -12,6 +12,8 @@ class RNCodeScannerView : UIView, CodeScannerViewDelegate {
   @objc var onDetected : RCTBubblingEventBlock?
   
   var codeScannerView : CodeScannerView?
+  @objc var onError : RCTBubblingEventBlock?
+
 
 
   
@@ -35,11 +37,33 @@ class RNCodeScannerView : UIView, CodeScannerViewDelegate {
       codeScannerView!.isBarCodeOrQRCodeIndicationOn = true
     }
   }
-  
-  //prop from Js to Swift
-  @objc func setAPIKey(_ apiKey: NSString) {
-    Constants.apiKey = apiKey as String
-  }
+//    prop from Js to Swift
+//   @objc func setautoMode(_ autoMode: NSString) {
+////     if codeScannerView == nil {
+////       return
+////     }
+////       codeScannerView?.setCaptureModeTo(.auto)
+////    if (autoMode == "auto") {
+////       codeScannerView!.setCaptureModeTo(.auto)
+////    }else{
+////        codeScannerView!.setCaptureModeTo(.manual)
+////    }
+//   }
+
+    @objc func setCaptureMode(_ captureMode: NSString){
+        if(captureMode == "auto"){
+            codeScannerView?.setCaptureModeTo(.auto)
+        }else{
+            codeScannerView?.setCaptureModeTo(.manual)
+        }
+    }
+//  prop from Js to Swift
+//   @objc func setAPIKey(_ apiKey: NSString) {
+//     Constants.apiKey = apiKey as String
+//   }
+    @objc func setApiKey(_ apiKey: NSString){
+        Constants.apiKey = apiKey as String
+    }
   
     func codeScannerView(_ scannerView: VisionSDK.CodeScannerView, didSuccess code: [String]) {
     if onBarcodeScanSuccess != nil {
@@ -49,7 +73,7 @@ class RNCodeScannerView : UIView, CodeScannerViewDelegate {
   }
     
   func codeScannerView(_ scannerView: VisionSDK.CodeScannerView, didFailure error: VisionSDK.CodeScannerError) {
-     
+//          onError!(["message":error]);
     }
   
   func codeScannerViewDidDetect(_ text: Bool, barCode: Bool, qrCode: Bool) {
@@ -72,11 +96,12 @@ class RNCodeScannerView : UIView, CodeScannerViewDelegate {
       onOCRDataReceived!(["data" : data])
     }
     else {
-      
+            onError!(["message":"not found"]);
     }
   }
   
   func callForOCRWithImageFailedWithMessage(message: String){
+          onError!(["message":message]);
      
   }
   
@@ -117,7 +142,7 @@ extension RNCodeScannerView {
 //
 //            [weak self] data, response, error in
       
-      VisionAPIManager.shared.callScanAPIWith(image, andApiKey: !Constants.apiKey.isEmpty ? Constants.apiKey : "XRI8HaRVOM5P9OS2Mhakq3voRSOs66hK6j7CSWUG") {
+              VisionAPIManager.shared.callScanAPIWith(image, andApiKey: !Constants.apiKey.isEmpty ? Constants.apiKey : "key_stag_7da7b5e917tq2eCckhc5QnTr1SfpvFGjwbTfpu1SQYy242xPjBz2mk3hbtzxVw1zj5K5XBF") {
 
               [weak self] data, response, error in
             
