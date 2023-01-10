@@ -110,7 +110,7 @@ const Camera: React.FC<Props> = ({
             <View>
               <View style={styles.circle} />
             </View>
-            {mode == ScanMode.OCR && (
+            {mode === ScanMode.OCR && (
               <View style={styles.zoomBlock}>
                 <View style={[styles.circle]} />
                 <View style={styles.circle} />
@@ -123,15 +123,15 @@ const Camera: React.FC<Props> = ({
                 <ActionButton
                   text={'Manual'}
                   textColor={'#000'}
-                  style={styles.autoManualButton(captureMode == 'manual')}
-                  isSeleted={mode == ScanMode.OCR}
+                  style={styles.autoManualButton(captureMode === 'manual')}
+                  isSeleted={mode === ScanMode.OCR}
                   onPress={() => setCaptureMode('manual')}
                 />
                 <ActionButton
                   text={'Auto'}
                   textColor={'#000'}
-                  style={styles.autoManualButton(captureMode == 'auto')}
-                  isSeleted={mode == ScanMode.OCR}
+                  style={styles.autoManualButton(captureMode === 'auto')}
+                  isSeleted={mode === ScanMode.OCR}
                   onPress={() => setCaptureMode('auto')}
                 />
               </View>
@@ -151,21 +151,21 @@ const Camera: React.FC<Props> = ({
             <View style={[styles.row, { justifyContent: 'space-around' }]}>
               <ActionButton
                 text={'BarCode'}
-                isSeleted={mode == ScanMode.BARCODE}
+                isSeleted={mode === ScanMode.BARCODE}
                 onPress={() => setMode(ScanMode.BARCODE)}
               />
               <ActionButton
                 text={'QR Code'}
-                isSeleted={mode == ScanMode.QRCODE}
+                isSeleted={mode === ScanMode.QRCODE}
                 onPress={() => setMode(ScanMode.QRCODE)}
               />
               <ActionButton
                 text={'OCR'}
-                isSeleted={mode == ScanMode.OCR}
+                isSeleted={mode === ScanMode.OCR}
                 onPress={() => setMode(ScanMode.OCR)}
               />
             </View>
-            {captureMode == 'manual' ? (
+            {captureMode === 'manual' ? (
               <View
                 style={{
                   alignItems: 'center',
@@ -189,7 +189,7 @@ const Camera: React.FC<Props> = ({
                 />
               </View>
             ) : (
-             null
+             <View/>
             )}
           </View>
         </View>
