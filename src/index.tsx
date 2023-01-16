@@ -87,7 +87,7 @@ const Camera: React.FC<Props> = ({
       // onDetected={onDetected}
       ref={VisionSDKViewRef}
     >
-      <View style={[styles.childrenContainer]}>
+      {/* <View style={[styles.childrenContainer]}>
         <View
           style={[
             styles.row,
@@ -193,7 +193,7 @@ const Camera: React.FC<Props> = ({
             )}
           </View>
         </View>
-      </View>
+      </View> */}
       {/* </View> */}
       {children}
     </VisionSdkView>
