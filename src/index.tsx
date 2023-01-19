@@ -52,7 +52,7 @@ const Camera: React.FC<Props> = ({
   }));
 
   const onPressCaptures = () => {
-    console.log("onPressCaptures called")
+    console.log('Image Captured');
     UIManager.dispatchViewManagerCommand(
       findNodeHandle(VisionSDKViewRef.current),
       (UIManager.hasViewManagerConfig('VisionSDKView') &&
