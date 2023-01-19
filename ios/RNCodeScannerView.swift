@@ -5,14 +5,14 @@ import VisionSDK
 class RNCodeScannerView : UIView, CodeScannerViewDelegate {
     
   // events from swift to Js
-  @objc var onBarcodeScanSuccess : RCTBubblingEventBlock?
+  @objc var onBarcodeScanSuccess : RCTDirectEventBlock?
   
-  @objc var onOCRDataReceived : RCTBubblingEventBlock?
+  @objc var onOCRDataReceived : RCTDirectEventBlock?
 
-  @objc var onDetected : RCTBubblingEventBlock?
+  @objc var onDetected : RCTDirectEventBlock?
   
   var codeScannerView : CodeScannerView?
-  @objc var onError : RCTBubblingEventBlock?
+  @objc var onError : RCTDirectEventBlock?
 
 
 
@@ -26,7 +26,7 @@ class RNCodeScannerView : UIView, CodeScannerViewDelegate {
     
     if (mode == "ocr") {
       codeScannerView!.setScanModeTo(.ocr)
-      codeScannerView!.isBarCodeOrQRCodeIndicationOn = false
+      codeScannerView!.isBarCodeOrQRCodeIndicationOn = true
       
     } else if (mode == "barcode") {
       codeScannerView!.setScanModeTo(.barCode)
@@ -142,7 +142,7 @@ extension RNCodeScannerView {
 //
 //            [weak self] data, response, error in
       
-              VisionAPIManager.shared.callScanAPIWith(image, andApiKey: !Constants.apiKey.isEmpty ? Constants.apiKey : "key_stag_7da7b5e917tq2eCckhc5QnTr1SfpvFGjwbTfpu1SQYy242xPjBz2mk3hbtzxVw1zj5K5XBF") {
+        VisionAPIManager.shared.callScanAPIWith(image, andBarcodes: barcodes, andApiKey: !Constants.apiKey.isEmpty ? Constants.apiKey : "key_stag_7da7b5e917tq2eCckhc5QnTr1SfpvFGjwbTfpu1SQYy242xPjBz2mk3hbtzxVw1zj5K5XBF") {
 
               [weak self] data, response, error in
             
