@@ -175,7 +175,10 @@ const Camera: React.FC<Props> = ({
               <ActionButton
                 text={'OCR'}
                 isSeleted={mode === ScanMode.OCR}
-                onPress={() => setMode(ScanMode.OCR)}
+                onPress={() => {
+                  setCaptureMode('manual')
+                  setMode(ScanMode.OCR)
+                }}
               />
             </View>
             {captureMode === 'manual' ? (
