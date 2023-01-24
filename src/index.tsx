@@ -30,6 +30,7 @@ const Camera: React.FC<Props> = ({
   refProp,
   BarCodeScanHandler = (_e: any) => {},
   OCRScanHandler = (_e: any) => {},
+  OnDetectedHandler = (_e: any) => {},
   onError = (_e: any): void => {},
 }: Props) => {
   const defaultScanMode = ScanMode.OCR;
@@ -49,6 +50,7 @@ const Camera: React.FC<Props> = ({
   }));
 
   const onPressCaptures = () => {
+    console.log('Image Captured');
     UIManager.dispatchViewManagerCommand(
       findNodeHandle(VisionSDKViewRef.current),
       (UIManager.hasViewManagerConfig('VisionSDKView') &&
@@ -68,6 +70,7 @@ const Camera: React.FC<Props> = ({
       style={styles.flex}
       onBarcodeScanSuccess={BarCodeScanHandler}
       onOCRDataReceived={OCRScanHandler}
+      onDetected={OnDetectedHandler}
       // onDetected={onDetected}
       // OnDetectedHandler={OnDetectedHandler}
       // onOCRDataReceived={({ nativeEvent }) =>
@@ -121,7 +124,7 @@ const Camera: React.FC<Props> = ({
                 <ActionButton
                   text={'Manual'}
                   textColor={'#000'}
-                  style={captureMode === 'manual' && styles.unautoManualButton}
+                  style={captureMode === 'manual' && styles.autoManualButton}
                   // isSeleted={mode === ScanMode.OCR}
                   onPress={() => setCaptureMode('manual')}
                 />
@@ -151,16 +154,29 @@ const Camera: React.FC<Props> = ({
                 text={'BarCode'}
                 isSeleted={mode === ScanMode.BARCODE}
                 onPress={() => setMode(ScanMode.BARCODE)}
+                icon={
+                  mode === ScanMode.BARCODE
+                    ? require('../assets/Barcode_Highlight.png')
+                    : require('../assets/Barcode.png')
+                }
               />
               <ActionButton
                 text={'QR Code'}
                 isSeleted={mode === ScanMode.QRCODE}
                 onPress={() => setMode(ScanMode.QRCODE)}
+                icon={
+                  mode === ScanMode.QRCODE
+                    ? require('../assets/QRcode_Highlight.png')
+                    : require('../assets/QRcode.png')
+                }
               />
               <ActionButton
                 text={'OCR'}
                 isSeleted={mode === ScanMode.OCR}
-                onPress={() => setMode(ScanMode.OCR)}
+                onPress={() => {
+                  setCaptureMode('manual');
+                  setMode(ScanMode.OCR);
+                }}
               />
             </View>
             {captureMode === 'manual' ? (
@@ -260,11 +276,15 @@ const styles = StyleSheet.create({
     backgroundColor: '#00000050',
     justifyContent: 'space-between',
   },
+  iconStyle: {
+    width: 55,
+    height: 55,
+    bottom: 8,
+  },
   autoManualBlock: {
     borderRadius: 4,
-    // paddingHorizontal: 2,
+    paddingHorizontal: 2,
     height: 40,
-
     alignItems: 'center',
     flexDirection: 'row',
     backgroundColor: 'grey',
