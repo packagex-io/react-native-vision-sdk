@@ -6,8 +6,6 @@ import {
   Text,
   Platform,
   StyleSheet,
-  TouchableOpacity,
-  Image,
 } from 'react-native';
 import { VisionSdkView } from './VisionSdkViewManager';
 
@@ -37,7 +35,7 @@ const Camera: React.FC<Props> = ({
 }: Props) => {
   const defaultScanMode = ScanMode.OCR;
   const [mode, setMode] = useState<ScanMode>(defaultScanMode);
-  const [captureMode, setCaptureMode] = useState<String>('auto');
+  // const [captureMode, setCaptureMode] = useState<String>('auto');
   // const [apiKey, setAPIKey] = useState < String > ('key_stag_7da7b5e917tq2eCckhc5QnTr1SfpvFGjwbTfpu1SQYy242xPjBz2mk3hbtzN6eB85MftxVw1zj5K5XBF')
 
   const VisionSDKViewRef = useRef(null);
@@ -90,7 +88,7 @@ const Camera: React.FC<Props> = ({
       // onDetected={onDetected}
       ref={VisionSDKViewRef}
     >
-      <View style={[styles.childrenContainer]}>
+      {/* <View style={[styles.childrenContainer]}>
         <View
           style={[
             styles.row,
@@ -209,7 +207,7 @@ const Camera: React.FC<Props> = ({
             )}
           </View>
         </View>
-      </View>
+      </View> */}
       {/* </View> */}
       {children}
     </VisionSdkView>
@@ -222,36 +220,36 @@ const Camera: React.FC<Props> = ({
 
 export default Camera;
 
-type ActionButtonType = {
-  text?: string;
-  onPress?: () => void | undefined;
-  isSeleted?: boolean | undefined;
-  icon?: any;
-  style?: any;
-  textColor?: string | undefined | null | any;
-};
-const ActionButton = ({
-  text,
-  onPress,
-  isSeleted,
-  icon,
-  style,
-  textColor,
-}: ActionButtonType) => {
-  return (
-    <TouchableOpacity style={[style && style]} onPress={onPress}>
-      {icon && <Image source={icon} style={styles.iconStyle} />}
-      <Text
-        style={[
-          isSeleted ? styles.buttonText : styles.unbuttonText,
-          textColor && { color: textColor },
-        ]}
-      >
-        {text}
-      </Text>
-    </TouchableOpacity>
-  );
-};
+// type ActionButtonType = {
+//   text?: string;
+//   onPress?: () => void | undefined;
+//   isSeleted?: boolean | undefined;
+//   icon?: string | undefined;
+//   style?: any;
+//   textColor?: string | undefined | null | any;
+// };
+// const ActionButton = ({
+//   text,
+//   onPress,
+//   isSeleted,
+//   icon,
+//   style,
+//   textColor,
+// }: ActionButtonType) => {
+//   return (
+//     <TouchableOpacity style={[style && style]} onPress={onPress}>
+//       <Text
+//         style={[
+//           isSeleted ? styles.buttonText : styles.unbuttonText,
+//           textColor && { color: textColor },
+//         ]}
+//       >
+//         {text}
+//       </Text>
+//       {icon ?? <Image source={icon} />}
+//     </TouchableOpacity>
+//   );
+// };
 
 const styles = StyleSheet.create({
   flex: {
