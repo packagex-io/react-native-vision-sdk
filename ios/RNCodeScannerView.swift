@@ -131,8 +131,8 @@ class RNCodeScannerView: UIView, CodeScannerViewDelegate {
 extension RNCodeScannerView {
 
   private func callOCRAPIWithImage(
-    _ image: UIImage, andBarcodes barcodes: [String], andToken token: [String],
-    andLocationId locationId: [String], andOptions options: [String: String]
+    _ image: UIImage, andBarcodes barcodes: [String], andToken token: String,
+    andLocationId locationId: String, andOptions options: [String: String]
   ) {
 
     self.callForOCRWithImageInProgress()
