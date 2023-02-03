@@ -13,6 +13,10 @@ class RNCodeScannerView: UIView, CodeScannerViewDelegate {
   var codeScannerView: CodeScannerView?
   @objc var onError: RCTDirectEventBlock?
 
+  var token: String?
+  var locationId: String?
+  var options: [String: String]?
+
   //prop from Js to Swift
   @objc func setMode(_ mode: NSString) {
 
@@ -33,18 +37,6 @@ class RNCodeScannerView: UIView, CodeScannerViewDelegate {
       codeScannerView!.isBarCodeOrQRCodeIndicationOn = true
     }
   }
-  //    prop from Js to Swift
-  //   @objc func setautoMode(_ autoMode: NSString) {
-  ////     if codeScannerView == nil {
-  ////       return
-  ////     }
-  ////       codeScannerView?.setCaptureModeTo(.auto)
-  ////    if (autoMode == "auto") {
-  ////       codeScannerView!.setCaptureModeTo(.auto)
-  ////    }else{
-  ////        codeScannerView!.setCaptureModeTo(.manual)
-  ////    }
-  //   }
 
   @objc func setCaptureMode(_ captureMode: NSString) {
     if captureMode == "auto" {
@@ -53,13 +45,24 @@ class RNCodeScannerView: UIView, CodeScannerViewDelegate {
       codeScannerView?.setCaptureModeTo(.manual)
     }
   }
-  //  prop from Js to Swift
-  //   @objc func setAPIKey(_ apiKey: NSString) {
-  //     Constants.apiKey = apiKey as String
-  //   }
+
   @objc func setApiKey(_ apiKey: NSString) {
+    print(apiKey)
     Constants.apiKey = apiKey as String
   }
+
+  @objc func setToken(_ token: NSString) {
+    self.token = token as String
+  }
+
+  @objc func setOptions(_ options: [String: String]) {
+    self.options = options as [String: String]
+  }
+
+  @objc func setLocationId(_ locationId: NSString) {
+      self.locationId = locationId as String
+  }
+  
 
   func codeScannerView(_ scannerView: VisionSDK.CodeScannerView, didSuccess code: [String]) {
     if onBarcodeScanSuccess != nil {
@@ -75,20 +78,17 @@ class RNCodeScannerView: UIView, CodeScannerViewDelegate {
   }
 
   func codeScannerViewDidDetect(_ text: Bool, barCode: Bool, qrCode: Bool) {
+      
     if onDetected != nil {
       onDetected!(["text": text, "barCode": barCode, "qrCode": qrCode])
     }
   }
 
-  func codeScannerView(
-    _ scannerView: CodeScannerView, didCaptureOCRImage image: UIImage,
-    withbarCodes barcodes: [String], andToken token: [String], andLocationId locationId: [String],
-    andOptions options: [String: String]
-  ) {
-    self.callOCRAPIWithImage(
-      image, andBarcodes: barcodes, andToken: token, andLocationId: locationId, andOptions: options)
+  func codeScannerView(_ scannerView: CodeScannerView, didCaptureOCRImage image: UIImage, withbarCodes barcodes: [String]) {
+     
+    self.callOCRAPIWithImage(image, andBarcodes: barcodes)
   }
-
+  
   func callForOCRWithImageInProgress() {
     // do stuff while vision api call is in progress
   }
@@ -131,15 +131,15 @@ class RNCodeScannerView: UIView, CodeScannerViewDelegate {
 extension RNCodeScannerView {
 
   private func callOCRAPIWithImage(
-    _ image: UIImage, andBarcodes barcodes: [String], andToken token: String,
-    andLocationId locationId: String, andOptions options: [String: String]
+    _ image: UIImage, andBarcodes barcodes: [String]
   ) {
 
+    
     self.callForOCRWithImageInProgress()
 
     VisionAPIManager.shared.callScanAPIWith(
       image, andBarcodes: barcodes, andApiKey: !Constants.apiKey.isEmpty ? Constants.apiKey : nil,
-      andToken: token, andLocationId: locationId, andOptions: options
+      andToken: token, andLocationId: locationId, andOptions: options ?? [:]
     ) {
 
       [weak self] data, response, error in
