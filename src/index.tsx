@@ -38,8 +38,10 @@ const Camera: React.FC<Props> = ({
   const [apiKey, setapiKey] = useState('');
   const [environment, setEnvironment] = useState('dev');
   const [locationId, setlocationId] = useState('');
-  // const [options, setOptions] = useState({});
-  const opt = { parse_addresses: 'true', match_contacts: 'true' };
+  const [options, setOptions] = useState({
+    parse_addresses: 'true',
+    match_contacts: 'true',
+  });
 
   const VisionSDKViewRef = useRef(null);
 
@@ -96,7 +98,7 @@ const Camera: React.FC<Props> = ({
       onError={onError}
       token={token}
       locationId={locationId}
-      options={opt} // ideally this should be passed from options variable, that is receiving data from ScannerContainer
+      options={options} // ideally this should be passed from options variable, that is receiving data from ScannerContainer
       environment={environment}
       ref={VisionSDKViewRef}
     >
