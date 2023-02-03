@@ -18,6 +18,10 @@ type VisionSdkProps = {
   mode?: String;
   ref?: any;
   apiKey?: String;
+  token?: String;
+  locationId?: String;
+  options?: any;
+  environment?: String;
   captureMode?: String;
   onBarcodeScanSuccess?: (e: any) => void;
   onOCRDataReceived?: (e: any) => void;

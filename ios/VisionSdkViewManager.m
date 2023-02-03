@@ -10,6 +10,7 @@ RCT_EXPORT_VIEW_PROPERTY(captureMode, NSString)
 RCT_EXPORT_VIEW_PROPERTY(apiKey, NSString)
 RCT_EXPORT_VIEW_PROPERTY(token, NSString)
 RCT_EXPORT_VIEW_PROPERTY(locationId, NSString)
-RCT_EXPORT_VIEW_PROPERTY(options, NSDictonary *)
+RCT_EXPORT_VIEW_PROPERTY(environment, NSString)
+RCT_EXPORT_VIEW_PROPERTY(options, NSDictionary *) 
 RCT_EXTERN_METHOD(captureImage:(nonnull NSNumber *)node)
 @end

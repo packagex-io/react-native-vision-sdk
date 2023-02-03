@@ -14,7 +14,6 @@ enum ScanMode {
   BARCODE = 'barcode',
   QRCODE = 'qrcode',
 }
-// enum AutoMode  ["auto", "manual"]
 
 type Props = {
   children?: React.ReactNode;
@@ -35,8 +34,12 @@ const Camera: React.FC<Props> = ({
 }: Props) => {
   const defaultScanMode = ScanMode.OCR;
   const [mode, setMode] = useState<ScanMode>(defaultScanMode);
-  // const [captureMode, setCaptureMode] = useState<String>('auto');
-  // const [apiKey, setAPIKey] = useState < String > ('key_stag_7da7b5e917tq2eCckhc5QnTr1SfpvFGjwbTfpu1SQYy242xPjBz2mk3hbtzN6eB85MftxVw1zj5K5XBF')
+  const [token, setToken] = useState('');
+  const [apiKey, setapiKey] = useState('');
+  const [environment, setEnvironment] = useState('dev');
+  const [locationId, setlocationId] = useState('');
+  // const [options, setOptions] = useState({});
+  const opt = { parse_addresses: 'true', match_contacts: 'true' };
 
   const VisionSDKViewRef = useRef(null);
 
@@ -44,8 +47,19 @@ const Camera: React.FC<Props> = ({
     cameraCaptureHandler: () => {
       onPressCaptures();
     },
-    changeModeHandler: (input: React.SetStateAction<ScanMode>) => {
+    changeModeHandler: (
+      input: React.SetStateAction<ScanMode>,
+      token: React.SetStateAction<string>,
+      locationId: React.SetStateAction<string>,
+      option: React.SetStateAction<any>,
+      appEnvironment: React.SetStateAction<string>
+    ) => {
+      setEnvironment(appEnvironment);
+      setToken(token);
+      setlocationId(locationId);
+      setapiKey(apiKey);
       onChangeMode(input);
+      onChangeOptions(option);
     },
   }));
 
@@ -64,6 +78,9 @@ const Camera: React.FC<Props> = ({
   const onChangeMode = (input: React.SetStateAction<ScanMode>) => {
     setMode(input);
   };
+  const onChangeOptions = (input: React.SetStateAction<any>) => {
+    setOptions(input);
+  };
 
   return Platform.OS === 'ios' ? (
     <VisionSdkView
@@ -71,144 +88,18 @@ const Camera: React.FC<Props> = ({
       onBarcodeScanSuccess={BarCodeScanHandler}
       onOCRDataReceived={OCRScanHandler}
       onDetected={OnDetectedHandler}
-      // onDetected={onDetected}
-      // OnDetectedHandler={OnDetectedHandler}
-      // onOCRDataReceived={({ nativeEvent }) =>
-      //   console.log('onOCRDataReceived', nativeEvent)
-      // }
-      // onBarcodeScanSuccess={({ nativeEvent }) =>
-      //   console.log('onBarcodeScanSuccess', nativeEvent)
-      // }
       mode={mode}
       apiKey={
         'key_stag_7da7b5e917tq2eCckhc5QnTr1SfpvFGjwbTfpu1SQYy242xPjBz2mk3hbtzN6eB85MftxVw1zj5K5XBF'
       }
       captureMode={'auto'}
       onError={onError}
-      // onDetected={onDetected}
+      token={token}
+      locationId={locationId}
+      options={opt} // ideally this should be passed from options variable, that is receiving data from ScannerContainer
+      environment={environment}
       ref={VisionSDKViewRef}
     >
-      {/* <View style={[styles.childrenContainer]}>
-        <View
-          style={[
-            styles.row,
-            { paddingHorizontal: 20, alignItems: 'flex-start' },
-          ]}
-        >
-          <View>
-            <View style={styles.circle} />
-          </View>
-          <View>
-            <View style={styles.circle} />
-            <View style={styles.circle} />
-            <View style={styles.circle} />
-          </View>
-        </View>
-        <View>
-          <View
-            style={[styles.row, { marginBottom: 10, paddingHorizontal: 20 }]}
-          >
-            <View>
-              <View style={styles.circle} />
-            </View>
-            {mode === ScanMode.OCR && (
-              <View style={styles.zoomBlock}>
-                <View style={[styles.circle]} />
-                <View style={styles.circle} />
-                <View style={styles.circle} />
-              </View>
-            )}
-
-            {mode !== ScanMode.OCR && (
-              <View style={styles.autoManualBlock}>
-                <ActionButton
-                  text={'Manual'}
-                  textColor={'#000'}
-                  style={captureMode === 'manual' && styles.autoManualButton}
-                  // isSeleted={mode === ScanMode.OCR}
-                  onPress={() => setCaptureMode('manual')}
-                />
-                <ActionButton
-                  text={'Auto'}
-                  textColor={'#000'}
-                  style={captureMode === 'auto' && styles.autoManualButton}
-                  // isSeleted={mode === ScanMode.OCR}
-                  onPress={() => setCaptureMode('auto')}
-                />
-              </View>
-            )}
-
-            <View>
-              <View style={styles.circle} />
-            </View>
-          </View>
-          <View
-            style={{
-              backgroundColor: '#000',
-              width: '100%',
-              paddingVertical: 20,
-            }}
-          >
-            <View style={[styles.row, { justifyContent: 'space-around' }]}>
-              <ActionButton
-                text={'BarCode'}
-                isSeleted={mode === ScanMode.BARCODE}
-                onPress={() => setMode(ScanMode.BARCODE)}
-                icon={
-                  mode === ScanMode.BARCODE
-                    ? require('../assets/Barcode_Highlight.png')
-                    : require('../assets/Barcode.png')
-                }
-              />
-              <ActionButton
-                text={'QR Code'}
-                isSeleted={mode === ScanMode.QRCODE}
-                onPress={() => setMode(ScanMode.QRCODE)}
-                icon={
-                  mode === ScanMode.QRCODE
-                    ? require('../assets/QRcode_Highlight.png')
-                    : require('../assets/QRcode.png')
-                }
-              />
-              <ActionButton
-                text={'OCR'}
-                isSeleted={mode === ScanMode.OCR}
-                onPress={() => {
-                  setCaptureMode('manual');
-                  setMode(ScanMode.OCR);
-                }}
-              />
-            </View>
-            {captureMode === 'manual' ? (
-              <View
-                style={{
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  paddingVertical: 20,
-                }}
-              >
-                <ActionButton
-                  text={'OCR'}
-                  textColor={'#000'}
-                  style={{
-                    backgroundColor: '#fff',
-                    width: 70,
-                    height: 70,
-                    borderRadius: 35,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    paddingVertical: 20,
-                  }}
-                  onPress={() => onPressCaptures()}
-                />
-              </View>
-            ) : (
-              <View />
-            )}
-          </View>
-        </View>
-      </View> */}
-      {/* </View> */}
       {children}
     </VisionSdkView>
   ) : (
@@ -219,37 +110,6 @@ const Camera: React.FC<Props> = ({
 };
 
 export default Camera;
-
-// type ActionButtonType = {
-//   text?: string;
-//   onPress?: () => void | undefined;
-//   isSeleted?: boolean | undefined;
-//   icon?: string | undefined;
-//   style?: any;
-//   textColor?: string | undefined | null | any;
-// };
-// const ActionButton = ({
-//   text,
-//   onPress,
-//   isSeleted,
-//   icon,
-//   style,
-//   textColor,
-// }: ActionButtonType) => {
-//   return (
-//     <TouchableOpacity style={[style && style]} onPress={onPress}>
-//       <Text
-//         style={[
-//           isSeleted ? styles.buttonText : styles.unbuttonText,
-//           textColor && { color: textColor },
-//         ]}
-//       >
-//         {text}
-//       </Text>
-//       {icon ?? <Image source={icon} />}
-//     </TouchableOpacity>
-//   );
-// };
 
 const styles = StyleSheet.create({
   flex: {

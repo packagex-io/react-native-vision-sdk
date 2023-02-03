@@ -50,12 +50,32 @@ class RNCodeScannerView: UIView, CodeScannerViewDelegate {
     print(apiKey)
     Constants.apiKey = apiKey as String
   }
+    
+  @objc func setEnvironment(_ environment: String) {
+      print(environment)
+      switch environment {
+      case "dev":
+          Constants.apiEnvironment = .dev
+          break
+      case "qa":
+          Constants.apiEnvironment = .qa
+          break
+      case "sandbox":
+          Constants.apiEnvironment = .sandbox
+          break
+      case "prod":
+          Constants.apiEnvironment = .production
+          break
+      default:
+          Constants.apiEnvironment = .dev
+      }
+    }
 
   @objc func setToken(_ token: NSString) {
     self.token = token as String
   }
 
-  @objc func setOptions(_ options: [String: String]) {
+  @objc func setOptions(_ options: [NSString: NSString]) {
     self.options = options as [String: String]
   }
 
@@ -136,15 +156,17 @@ extension RNCodeScannerView {
 
     
     self.callForOCRWithImageInProgress()
-
+    
     VisionAPIManager.shared.callScanAPIWith(
       image, andBarcodes: barcodes, andApiKey: !Constants.apiKey.isEmpty ? Constants.apiKey : nil,
-      andToken: token, andLocationId: locationId, andOptions: options ?? [:]
+      andToken: token ?? "", andLocationId: locationId ?? "", andOptions: options ?? [:]
     ) {
 
       [weak self] data, response, error in
 
-      guard let self = self else { return }
+      guard let self = self else {
+        return
+      }
 
       // Check if there's an error or response data is nil
       guard error == nil else {
@@ -170,7 +192,7 @@ extension RNCodeScannerView {
       }
 
       _ = (response as! HTTPURLResponse).statusCode
-
+       
       DispatchQueue.main.async {
 
         do {
