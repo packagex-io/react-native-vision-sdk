@@ -4,6 +4,7 @@ import {
   findNodeHandle,
   StyleSheet,
   DeviceEventEmitter,
+  Platform,
 } from 'react-native';
 import { VisionSdkView } from './VisionSdkViewManager';
 
