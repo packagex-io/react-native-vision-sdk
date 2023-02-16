@@ -12,6 +12,6 @@ class VisionSdkPackage : ReactPackage {
   }
 
   override fun createViewManagers(reactContext: ReactApplicationContext): List<ViewManager<*, *>> {
-    return listOf(VisionSdkViewManager())
+    return listOf(VisionSdkViewManager(reactContext))
   }
 }
