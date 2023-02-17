@@ -27,10 +27,10 @@ type Props = {
 const Camera: React.FC<Props> = ({
   children,
   refProp,
-  BarCodeScanHandler = (_e: any) => {},
-  OCRScanHandler = (_e: any) => {},
-  OnDetectedHandler = (_e: any) => {},
-  onError = (_e: any): void => {},
+  BarCodeScanHandler = (_e: any) => { },
+  OCRScanHandler = (_e: any) => { },
+  OnDetectedHandler = (_e: any) => { },
+  onError = (_e: any): void => { },
 }: Props) => {
   const defaultScanMode = ScanMode.OCR;
   const [mode, setMode] = useState<ScanMode>(defaultScanMode);
@@ -48,6 +48,12 @@ const Camera: React.FC<Props> = ({
   useImperativeHandle(refProp, () => ({
     cameraCaptureHandler: () => {
       onPressCaptures();
+    },
+    stopRunningHandler: () => {
+      onPressStopRunning()
+    },
+    startRunningHandler: () => {
+      onPressStartRunning()
     },
     changeModeHandler: (
       input: React.SetStateAction<ScanMode>,
@@ -72,7 +78,31 @@ const Camera: React.FC<Props> = ({
       (UIManager.hasViewManagerConfig('VisionSDKView') &&
         UIManager.getViewManagerConfig('VisionSDKView').Commands
           .captureImage) ||
-        0,
+      0,
+      []
+    );
+  };
+
+  const onPressStopRunning = () => {
+    console.log('Image Captured');
+    UIManager.dispatchViewManagerCommand(
+      findNodeHandle(VisionSDKViewRef.current),
+      (UIManager.hasViewManagerConfig('VisionSDKView') &&
+        UIManager.getViewManagerConfig('VisionSDKView').Commands
+          .stopRunning) ||
+      0,
+      []
+    );
+  };
+
+  const onPressStartRunning = () => {
+    console.log('Image Captured');
+    UIManager.dispatchViewManagerCommand(
+      findNodeHandle(VisionSDKViewRef.current),
+      (UIManager.hasViewManagerConfig('VisionSDKView') &&
+        UIManager.getViewManagerConfig('VisionSDKView').Commands
+          .startRunning) ||
+      0,
       []
     );
   };
