@@ -17,6 +17,37 @@ class VisionSdkViewManager: RCTViewManager {
 
   }
 
+  @objc func stopRunning(_ node: NSNumber) {
+
+    DispatchQueue.main.async {
+      let component =
+        self.bridge.uiManager.view(
+          forReactTag: node
+        ) as! RNCodeScannerView
+
+       component.codeScannerView?.stopRunning()
+    }
+
+  }
+
+
+
+  @objc func startRunning(_ node: NSNumber) {
+
+    DispatchQueue.main.async {
+      let component =
+        self.bridge.uiManager.view(
+          forReactTag: node
+        ) as! RNCodeScannerView
+
+       component.codeScannerView?.startRunning()
+    }
+
+  }
+
+ 
+
+
   override func view() -> UIView! {
 
     return RNCodeScannerView()

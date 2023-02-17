@@ -48,6 +48,12 @@ const Camera: React.FC<Props> = ({
     cameraCaptureHandler: () => {
       onPressCaptures();
     },
+    stopRunningHandler: () => {
+      onPressStopRunning();
+    },
+    startRunningHandler: () => {
+      onPressStartRunning();
+    },
     changeModeHandler: (
       input: React.SetStateAction<ScanMode>,
       token: React.SetStateAction<string>,
@@ -71,6 +77,29 @@ const Camera: React.FC<Props> = ({
       (UIManager.hasViewManagerConfig('VisionSDKView') &&
         UIManager.getViewManagerConfig('VisionSDKView').Commands
           .captureImage) ||
+        0,
+      []
+    );
+  };
+
+  const onPressStopRunning = () => {
+    console.log('Image Captured');
+    UIManager.dispatchViewManagerCommand(
+      findNodeHandle(VisionSDKViewRef.current),
+      (UIManager.hasViewManagerConfig('VisionSDKView') &&
+        UIManager.getViewManagerConfig('VisionSDKView').Commands.stopRunning) ||
+        0,
+      []
+    );
+  };
+
+  const onPressStartRunning = () => {
+    console.log('Image Captured');
+    UIManager.dispatchViewManagerCommand(
+      findNodeHandle(VisionSDKViewRef.current),
+      (UIManager.hasViewManagerConfig('VisionSDKView') &&
+        UIManager.getViewManagerConfig('VisionSDKView').Commands
+          .startRunning) ||
         0,
       []
     );
