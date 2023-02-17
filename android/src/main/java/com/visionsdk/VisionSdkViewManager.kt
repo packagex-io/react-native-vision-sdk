@@ -136,7 +136,7 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
 //    } }
 
     customScannerView?.startScanning(
-      ViewType.WINDOW,
+      ViewType.FULLSCRREN,
       scanningMode,
       detectionMode,
       object : ScannerCallbacks {
@@ -158,8 +158,8 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
 
         override fun onBarcodeDetected(barcode: Barcode) {
           Log.d(VisionSdkViewManager.TAG, "onBarcodeDetected: ")
-          Toast.makeText(context!!, barcode.displayValue, Toast.LENGTH_LONG).show()
-
+//          Toast.makeText(context!!, barcode.displayValue, Toast.LENGTH_LONG).show()
+          customScannerView?.stopScanning()
           val event = Arguments.createMap().apply {
             putArray("code", Arguments.fromArray(arrayOf(barcode.displayValue)))
           }
