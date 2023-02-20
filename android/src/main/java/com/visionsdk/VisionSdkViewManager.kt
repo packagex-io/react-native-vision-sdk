@@ -136,7 +136,7 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
 //    } }
 
     customScannerView?.startScanning(
-      ViewType.FULLSCRREN,
+      ViewType.WINDOW,
       scanningMode,
       detectionMode,
       object : ScannerCallbacks {
