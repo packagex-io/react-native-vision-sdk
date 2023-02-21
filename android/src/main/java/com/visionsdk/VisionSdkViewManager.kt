@@ -50,9 +50,9 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
   override fun onAfterUpdateTransaction(view: CustomScannerView) {
     super.onAfterUpdateTransaction(view)
     Log.d(TAG, "onAfterUpdateTransaction: ")
-//    if (token!!.isNotEmpty()) {
+    if (token!!.isNotEmpty()) {
       startScanning()
-//    }
+    }
 
 //    Handler(Looper.myLooper()!!).postDelayed({
 //      if (detectionMode == DetectionMode.OCR)
