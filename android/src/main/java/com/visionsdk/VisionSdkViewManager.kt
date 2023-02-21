@@ -50,7 +50,9 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
   override fun onAfterUpdateTransaction(view: CustomScannerView) {
     super.onAfterUpdateTransaction(view)
     Log.d(TAG, "onAfterUpdateTransaction: ")
-    startScanning()
+//    if (token!!.isNotEmpty()) {
+      startScanning()
+//    }
 
 //    Handler(Looper.myLooper()!!).postDelayed({
 //      if (detectionMode == DetectionMode.OCR)
@@ -91,50 +93,19 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
     )
   }
 
-//  val scope = CoroutineScope(Dispatchers.Default)
+  override fun onDropViewInstance(view: CustomScannerView) {
+    super.onDropViewInstance(view)
+    Log.d(TAG, "onDropViewInstance: ")
+    customScannerView?.recycle()
+//    customScannerView?.stopScanning()
+  }
+  //  val scope = CoroutineScope(Dispatchers.Default)
 
   private fun startScanning() {
 
     Log.d(VisionSdkViewManager.TAG, "startScanning: ")
-    Log.d(VisionSdkViewManager.TAG, "scanningMode: $scanningMode")
-    Log.d(VisionSdkViewManager.TAG, "detectionMode: $detectionMode")
-
-
-//    val barcodeIndicatorFlow = callbackFlow<MutableList<Barcode>> {
-//      customScannerView?.barcodeIndicators?.observe(lifecycleOwner!!) { list ->
-//        scope.launch { send(list) }
-//      }
-//    }
-//
-//    val textIndicatorFlow = callbackFlow<Text> {
-//      customScannerView?.textIndicator?.observe(lifecycleOwner!!) { text ->
-//        scope.launch { send(text) }
-//      }
-//    }
-
-//    barcodeIndicatorFlow.combine(textIndicatorFlow) { barcodeIndicator, textIndicator ->
-//      Log.d(TAG, "textIndicator: " +textIndicator)
-//      Log.d(TAG, "barcodeIndicators: "+barcodeIndicator)
-//
-//    }
-
-//    val textIndicatorFlow = customScannerView?.textIndicator?.asFlow()
-//    val barcodeIndicatorsFlow = customScannerView?.barcodeIndicators?.asFlow()
-//    val thirdFlow = textIndicatorFlow?.combine(barcodeIndicatorsFlow!!) { textIndicator, barcodeIndicator ->
-//      Pair(textIndicator, barcodeIndicator)
-//    }
-////    customScannerView?.textIndicator?.observe(lifecycleOwner!!){
-////      Log.d(TAG, "textIndicator: ")
-////
-////    }
-//    scope.launch {
-////      Log.d(TAG, "scope: ")
-//      thirdFlow?.collect {
-//
-//
-////      Log.d(TAG, "thirdFlow: " +it.first.text)
-//    } }
-
+//    Log.d(VisionSdkViewManager.TAG, "scanningMode: $scanningMode")
+//    Log.d(VisionSdkViewManager.TAG, "detectionMode: $detectionMode")
     customScannerView?.startScanning(
       ViewType.WINDOW,
       scanningMode,
@@ -200,8 +171,10 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
   override fun getCommandsMap(): Map<String?, Int?>? {
     Log.d("React", " View manager getCommandsMap:")
     return MapBuilder.of(
-      "saveImage",
-      0
+      "captureImage",
+      0,
+      "stopRunning",
+      1
     )
   }
 
@@ -215,6 +188,10 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
     when (commandType) {
       0 -> {
         captureImage()
+        return
+      }
+      1 -> {
+        stopCamera()
         return
       }
       else -> throw IllegalArgumentException(
@@ -231,6 +208,10 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
   private fun captureImage() {
     Log.d(TAG, "captureImage: ")
     customScannerView!!.capture()
+  }
+  private fun stopCamera() {
+    Log.d(TAG, "stopCamera: ")
+    customScannerView!!.recycle()
   }
 
   private fun triggerOCRCalls(bitmap: Bitmap, list: MutableList<Barcode>) {

@@ -125,25 +125,31 @@ const Camera: React.FC<Props> = ({
   }, []);
   return (
     // Platform.OS === 'ios' ? (
-    <VisionSdkView
-      style={styles.flex}
-      onBarcodeScanSuccess={BarCodeScanHandler}
-      onOCRDataReceived={OCRScanHandler}
-      onDetected={OnDetectedHandler}
-      mode={mode}
-      // apiKey={
-      //   'key_stag_7da7b5e917tq2eCckhc5QnTr1SfpvFGjwbTfpu1SQYy242xPjBz2mk3hbtzN6eB85MftxVw1zj5K5XBF'
-      // }
-      captureMode={'auto'}
-      onError={onError}
-      token={token}
-      locationId={locationId}
-      options={Platform.OS === 'ios' ? options : JSON.stringify(options)} // ideally this should be passed from options variable, that is receiving data from ScannerContainer
-      environment={environment}
-      ref={VisionSDKViewRef}
-    >
-      {children}
-    </VisionSdkView>
+    <>
+      {/* {token !== '' ? ( */}
+      <VisionSdkView
+        style={styles.flex}
+        onBarcodeScanSuccess={BarCodeScanHandler}
+        onOCRDataReceived={OCRScanHandler}
+        onDetected={OnDetectedHandler}
+        mode={mode}
+        // apiKey={
+        //   'key_stag_7da7b5e917tq2eCckhc5QnTr1SfpvFGjwbTfpu1SQYy242xPjBz2mk3hbtzN6eB85MftxVw1zj5K5XBF'
+        // }
+        captureMode={'auto'}
+        onError={onError}
+        token={token}
+        locationId={locationId}
+        options={Platform.OS === 'ios' ? options : JSON.stringify(options)} // ideally this should be passed from options variable, that is receiving data from ScannerContainer
+        environment={environment}
+        ref={VisionSDKViewRef}
+      >
+        {children}
+      </VisionSdkView>
+      {/* ) : (
+        <></>
+      )} */}
+    </>
     // ) : (
     //   <View style={styles.flex}>
     //     <Text>NOT IMPLEMENTED FOR ANDROID YET.</Text>
