@@ -1,11 +1,10 @@
-import React, { useImperativeHandle, useRef, useState } from 'react';
+import React, { useEffect, useImperativeHandle, useRef, useState } from 'react';
 import {
-  View,
   UIManager,
   findNodeHandle,
-  Text,
-  Platform,
   StyleSheet,
+  DeviceEventEmitter,
+  Platform,
 } from 'react-native';
 import { VisionSdkView } from './VisionSdkViewManager';
 
@@ -50,10 +49,10 @@ const Camera: React.FC<Props> = ({
       onPressCaptures();
     },
     stopRunningHandler: () => {
-      onPressStopRunning()
+      onPressStopRunning();
     },
     startRunningHandler: () => {
-      onPressStartRunning()
+      onPressStartRunning();
     },
     onPressToggleTorchHandler: () => {
       onPressToggleTorch()
@@ -125,31 +124,49 @@ const Camera: React.FC<Props> = ({
   const onChangeOptions = (input: React.SetStateAction<any>) => {
     setOptions(input);
   };
+  useEffect(() => {
+    DeviceEventEmitter.addListener('onBarcodeScanSuccess', BarCodeScanHandler);
+    DeviceEventEmitter.addListener('onOCRDataReceived', OCRScanHandler);
+    DeviceEventEmitter.addListener('onDetected', OnDetectedHandler);
 
-  return Platform.OS === 'ios' ? (
-    <VisionSdkView
-      style={styles.flex}
-      onBarcodeScanSuccess={BarCodeScanHandler}
-      onOCRDataReceived={OCRScanHandler}
-      onDetected={OnDetectedHandler}
-      mode={mode}
-      apiKey={
-        'key_stag_7da7b5e917tq2eCckhc5QnTr1SfpvFGjwbTfpu1SQYy242xPjBz2mk3hbtzN6eB85MftxVw1zj5K5XBF'
-      }
-      captureMode={'auto'}
-      onError={onError}
-      token={token}
-      locationId={locationId}
-      options={options} // ideally this should be passed from options variable, that is receiving data from ScannerContainer
-      environment={environment}
-      ref={VisionSDKViewRef}
-    >
-      {children}
-    </VisionSdkView>
-  ) : (
-    <View style={styles.flex}>
-      <Text>NOT IMPLEMENTED FOR ANDROID YET.</Text>
-    </View>
+    return () => {
+      DeviceEventEmitter.removeAllListeners('onBarcodeScanSuccess');
+      DeviceEventEmitter.removeAllListeners('onOCRDataReceived');
+      DeviceEventEmitter.removeAllListeners('onDetected');
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  return (
+    // Platform.OS === 'ios' ? (
+    <>
+      {/* {token !== '' ? ( */}
+      <VisionSdkView
+        style={styles.flex}
+        onBarcodeScanSuccess={BarCodeScanHandler}
+        onOCRDataReceived={OCRScanHandler}
+        onDetected={OnDetectedHandler}
+        mode={mode}
+        // apiKey={
+        //   'key_stag_7da7b5e917tq2eCckhc5QnTr1SfpvFGjwbTfpu1SQYy242xPjBz2mk3hbtzN6eB85MftxVw1zj5K5XBF'
+        // }
+        captureMode={'auto'}
+        onError={onError}
+        token={token}
+        locationId={locationId}
+        options={Platform.OS === 'ios' ? options : JSON.stringify(options)} // ideally this should be passed from options variable, that is receiving data from ScannerContainer
+        environment={environment}
+        ref={VisionSDKViewRef}
+      >
+        {children}
+      </VisionSdkView>
+      {/* ) : (
+        <></>
+      )} */}
+    </>
+    // ) : (
+    //   <View style={styles.flex}>
+    //     <Text>NOT IMPLEMENTED FOR ANDROID YET.</Text>
+    //   </View>
   );
 };
 
