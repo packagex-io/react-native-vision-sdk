@@ -45,6 +45,19 @@ class VisionSdkViewManager: RCTViewManager {
 
   }
 
+  @objc func toggleTorch(_ node: NSNumber) {
+
+      DispatchQueue.main.async {
+        let component =
+          self.bridge.uiManager.view(
+            forReactTag: node
+          ) as! RNCodeScannerView
+
+          component.setTorchActive()
+      }
+
+    }
+
  
 
 
