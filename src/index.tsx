@@ -55,7 +55,7 @@ const Camera: React.FC<Props> = ({
       onPressStartRunning();
     },
     onPressToggleTorchHandler: () => {
-      onPressToggleTorch()
+      onPressToggleTorch();
     },
     changeModeHandler: (
       input: React.SetStateAction<ScanMode>,
