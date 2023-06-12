@@ -26,10 +26,10 @@ type Props = {
 const Camera: React.FC<Props> = ({
   children,
   refProp,
-  BarCodeScanHandler = (_e: any) => { },
-  OCRScanHandler = (_e: any) => { },
-  OnDetectedHandler = (_e: any) => { },
-  onError = (_e: any): void => { },
+  BarCodeScanHandler = (_e: any) => {},
+  OCRScanHandler = (_e: any) => {},
+  OnDetectedHandler = (_e: any) => {},
+  onError = (_e: any): void => {},
 }: Props) => {
   const defaultScanMode = ScanMode.OCR;
   const [mode, setMode] = useState<ScanMode>(defaultScanMode);
@@ -59,13 +59,13 @@ const Camera: React.FC<Props> = ({
     },
     changeModeHandler: (
       input: React.SetStateAction<ScanMode>,
-      token: React.SetStateAction<string>,
+      _token: React.SetStateAction<string>,
       locationId: React.SetStateAction<string>,
       option: React.SetStateAction<any>,
       appEnvironment: React.SetStateAction<string>
     ) => {
       setEnvironment(appEnvironment);
-      setToken(token);
+      setToken(_token);
       setlocationId(locationId);
       setapiKey(apiKey);
       onChangeMode(input);
@@ -79,7 +79,7 @@ const Camera: React.FC<Props> = ({
       (UIManager.hasViewManagerConfig('VisionSDKView') &&
         UIManager.getViewManagerConfig('VisionSDKView').Commands
           .captureImage) ||
-      0,
+        0,
       []
     );
   };
@@ -88,9 +88,8 @@ const Camera: React.FC<Props> = ({
     UIManager.dispatchViewManagerCommand(
       findNodeHandle(VisionSDKViewRef.current),
       (UIManager.hasViewManagerConfig('VisionSDKView') &&
-        UIManager.getViewManagerConfig('VisionSDKView').Commands
-          .stopRunning) ||
-      1,
+        UIManager.getViewManagerConfig('VisionSDKView').Commands.stopRunning) ||
+        1,
       []
     );
   };
@@ -101,19 +100,17 @@ const Camera: React.FC<Props> = ({
       (UIManager.hasViewManagerConfig('VisionSDKView') &&
         UIManager.getViewManagerConfig('VisionSDKView').Commands
           .startRunning) ||
-      2,
+        2,
       []
     );
   };
-
 
   const onPressToggleTorch = () => {
     UIManager.dispatchViewManagerCommand(
       findNodeHandle(VisionSDKViewRef.current),
       (UIManager.hasViewManagerConfig('VisionSDKView') &&
-        UIManager.getViewManagerConfig('VisionSDKView').Commands
-          .toggleTorch) ||
-      3,
+        UIManager.getViewManagerConfig('VisionSDKView').Commands.toggleTorch) ||
+        3,
       []
     );
   };
