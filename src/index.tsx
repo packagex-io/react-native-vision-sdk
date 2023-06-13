@@ -54,15 +54,18 @@ const Camera: React.FC<Props> = ({
     startRunningHandler: () => {
       onPressStartRunning();
     },
+    onPressToggleTorchHandler: () => {
+      onPressToggleTorch();
+    },
     changeModeHandler: (
       input: React.SetStateAction<ScanMode>,
-      token: React.SetStateAction<string>,
+      _token: React.SetStateAction<string>,
       locationId: React.SetStateAction<string>,
       option: React.SetStateAction<any>,
       appEnvironment: React.SetStateAction<string>
     ) => {
       setEnvironment(appEnvironment);
-      setToken(token);
+      setToken(_token);
       setlocationId(locationId);
       setapiKey(apiKey);
       onChangeMode(input);
@@ -71,7 +74,6 @@ const Camera: React.FC<Props> = ({
   }));
 
   const onPressCaptures = () => {
-    console.log('Image Captured');
     UIManager.dispatchViewManagerCommand(
       findNodeHandle(VisionSDKViewRef.current),
       (UIManager.hasViewManagerConfig('VisionSDKView') &&
@@ -83,7 +85,6 @@ const Camera: React.FC<Props> = ({
   };
 
   const onPressStopRunning = () => {
-    console.log('Image Captured');
     UIManager.dispatchViewManagerCommand(
       findNodeHandle(VisionSDKViewRef.current),
       (UIManager.hasViewManagerConfig('VisionSDKView') &&
@@ -94,13 +95,22 @@ const Camera: React.FC<Props> = ({
   };
 
   const onPressStartRunning = () => {
-    console.log('Image Captured');
     UIManager.dispatchViewManagerCommand(
       findNodeHandle(VisionSDKViewRef.current),
       (UIManager.hasViewManagerConfig('VisionSDKView') &&
         UIManager.getViewManagerConfig('VisionSDKView').Commands
           .startRunning) ||
         2,
+      []
+    );
+  };
+
+  const onPressToggleTorch = () => {
+    UIManager.dispatchViewManagerCommand(
+      findNodeHandle(VisionSDKViewRef.current),
+      (UIManager.hasViewManagerConfig('VisionSDKView') &&
+        UIManager.getViewManagerConfig('VisionSDKView').Commands.toggleTorch) ||
+        3,
       []
     );
   };

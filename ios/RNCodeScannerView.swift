@@ -126,6 +126,20 @@ class RNCodeScannerView: UIView, CodeScannerViewDelegate {
 
   }
 
+// toggles torch 
+    func setTorchActive() {
+            assert(Thread.isMainThread)
+            
+            guard let videoDevice = AVCaptureDevice.DiscoverySession(deviceTypes: [.builtInWideAngleCamera], mediaType: .video, position: .back).devices.first,
+                videoDevice.hasTorch, videoDevice.isTorchAvailable
+            else {
+                    return
+            }
+            try? videoDevice.lockForConfiguration()
+        videoDevice.torchMode = videoDevice.isTorchActive ? .off : .on
+            videoDevice.unlockForConfiguration()
+        }
+
   init() {
     super.init(frame: UIScreen.main.bounds)
 

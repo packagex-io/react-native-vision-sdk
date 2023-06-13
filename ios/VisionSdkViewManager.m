@@ -15,4 +15,5 @@ RCT_EXPORT_VIEW_PROPERTY(options, NSDictionary *)
 RCT_EXTERN_METHOD(captureImage:(nonnull NSNumber *)node)
 RCT_EXTERN_METHOD(stopRunning:(nonnull NSNumber *)node)
 RCT_EXTERN_METHOD(startRunning:(nonnull NSNumber *)node)
+RCT_EXTERN_METHOD(toggleTorch:(nonnull NSNumber *)node)
 @end
