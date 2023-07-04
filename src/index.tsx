@@ -30,10 +30,10 @@ const Camera: React.FC<Props> = ({
   refProp,
   reRender,
   captureMode,
-  BarCodeScanHandler = (_e: any) => { },
-  OCRScanHandler = (_e: any) => { },
-  OnDetectedHandler = (_e: any) => { },
-  onError = (_e: any): void => { },
+  BarCodeScanHandler = (_e: any) => {},
+  OCRScanHandler = (_e: any) => {},
+  OnDetectedHandler = (_e: any) => {},
+  onError = (_e: any): void => {},
 }: Props) => {
   const defaultScanMode = ScanMode.BARCODE;
   const [mode, setMode] = useState<ScanMode>(defaultScanMode);
