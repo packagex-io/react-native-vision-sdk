@@ -151,6 +151,7 @@ class RNCodeScannerView: UIView, CodeScannerViewDelegate {
         focusImage: nil, shouldDisplayFocusImage: true, shouldScanInFocusImageRect: true,
         isTextIndicationOn: true, isBarCodeOrQRCodeIndicationOn: true, sessionPreset: .high,
         nthFrameToProcess: 10, captureMode: .manual, captureType: .single), scanMode: .barCode)
+      self.backgroundColor = UIColor.black
 
     codeScannerView!.startRunning()
 
