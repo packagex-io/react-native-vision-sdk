@@ -135,8 +135,8 @@ const Camera: React.FC<Props> = ({
         mode={mode}
         captureMode={captureMode}
         onError={onError}
-        token={token || 'eyJhbGciOiJSUzI1NiIsImtpZCI6ImI2NzE1ZTJmZjcxZDIyMjQ5ODk1MDAyMzY2ODMwNDc3Mjg2Nzg0ZTMiLCJ0eXAiOiJKV1QifQ.eyJvcmciOiJvcmdfZk1USDE1ZVhkWWFGUUI1WTd1UEVVZiIsInJvbGUiOiJyb2xlX293bmVyIiwic2NvcGVzIjp7Im9yZ2FuaXphdGlvbnMiOjIsInNoaXBtZW50cyI6MiwibG9jYXRpb25zIjoyLCJ1c2VycyI6MiwicGF5bWVudHMiOjIsInBheW1lbnRfbWV0aG9kcyI6MiwiZGVsaXZlcmllcyI6Miwid2ViaG9va3MiOjIsImFwaV9rZXlzIjoyLCJpdGVtcyI6MiwiYXNzZXRzIjoyLCJmdWxmaWxsbWVudHMiOjIsImNvbnRhY3RzIjoyLCJhZGRyZXNzZXMiOjIsImtpb3NrcyI6MiwibWFuaWZlc3RzIjoyLCJhdWRpdHMiOjIsInNjYW5zIjoyLCJldmVudHMiOjIsImNvbnRhaW5lcnMiOjIsInRocmVhZHMiOjIsImFuYWx5dGljcyI6Mn0sImlzcyI6Imh0dHBzOi8vc2VjdXJldG9rZW4uZ29vZ2xlLmNvbS9weC1wbGF0Zm9ybS1kZXYtYTFlYzQiLCJhdWQiOiJweC1wbGF0Zm9ybS1kZXYtYTFlYzQiLCJhdXRoX3RpbWUiOjE2ODExMDIyNzQsInVzZXJfaWQiOiJ1c2VyX21SdGJ0aWJiWnFNWTgxTm5XMjZZcGgiLCJzdWIiOiJ1c2VyX21SdGJ0aWJiWnFNWTgxTm5XMjZZcGgiLCJpYXQiOjE2ODMxMTE4NjksImV4cCI6MTY4MzExNTQ2OSwiZW1haWwiOiJtdWhhbW1hZC5zaGVoYXJ5YXJAcGFja2FnZXguaW8iLCJlbWFpbF92ZXJpZmllZCI6dHJ1ZSwiZmlyZWJhc2UiOnsiaWRlbnRpdGllcyI6eyJlbWFpbCI6WyJtdWhhbW1hZC5zaGVoYXJ5YXJAcGFja2FnZXguaW8iXX0sInNpZ25faW5fcHJvdmlkZXIiOiJwYXNzd29yZCJ9fQ.OxUnMrMwIdgnWf82_rqazJk6HD5DYSMQyNmYilErEWHclKAdZmx-yN8LfQbC81nQMosmNMvf6yGeKa2BoplNM7MrqUelcjFNewk5K9jIjIYdfIAeRn1gX6wA7PYgMWxeGLjkMLNwS9dChy-i4eGLaG0G9rk7Qxt8kSBmDJI9sDbsTRND2dwJ0KFfjlhxJH2NEWygNv0ApAPR1gTyngMRYH4JLapp91JKmWgKvq2q2Id_iGTdH1z9XuM51J5QPFNTJXK7lmzVmZknnHOt-B6QoXOADv2Js5jzNBwKgxPJssBT3Q2uDI73_zwuCj1kuGzdORMb8IqDFO80mjDVFJAXwA'}
-        locationId={locationId || 'loc_3LUuAHBZgSQ4t9fgMYVfyA'}
+        token={token }
+        locationId={locationId }
         options={Platform.OS === 'ios' ? options : JSON.stringify(options)} // ideally this should be passed from options variable, that is receiving data from ScannerContainer
         environment={environment}
         ref={VisionSDKViewRef}
