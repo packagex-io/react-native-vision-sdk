@@ -1,18 +1,18 @@
-# react-native-vision-sdk
+# React Native Vision SDK
 
 VisionSDK provides a way to detect barcodes and QR codes with both manual and auto capturing modes. It also provides OCR (Optical Character Recognition) for text detection (label scanning with Restful API) modes.
 Some key features of the VisionSDK include:
-• Support for multiple view types (rectangular, square, fullscreen) for the scanning window
+• Support for multiple view types (rectangular, square, full screen) for the scanning window
 • Customization options for the scanning window size, shape, and border style
 • Capture image and OCR API capabilities
 
-# Installation
+## Installation
 
 yarn add react-native-vision-sdk;
 // OR
 npm install --save react-native-vision-sdk
 
-# Permissions
+## Permissions
 
 To use the camera,
 
@@ -26,13 +26,13 @@ To use the camera,
    <string>Your own description of the purpose</string>
    ...
 
-# IOS Development Requirements
+## IOS Development Requirements
 
 • iOS 13.0+
 • Swift: 5.4.2
 • Xcode Version: 13.0
 
-# Basis Of Usage
+### Basis Of Usage
 
 ```js
 import React, { useEffect, useRef } from 'react';
@@ -58,7 +58,7 @@ const ScannerView = () => {
 };
 ```
 
-# Initialization
+### Initialization
 
 In order to use the OCR API, you have to set apiKey to your API key. Also, you also need to specify the API environment that you have the API key for. Please note that these have to be set before using the API call. You can generate your own API key at cloud.packagex.io. You can find the instruction guide here.
 
@@ -71,21 +71,21 @@ locationId // your location id if you have
 },[])
 ```
 
-# Capture Image
+### Capture Image
 
 You can capture an image when mode is OCR. In OCR mode when capture is called, then in the callback, it will return an image.
 ```js
 visionSdk.current.cameraCaptureHandler()
 ```
 
-# Close Camera
+### Close Camera
 
 Stops camera session and scanning.
 ```js
 visionSdk.current.stopRunningHandler()
 ```
 
-# Props
+### Props
 
 refProp: Set reference for vision sdk to manipulate modes or to access callback functions
 mode: barCode - Detects barcodes only in this mode.
@@ -96,9 +96,9 @@ captureMode: Default captureMode in ‘auto’, you can either use ‘manual’
 locationId: By default your location will get from apiKey or either you can set location id
 environment: You can set your development environment like ‘dev’, ‘staging’
 
-# The callback will be called with a response object
+### The callback will be called with a response object
 
-# The Response Object
+### The Response Object
 ```js
 OCRScanHandler: Return ocr detected data
 onDetectedHandler: Return the detected data for ‘barcode’ and ‘text’
@@ -109,16 +109,11 @@ ErrorCode: Description camera_unavailable camera not available on device
 permission: Permission not satisfied
 others: other errors (check errorMessage for description)
 ```
-# In the callbacks, Success or error will be returned. It returns with the OCR Response from PackageX Platform API Response.
+### In the callbacks, Success or error will be returned. It returns with the OCR Response from PackageX Platform API Response.
 
 ## Contributing
 
 See the [contributing guide](CONTRIBUTING.md) to learn how to contribute to the repository and the development workflow.
 
 ## License
-
 MIT
-
----
-
-Made with [create-react-native-library](https://github.com/callstack/react-native-builder-bob)
