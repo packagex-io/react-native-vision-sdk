@@ -135,8 +135,8 @@ const Camera: React.FC<Props> = ({
         mode={mode}
         captureMode={captureMode}
         onError={onError}
-        token={token }
-        locationId={locationId }
+        token={token}
+        locationId={locationId}
         options={Platform.OS === 'ios' ? options : JSON.stringify(options)} // ideally this should be passed from options variable, that is receiving data from ScannerContainer
         environment={environment}
         ref={VisionSDKViewRef}
