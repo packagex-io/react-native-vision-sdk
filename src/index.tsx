@@ -17,6 +17,8 @@ enum ScanMode {
 type Props = {
   children?: React.ReactNode;
   refProp?: any;
+  reRender?: string;
+  captureMode?: string;
   BarCodeScanHandler?: (_e: any) => void;
   OCRScanHandler?: (_e: any) => void;
   OnDetectedHandler?: (_e: any) => void;
@@ -26,17 +28,19 @@ type Props = {
 const Camera: React.FC<Props> = ({
   children,
   refProp,
+  reRender,
+  captureMode,
   BarCodeScanHandler = (_e: any) => {},
   OCRScanHandler = (_e: any) => {},
   OnDetectedHandler = (_e: any) => {},
   onError = (_e: any): void => {},
 }: Props) => {
-  const defaultScanMode = ScanMode.OCR;
+  const defaultScanMode = ScanMode.BARCODE;
   const [mode, setMode] = useState<ScanMode>(defaultScanMode);
   const [token, setToken] = useState('');
-  const [apiKey, setapiKey] = useState('');
+  const [apiKey, setApiKey] = useState('');
   const [environment, setEnvironment] = useState('dev');
-  const [locationId, setlocationId] = useState('');
+  const [locationId, setLocationId] = useState('');
   const [options, setOptions] = useState({
     parse_addresses: 'true',
     match_contacts: 'true',
@@ -54,22 +58,19 @@ const Camera: React.FC<Props> = ({
     startRunningHandler: () => {
       onPressStartRunning();
     },
-    onPressToggleTorchHandler: () => {
-      onPressToggleTorch();
-    },
     changeModeHandler: (
       input: React.SetStateAction<ScanMode>,
-      _token: React.SetStateAction<string>,
+      token: React.SetStateAction<string>,
       locationId: React.SetStateAction<string>,
       option: React.SetStateAction<any>,
       appEnvironment: React.SetStateAction<string>
     ) => {
-      setEnvironment(appEnvironment);
-      setToken(_token);
-      setlocationId(locationId);
-      setapiKey(apiKey);
+      setEnvironment(appEnvironment ? appEnvironment : environment);
+      setToken(token);
+      setLocationId(locationId);
+      setApiKey(apiKey);
       onChangeMode(input);
-      onChangeOptions(option);
+      onChangeOptions(option ? option : options);
     },
   }));
 
@@ -105,16 +106,6 @@ const Camera: React.FC<Props> = ({
     );
   };
 
-  const onPressToggleTorch = () => {
-    UIManager.dispatchViewManagerCommand(
-      findNodeHandle(VisionSDKViewRef.current),
-      (UIManager.hasViewManagerConfig('VisionSDKView') &&
-        UIManager.getViewManagerConfig('VisionSDKView').Commands.toggleTorch) ||
-        3,
-      []
-    );
-  };
-
   const onChangeMode = (input: React.SetStateAction<ScanMode>) => {
     setMode(input);
   };
@@ -134,19 +125,15 @@ const Camera: React.FC<Props> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   return (
-    // Platform.OS === 'ios' ? (
     <>
-      {/* {token !== '' ? ( */}
       <VisionSdkView
+        key={reRender}
         style={styles.flex}
         onBarcodeScanSuccess={BarCodeScanHandler}
         onOCRDataReceived={OCRScanHandler}
         onDetected={OnDetectedHandler}
         mode={mode}
-        // apiKey={
-        //   'key_stag_7da7b5e917tq2eCckhc5QnTr1SfpvFGjwbTfpu1SQYy242xPjBz2mk3hbtzN6eB85MftxVw1zj5K5XBF'
-        // }
-        captureMode={'auto'}
+        captureMode={captureMode}
         onError={onError}
         token={token}
         locationId={locationId}
@@ -156,14 +143,7 @@ const Camera: React.FC<Props> = ({
       >
         {children}
       </VisionSdkView>
-      {/* ) : (
-        <></>
-      )} */}
     </>
-    // ) : (
-    //   <View style={styles.flex}>
-    //     <Text>NOT IMPLEMENTED FOR ANDROID YET.</Text>
-    //   </View>
   );
 };
 
