@@ -148,8 +148,8 @@ class RNCodeScannerView: UIView, CodeScannerViewDelegate {
     codeScannerView!.configure(
       delegate: self,
       input: .init(
-        focusImage: nil, shouldDisplayFocusImage: true, shouldScanInFocusImageRect: true,
-        isTextIndicationOn: true, isBarCodeOrQRCodeIndicationOn: true, sessionPreset: .high,
+        focusImage: nil, shouldDisplayFocusImage: false, shouldScanInFocusImageRect: false,
+        isTextIndicationOn: false, isBarCodeOrQRCodeIndicationOn: false, sessionPreset: .high,
         nthFrameToProcess: 10, captureMode: .manual, captureType: .single), scanMode: .barCode)
       self.backgroundColor = UIColor.black
 
