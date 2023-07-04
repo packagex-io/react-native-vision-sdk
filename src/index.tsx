@@ -17,7 +17,6 @@ enum ScanMode {
 type Props = {
   children?: React.ReactNode;
   refProp?: any;
-  key?:string;
   reRender?:string;
   captureMode?:string;
   BarCodeScanHandler?: (_e: any) => void;
@@ -29,7 +28,6 @@ type Props = {
 const Camera: React.FC<Props> = ({
   children,
   refProp,
-  key,
   reRender,
   captureMode,
   BarCodeScanHandler = (_e: any) => {},
