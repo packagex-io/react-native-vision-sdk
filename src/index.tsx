@@ -38,9 +38,9 @@ const Camera: React.FC<Props> = ({
   const defaultScanMode = ScanMode.BARCODE;
   const [mode, setMode] = useState<ScanMode>(defaultScanMode);
   const [token, setToken] = useState('');
-  const [apiKey, setapiKey] = useState('');
+  const [apiKey, setApiKey] = useState('');
   const [environment, setEnvironment] = useState('dev');
-  const [locationId, setlocationId] = useState('');
+  const [locationId, setLocationId] = useState('');
   const [options, setOptions] = useState({
     parse_addresses: 'true',
     match_contacts: 'true',
@@ -67,8 +67,8 @@ const Camera: React.FC<Props> = ({
     ) => {
       setEnvironment(appEnvironment ? appEnvironment : environment);
       setToken(token);
-      setlocationId(locationId);
-      setapiKey(apiKey);
+      setLocationId(locationId);
+      setApiKey(apiKey);
       onChangeMode(input);
       onChangeOptions(option ? option : options);
     },
