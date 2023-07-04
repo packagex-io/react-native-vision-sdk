@@ -80,8 +80,8 @@ const Camera: React.FC<Props> = ({
       (UIManager.hasViewManagerConfig('VisionSDKView') &&
         UIManager.getViewManagerConfig('VisionSDKView').Commands
           .captureImage) ||
-          0,
-        []
+        0,
+      []
     );
   };
 
@@ -90,8 +90,8 @@ const Camera: React.FC<Props> = ({
       findNodeHandle(VisionSDKViewRef.current),
       (UIManager.hasViewManagerConfig('VisionSDKView') &&
         UIManager.getViewManagerConfig('VisionSDKView').Commands.stopRunning) ||
-          1,
-        []
+        1,
+      []
     );
   };
 
@@ -101,8 +101,8 @@ const Camera: React.FC<Props> = ({
       (UIManager.hasViewManagerConfig('VisionSDKView') &&
         UIManager.getViewManagerConfig('VisionSDKView').Commands
           .startRunning) ||
-          2,
-        []
+        2,
+      []
     );
   };
 
