@@ -56,7 +56,7 @@ allprojects {
 
         credentials {
           username = "zaheerrasheed"
-          password = "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"
+          password = ""
         }
       }
     }
