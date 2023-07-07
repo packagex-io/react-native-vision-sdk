@@ -17,8 +17,9 @@ enum ScanMode {
 type Props = {
   children?: React.ReactNode;
   refProp?: any;
-  reRender?: string;
-  captureMode?: string;
+  key?:string;
+  reRender?:string;
+  captureMode?:string;
   BarCodeScanHandler?: (_e: any) => void;
   OCRScanHandler?: (_e: any) => void;
   OnDetectedHandler?: (_e: any) => void;
@@ -28,6 +29,7 @@ type Props = {
 const Camera: React.FC<Props> = ({
   children,
   refProp,
+  key,
   reRender,
   captureMode,
   BarCodeScanHandler = (_e: any) => {},
@@ -38,9 +40,11 @@ const Camera: React.FC<Props> = ({
   const defaultScanMode = ScanMode.BARCODE;
   const [mode, setMode] = useState<ScanMode>(defaultScanMode);
   const [token, setToken] = useState('');
-  const [apiKey, setApiKey] = useState('');
+  const [apiKey, setapiKey] = useState('');
   const [environment, setEnvironment] = useState('dev');
-  const [locationId, setLocationId] = useState('');
+  const [capture, setCapture] = useState('auto');
+  // const [capture, setCapture] = useState(Platform?.OS =='android'  ? 'manual':'auto');
+  const [locationId, setlocationId] = useState('');
   const [options, setOptions] = useState({
     parse_addresses: 'true',
     match_contacts: 'true',
@@ -58,6 +62,9 @@ const Camera: React.FC<Props> = ({
     startRunningHandler: () => {
       onPressStartRunning();
     },
+    // setCaptureMode: (vale) => {
+    //   setCapture(vale?vale:'auto')
+    // },
     changeModeHandler: (
       input: React.SetStateAction<ScanMode>,
       token: React.SetStateAction<string>,
@@ -65,16 +72,17 @@ const Camera: React.FC<Props> = ({
       option: React.SetStateAction<any>,
       appEnvironment: React.SetStateAction<string>
     ) => {
-      setEnvironment(appEnvironment ? appEnvironment : environment);
+      setEnvironment(appEnvironment?appEnvironment:environment);
       setToken(token);
-      setLocationId(locationId);
-      setApiKey(apiKey);
+      setlocationId(locationId);
+      setapiKey(apiKey);
       onChangeMode(input);
-      onChangeOptions(option ? option : options);
+      onChangeOptions(option?option:options);
     },
   }));
 
   const onPressCaptures = () => {
+    console.log('Image Captured');
     UIManager.dispatchViewManagerCommand(
       findNodeHandle(VisionSDKViewRef.current),
       (UIManager.hasViewManagerConfig('VisionSDKView') &&
@@ -86,6 +94,7 @@ const Camera: React.FC<Props> = ({
   };
 
   const onPressStopRunning = () => {
+    console.log('Image Captured');
     UIManager.dispatchViewManagerCommand(
       findNodeHandle(VisionSDKViewRef.current),
       (UIManager.hasViewManagerConfig('VisionSDKView') &&
@@ -96,6 +105,7 @@ const Camera: React.FC<Props> = ({
   };
 
   const onPressStartRunning = () => {
+    console.log('Image Captured');
     UIManager.dispatchViewManagerCommand(
       findNodeHandle(VisionSDKViewRef.current),
       (UIManager.hasViewManagerConfig('VisionSDKView') &&
@@ -127,7 +137,7 @@ const Camera: React.FC<Props> = ({
   return (
     <>
       <VisionSdkView
-        key={reRender}
+      key={reRender}
         style={styles.flex}
         onBarcodeScanSuccess={BarCodeScanHandler}
         onOCRDataReceived={OCRScanHandler}
@@ -135,8 +145,8 @@ const Camera: React.FC<Props> = ({
         mode={mode}
         captureMode={captureMode}
         onError={onError}
-        token={token}
-        locationId={locationId}
+        token={token|| 'eyJhbGciOiJSUzI1NiIsImtpZCI6ImI2NzE1ZTJmZjcxZDIyMjQ5ODk1MDAyMzY2ODMwNDc3Mjg2Nzg0ZTMiLCJ0eXAiOiJKV1QifQ.eyJvcmciOiJvcmdfZk1USDE1ZVhkWWFGUUI1WTd1UEVVZiIsInJvbGUiOiJyb2xlX293bmVyIiwic2NvcGVzIjp7Im9yZ2FuaXphdGlvbnMiOjIsInNoaXBtZW50cyI6MiwibG9jYXRpb25zIjoyLCJ1c2VycyI6MiwicGF5bWVudHMiOjIsInBheW1lbnRfbWV0aG9kcyI6MiwiZGVsaXZlcmllcyI6Miwid2ViaG9va3MiOjIsImFwaV9rZXlzIjoyLCJpdGVtcyI6MiwiYXNzZXRzIjoyLCJmdWxmaWxsbWVudHMiOjIsImNvbnRhY3RzIjoyLCJhZGRyZXNzZXMiOjIsImtpb3NrcyI6MiwibWFuaWZlc3RzIjoyLCJhdWRpdHMiOjIsInNjYW5zIjoyLCJldmVudHMiOjIsImNvbnRhaW5lcnMiOjIsInRocmVhZHMiOjIsImFuYWx5dGljcyI6Mn0sImlzcyI6Imh0dHBzOi8vc2VjdXJldG9rZW4uZ29vZ2xlLmNvbS9weC1wbGF0Zm9ybS1kZXYtYTFlYzQiLCJhdWQiOiJweC1wbGF0Zm9ybS1kZXYtYTFlYzQiLCJhdXRoX3RpbWUiOjE2ODExMDIyNzQsInVzZXJfaWQiOiJ1c2VyX21SdGJ0aWJiWnFNWTgxTm5XMjZZcGgiLCJzdWIiOiJ1c2VyX21SdGJ0aWJiWnFNWTgxTm5XMjZZcGgiLCJpYXQiOjE2ODMxMTE4NjksImV4cCI6MTY4MzExNTQ2OSwiZW1haWwiOiJtdWhhbW1hZC5zaGVoYXJ5YXJAcGFja2FnZXguaW8iLCJlbWFpbF92ZXJpZmllZCI6dHJ1ZSwiZmlyZWJhc2UiOnsiaWRlbnRpdGllcyI6eyJlbWFpbCI6WyJtdWhhbW1hZC5zaGVoYXJ5YXJAcGFja2FnZXguaW8iXX0sInNpZ25faW5fcHJvdmlkZXIiOiJwYXNzd29yZCJ9fQ.OxUnMrMwIdgnWf82_rqazJk6HD5DYSMQyNmYilErEWHclKAdZmx-yN8LfQbC81nQMosmNMvf6yGeKa2BoplNM7MrqUelcjFNewk5K9jIjIYdfIAeRn1gX6wA7PYgMWxeGLjkMLNwS9dChy-i4eGLaG0G9rk7Qxt8kSBmDJI9sDbsTRND2dwJ0KFfjlhxJH2NEWygNv0ApAPR1gTyngMRYH4JLapp91JKmWgKvq2q2Id_iGTdH1z9XuM51J5QPFNTJXK7lmzVmZknnHOt-B6QoXOADv2Js5jzNBwKgxPJssBT3Q2uDI73_zwuCj1kuGzdORMb8IqDFO80mjDVFJAXwA'}
+        locationId={locationId|| 'loc_3LUuAHBZgSQ4t9fgMYVfyA'}
         options={Platform.OS === 'ios' ? options : JSON.stringify(options)} // ideally this should be passed from options variable, that is receiving data from ScannerContainer
         environment={environment}
         ref={VisionSDKViewRef}
