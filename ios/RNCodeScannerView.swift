@@ -1,5 +1,6 @@
 import UIKit
 import VisionSDK
+import AVFoundation
 
 class RNCodeScannerView: UIView, CodeScannerViewDelegate {
 
