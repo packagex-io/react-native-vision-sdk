@@ -19,7 +19,6 @@ type Props = {
   refProp?: any;
   key?: string;
   reRender?: string;
-  captureMode?: string;
   BarCodeScanHandler?: (_e: any) => void;
   OCRScanHandler?: (_e: any) => void;
   OnDetectedHandler?: (_e: any) => void;
@@ -31,7 +30,6 @@ const Camera: React.FC<Props> = ({
   refProp,
   // key,
   reRender,
-  captureMode,
   BarCodeScanHandler = (_e: any) => {},
   OCRScanHandler = (_e: any) => {},
   OnDetectedHandler = (_e: any) => {},
