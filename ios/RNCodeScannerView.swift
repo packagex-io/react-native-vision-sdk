@@ -48,13 +48,12 @@ class RNCodeScannerView: UIView, CodeScannerViewDelegate {
   }
 
   @objc func setApiKey(_ apiKey: NSString) {
-    print(apiKey)
     Constants.apiKey = apiKey as String
   }
     
   @objc func setEnvironment(_ environment: String) {
-      print(environment)
       switch environment {
+          
       case "dev":
           Constants.apiEnvironment = .dev
           break
@@ -67,6 +66,9 @@ class RNCodeScannerView: UIView, CodeScannerViewDelegate {
       case "prod":
           Constants.apiEnvironment = .production
           break
+      case "staging":
+          Constants.apiEnvironment = .staging
+        break
       default:
           Constants.apiEnvironment = .dev
       }
@@ -104,11 +106,10 @@ class RNCodeScannerView: UIView, CodeScannerViewDelegate {
       onDetected!(["text": text, "barCode": barCode, "qrCode": qrCode])
     }
   }
+    func codeScannerView(_ scannerView: CodeScannerView, didCaptureOCRImage image: UIImage, withCroppedImge croppedImage: UIImage?, withbarCodes barcodes: [String]) {
+        self.callOCRAPIWithImage(image, andBarcodes: barcodes)
+    }
 
-  func codeScannerView(_ scannerView: CodeScannerView, didCaptureOCRImage image: UIImage, withbarCodes barcodes: [String]) {
-     
-    self.callOCRAPIWithImage(image, andBarcodes: barcodes)
-  }
   
   func callForOCRWithImageInProgress() {
     // do stuff while vision api call is in progress
@@ -179,7 +180,12 @@ extension RNCodeScannerView {
     ) {
 
       [weak self] data, response, error in
-
+        
+        if let data = data {
+            let json = String(data: data, encoding: String.Encoding.utf8)
+            // print("Failure Response: \(json)")
+        }
+        
       guard let self = self else {
         return
       }
