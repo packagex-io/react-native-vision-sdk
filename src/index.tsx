@@ -61,6 +61,9 @@ const Camera: React.FC<Props> = ({
     startRunningHandler: () => {
       onPressStartRunning();
     },
+    onPressToggleTorchHandler: () => {
+      onPressToggleTorch();
+    },
     // setCaptureMode: (vale) => {
     //   setCapture(vale?vale:'auto')
     // },
@@ -113,6 +116,17 @@ const Camera: React.FC<Props> = ({
         UIManager.getViewManagerConfig('VisionSDKView').Commands
           .startRunning) ||
         2,
+      []
+    );
+  };
+
+  const onPressToggleTorch = () => {
+    console.log('Toggle Torch');
+    UIManager.dispatchViewManagerCommand(
+      findNodeHandle(VisionSDKViewRef.current),
+      (UIManager.hasViewManagerConfig('VisionSDKView') &&
+        UIManager.getViewManagerConfig('VisionSDKView').Commands.toggleTorch) ||
+        3,
       []
     );
   };
