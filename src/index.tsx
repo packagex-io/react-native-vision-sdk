@@ -30,10 +30,10 @@ const Camera: React.FC<Props> = ({
   refProp,
   // key,
   reRender,
-  BarCodeScanHandler = (_e: any) => {},
-  OCRScanHandler = (_e: any) => {},
-  OnDetectedHandler = (_e: any) => {},
-  onError = (_e: any): void => {},
+  BarCodeScanHandler = (_e: any) => { },
+  OCRScanHandler = (_e: any) => { },
+  OnDetectedHandler = (_e: any) => { },
+  onError = (_e: any): void => { },
 }: Props) => {
   const defaultScanMode = ScanMode.BARCODE;
   const [mode, setMode] = useState<ScanMode>(defaultScanMode);
@@ -65,7 +65,7 @@ const Camera: React.FC<Props> = ({
     //   setCapture(vale?vale:'auto')
     // },
     changeModeHandler: (
-       c_mode: React.SetStateAction<any>,
+      c_mode: React.SetStateAction<any>,
       input: React.SetStateAction<ScanMode>,
       token: React.SetStateAction<string>,
       locationId: React.SetStateAction<string>,
@@ -89,7 +89,7 @@ const Camera: React.FC<Props> = ({
       (UIManager.hasViewManagerConfig('VisionSDKView') &&
         UIManager.getViewManagerConfig('VisionSDKView').Commands
           .captureImage) ||
-        0,
+      0,
       []
     );
   };
@@ -100,7 +100,7 @@ const Camera: React.FC<Props> = ({
       findNodeHandle(VisionSDKViewRef.current),
       (UIManager.hasViewManagerConfig('VisionSDKView') &&
         UIManager.getViewManagerConfig('VisionSDKView').Commands.stopRunning) ||
-        1,
+      1,
       []
     );
   };
@@ -112,12 +112,12 @@ const Camera: React.FC<Props> = ({
       (UIManager.hasViewManagerConfig('VisionSDKView') &&
         UIManager.getViewManagerConfig('VisionSDKView').Commands
           .startRunning) ||
-        2,
+      2,
       []
     );
   };
 
-  const onChangeCaptureMode= (c_mode: React.SetStateAction<any>) => {
+  const onChangeCaptureMode = (c_mode: React.SetStateAction<any>) => {
     setCameraCaptureMode(c_mode);
   };
   const onChangeMode = (input: React.SetStateAction<ScanMode>) => {
@@ -152,7 +152,7 @@ const Camera: React.FC<Props> = ({
         token={
           token
         }
-        locationId={locationId }
+        locationId={locationId}
         options={Platform.OS === 'ios' ? options : JSON.stringify(options)} // ideally this should be passed from options variable, that is receiving data from ScannerContainer
         environment={environment}
         ref={VisionSDKViewRef}
