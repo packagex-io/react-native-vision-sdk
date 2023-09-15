@@ -24,6 +24,7 @@ type VisionSdkProps = {
   environment?: String;
   captureMode?: String;
   onBarcodeScanSuccess?: (e: any) => void;
+  onOCRImageCaptured?: (e: any) => void;
   onOCRDataReceived?: (e: any) => void;
   onDetected?: (e: any) => void;
   onError?: (e: { nativeEvent: { message: any } }) => void;
