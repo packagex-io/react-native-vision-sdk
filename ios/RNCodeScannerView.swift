@@ -6,7 +6,7 @@ class RNCodeScannerView: UIView, CodeScannerViewDelegate {
 
   // events from swift to Js
   @objc var onBarcodeScanSuccess: RCTDirectEventBlock?
-
+  @objc var onOCRImageCaptured: RCTDirectEventBlock?
   @objc var onOCRDataReceived: RCTDirectEventBlock?
 
   @objc var onDetected: RCTDirectEventBlock?
@@ -107,12 +107,32 @@ class RNCodeScannerView: UIView, CodeScannerViewDelegate {
     }
   }
     func codeScannerView(_ scannerView: CodeScannerView, didCaptureOCRImage image: UIImage, withCroppedImge croppedImage: UIImage?, withbarCodes barcodes: [String]) {
+        
         self.callOCRAPIWithImage(image, andBarcodes: barcodes)
     }
 
   
-  func callForOCRWithImageInProgress() {
-    // do stuff while vision api call is in progress
+    func callForOCRWithImageInProgress(image:UIImage) {
+        
+        // do stuff here while vision api call is in progress
+        
+        // Get the document directory URL
+        let documentsDirectory = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
+
+        // Append a unique filename to the document directory URL
+        let uniqueFilename = UUID().uuidString // You can use a unique identifier or any desired name
+        let fileURL = documentsDirectory.appendingPathComponent(uniqueFilename)
+
+        // Convert the UIImage to Data and save it to the file URL
+        if let imageData = image.pngData() {
+            do {
+                try imageData.write(to: fileURL)
+                print("Image saved at \(fileURL)")
+                onOCRImageCaptured!(["image": "\(fileURL)"])
+            } catch {
+                print("Error saving image: \(error)")
+            }
+        }
   }
 
   func callForOCRWithImageCompletedWithData(data: [AnyHashable: Any]) {
@@ -172,7 +192,7 @@ extension RNCodeScannerView {
   ) {
 
     
-    self.callForOCRWithImageInProgress()
+      self.callForOCRWithImageInProgress(image:image)
     
     VisionAPIManager.shared.callScanAPIWith(
       image, andBarcodes: barcodes, andApiKey: !Constants.apiKey.isEmpty ? Constants.apiKey : nil,
@@ -252,3 +272,4 @@ extension RNCodeScannerView {
     }
   }
 }
+
