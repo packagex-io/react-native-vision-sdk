@@ -41,7 +41,7 @@ const Camera: React.FC<Props> = ({
   const [mode, setMode] = useState<ScanMode>(defaultScanMode);
   const [token, setToken] = useState('');
   const [apiKey, setApiKey] = useState('');
-  const [cameraCaptureMode, setCameraCaptureMode] = useState('manual');
+  const [cameraCaptureMode, setCameraCaptureMode] = useState('auto');
   const [environment, setEnvironment] = useState('staging');
   // const [capture, setCapture] = useState('auto');
   // const [capture, setCapture] = useState(Platform?.OS =='android'  ? 'manual':'auto');
@@ -100,7 +100,7 @@ const Camera: React.FC<Props> = ({
   };
 
   const onPressStopRunning = () => {
-    console.log('Image Captured');
+    console.log('onPressStopRunning');
     UIManager.dispatchViewManagerCommand(
       findNodeHandle(VisionSDKViewRef.current),
       (UIManager.hasViewManagerConfig('VisionSDKView') &&
@@ -111,7 +111,7 @@ const Camera: React.FC<Props> = ({
   };
 
   const onPressStartRunning = () => {
-    console.log('Image Captured');
+    console.log('onPressStartRunning');
     UIManager.dispatchViewManagerCommand(
       findNodeHandle(VisionSDKViewRef.current),
       (UIManager.hasViewManagerConfig('VisionSDKView') &&

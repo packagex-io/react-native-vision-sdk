@@ -87,7 +87,7 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
       authentication = Authentication.BearerToken(token!!)
     else return
 
-    VisionSDK.getInstance().initialise(
+    VisionSDK.getInstance().initialize(
       authentication,
       environment
     )
@@ -97,9 +97,7 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
     super.onDropViewInstance(view)
     Log.d(TAG, "onDropViewInstance: ")
     customScannerView?.recycle()
-//    customScannerView?.stopScanning()
   }
-  //  val scope = CoroutineScope(Dispatchers.Default)
 
   private fun startScanning() {
 
@@ -107,7 +105,7 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
 //    Log.d(VisionSdkViewManager.TAG, "scanningMode: $scanningMode")
 //    Log.d(VisionSdkViewManager.TAG, "detectionMode: $detectionMode")
     customScannerView?.startScanning(
-      ViewType.WINDOW,
+      ViewType.FULLSCRREN,
       scanningMode,
       detectionMode,
       object : ScannerCallbacks {
@@ -130,7 +128,7 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
         override fun onBarcodeDetected(barcode: Barcode) {
           Log.d(VisionSdkViewManager.TAG, "onBarcodeDetected: ")
 //          Toast.makeText(context!!, barcode.displayValue, Toast.LENGTH_LONG).show()
-          customScannerView?.stopScanning()
+//          customScannerView?.stopScanning()
           val event = Arguments.createMap().apply {
             putArray("code", Arguments.fromArray(arrayOf(barcode.displayValue)))
           }
@@ -174,7 +172,11 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
       "captureImage",
       0,
       "stopRunning",
-      1
+      1,
+      "startRunning",
+      2,
+      "toggleTorch",
+      3
     )
   }
 
@@ -191,7 +193,15 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
         return
       }
       1 -> {
-        stopCamera()
+        stopScanning()
+        return
+      }
+      2 -> {
+        restartScanning()
+        return
+      }
+      3 -> {
+        toggleTorch()
         return
       }
       else -> throw IllegalArgumentException(
@@ -209,9 +219,17 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
     Log.d(TAG, "captureImage: ")
     customScannerView!!.capture()
   }
-  private fun stopCamera() {
-    Log.d(TAG, "stopCamera: ")
-    customScannerView!!.recycle()
+  private fun stopScanning() {
+    Log.d(TAG, "stopScanning: ")
+    customScannerView!!.stopScanning()
+  }
+  private fun restartScanning() {
+    Log.d(TAG, "restartScanning: ")
+    customScannerView!!.restartScanning()
+  }
+  private fun toggleTorch() {
+    Log.d(TAG, "enableTorch: ")
+    customScannerView!!.enableTorch()
   }
 
   private fun triggerOCRCalls(bitmap: Bitmap, list: MutableList<Barcode>) {
