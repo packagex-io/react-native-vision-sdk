@@ -2,12 +2,8 @@ import * as React from 'react';
 import VisionSdkView from 'react-native-vision-sdk';
 
 export default function App() {
-  const visionSdk = React.useRef(null);
+  const visionSdk = React.useRef<any>(null);
   React.useEffect(() => {
-    // console.log('ScanMode.BARCODE', ScanMode.BARCODE);
-    // console.log('idToken', idToken);
-    // console.log('currentLocation.id', location.id);
-
     visionSdk?.current?.changeModeHandler(
       'auto',
       'barcode',
@@ -20,6 +16,7 @@ export default function App() {
       'staging'
     );
   }, []);
+
   return (
     <>
       <VisionSdkView
