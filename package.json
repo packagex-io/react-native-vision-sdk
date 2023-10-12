@@ -86,7 +86,7 @@
     "react-native-builder-bob": "^0.20.0",
     "release-it": "^15.0.0",
     "typescript": "^4.5.2",
-    "metro-react-native-babel-preset": "^0.77.0"
+    "metro-react-native-babel-preset": "^0.72.3"
   },
   "optionalDependencies": {
     "fsevents": "^2.0.6"
