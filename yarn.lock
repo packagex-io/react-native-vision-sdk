@@ -2131,11 +2131,6 @@
   resolved "https://registry.yarnpkg.com/@react-native/js-polyfills/-/js-polyfills-0.72.1.tgz#905343ef0c51256f128256330fccbdb35b922291"
   integrity sha512-cRPZh2rBswFnGt5X5EUEPs0r+pAsXxYsifv/fgy9ZLQokuT52bPH+9xjDR+7TafRua5CttGW83wP4TntRcWNDA==
 
-"@react-native/normalize-colors@*":
-  version "0.74.0"
-  resolved "https://registry.yarnpkg.com/@react-native/normalize-colors/-/normalize-colors-0.74.0.tgz#ff9baef0d405bdf88a736f4cdbfc1af51559c031"
-  integrity sha512-wiqXuzfrvIEvNHl+eZCAfPH+XwuKDOD0ldbxEVrN2Odbh/zfZpxA2KxfYnjRGwceEDrzgXAEH5s2Hypn3yP9Og==
-
 "@react-native/normalize-colors@^0.72.0":
   version "0.72.0"
   resolved "https://registry.yarnpkg.com/@react-native/normalize-colors/-/normalize-colors-0.72.0.tgz#14294b7ed3c1d92176d2a00df48456e8d7d62212"
