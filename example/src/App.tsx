@@ -2,12 +2,11 @@ import * as React from 'react';
 import VisionSdkView from 'react-native-vision-sdk';
 
 export default function App() {
-  const [mode, setMode] = React.useState('auto');
   const visionSdk = React.useRef<any>(null);
 
   React.useEffect(() => {
     visionSdk?.current?.changeModeHandler(
-      mode,
+      'auto',
       'barcode',
       'idToken',
       'location.id',
