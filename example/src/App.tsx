@@ -3,6 +3,7 @@ import VisionSdkView from 'react-native-vision-sdk';
 
 export default function App() {
   const visionSdk = React.useRef<any>(null);
+
   React.useEffect(() => {
     visionSdk?.current?.changeModeHandler(
       'auto',
@@ -15,6 +16,10 @@ export default function App() {
       },
       'staging'
     );
+
+    // setInterval(() => {
+    //   setMode(mode === 'manual' ? 'auto' : 'manual');
+    // }, 5000);
   }, []);
 
   return (

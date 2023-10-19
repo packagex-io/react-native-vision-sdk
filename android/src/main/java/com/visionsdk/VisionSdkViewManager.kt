@@ -5,7 +5,6 @@ import android.graphics.Bitmap
 import android.graphics.Color
 import android.util.Log
 import android.view.View
-import android.widget.Toast
 import androidx.annotation.Nullable
 import androidx.lifecycle.LifecycleOwner
 import com.example.customscannerview.mlkit.Authentication
@@ -13,7 +12,11 @@ import com.example.customscannerview.mlkit.Environment
 import com.example.customscannerview.mlkit.VisionSDK
 import com.example.customscannerview.mlkit.enums.ViewType
 import com.example.customscannerview.mlkit.interfaces.OCRResult
-import com.example.customscannerview.mlkit.views.*
+import com.example.customscannerview.mlkit.views.CustomScannerView
+import com.example.customscannerview.mlkit.views.DetectionMode
+import com.example.customscannerview.mlkit.views.ScannerCallbacks
+import com.example.customscannerview.mlkit.views.ScannerException
+import com.example.customscannerview.mlkit.views.ScanningMode
 import com.facebook.infer.annotation.Assertions
 import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.ReactApplicationContext
@@ -27,14 +30,14 @@ import com.facebook.react.uimanager.annotations.ReactProp
 import com.google.mlkit.vision.barcode.common.Barcode
 
 class VisionSdkViewManager(val appContext: ReactApplicationContext) :
-  ViewGroupManager<CustomScannerView>() {
+  ViewGroupManager<CustomScannerView>(), ScannerCallbacks {
 
   var context: Context? = null
   override fun getName() = "VisionSdkView"
   var apiKey: String? = ""
   var token: String? = ""
   var locationId: String? = ""
-  var options: Map<String,String>? =  mapOf()
+  var options: Map<String, String>? = mapOf()
   var environment: Environment = Environment.DEV
   lateinit var authentication: Authentication
 
@@ -42,6 +45,7 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
   var detectionMode: DetectionMode = DetectionMode.Barcode
   var scanningMode: ScanningMode = ScanningMode.Manual
   private var lifecycleOwner: LifecycleOwner? = null
+  private var shouldAddGlobalListner = true
 
   companion object {
     val TAG = "CustomScannerView"
@@ -49,9 +53,15 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
 
   override fun onAfterUpdateTransaction(view: CustomScannerView) {
     super.onAfterUpdateTransaction(view)
+    customScannerView = view
     Log.d(TAG, "onAfterUpdateTransaction: ")
     if (token!!.isNotEmpty()) {
-      startScanning()
+      if (shouldAddGlobalListner) {
+        shouldAddGlobalListner = false
+        startScanning()
+      } else {
+        restartScanning()
+      }
     }
 
 //    Handler(Looper.myLooper()!!).postDelayed({
@@ -75,7 +85,6 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
 //    customScannerView = view.findViewById<CustomScannerView>(R.id.customScannerView)
     customScannerView = CustomScannerView(context!!, null)
 //    customScannerView = CustomView(reactContext)
-
     return customScannerView!!
   }
 
@@ -101,59 +110,65 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
 
   private fun startScanning() {
 
-    Log.d(VisionSdkViewManager.TAG, "startScanning: ")
+    Log.d(TAG, "startScanning: ")
 //    Log.d(VisionSdkViewManager.TAG, "scanningMode: $scanningMode")
 //    Log.d(VisionSdkViewManager.TAG, "detectionMode: $detectionMode")
     customScannerView?.startScanning(
       ViewType.FULLSCRREN,
       scanningMode,
-      detectionMode,
-      object : ScannerCallbacks {
-        override fun detectionCallbacks(
-          barcodeDetected: Boolean,
-          qrCodeDetected: Boolean,
-          textDetected: Boolean
-        ) {
-          val event = Arguments.createMap().apply {
-            putBoolean("barcode", barcodeDetected)
-            putBoolean("qrcode", qrCodeDetected)
-            putBoolean("text", textDetected)
-          }
-//          val reactContext = context as ReactContext
-          appContext
-            .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
-            .emit("onDetected", event)
-        }
+      detectionMode, this
+    )
+//    if (shouldAddGlobalListner){
+//      shouldAddGlobalListner = false
+    viewTreeObserver()
+//    }
+  }
 
-        override fun onBarcodeDetected(barcode: Barcode) {
-          Log.d(VisionSdkViewManager.TAG, "onBarcodeDetected: ")
+  override fun detectionCallbacks(
+    barcodeDetected: Boolean,
+    qrCodeDetected: Boolean,
+    textDetected: Boolean
+  ) {
+    val event = Arguments.createMap().apply {
+      putBoolean("barcode", barcodeDetected)
+      putBoolean("qrcode", qrCodeDetected)
+      putBoolean("text", textDetected)
+    }
+//          val reactContext = context as ReactContext
+    appContext
+      .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
+      .emit("onDetected", event)
+  }
+
+  override fun onBarcodeDetected(barcode: Barcode) {
+    Log.d(TAG, "onBarcodeDetected: ")
 //          Toast.makeText(context!!, barcode.displayValue, Toast.LENGTH_LONG).show()
 //          customScannerView?.stopScanning()
-          val event = Arguments.createMap().apply {
-            putArray("code", Arguments.fromArray(arrayOf(barcode.displayValue)))
-          }
+    val event = Arguments.createMap().apply {
+      putArray("code", Arguments.fromArray(arrayOf(barcode.displayValue)))
+    }
 //          val reactContext = context as ReactContext
-          appContext
-            .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
-            .emit("onBarcodeScanSuccess", event)
-        }
+    appContext
+      .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
+      .emit("onBarcodeScanSuccess", event)
+  }
 
-        override fun onFailure(exception: ScannerException) {
-          exception.printStackTrace()
-        }
+  override fun onFailure(exception: ScannerException) {
+    exception.printStackTrace()
+  }
 
-        override fun onImageCaptured(bitmap: Bitmap, value: MutableList<Barcode>?) {
-          Log.d(VisionSdkViewManager.TAG, "onImageCaptured: ")
+  override fun onImageCaptured(bitmap: Bitmap, value: MutableList<Barcode>?) {
+    Log.d(TAG, "onImageCaptured: ")
 
 //        Toast.makeText(context!!,"onImageCaptured",Toast.LENGTH_LONG).show()
-          triggerOCRCalls(bitmap, value ?: mutableListOf())
-        }
+    triggerOCRCalls(bitmap, value ?: mutableListOf())
+  }
 
-        override fun onMultipleBarcodesDetected(barcodeList: List<Barcode>) {
-          Log.d(VisionSdkViewManager.TAG, "onMultipleBarcodesDetected: ")
-        }
-      })
+  override fun onMultipleBarcodesDetected(barcodeList: List<Barcode>) {
+    Log.d(TAG, "onMultipleBarcodesDetected: ")
+  }
 
+  private fun viewTreeObserver() {
     customScannerView!!.viewTreeObserver.addOnGlobalLayoutListener {
       for (i in 0 until customScannerView!!.childCount) {
         val child: View = customScannerView!!.getChildAt(i)
@@ -192,18 +207,22 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
         captureImage()
         return
       }
+
       1 -> {
         stopScanning()
         return
       }
+
       2 -> {
         restartScanning()
         return
       }
+
       3 -> {
         toggleTorch()
         return
       }
+
       else -> throw IllegalArgumentException(
         String.format(
           "Unsupported command %d received by %s.",
@@ -219,14 +238,19 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
     Log.d(TAG, "captureImage: ")
     customScannerView!!.capture()
   }
+
   private fun stopScanning() {
     Log.d(TAG, "stopScanning: ")
     customScannerView!!.stopScanning()
   }
+
   private fun restartScanning() {
     Log.d(TAG, "restartScanning: ")
-    customScannerView!!.restartScanning()
+    customScannerView!!.restartScanning(
+      scanningMode,
+      detectionMode)
   }
+
   private fun toggleTorch() {
     Log.d(TAG, "enableTorch: ")
     customScannerView!!.enableTorch()
@@ -237,7 +261,7 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
     customScannerView!!.makeOCRApiCall(bitmap = bitmap,
       barcodeList = list,
       locationId = locationId ?: "",
-      options = options?: mapOf() ,
+      options = options ?: mapOf(),
       onScanResult = object : OCRResult {
         override fun onOCRResponse(ocrResponse: String?) {
 
@@ -261,21 +285,21 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
 
   @ReactProp(name = "apiKey")
   fun setApiKey(view: View, apiKey: String = "") {
-    Log.d(TAG ,"apiKey: "+ apiKey)
+    Log.d(TAG, "apiKey: " + apiKey)
     this.apiKey = apiKey
     initializeSdk()
   }
 
   @ReactProp(name = "token")
   fun setToken(view: View, token: String = "") {
-    Log.d(TAG,"token: "+ token)
+    Log.d(TAG, "token: " + token)
     this.token = token
     initializeSdk()
   }
 
   @ReactProp(name = "environment")
   fun setEnvironment(view: View, env: String = "") {
-    Log.d(TAG , "environment: "+env)
+    Log.d(TAG, "environment: " + env)
     environment = when (env.lowercase()) {
       "dev" -> Environment.DEV
       "staging" -> Environment.STAGING
@@ -286,7 +310,7 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
 
   @ReactProp(name = "captureMode")
   fun setCaptureMode(view: View, captureMode: String = "") {
-    Log.d(TAG , "captureMode: "+ captureMode)
+    Log.d(TAG, "captureMode: " + captureMode)
     scanningMode = when (captureMode.lowercase()) {
       "auto" -> ScanningMode.Auto
       "manual" -> ScanningMode.Manual
@@ -296,7 +320,7 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
 
   @ReactProp(name = "mode")
   fun setMode(view: View, mode: String = "") {
-    Log.d(TAG ,"mode: "+ mode)
+    Log.d(TAG, "mode: " + mode)
     detectionMode = when (mode.lowercase()) {
       "ocr" -> DetectionMode.OCR
       "barcode" -> DetectionMode.Barcode
@@ -307,13 +331,13 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
 
   @ReactProp(name = "locationId")
   fun setLocationId(view: View, locationId: String = "") {
-    Log.d(TAG ,"locationId: "+ locationId)
+    Log.d(TAG, "locationId: " + locationId)
     this.locationId = locationId
   }
 
   @ReactProp(name = "options")
   fun setOptions(view: View, options: String) {
-    Log.d(TAG ,"options: "+ options)
+    Log.d(TAG, "options: " + options)
     val map = options.split(",").associate {
       val (left, right) = it.split(":")
       left to right
