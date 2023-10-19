@@ -2,10 +2,12 @@ import * as React from 'react';
 import VisionSdkView from 'react-native-vision-sdk';
 
 export default function App() {
+  const [mode, setMode] = React.useState('auto');
   const visionSdk = React.useRef<any>(null);
+
   React.useEffect(() => {
     visionSdk?.current?.changeModeHandler(
-      'auto',
+      mode,
       'barcode',
       'idToken',
       'location.id',
@@ -15,6 +17,10 @@ export default function App() {
       },
       'staging'
     );
+
+    // setInterval(() => {
+    //   setMode(mode === 'manual' ? 'auto' : 'manual');
+    // }, 5000);
   }, []);
 
   return (
