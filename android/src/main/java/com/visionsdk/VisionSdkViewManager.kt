@@ -45,7 +45,7 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
   var detectionMode: DetectionMode = DetectionMode.Barcode
   var scanningMode: ScanningMode = ScanningMode.Manual
   private var lifecycleOwner: LifecycleOwner? = null
-  private var shouldAddGlobalListner = true
+  private var shouldStartScanning = true
 
   companion object {
     val TAG = "CustomScannerView"
@@ -56,8 +56,8 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
     customScannerView = view
     Log.d(TAG, "onAfterUpdateTransaction: ")
     if (token!!.isNotEmpty()) {
-      if (shouldAddGlobalListner) {
-        shouldAddGlobalListner = false
+      if (shouldStartScanning) {
+        shouldStartScanning = false
         startScanning()
       } else {
         restartScanning()
@@ -105,6 +105,7 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
   override fun onDropViewInstance(view: CustomScannerView) {
     super.onDropViewInstance(view)
     Log.d(TAG, "onDropViewInstance: ")
+    shouldStartScanning = true
     customScannerView?.recycle()
   }
 
