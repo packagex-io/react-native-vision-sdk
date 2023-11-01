@@ -15,6 +15,7 @@ class RNCodeScannerView: UIView, CodeScannerViewDelegate {
   @objc var onError: RCTDirectEventBlock?
 
   var token: String?
+  var delayTime: Double?
   var locationId: String?
   var options: [String: String]?
 
@@ -77,6 +78,10 @@ class RNCodeScannerView: UIView, CodeScannerViewDelegate {
   @objc func setToken(_ token: NSString) {
     self.token = token as String
   }
+  
+  @objc func setDelayTime(_ delayTime: NSNumber) {
+        self.delayTime = delayTime as? Double
+  }
 
   @objc func setOptions(_ options: [NSString: NSString]) {
     self.options = options as [String: String]
@@ -90,7 +95,9 @@ class RNCodeScannerView: UIView, CodeScannerViewDelegate {
   func codeScannerView(_ scannerView: VisionSDK.CodeScannerView, didSuccess code: [String]) {
     if onBarcodeScanSuccess != nil {
       onBarcodeScanSuccess!(["code": code])
-      scannerView.rescan()
+        DispatchQueue.main.asyncAfter(deadline: .now() + ((delayTime ?? 100)/1000)) {
+            scannerView.rescan()
+        }
     }
   }
 
@@ -272,4 +279,3 @@ extension RNCodeScannerView {
     }
   }
 }
-

@@ -19,6 +19,7 @@ type Props = {
   refProp?: any;
   key?: string;
   reRender?: string;
+  delayTime?: number;
   BarCodeScanHandler?: (_e: any) => void;
   OCRImageCaptured?: (_e: any) => void;
   OCRScanHandler?: (_e: any) => void;
@@ -31,6 +32,7 @@ const Camera: React.FC<Props> = ({
   refProp,
   // key,
   reRender,
+  delayTime = 100,
   BarCodeScanHandler = (_e: any) => {},
   OCRImageCaptured = (_e: any) => {},
   OCRScanHandler = (_e: any) => {},
@@ -43,6 +45,7 @@ const Camera: React.FC<Props> = ({
   const [apiKey, setApiKey] = useState('');
   const [cameraCaptureMode, setCameraCaptureMode] = useState('auto');
   const [environment, setEnvironment] = useState('staging');
+  // const [delayTime, setDelay] = useState(100);
   // const [capture, setCapture] = useState('auto');
   // const [capture, setCapture] = useState(Platform?.OS =='android'  ? 'manual':'auto');
   const [locationId, setLocationId] = useState('');
@@ -167,6 +170,7 @@ const Camera: React.FC<Props> = ({
         onDetected={OnDetectedHandler}
         mode={mode}
         captureMode={cameraCaptureMode}
+        delayTime={delayTime ? delayTime : 100}
         onError={onError}
         token={token}
         locationId={locationId}
