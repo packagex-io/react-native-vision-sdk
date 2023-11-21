@@ -66,8 +66,11 @@ const Camera: React.FC<Props> = ({
     startRunningHandler: () => {
       onPressStartRunning();
     },
-    onPressToggleTorchHandler: () => {
-      onPressToggleTorch();
+    onPressToggleTorchHandler: (val: any) => {
+      onPressToggleTorch(val);
+    },
+    setToDefaultZoom: (val: any) => {
+      onPressZoom(val);
     },
     // setCaptureMode: (vale) => {
     //   setCapture(vale?vale:'auto')
@@ -125,14 +128,24 @@ const Camera: React.FC<Props> = ({
     );
   };
 
-  const onPressToggleTorch = () => {
-    console.log('Toggle Torch');
+  const onPressToggleTorch = (value: any) => {
+    console.log('Toggle Torch', value);
     UIManager.dispatchViewManagerCommand(
       findNodeHandle(VisionSDKViewRef.current),
       (UIManager.hasViewManagerConfig('VisionSDKView') &&
         UIManager.getViewManagerConfig('VisionSDKView').Commands.toggleTorch) ||
         3,
-      []
+      [value]
+    );
+  };
+  const onPressZoom = (value: any) => {
+    console.log('Zoom value', value);
+    UIManager.dispatchViewManagerCommand(
+      findNodeHandle(VisionSDKViewRef.current),
+      (UIManager.hasViewManagerConfig('VisionSDKView') &&
+        UIManager.getViewManagerConfig('VisionSDKView').Commands.setZoomTo) ||
+        4,
+      [value]
     );
   };
 

@@ -45,15 +45,27 @@ class VisionSdkViewManager: RCTViewManager {
 
   }
 
-  @objc func toggleTorch(_ node: NSNumber) {
-
+ @objc func toggleTorch(_ node: NSNumber, isEnabled: Bool) {
       DispatchQueue.main.async {
         let component =
           self.bridge.uiManager.view(
             forReactTag: node
           ) as! RNCodeScannerView
 
-          component.setTorchActive()
+          component.setTorchActive(isEnabled)
+      }
+
+    }
+
+  @objc func setZoomTo(_ node: NSNumber,zoomValue: NSNumber) {
+      let zoomFloatValue = zoomValue.floatValue
+      DispatchQueue.main.async {
+        let component =
+          self.bridge.uiManager.view(
+            forReactTag: node
+          ) as! RNCodeScannerView
+
+          component.setZoomTo(zoomFloatValue as NSNumber)
       }
 
     }

@@ -17,5 +17,6 @@ RCT_EXPORT_VIEW_PROPERTY(delayTime, NSNumber)
 RCT_EXTERN_METHOD(captureImage:(nonnull NSNumber *)node)
 RCT_EXTERN_METHOD(stopRunning:(nonnull NSNumber *)node)
 RCT_EXTERN_METHOD(startRunning:(nonnull NSNumber *)node)
-RCT_EXTERN_METHOD(toggleTorch:(nonnull NSNumber *)node)
+RCT_EXTERN_METHOD(toggleTorch:(nonnull NSNumber *)node isEnabled:(BOOL)isEnabled)
+RCT_EXTERN_METHOD(setZoomTo:(nonnull NSNumber *)node  zoomValue:(nonnull NSNumber *)zoomValue)
 @end
