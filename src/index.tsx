@@ -73,8 +73,8 @@ const Camera: React.FC<Props> = ({
     //   setCapture(vale?vale:'auto')
     // },
     changeModeHandler: (
-      c_mode: React.SetStateAction<any>,
-      input: React.SetStateAction<ScanMode>,
+      captureMode: React.SetStateAction<any>,
+      scanMode: React.SetStateAction<ScanMode>,
       token: React.SetStateAction<string>,
       locationId: React.SetStateAction<string>,
       option: React.SetStateAction<any>,
@@ -84,8 +84,8 @@ const Camera: React.FC<Props> = ({
       setToken(token);
       setLocationId(locationId);
       setApiKey(apiKey);
-      onChangeCaptureMode(c_mode);
-      onChangeMode(input);
+      onChangeCaptureMode(captureMode);
+      onChangeMode(scanMode);
       onChangeOptions(option ? option : options);
     },
   }));
@@ -139,11 +139,11 @@ const Camera: React.FC<Props> = ({
   const onChangeCaptureMode = (c_mode: React.SetStateAction<any>) => {
     setCameraCaptureMode(c_mode);
   };
-  const onChangeMode = (input: React.SetStateAction<ScanMode>) => {
-    setMode(input);
+  const onChangeMode = (scanMode: React.SetStateAction<ScanMode>) => {
+    setMode(scanMode);
   };
-  const onChangeOptions = (input: React.SetStateAction<any>) => {
-    setOptions(input);
+  const onChangeOptions = (options: React.SetStateAction<any>) => {
+    setOptions(options);
   };
   useEffect(() => {
     DeviceEventEmitter.addListener('onBarcodeScanSuccess', BarCodeScanHandler);

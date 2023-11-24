@@ -32,20 +32,20 @@ import com.google.mlkit.vision.barcode.common.Barcode
 class VisionSdkViewManager(val appContext: ReactApplicationContext) :
   ViewGroupManager<CustomScannerView>(), ScannerCallbacks {
 
-  var context: Context? = null
   override fun getName() = "VisionSdkView"
+  lateinit var authentication: Authentication
+  private var lifecycleOwner: LifecycleOwner? = null
+  private var shouldStartScanning = true
+
+  var context: Context? = null
   var apiKey: String? = ""
   var token: String? = ""
   var locationId: String? = ""
   var options: Map<String, String>? = mapOf()
   var environment: Environment = Environment.DEV
-  lateinit var authentication: Authentication
-
   var customScannerView: CustomScannerView? = null
   var detectionMode: DetectionMode = DetectionMode.Barcode
   var scanningMode: ScanningMode = ScanningMode.Manual
-  private var lifecycleOwner: LifecycleOwner? = null
-  private var shouldStartScanning = true
 
   companion object {
     val TAG = "CustomScannerView"
