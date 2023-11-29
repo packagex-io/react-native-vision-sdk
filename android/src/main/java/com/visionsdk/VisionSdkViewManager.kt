@@ -27,7 +27,11 @@ import com.facebook.react.modules.core.DeviceEventManagerModule
 import com.facebook.react.uimanager.ThemedReactContext
 import com.facebook.react.uimanager.ViewGroupManager
 import com.facebook.react.uimanager.annotations.ReactProp
+import com.google.gson.Gson
 import com.google.mlkit.vision.barcode.common.Barcode
+import kotlinx.coroutines.GlobalScope
+import org.json.JSONArray
+import org.json.JSONObject
 
 class VisionSdkViewManager(val appContext: ReactApplicationContext) :
   ViewGroupManager<CustomScannerView>(), ScannerCallbacks {
@@ -37,7 +41,7 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
   var apiKey: String? = ""
   var token: String? = ""
   var locationId: String? = ""
-  var options: Map<String, String>? = mapOf()
+  var options: Map<String, Any>? = emptyMap()
   var environment: Environment = Environment.DEV
   lateinit var authentication: Authentication
 
@@ -258,11 +262,10 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
   }
 
   private fun triggerOCRCalls(bitmap: Bitmap, list: MutableList<Barcode>) {
-
     customScannerView!!.makeOCRApiCall(bitmap = bitmap,
       barcodeList = list,
       locationId = locationId ?: "",
-      options = options ?: mapOf(),
+      options = options ?: emptyMap(),
       onScanResult = object : OCRResult {
         override fun onOCRResponse(ocrResponse: String?) {
 
@@ -343,21 +346,20 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
       val (left, right) = it.split(":")
       left to right
     }
-    this.options = map
+    this.options = JSONObject(options).toMap()
   }
 
-
-  @ReactProp(name = "color")
-  fun setColor(view: View, color: String) {
-    view.setBackgroundColor(Color.parseColor(color))
-
-
+  private fun JSONObject.toMap(): Map<String, Any> = keys().asSequence().associateWith {
+    when (val value = this[it])
+    {
+      is JSONArray ->
+      {
+        val map = (0 until value.length()).associate { Pair(it.toString(), value[it]) }
+        JSONObject(map).toMap().values.toList()
+      }
+      is JSONObject -> value.toMap()
+      JSONObject.NULL -> ""
+      else            -> value
+    }
   }
-
-  @ReactMethod
-  fun startCamera() {
-    Log.d(TAG, "startCamera: ")
-//    this.startScanning()
-  }
-
 }
