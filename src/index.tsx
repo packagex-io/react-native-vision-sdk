@@ -51,9 +51,8 @@ const Camera: React.FC<Props> = ({
   const [options, setOptions] = useState({
     match: { location: true, search: ['recipients'] },
     postprocess: { require_unique_hash: false },
-    transform: { tracker: 'inbound', use_existing_tracking_number: false }
+    transform: { tracker: 'inbound', use_existing_tracking_number: false },
   });
-
   const VisionSDKViewRef = useRef(null);
 
   useImperativeHandle(refProp, () => ({
