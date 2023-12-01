@@ -19,6 +19,8 @@ type Props = {
   key?: string;
   reRender?: string;
   delayTime?: number;
+  showScanFrame?: boolean;
+  captureWithScanFrame?: boolean;
   BarCodeScanHandler?: (_e: any) => void;
   OCRImageCaptured?: (_e: any) => void;
   OCRScanHandler?: (_e: any) => void;
@@ -32,6 +34,8 @@ const Camera: React.FC<Props> = ({
   // key,
   reRender,
   delayTime = 100,
+  showScanFrame = true,
+  captureWithScanFrame= true,
   BarCodeScanHandler = (_e: any) => {},
   OCRImageCaptured = (_e: any) => {},
   OCRScanHandler = (_e: any) => {},
@@ -176,6 +180,8 @@ const Camera: React.FC<Props> = ({
       <VisionSdkView
         key={reRender}
         style={styles.flex}
+        showScanFrame={showScanFrame}
+        captureWithScanFrame={captureWithScanFrame}
         onBarcodeScanSuccess={BarCodeScanHandler}
         onOCRImageCaptured={OCRImageCaptured}
         onOCRDataReceived={OCRScanHandler}

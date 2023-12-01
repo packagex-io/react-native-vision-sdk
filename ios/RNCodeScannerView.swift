@@ -18,8 +18,20 @@ class RNCodeScannerView: UIView, CodeScannerViewDelegate {
     var delayTime: Double?
     var locationId: String?
     var options: [String: Any]?
+    var showScanFrame: Bool?
+    var captureWithScanFrame:Bool?
     
+    @objc func setShowScanFrame(_ showScanFrame: Bool) {
+        self.showScanFrame = showScanFrame
+        let focusSetting = VisionSDK.CodeScannerView.FocusSettings(focusImage: nil, focusImageRect: .zero, shouldDisplayFocusImage: self.showScanFrame ??  true, shouldScanInFocusImageRect: self.captureWithScanFrame ?? true, showDocumentBoundries: true, documentBoundryBorderColor: .orange, documentBoundryFillColor: UIColor.orange.withAlphaComponent(0.3), focusImageTintColor: .white, focusImageHighlightedColor: .white)
+        codeScannerView!.focusSettings = focusSetting
+    }
     
+    @objc func setCaptureWithScanFrame(_ captureWithScanFrame: Bool) {
+        self.captureWithScanFrame = captureWithScanFrame
+        let focusSetting = VisionSDK.CodeScannerView.FocusSettings(focusImage: nil, focusImageRect: .zero, shouldDisplayFocusImage: self.showScanFrame ??  true, shouldScanInFocusImageRect: self.captureWithScanFrame ?? true, showDocumentBoundries: true, documentBoundryBorderColor: .orange, documentBoundryFillColor: UIColor.orange.withAlphaComponent(0.3), focusImageTintColor: .white, focusImageHighlightedColor: .white)
+        codeScannerView!.focusSettings = focusSetting
+    }
     
     //prop from Js to Swift
     @objc func setMode(_ mode: NSString) {
@@ -43,6 +55,7 @@ class RNCodeScannerView: UIView, CodeScannerViewDelegate {
     }
     
     @objc func setCaptureMode(_ captureMode: NSString) {
+    
         if captureMode == "auto" {
             codeScannerView?.setCaptureModeTo(.auto)
         } else {
@@ -80,6 +93,7 @@ class RNCodeScannerView: UIView, CodeScannerViewDelegate {
     @objc func setToken(_ token: NSString) {
         self.token = token as String
     }
+    
     
     @objc func setDelayTime(_ delayTime: NSNumber) {
         self.delayTime = delayTime as? Double
@@ -190,17 +204,7 @@ class RNCodeScannerView: UIView, CodeScannerViewDelegate {
         
         codeScannerView = CodeScannerView(frame: UIScreen.main.bounds)
         
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        let focusSettings = VisionSDK.CodeScannerView.FocusSettings(focusImage: nil, focusImageRect: .zero, shouldDisplayFocusImage: true, shouldScanInFocusImageRect: true, showDocumentBoundries: true, documentBoundryBorderColor: .orange, documentBoundryFillColor: UIColor.orange.withAlphaComponent(0.3), focusImageTintColor: .white, focusImageHighlightedColor: .white)
+        let focusSettings = VisionSDK.CodeScannerView.FocusSettings(focusImage: nil, focusImageRect: .zero, shouldDisplayFocusImage: self.showScanFrame ??  false, shouldScanInFocusImageRect: self.captureWithScanFrame ?? true, showDocumentBoundries: true, documentBoundryBorderColor: .orange, documentBoundryFillColor: UIColor.orange.withAlphaComponent(0.3), focusImageTintColor: .white, focusImageHighlightedColor: .white)
         
         let objectDetectionConfiguration = VisionSDK.CodeScannerView.ObjectDetectionConfiguration(isTextIndicationOn: true, isBarCodeOrQRCodeIndicationOn: true, isDocumentIndicationOn: false, codeDetectionConfidence: 0.5, documentDetectionConfidence: 0.9)
         
@@ -209,8 +213,7 @@ class RNCodeScannerView: UIView, CodeScannerViewDelegate {
         
         codeScannerView!.configure(delegate: self, focusSettings: focusSettings, objectDetectionConfiguration: objectDetectionConfiguration, cameraSettings: cameraSettings, captureMode: .manual, captureType: .single, scanMode: .barCode)
         
-        
-        
+
         self.backgroundColor = UIColor.black
         
         codeScannerView!.startRunning()
