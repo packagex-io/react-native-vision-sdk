@@ -35,7 +35,7 @@ const Camera: React.FC<Props> = ({
   reRender,
   delayTime = 100,
   showScanFrame = true,
-  captureWithScanFrame= true,
+  captureWithScanFrame = true,
   BarCodeScanHandler = (_e: any) => {},
   OCRImageCaptured = (_e: any) => {},
   OCRScanHandler = (_e: any) => {},
