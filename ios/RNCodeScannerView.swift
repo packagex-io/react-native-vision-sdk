@@ -208,12 +208,16 @@ class RNCodeScannerView: UIView, CodeScannerViewDelegate {
         
         let objectDetectionConfiguration = VisionSDK.CodeScannerView.ObjectDetectionConfiguration(isTextIndicationOn: true, isBarCodeOrQRCodeIndicationOn: true, isDocumentIndicationOn: false, codeDetectionConfidence: 0.5, documentDetectionConfidence: 0.9)
         
-        let cameraSettings = VisionSDK.CodeScannerView.CameraSettings(sessionPreset: .high, nthFrameToProcess: 10, shouldAutoSaveCapturedImage: false)
+        var sessionPreset: AVCaptureSession.Preset = .high
         
+        if UIDevice.current.userInterfaceIdiom == .pad {
+            sessionPreset = .hd1920x1080
+        }
+        
+        let cameraSettings = VisionSDK.CodeScannerView.CameraSettings(sessionPreset: sessionPreset, nthFrameToProcess: 10, shouldAutoSaveCapturedImage: false)
         
         codeScannerView!.configure(delegate: self, focusSettings: focusSettings, objectDetectionConfiguration: objectDetectionConfiguration, cameraSettings: cameraSettings, captureMode: .manual, captureType: .single, scanMode: .barCode)
         
-
         self.backgroundColor = UIColor.black
         
         codeScannerView!.startRunning()
