@@ -2,7 +2,7 @@
 @interface RCT_EXTERN_MODULE(VisionSdkViewManager, RCTViewManager)
 
 RCT_EXPORT_VIEW_PROPERTY(onBarcodeScanSuccess, RCTDirectEventBlock)
-RCT_EXPORT_VIEW_PROPERTY(onOCRImageCaptured, RCTDirectEventBlock)
+RCT_EXPORT_VIEW_PROPERTY(onImageCaptured, RCTDirectEventBlock)
 RCT_EXPORT_VIEW_PROPERTY(onOCRDataReceived, RCTDirectEventBlock)
 RCT_EXPORT_VIEW_PROPERTY(onError, RCTDirectEventBlock)
 RCT_EXPORT_VIEW_PROPERTY(onDetected, RCTDirectEventBlock)
