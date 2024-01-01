@@ -6,7 +6,7 @@ class RNCodeScannerView: UIView, CodeScannerViewDelegate {
     
     // events from swift to Js
     @objc var onBarcodeScanSuccess: RCTDirectEventBlock?
-    @objc var onOCRImageCaptured: RCTDirectEventBlock?
+    @objc var onImageCaptured: RCTDirectEventBlock?
     @objc var onOCRDataReceived: RCTDirectEventBlock?
     
     @objc var onDetected: RCTDirectEventBlock?
@@ -48,6 +48,9 @@ class RNCodeScannerView: UIView, CodeScannerViewDelegate {
             codeScannerView!.setScanModeTo(.barCode)
             codeScannerView!.objectDetectionConfiguration.isBarCodeOrQRCodeIndicationOn = true
             
+        }else if mode == "photo" {
+            codeScannerView!.setScanModeTo(.photo)
+            codeScannerView!.objectDetectionConfiguration.isBarCodeOrQRCodeIndicationOn = false
         } else {
             codeScannerView!.setScanModeTo(.qrCode)
             codeScannerView!.objectDetectionConfiguration.isBarCodeOrQRCodeIndicationOn = true
@@ -142,12 +145,15 @@ class RNCodeScannerView: UIView, CodeScannerViewDelegate {
     }
     
     func codeScannerView(_ scannerView: CodeScannerView, didCaptureOCRImage image: UIImage, withCroppedImge croppedImage: UIImage?, withbarCodes barcodes: [String], savedImageURL: URL?) {
-        
-        self.callOCRAPIWithImage(image, andBarcodes: barcodes)
+        if ((codeScannerView?.scanMode == .photo) ) {
+           self.callForImageCaptured(image:image)
+        }
+        else {
+            self.callOCRAPIWithImage(image, andBarcodes: barcodes)
+        }
     }
     
-    
-    func callForOCRWithImageInProgress(image:UIImage) {
+    func callForImageCaptured(image:UIImage) {
         
         // do stuff here while vision api call is in progress
         
@@ -163,7 +169,7 @@ class RNCodeScannerView: UIView, CodeScannerViewDelegate {
             do {
                 try imageData.write(to: fileURL)
                 print("Image saved at \(fileURL)")
-                onOCRImageCaptured!(["image": "\(fileURL)"])
+                onImageCaptured!(["image": "\(fileURL)"])
             } catch {
                 print("Error saving image: \(error)")
             }
@@ -239,7 +245,7 @@ extension RNCodeScannerView {
         
         debugPrint(options)
         
-        self.callForOCRWithImageInProgress(image:image)
+        self.callForImageCaptured(image:image)
         
         VisionAPIManager.shared.callScanAPIWith(
             image, andBarcodes: barcodes, andApiKey: !Constants.apiKey.isEmpty ? Constants.apiKey : nil,

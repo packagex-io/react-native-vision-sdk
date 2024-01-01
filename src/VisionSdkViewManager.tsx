@@ -27,7 +27,7 @@ type VisionSdkProps = {
   showScanFrame?: boolean;
   captureWithScanFrame?: boolean;
   onBarcodeScanSuccess?: (e: any) => void;
-  onOCRImageCaptured?: (e: any) => void;
+  onImageCaptured?: (e: any) => void;
   onOCRDataReceived?: (e: any) => void;
   onDetected?: (e: any) => void;
   onError?: (e: { nativeEvent: { message: any } }) => void;
