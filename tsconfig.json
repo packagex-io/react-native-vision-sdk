@@ -2,7 +2,7 @@
   "compilerOptions": {
     "baseUrl": "./",
     "paths": {
-      "react-native-vision-sdk": ["./src/index"],
+      "react-native-vision-sdk": ["./src/index"]
     },
     "ignoreDeprecations": "5.0",
     "allowUnreachableCode": false,
@@ -26,4 +26,5 @@
     "strict": true,
     "target": "esnext"
   }
+  // "extends": "@react-native/typescript-config/tsconfig.json
 }
