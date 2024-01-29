@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { Text, TouchableOpacity, View } from 'react-native';
 import VisionSdkView from 'react-native-vision-sdk';
 
 export default function App() {
@@ -16,7 +17,6 @@ export default function App() {
       },
       'staging'
     );
-
     // setInterval(() => {
     //   setMode(mode === 'manual' ? 'auto' : 'manual');
     // }, 5000);
@@ -30,7 +30,7 @@ export default function App() {
         OCRScanHandler={(e: any) => console.log('OCRScanHandler', e)}
         OnDetectedHandler={(e: any) => console.log('OnDetectedHandler', e)}
       />
-      {/* <View
+      <View
         style={{
           zIndex: 1,
           position: 'absolute',
@@ -44,7 +44,7 @@ export default function App() {
       >
         <TouchableOpacity
           onPress={() => {
-            visionSdk?.current?.onPressToggleTorchHandler();
+            // visionSdk?.current?.onPressToggleTorchHandler();
             // setTimeout(() => {
             //   visionSdk?.current?.startRunningHandler();
             // }, 5000);
@@ -52,7 +52,7 @@ export default function App() {
         >
           <Text style={{ color: 'white', fontStyle: 'normal' }}> Button</Text>
         </TouchableOpacity>
-      </View> */}
+      </View>
     </>
   );
 }
