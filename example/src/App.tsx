@@ -7,7 +7,7 @@ export default function App() {
   React.useEffect(() => {
     visionSdk?.current?.changeModeHandler(
       'auto',
-      'barcode',
+      'ocr',
       'idToken',
       'location.id',
       {

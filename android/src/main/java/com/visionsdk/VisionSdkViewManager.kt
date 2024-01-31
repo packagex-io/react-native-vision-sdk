@@ -7,16 +7,6 @@ import android.util.Log
 import android.view.View
 import androidx.annotation.Nullable
 import androidx.lifecycle.LifecycleOwner
-import com.example.customscannerview.mlkit.Authentication
-import com.example.customscannerview.mlkit.Environment
-import com.example.customscannerview.mlkit.VisionSDK
-import com.example.customscannerview.mlkit.enums.ViewType
-import com.example.customscannerview.mlkit.interfaces.OCRResult
-import com.example.customscannerview.mlkit.views.CustomScannerView
-import com.example.customscannerview.mlkit.views.DetectionMode
-import com.example.customscannerview.mlkit.views.ScannerCallbacks
-import com.example.customscannerview.mlkit.views.ScannerException
-import com.example.customscannerview.mlkit.views.ScanningMode
 import com.facebook.infer.annotation.Assertions
 import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.ReactApplicationContext
@@ -27,14 +17,24 @@ import com.facebook.react.modules.core.DeviceEventManagerModule
 import com.facebook.react.uimanager.ThemedReactContext
 import com.facebook.react.uimanager.ViewGroupManager
 import com.facebook.react.uimanager.annotations.ReactProp
-import com.google.gson.Gson
 import com.google.mlkit.vision.barcode.common.Barcode
-import kotlinx.coroutines.GlobalScope
+import io.packagex.visionsdk.Authentication
+import io.packagex.visionsdk.Environment
+import io.packagex.visionsdk.VisionSDK
+import io.packagex.visionsdk.core.DetectionMode
+import io.packagex.visionsdk.core.ScanningMode
+import io.packagex.visionsdk.core.ScreenState
+import io.packagex.visionsdk.core.ScreenViewType
+import io.packagex.visionsdk.exceptions.ScannerException
+import io.packagex.visionsdk.interfaces.OCRResult
+import io.packagex.visionsdk.interfaces.ScannerCallback
+import io.packagex.visionsdk.views.VisionCameraView
 import org.json.JSONArray
 import org.json.JSONObject
+import java.io.File
 
 class VisionSdkViewManager(val appContext: ReactApplicationContext) :
-  ViewGroupManager<CustomScannerView>(), ScannerCallbacks {
+  ViewGroupManager<VisionCameraView>(), ScannerCallback {
 
   var context: Context? = null
   override fun getName() = "VisionSdkView"
@@ -45,7 +45,7 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
   var environment: Environment = Environment.DEV
   lateinit var authentication: Authentication
 
-  var customScannerView: CustomScannerView? = null
+  var customScannerView: VisionCameraView? = null
   var detectionMode: DetectionMode = DetectionMode.Barcode
   var scanningMode: ScanningMode = ScanningMode.Manual
   private var lifecycleOwner: LifecycleOwner? = null
@@ -55,7 +55,7 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
     val TAG = "CustomScannerView"
   }
 
-  override fun onAfterUpdateTransaction(view: CustomScannerView) {
+  override fun onAfterUpdateTransaction(view: VisionCameraView) {
     super.onAfterUpdateTransaction(view)
     customScannerView = view
     Log.d(TAG, "onAfterUpdateTransaction: ")
@@ -74,7 +74,7 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
 //    }, 5000)
   }
 
-  override fun createViewInstance(reactContext: ThemedReactContext): CustomScannerView {
+  override fun createViewInstance(reactContext: ThemedReactContext): VisionCameraView {
 
 
     Log.d(TAG, "createViewInstance: ")
@@ -87,7 +87,7 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
 //    val view = inflater.inflate(R.layout.custom_view, null)
 
 //    customScannerView = view.findViewById<CustomScannerView>(R.id.customScannerView)
-    customScannerView = CustomScannerView(context!!, null)
+    customScannerView = VisionCameraView(context!!, null)
 //    customScannerView = CustomView(reactContext)
     return customScannerView!!
   }
@@ -101,12 +101,13 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
     else return
 
     VisionSDK.getInstance().initialize(
+      environment,
       authentication,
-      environment
+      ""
     )
   }
 
-  override fun onDropViewInstance(view: CustomScannerView) {
+  override fun onDropViewInstance(view: VisionCameraView) {
     super.onDropViewInstance(view)
     Log.d(TAG, "onDropViewInstance: ")
     shouldStartScanning = true
@@ -118,11 +119,15 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
     Log.d(TAG, "startScanning: ")
 //    Log.d(VisionSdkViewManager.TAG, "scanningMode: $scanningMode")
 //    Log.d(VisionSdkViewManager.TAG, "detectionMode: $detectionMode")
-    customScannerView?.startScanning(
-      ViewType.FULLSCRREN,
-      scanningMode,
-      detectionMode, this
+    customScannerView?.setState(
+      ScreenState(
+        ScreenViewType.FullScreen,
+        detectionMode,
+        scanningMode
+      )
     )
+    customScannerView?.setScannerCallback(this)
+    customScannerView?.startScanning()
 //    if (shouldAddGlobalListner){
 //      shouldAddGlobalListner = false
     viewTreeObserver()
@@ -145,12 +150,10 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
       .emit("onDetected", event)
   }
 
-  override fun onBarcodeDetected(barcode: Barcode) {
+  override fun onBarcodesDetected(barcodeList: List<Barcode>) {
     Log.d(TAG, "onBarcodeDetected: ")
-//          Toast.makeText(context!!, barcode.displayValue, Toast.LENGTH_LONG).show()
-//          customScannerView?.stopScanning()
     val event = Arguments.createMap().apply {
-      putArray("code", Arguments.fromArray(arrayOf(barcode.displayValue)))
+      putArray("code", Arguments.fromList(barcodeList))
     }
 //          val reactContext = context as ReactContext
     appContext
@@ -161,17 +164,16 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
   override fun onFailure(exception: ScannerException) {
     exception.printStackTrace()
   }
-
-  override fun onImageCaptured(bitmap: Bitmap, value: MutableList<Barcode>?) {
+  override fun onImageCaptured(bitmap: Bitmap, imageFile: File?, value: List<Barcode>) {
     Log.d(TAG, "onImageCaptured: ")
 
 //        Toast.makeText(context!!,"onImageCaptured",Toast.LENGTH_LONG).show()
     triggerOCRCalls(bitmap, value ?: mutableListOf())
   }
 
-  override fun onMultipleBarcodesDetected(barcodeList: List<Barcode>) {
-    Log.d(TAG, "onMultipleBarcodesDetected: ")
-  }
+//  override fun onMultipleBarcodesDetected(barcodeList: List<Barcode>) {
+//    Log.d(TAG, "onMultipleBarcodesDetected: ")
+//  }
 
   private fun viewTreeObserver() {
     customScannerView!!.viewTreeObserver.addOnGlobalLayoutListener {
@@ -201,7 +203,7 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
   }
 
   override fun receiveCommand(
-    view: CustomScannerView,
+    view: VisionCameraView,
     commandType: Int,
     @Nullable args: ReadableArray?
   ) {
@@ -246,14 +248,12 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
 
   private fun stopScanning() {
     Log.d(TAG, "stopScanning: ")
-    customScannerView!!.stopScanning()
+    customScannerView!!.recycle()
   }
 
   private fun restartScanning() {
     Log.d(TAG, "restartScanning: ")
-    customScannerView!!.restartScanning(
-      scanningMode,
-      detectionMode)
+    customScannerView!!.rescan()
   }
 
   private fun toggleTorch() {
@@ -261,7 +261,7 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
     customScannerView!!.enableTorch()
   }
 
-  private fun triggerOCRCalls(bitmap: Bitmap, list: MutableList<Barcode>) {
+  private fun triggerOCRCalls(bitmap: Bitmap, list: List<Barcode>) {
     customScannerView!!.makeOCRApiCall(bitmap = bitmap,
       barcodeList = list,
       locationId = locationId ?: "",
@@ -350,16 +350,15 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
   }
 
   private fun JSONObject.toMap(): Map<String, Any> = keys().asSequence().associateWith {
-    when (val value = this[it])
-    {
-      is JSONArray ->
-      {
+    when (val value = this[it]) {
+      is JSONArray -> {
         val map = (0 until value.length()).associate { Pair(it.toString(), value[it]) }
         JSONObject(map).toMap().values.toList()
       }
+
       is JSONObject -> value.toMap()
       JSONObject.NULL -> ""
-      else            -> value
+      else -> value
     }
   }
 }
