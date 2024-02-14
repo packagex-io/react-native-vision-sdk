@@ -2,364 +2,358 @@ package com.visionsdk
 
 import android.content.Context
 import android.graphics.Bitmap
-import android.graphics.Color
 import android.util.Log
 import android.view.View
 import androidx.annotation.Nullable
+import androidx.core.net.toUri
 import androidx.lifecycle.LifecycleOwner
-import com.example.customscannerview.mlkit.Authentication
-import com.example.customscannerview.mlkit.Environment
-import com.example.customscannerview.mlkit.VisionSDK
-import com.example.customscannerview.mlkit.enums.ViewType
-import com.example.customscannerview.mlkit.interfaces.OCRResult
-import com.example.customscannerview.mlkit.views.CustomScannerView
-import com.example.customscannerview.mlkit.views.DetectionMode
-import com.example.customscannerview.mlkit.views.ScannerCallbacks
-import com.example.customscannerview.mlkit.views.ScannerException
-import com.example.customscannerview.mlkit.views.ScanningMode
 import com.facebook.infer.annotation.Assertions
 import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.ReactApplicationContext
-import com.facebook.react.bridge.ReactMethod
 import com.facebook.react.bridge.ReadableArray
 import com.facebook.react.common.MapBuilder
 import com.facebook.react.modules.core.DeviceEventManagerModule
 import com.facebook.react.uimanager.ThemedReactContext
 import com.facebook.react.uimanager.ViewGroupManager
 import com.facebook.react.uimanager.annotations.ReactProp
-import com.google.gson.Gson
 import com.google.mlkit.vision.barcode.common.Barcode
-import kotlinx.coroutines.GlobalScope
+import io.packagex.visionsdk.Authentication
+import io.packagex.visionsdk.Environment
+import io.packagex.visionsdk.VisionSDK
+import io.packagex.visionsdk.core.DetectionMode
+import io.packagex.visionsdk.core.ScanningMode
+import io.packagex.visionsdk.core.ScreenState
+import io.packagex.visionsdk.core.ScreenViewType
+import io.packagex.visionsdk.exceptions.ScannerException
+import io.packagex.visionsdk.interfaces.CameraLifecycleCallback
+import io.packagex.visionsdk.interfaces.OCRResult
+import io.packagex.visionsdk.interfaces.ScannerCallback
+import io.packagex.visionsdk.views.VisionCameraView
 import org.json.JSONArray
 import org.json.JSONObject
+import java.io.File
 
 class VisionSdkViewManager(val appContext: ReactApplicationContext) :
-  ViewGroupManager<CustomScannerView>(), ScannerCallbacks {
+    ViewGroupManager<VisionCameraView>(), ScannerCallback, CameraLifecycleCallback {
 
-  var context: Context? = null
-  override fun getName() = "VisionSdkView"
-  var apiKey: String? = ""
-  var token: String? = ""
-  var locationId: String? = ""
-  var options: Map<String, Any>? = emptyMap()
-  var environment: Environment = Environment.DEV
-  lateinit var authentication: Authentication
+    private var context: Context? = null
+    override fun getName() = "VisionSdkView"
+    private var apiKey: String? = ""
+    private var token: String? = ""
+    private var locationId: String? = ""
+    private var options: Map<String, Any>? = emptyMap()
+    private var environment: Environment = Environment.DEV
+    private var visionCameraView: VisionCameraView? = null
+    private var detectionMode: DetectionMode = DetectionMode.Barcode
+    private var scanningMode: ScanningMode = ScanningMode.Manual
+    private var lifecycleOwner: LifecycleOwner? = null
+    private var shouldStartScanning = true
+    private lateinit var authentication: Authentication
 
-  var customScannerView: CustomScannerView? = null
-  var detectionMode: DetectionMode = DetectionMode.Barcode
-  var scanningMode: ScanningMode = ScanningMode.Manual
-  private var lifecycleOwner: LifecycleOwner? = null
-  private var shouldStartScanning = true
-
-  companion object {
-    val TAG = "CustomScannerView"
-  }
-
-  override fun onAfterUpdateTransaction(view: CustomScannerView) {
-    super.onAfterUpdateTransaction(view)
-    customScannerView = view
-    Log.d(TAG, "onAfterUpdateTransaction: ")
-    if (token!!.isNotEmpty()) {
-      if (shouldStartScanning) {
-        shouldStartScanning = false
-        startScanning()
-      } else {
-        restartScanning()
-      }
+    companion object {
+        val TAG = "VisionCameraView"
     }
 
-//    Handler(Looper.myLooper()!!).postDelayed({
-//      if (detectionMode == DetectionMode.OCR)
-//        captureImage()
-//    }, 5000)
-  }
-
-  override fun createViewInstance(reactContext: ThemedReactContext): CustomScannerView {
-
-
-    Log.d(TAG, "createViewInstance: ")
-
-    context = appContext.currentActivity!!
-    lifecycleOwner = context as LifecycleOwner
-
-//    val inflater: LayoutInflater =
-//      LayoutInflater.from(context).context.getSystemService(Context.LAYOUT_INFLATER_SERVICE) as LayoutInflater
-//    val view = inflater.inflate(R.layout.custom_view, null)
-
-//    customScannerView = view.findViewById<CustomScannerView>(R.id.customScannerView)
-    customScannerView = CustomScannerView(context!!, null)
-//    customScannerView = CustomView(reactContext)
-    return customScannerView!!
-  }
-
-  private fun initializeSdk() {
-
-    if (apiKey?.isNotEmpty() == true)
-      authentication = Authentication.API(apiKey!!)
-    else if (token?.isNotEmpty() == true)
-      authentication = Authentication.BearerToken(token!!)
-    else return
-
-    VisionSDK.getInstance().initialize(
-      authentication,
-      environment
-    )
-  }
-
-  override fun onDropViewInstance(view: CustomScannerView) {
-    super.onDropViewInstance(view)
-    Log.d(TAG, "onDropViewInstance: ")
-    shouldStartScanning = true
-    customScannerView?.recycle()
-  }
-
-  private fun startScanning() {
-
-    Log.d(TAG, "startScanning: ")
-//    Log.d(VisionSdkViewManager.TAG, "scanningMode: $scanningMode")
-//    Log.d(VisionSdkViewManager.TAG, "detectionMode: $detectionMode")
-    customScannerView?.startScanning(
-      ViewType.FULLSCRREN,
-      scanningMode,
-      detectionMode, this
-    )
-//    if (shouldAddGlobalListner){
-//      shouldAddGlobalListner = false
-    viewTreeObserver()
-//    }
-  }
-
-  override fun detectionCallbacks(
-    barcodeDetected: Boolean,
-    qrCodeDetected: Boolean,
-    textDetected: Boolean
-  ) {
-    val event = Arguments.createMap().apply {
-      putBoolean("barcode", barcodeDetected)
-      putBoolean("qrcode", qrCodeDetected)
-      putBoolean("text", textDetected)
+    /*this will update the camera state after changing
+    any property from react native side*/
+    override fun onAfterUpdateTransaction(view: VisionCameraView) {
+        super.onAfterUpdateTransaction(view)
+        visionCameraView = view
+        Log.d(TAG, "onAfterUpdateTransaction: ")
+        if (token!!.isNotEmpty()) {
+            if (shouldStartScanning) {
+                shouldStartScanning = false
+                startScanning()
+            } else {
+                restartScanning()
+            }
+        }
     }
-//          val reactContext = context as ReactContext
-    appContext
-      .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
-      .emit("onDetected", event)
-  }
 
-  override fun onBarcodeDetected(barcode: Barcode) {
-    Log.d(TAG, "onBarcodeDetected: ")
-//          Toast.makeText(context!!, barcode.displayValue, Toast.LENGTH_LONG).show()
-//          customScannerView?.stopScanning()
-    val event = Arguments.createMap().apply {
-      putArray("code", Arguments.fromArray(arrayOf(barcode.displayValue)))
+    override fun onDropViewInstance(view: VisionCameraView) {
+        super.onDropViewInstance(view)
+        Log.d(TAG, "onDropViewInstance: ")
+        shouldStartScanning = true
+        visionCameraView?.stopCamera()
     }
-//          val reactContext = context as ReactContext
-    appContext
-      .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
-      .emit("onBarcodeScanSuccess", event)
-  }
 
-  override fun onFailure(exception: ScannerException) {
-    exception.printStackTrace()
-  }
+    override fun createViewInstance(reactContext: ThemedReactContext): VisionCameraView {
+        Log.d(TAG, "createViewInstance: ")
+        context = appContext.currentActivity!!
+        lifecycleOwner = context as LifecycleOwner
+        visionCameraView = VisionCameraView(context!!, null)
+        return visionCameraView!!
+    }
 
-  override fun onImageCaptured(bitmap: Bitmap, value: MutableList<Barcode>?) {
-    Log.d(TAG, "onImageCaptured: ")
+    private fun initializeSdk() {
 
-//        Toast.makeText(context!!,"onImageCaptured",Toast.LENGTH_LONG).show()
-    triggerOCRCalls(bitmap, value ?: mutableListOf())
-  }
+        if (apiKey?.isNotEmpty() == true)
+            authentication = Authentication.API(apiKey!!)
+        else if (token?.isNotEmpty() == true)
+            authentication = Authentication.BearerToken(token!!)
+        else return
 
-  override fun onMultipleBarcodesDetected(barcodeList: List<Barcode>) {
-    Log.d(TAG, "onMultipleBarcodesDetected: ")
-  }
-
-  private fun viewTreeObserver() {
-    customScannerView!!.viewTreeObserver.addOnGlobalLayoutListener {
-      for (i in 0 until customScannerView!!.childCount) {
-        val child: View = customScannerView!!.getChildAt(i)
-        child.measure(
-          View.MeasureSpec.makeMeasureSpec(child.measuredWidth, View.MeasureSpec.EXACTLY),
-          View.MeasureSpec.makeMeasureSpec(child.measuredHeight, View.MeasureSpec.EXACTLY)
+        VisionSDK.getInstance().initialize(
+            environment,
+            authentication,
+            ""
         )
-        child.layout(0, 0, child.getMeasuredWidth(), child.getMeasuredHeight())
-      }
     }
-  }
 
-  override fun getCommandsMap(): Map<String?, Int?>? {
-    Log.d("React", " View manager getCommandsMap:")
-    return MapBuilder.of(
-      "captureImage",
-      0,
-      "stopRunning",
-      1,
-      "startRunning",
-      2,
-      "toggleTorch",
-      3
-    )
-  }
+    private fun startScanning() {
 
-  override fun receiveCommand(
-    view: CustomScannerView,
-    commandType: Int,
-    @Nullable args: ReadableArray?
-  ) {
-    Assertions.assertNotNull(view)
-    Assertions.assertNotNull(args)
-    when (commandType) {
-      0 -> {
-        captureImage()
-        return
-      }
+        Log.d(TAG, "startScanning: ")
+        visionCameraView?.setState(ScreenState(ScreenViewType.FullScreen, detectionMode, scanningMode))
+        visionCameraView?.shouldAutoSaveCapturedImage(true)
+        visionCameraView?.setCameraLifecycleCallback(this)
+        visionCameraView?.setScannerCallback(this)
+        visionCameraView?.startCameraAndScanning()
 
-      1 -> {
-        stopScanning()
-        return
-      }
-
-      2 -> {
-        restartScanning()
-        return
-      }
-
-      3 -> {
-        toggleTorch()
-        return
-      }
-
-      else -> throw IllegalArgumentException(
-        String.format(
-          "Unsupported command %d received by %s.",
-          commandType,
-          javaClass.simpleName
-        )
-      )
+        viewTreeObserver()
     }
-  }
 
-  //  @ReactMethod
-  private fun captureImage() {
-    Log.d(TAG, "captureImage: ")
-    customScannerView!!.capture()
-  }
-
-  private fun stopScanning() {
-    Log.d(TAG, "stopScanning: ")
-    customScannerView!!.stopScanning()
-  }
-
-  private fun restartScanning() {
-    Log.d(TAG, "restartScanning: ")
-    customScannerView!!.restartScanning(
-      scanningMode,
-      detectionMode)
-  }
-
-  private fun toggleTorch() {
-    Log.d(TAG, "enableTorch: ")
-    customScannerView!!.enableTorch()
-  }
-
-  private fun triggerOCRCalls(bitmap: Bitmap, list: MutableList<Barcode>) {
-    customScannerView!!.makeOCRApiCall(bitmap = bitmap,
-      barcodeList = list,
-      locationId = locationId ?: "",
-      options = options ?: emptyMap(),
-      onScanResult = object : OCRResult {
-        override fun onOCRResponse(ocrResponse: String?) {
-
-          Log.d(TAG, "api responded with  ${ocrResponse}")
-          val event = Arguments.createMap().apply {
-            putString("data", ocrResponse)
-          }
-//          val reactContext = context as ReactContext
-          appContext
+    override fun detectionCallbacks(
+        barcodeDetected: Boolean,
+        qrCodeDetected: Boolean,
+        textDetected: Boolean
+    ) {
+//        Log.d(TAG, "detectionCallbacks: "+barcodeDetected)
+        val event = Arguments.createMap().apply {
+            putBoolean("barcode", barcodeDetected)
+            putBoolean("qrcode", qrCodeDetected)
+            putBoolean("text", textDetected)
+        }
+        appContext
             .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
-            .emit("onOCRDataReceived", event)
-        }
+            .emit("onDetected", event)
+    }
 
-        override fun onOCRResponseFailed(throwable: Throwable?) {
+    override fun onBarcodesDetected(barcodeList: List<Barcode>) {
+        Log.d(TAG, "onBarcodeDetected: ")
+        visionCameraView?.rescan()
+        val event = Arguments.createMap().apply {
+            putArray(
+                "code",
+                Arguments.fromArray(barcodeList.map { it.displayValue }.toTypedArray())
+            )
+        }
+        appContext
+            .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
+            .emit("onBarcodeScanSuccess", event)
+    }
+
+    override fun onFailure(exception: ScannerException) {
+        exception.printStackTrace()
+    }
+
+    override fun onImageCaptured(bitmap: Bitmap, imageFile: File?, value: List<Barcode>) {
+        Log.d(TAG, "onImageCaptured: " + imageFile?.toUri().toString())
+
+        visionCameraView?.rescan()
+
+        if (detectionMode == DetectionMode.OCR) {
+            triggerOCRCalls(bitmap, value ?: mutableListOf())
+        }
+        val event = Arguments.createMap().apply {
+            putString("image", imageFile?.toUri().toString())
+        }
+        appContext
+            .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
+            .emit("onImageCaptured", event)
+    }
+
+    private fun triggerOCRCalls(bitmap: Bitmap, list: List<Barcode>) {
+        visionCameraView!!.makeOCRApiCall(bitmap = bitmap,
+            barcodeList = list,
+            locationId = locationId ?: "",
+            options = options ?: emptyMap(),
+            onScanResult = object : OCRResult {
+                override fun onOCRResponse(ocrResponse: String?) {
+
+                    Log.d(TAG, "api responded with  ${ocrResponse}")
+                    val event = Arguments.createMap().apply {
+                        putString("data", ocrResponse)
+                    }
+//          val reactContext = context as ReactContext
+                    appContext
+                        .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
+                        .emit("onOCRDataReceived", event)
+                }
+
+                override fun onOCRResponseFailed(throwable: Throwable?) {
 //          progressBar.visibility = View.GONE
-          Log.d(VisionSdkViewManager.TAG, "Something went wrong ${throwable?.message}")
+                    Log.d(VisionSdkViewManager.TAG, "Something went wrong ${throwable?.message}")
+                }
+            })
+    }
+
+    override fun getCommandsMap(): Map<String?, Int?>? {
+        Log.d("React", " View manager getCommandsMap:")
+        return MapBuilder.of(
+            "captureImage",
+            0,
+            "stopRunning",
+            1,
+            "startRunning",
+            2,
+            "toggleTorch",
+            3
+        )
+    }
+
+    override fun receiveCommand(
+        view: VisionCameraView,
+        commandType: Int,
+        @Nullable args: ReadableArray?
+    ) {
+        Assertions.assertNotNull(view)
+        Assertions.assertNotNull(args)
+        when (commandType) {
+            0 -> {
+                captureImage()
+                return
+            }
+
+            1 -> {
+                stopScanning()
+                return
+            }
+
+            2 -> {
+                restartScanning()
+                return
+            }
+
+            3 -> {
+                toggleTorch(args?.getBoolean(0))
+                return
+            }
+
+            else -> throw IllegalArgumentException(
+                String.format(
+                    "Unsupported command %d received by %s.",
+                    commandType,
+                    javaClass.simpleName
+                )
+            )
         }
-      })
-  }
-
-
-  @ReactProp(name = "apiKey")
-  fun setApiKey(view: View, apiKey: String = "") {
-    Log.d(TAG, "apiKey: " + apiKey)
-    this.apiKey = apiKey
-    initializeSdk()
-  }
-
-  @ReactProp(name = "token")
-  fun setToken(view: View, token: String = "") {
-    Log.d(TAG, "token: " + token)
-    this.token = token
-    initializeSdk()
-  }
-
-  @ReactProp(name = "environment")
-  fun setEnvironment(view: View, env: String = "") {
-    Log.d(TAG, "environment: " + env)
-    environment = when (env.lowercase()) {
-      "dev" -> Environment.DEV
-      "staging" -> Environment.STAGING
-      else -> Environment.DEV
     }
-    initializeSdk()
-  }
 
-  @ReactProp(name = "captureMode")
-  fun setCaptureMode(view: View, captureMode: String = "") {
-    Log.d(TAG, "captureMode: " + captureMode)
-    scanningMode = when (captureMode.lowercase()) {
-      "auto" -> ScanningMode.Auto
-      "manual" -> ScanningMode.Manual
-      else -> ScanningMode.Auto
+    private fun captureImage() {
+        Log.d(TAG, "captureImage: ")
+        visionCameraView!!.capture()
     }
-  }
 
-  @ReactProp(name = "mode")
-  fun setMode(view: View, mode: String = "") {
-    Log.d(TAG, "mode: " + mode)
-    detectionMode = when (mode.lowercase()) {
-      "ocr" -> DetectionMode.OCR
-      "barcode" -> DetectionMode.Barcode
-      "qrcode" -> DetectionMode.QR
-      else -> DetectionMode.OCR
+    private fun stopScanning() {
+        Log.d(TAG, "stopScanning: ")
+        visionCameraView!!.stopCamera()
     }
-  }
 
-  @ReactProp(name = "locationId")
-  fun setLocationId(view: View, locationId: String = "") {
-    Log.d(TAG, "locationId: " + locationId)
-    this.locationId = locationId
-  }
-
-  @ReactProp(name = "options")
-  fun setOptions(view: View, options: String) {
-    Log.d(TAG, "options: " + options)
-    val map = options.split(",").associate {
-      val (left, right) = it.split(":")
-      left to right
+    private fun restartScanning() {
+        Log.d(TAG, "restartScanning: ")
+        visionCameraView!!.rescan()
     }
-    this.options = JSONObject(options).toMap()
-  }
 
-  private fun JSONObject.toMap(): Map<String, Any> = keys().asSequence().associateWith {
-    when (val value = this[it])
-    {
-      is JSONArray ->
-      {
-        val map = (0 until value.length()).associate { Pair(it.toString(), value[it]) }
-        JSONObject(map).toMap().values.toList()
-      }
-      is JSONObject -> value.toMap()
-      JSONObject.NULL -> ""
-      else            -> value
+    private fun toggleTorch(boolean: Boolean?) {
+        Log.d(TAG, "enableTorch: ")
+        if (boolean == true)
+            visionCameraView!!.enableTorch()
+        else
+            visionCameraView!!.disableTorch()
+
     }
-  }
+
+    @ReactProp(name = "apiKey")
+    fun setApiKey(view: View, apiKey: String = "") {
+        Log.d(TAG, "apiKey: " + apiKey)
+        this.apiKey = apiKey
+        initializeSdk()
+    }
+
+    @ReactProp(name = "token")
+    fun setToken(view: View, token: String = "") {
+        Log.d(TAG, "token: " + token)
+        this.token = token
+        initializeSdk()
+    }
+
+    @ReactProp(name = "environment")
+    fun setEnvironment(view: View, env: String = "") {
+        Log.d(TAG, "environment: " + env)
+        environment = when (env.lowercase()) {
+            "dev" -> Environment.DEV
+            "staging" -> Environment.STAGING
+            else -> Environment.DEV
+        }
+        initializeSdk()
+    }
+
+    @ReactProp(name = "captureMode")
+    fun setCaptureMode(view: View, captureMode: String = "") {
+        Log.d(TAG, "captureMode: " + captureMode)
+        scanningMode = when (captureMode.lowercase()) {
+            "auto" -> ScanningMode.Auto
+            "manual" -> ScanningMode.Manual
+            else -> ScanningMode.Auto
+        }
+    }
+
+    @ReactProp(name = "mode")
+    fun setMode(view: View, mode: String = "") {
+        Log.d(TAG, "mode: " + mode)
+        detectionMode = when (mode.lowercase()) {
+            "ocr" -> DetectionMode.OCR
+            "barcode" -> DetectionMode.Barcode
+            "qrcode" -> DetectionMode.QR
+            "photo" -> DetectionMode.Photo
+            else -> DetectionMode.OCR
+        }
+    }
+
+    @ReactProp(name = "locationId")
+    fun setLocationId(view: View, locationId: String = "") {
+        Log.d(TAG, "locationId: " + locationId)
+        this.locationId = locationId
+    }
+
+    @ReactProp(name = "options")
+    fun setOptions(view: View, options: String) {
+        Log.d(TAG, "options: " + options)
+        this.options = JSONObject(options).toMap()
+    }
+
+    private fun JSONObject.toMap(): Map<String, Any> = keys().asSequence().associateWith {
+        when (val value = this[it]) {
+            is JSONArray -> {
+                val map = (0 until value.length()).associate { Pair(it.toString(), value[it]) }
+                JSONObject(map).toMap().values.toList()
+            }
+
+            is JSONObject -> value.toMap()
+            JSONObject.NULL -> ""
+            else -> value
+        }
+    }
+
+    override fun onCameraStarted() {
+        Log.d(TAG, "onCameraStarted: ")
+
+    }
+
+    override fun onCameraStopped() {
+        Log.d(TAG, "onCameraStopped: ")
+    }
+
+    private fun viewTreeObserver() {
+        visionCameraView!!.viewTreeObserver.addOnGlobalLayoutListener {
+            for (i in 0 until visionCameraView!!.childCount) {
+                val child: View = visionCameraView!!.getChildAt(i)
+                child.measure(
+                    View.MeasureSpec.makeMeasureSpec(child.measuredWidth, View.MeasureSpec.EXACTLY),
+                    View.MeasureSpec.makeMeasureSpec(child.measuredHeight, View.MeasureSpec.EXACTLY)
+                )
+                child.layout(0, 0, child.getMeasuredWidth(), child.getMeasuredHeight())
+            }
+        }
+    }
 }
