@@ -52,8 +52,8 @@ android {
   }
 
   compileOptions {
-    sourceCompatibility JavaVersion.VERSION_1_8
-    targetCompatibility JavaVersion.VERSION_1_8
+    sourceCompatibility JavaVersion.VERSION_11
+    targetCompatibility JavaVersion.VERSION_11
   }
 
 }
@@ -135,7 +135,7 @@ dependencies {
   implementation "com.facebook.react:react-native:+"
   implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
 // From node_modules
-  implementation 'com.github.packagexlabs:vision-sdk-android:v1.21.20'
+  implementation 'com.github.packagexlabs:vision-sdk-android:v1.21.25'
 
 //  implementation 'com.packagexlabs:android-vision-sdk:1.1.1'
 }
