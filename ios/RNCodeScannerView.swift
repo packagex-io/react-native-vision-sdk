@@ -1,3 +1,4 @@
+
 import UIKit
 import VisionSDK
 import AVFoundation
@@ -21,12 +22,14 @@ class RNCodeScannerView: UIView {
     var delayTime: Double?
     var locationId: String?
     var options: [String: Any]?
+    var metaData: [String: Any]?
     var showScanFrame: Bool?
     var captureWithScanFrame:Bool?
     
     //MARK: - Initializer
     init() {
         
+        codeScannerView?.stopRunning()
         super.init(frame: UIScreen.main.bounds)
         codeScannerView = CodeScannerView(frame: UIScreen.main.bounds)
         
@@ -41,8 +44,6 @@ class RNCodeScannerView: UIView {
         }
         
         let cameraSettings = VisionSDK.CodeScannerView.CameraSettings(sessionPreset: sessionPreset, nthFrameToProcess: 10, shouldAutoSaveCapturedImage: true)
-        
-        cameraSettings.shouldAutoSaveCapturedImage = true
         
         codeScannerView!.configure(delegate: self, focusSettings: focusSettings, objectDetectionConfiguration: objectDetectionConfiguration, cameraSettings: cameraSettings, captureMode: .manual, captureType: .single, scanMode: .barCode)
         
@@ -61,6 +62,7 @@ class RNCodeScannerView: UIView {
 // MARK: - VisionSDK CodeScannerViewDelegate functions
 //MARK: -
 extension RNCodeScannerView: CodeScannerViewDelegate {
+   
     func codeScannerView(_ scannerView: VisionSDK.CodeScannerView, didSuccess code: [String]) {
         if onBarcodeScanSuccess != nil {
             onBarcodeScanSuccess!(["code": code])
@@ -103,7 +105,7 @@ extension RNCodeScannerView: CodeScannerViewDelegate {
 //MARK: -
 extension RNCodeScannerView {
     
-    /// This Functions takes input params from VisionSDK and calls OCR API and fetch response from the server to pass it to react native app.
+    /// This Functions takes input params from VisionSDK and calls OCR API and fetch response from the server to pass it to react native app, function is called from the codeScannerView delegate method
     /// - Parameters:
     ///   - image: Captured image from VisionSDK to pass into API
     ///   - barcodes: Detected barcodes from VisionSDK to pass into API
@@ -111,7 +113,6 @@ extension RNCodeScannerView {
     private func callOCRAPIWithImage(_ image: UIImage, andBarcodes barcodes: [String], savedImageURL: URL?) {
         
 //        debugPrint(options)
-    
 //        self.callForImageCaptured(image:image)
         if savedImageURL == nil {
             onImageCaptured!(["image": "Nil: URL not found"])
@@ -120,7 +121,7 @@ extension RNCodeScannerView {
             onImageCaptured!(["image": "\(savedImageURL!)"])
         }
         
-        VisionAPIManager.shared.callScanAPIWith(image, andBarcodes: barcodes, andApiKey: !Constants.apiKey.isEmpty ? Constants.apiKey : nil, andToken: token ?? "", andLocationId: locationId ?? "", andOptions: options ?? [:]
+        VisionAPIManager.shared.callScanAPIWith(image, andBarcodes: barcodes, andApiKey: !Constants.apiKey.isEmpty ? Constants.apiKey : nil, andToken: token ?? "", andLocationId: locationId ?? "", andOptions: options ?? [:], andMetaData: metaData ?? [:]
         ) {
             
             [weak self] data, response, error in
@@ -351,6 +352,14 @@ extension RNCodeScannerView {
     @objc func setOptions(_ options: NSString) {
         self.options = convertToDictionary(text: options as? String ?? "")
     }
+    
+    /// Sets the custom metaData from client/React Native side to control scanning inputs/outputs
+    /// - Parameter metaData: metaData description
+    @objc func setMetaData(_ metaData: NSString) {
+        print("metadata ==================", metaData)
+        self.metaData = convertToDictionary(text: metaData as? String ?? "")
+        print("self.metadata ==================", self.metaData)
+    }
 }
 
 //MARK: - Other Helper functions
@@ -394,4 +403,3 @@ extension RNCodeScannerView {
     //        }
     //    }
 }
-

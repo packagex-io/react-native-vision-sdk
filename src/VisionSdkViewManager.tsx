@@ -21,6 +21,7 @@ type VisionSdkProps = {
   token?: String;
   locationId?: String;
   options?: any;
+  metaData?: any;
   environment?: String;
   captureMode?: String;
   delayTime: number;

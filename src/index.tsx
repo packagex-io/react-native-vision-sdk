@@ -57,6 +57,7 @@ const Camera: React.FC<Props> = ({
     postprocess: { require_unique_hash: false },
     transform: { tracker: 'inbound', use_existing_tracking_number: false },
   });
+  const [metaData, setMetaData] = useState({ service: 'inbound' });
   const VisionSDKViewRef = useRef(null);
 
   useImperativeHandle(refProp, () => ({
@@ -84,7 +85,8 @@ const Camera: React.FC<Props> = ({
       token: React.SetStateAction<string>,
       locationId: React.SetStateAction<string>,
       option: React.SetStateAction<any>,
-      appEnvironment: React.SetStateAction<string>
+      appEnvironment: React.SetStateAction<string>,
+      metaDataValue: React.SetStateAction<any>
     ) => {
       setEnvironment(appEnvironment ? appEnvironment : environment);
       setToken(token);
@@ -93,6 +95,7 @@ const Camera: React.FC<Props> = ({
       onChangeCaptureMode(c_mode);
       onChangeMode(input);
       onChangeOptions(option ? option : options);
+      onChangeMetaData(metaDataValue ? metaDataValue : metaData);
     },
   }));
 
@@ -161,6 +164,9 @@ const Camera: React.FC<Props> = ({
   const onChangeOptions = (input: React.SetStateAction<any>) => {
     setOptions(input);
   };
+  const onChangeMetaData = (input: React.SetStateAction<any>) => {
+    setMetaData(input);
+  };
   useEffect(() => {
     DeviceEventEmitter.addListener('onBarcodeScanSuccess', BarCodeScanHandler);
     DeviceEventEmitter.addListener('onImageCaptured', ImageCaptured);
@@ -192,7 +198,8 @@ const Camera: React.FC<Props> = ({
         onError={onError}
         token={token}
         locationId={locationId}
-        options={JSON.stringify(options)} // ideally this should be passed from options variable, that is receiving data from ScannerContainer
+        options={JSON.stringify(options)} // ideally this should be passed from variable, that is receiving data from ScannerContainer
+        metaData={JSON.stringify(metaData)}
         environment={environment}
         ref={VisionSDKViewRef}
       >
