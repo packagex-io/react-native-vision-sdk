@@ -84,25 +84,25 @@ const Camera: React.FC<Props> = ({
     // },
     changeModeHandler: (
       c_mode: React.SetStateAction<any>,
-      input: React.SetStateAction<ScanMode>,
-      token: React.SetStateAction<string>,
-      height: React.SetStateAction<number>,
-      locationId: React.SetStateAction<string>,
+      receivedInput: React.SetStateAction<ScanMode>,
+      receivedToken: React.SetStateAction<string>,
+      receivedHeight: React.SetStateAction<number>,
+      receivedLocationId: React.SetStateAction<string>,
       option: React.SetStateAction<any>,
       appEnvironment: React.SetStateAction<string>,
       metaDataValue: React.SetStateAction<any>,
-      recipient: React.SetStateAction<any>
+      receivedRecipient: React.SetStateAction<any>
     ) => {
       setEnvironment(appEnvironment ? appEnvironment : environment);
-      setToken(token);
-      setLocationId(locationId);
+      setToken(receivedToken);
+      setLocationId(receivedLocationId);
       setApiKey(apiKey);
       onChangeCaptureMode(c_mode);
-      onChangeMode(input);
+      onChangeMode(receivedInput);
       onChangeOptions(option ? option : options);
-      onChangeHeight(height);
+      onChangeHeight(receivedHeight);
       onChangeMetaData(metaDataValue ? metaDataValue : metaData);
-      onChangeRecipient(recipient ? recipient : '');
+      onChangeRecipient(receivedRecipient ? receivedRecipient : '');
     },
   }));
 
