@@ -19,6 +19,7 @@ type Props = {
   key?: string;
   reRender?: string;
   delayTime?: number;
+  height?: number;
   showScanFrame?: boolean;
   captureWithScanFrame?: boolean;
   BarCodeScanHandler?: (_e: any) => void;
@@ -45,6 +46,7 @@ const Camera: React.FC<Props> = ({
   const defaultScanMode = ScanMode.BARCODE;
   const [mode, setMode] = useState<ScanMode>(defaultScanMode);
   const [token, setToken] = useState('');
+  const [height, setHeight] = useState(1.0);
   const [apiKey, setApiKey] = useState('');
   const [cameraCaptureMode, setCameraCaptureMode] = useState('auto');
   const [environment, setEnvironment] = useState('staging');
@@ -57,6 +59,8 @@ const Camera: React.FC<Props> = ({
     postprocess: { require_unique_hash: false },
     transform: { tracker: 'inbound', use_existing_tracking_number: false },
   });
+  const [metaData, setMetaData] = useState({ service: 'inbound' });
+  const [recipient, setRecipient] = useState({ '': '' });
   const VisionSDKViewRef = useRef(null);
 
   useImperativeHandle(refProp, () => ({
@@ -80,19 +84,25 @@ const Camera: React.FC<Props> = ({
     // },
     changeModeHandler: (
       c_mode: React.SetStateAction<any>,
-      input: React.SetStateAction<ScanMode>,
-      token: React.SetStateAction<string>,
-      locationId: React.SetStateAction<string>,
+      receivedInput: React.SetStateAction<ScanMode>,
+      receivedToken: React.SetStateAction<string>,
+      receivedHeight: React.SetStateAction<number>,
+      receivedLocationId: React.SetStateAction<string>,
       option: React.SetStateAction<any>,
-      appEnvironment: React.SetStateAction<string>
+      appEnvironment: React.SetStateAction<string>,
+      metaDataValue: React.SetStateAction<any>,
+      receivedRecipient: React.SetStateAction<any>
     ) => {
       setEnvironment(appEnvironment ? appEnvironment : environment);
-      setToken(token);
-      setLocationId(locationId);
+      setToken(receivedToken);
+      setLocationId(receivedLocationId);
       setApiKey(apiKey);
       onChangeCaptureMode(c_mode);
-      onChangeMode(input);
+      onChangeMode(receivedInput);
       onChangeOptions(option ? option : options);
+      onChangeHeight(receivedHeight);
+      onChangeMetaData(metaDataValue ? metaDataValue : metaData);
+      onChangeRecipient(receivedRecipient ? receivedRecipient : '');
     },
   }));
 
@@ -161,6 +171,15 @@ const Camera: React.FC<Props> = ({
   const onChangeOptions = (input: React.SetStateAction<any>) => {
     setOptions(input);
   };
+  const onChangeHeight = (input: React.SetStateAction<any>) => {
+    setHeight(input);
+  };
+  const onChangeMetaData = (input: React.SetStateAction<any>) => {
+    setMetaData(input);
+  };
+  const onChangeRecipient = (input: React.SetStateAction<any>) => {
+    setRecipient(input);
+  };
   useEffect(() => {
     DeviceEventEmitter.addListener('onBarcodeScanSuccess', BarCodeScanHandler);
     DeviceEventEmitter.addListener('onImageCaptured', ImageCaptured);
@@ -189,10 +208,13 @@ const Camera: React.FC<Props> = ({
         mode={mode}
         captureMode={cameraCaptureMode}
         delayTime={delayTime ? delayTime : 100}
+        height={height}
         onError={onError}
         token={token}
         locationId={locationId}
-        options={JSON.stringify(options)} // ideally this should be passed from options variable, that is receiving data from ScannerContainer
+        options={JSON.stringify(options)} // ideally this should be passed from variable, that is receiving data from ScannerContainer
+        metaData={JSON.stringify(metaData)}
+        recipient={JSON.stringify(recipient)}
         environment={environment}
         ref={VisionSDKViewRef}
       >
