@@ -17,7 +17,7 @@ export default function App() {
       },
       'staging',
       { service: 'inbound' },
-      { recipient: 'ctct_hNxjevb74gV62i5XTQvqg6' }
+      { recipient: '' }
     );
 
     // setInterval(() => {
