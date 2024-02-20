@@ -91,8 +91,7 @@ const Camera: React.FC<Props> = ({
       option: React.SetStateAction<any>,
       appEnvironment: React.SetStateAction<string>,
       metaDataValue: React.SetStateAction<any>,
-      recipient: React.SetStateAction<any>,
-
+      recipient: React.SetStateAction<any>
     ) => {
       setEnvironment(appEnvironment ? appEnvironment : environment);
       setToken(token);
@@ -103,7 +102,7 @@ const Camera: React.FC<Props> = ({
       onChangeOptions(option ? option : options);
       onChangeHeight(height);
       onChangeMetaData(metaDataValue ? metaDataValue : metaData);
-      onChangeRecipient(recipient ? recipient : '')
+      onChangeRecipient(recipient ? recipient : '');
     },
   }));
 
