@@ -70,6 +70,40 @@ class VisionSdkViewManager: RCTViewManager {
 
     }
 
+@objc func setHeight(_ node: NSNumber, height: NSNumber) {
+    DispatchQueue.main.async {
+      let component =
+        self.bridge.uiManager.view(
+          forReactTag: node
+        ) as! RNCodeScannerView
+        component.setHeight(height as NSNumber)
+    }
+   }
+
+@objc func setMetaData(_ node: NSNumber, metaData: NSString) {
+    print("setMetaData=======>",metaData)
+
+    DispatchQueue.main.async {
+      let component =
+        self.bridge.uiManager.view(
+          forReactTag: node
+        ) as! RNCodeScannerView
+        component.setMetaData(metaData as NSString)
+    }
+   }
+ 
+
+@objc func setRecipient(_ node: NSNumber, recipient: NSString) {
+    print("setRecipient=======>",recipient)
+
+    DispatchQueue.main.async {
+      let component =
+        self.bridge.uiManager.view(
+          forReactTag: node
+        ) as! RNCodeScannerView
+        component.setRecipient(recipient as NSString)
+    }
+   }
  
 
 

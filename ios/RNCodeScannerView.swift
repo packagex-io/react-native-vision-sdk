@@ -57,32 +57,6 @@ class RNCodeScannerView: UIView {
 //        self.addSubview(codeScannerView!)
 //    }
     
-    
-    /// This function reconfigure the changes requested by ReInitializeSDK method, or if its called from Init() then first time properties are set.
-    /// - Parameter isReinitializationRequest: isReinitializationRequest defines whether user called this method while re-initialising or it is called from Init(),
-    /// isReinitializationRequest: true mean user called this function
-    /// isReinitializationRequest: false mean, method is called from Init()
-    func ConfigureCodeScannerView(isReinitializationRequest: Bool = false) {
-        let focusSettings = VisionSDK.CodeScannerView.FocusSettings(focusImage: nil, focusImageRect: .zero, shouldDisplayFocusImage: self.showScanFrame ??  false, shouldScanInFocusImageRect: self.captureWithScanFrame ?? true, showDocumentBoundries: true, documentBoundryBorderColor: .orange, documentBoundryFillColor: UIColor.orange.withAlphaComponent(0.3), focusImageTintColor: .white, focusImageHighlightedColor: .white)
-        
-        let objectDetectionConfiguration = VisionSDK.CodeScannerView.ObjectDetectionConfiguration(isTextIndicationOn: true, isBarCodeOrQRCodeIndicationOn: true, isDocumentIndicationOn: false, codeDetectionConfidence: 0.5, documentDetectionConfidence: 0.9)
-        
-        var sessionPreset: AVCaptureSession.Preset = .high
-        
-        if UIDevice.current.userInterfaceIdiom == .pad {
-            sessionPreset = .hd1920x1080
-        }
-        
-        let cameraSettings = VisionSDK.CodeScannerView.CameraSettings(sessionPreset: sessionPreset, nthFrameToProcess: 10, shouldAutoSaveCapturedImage: true)
-        
-        if isReinitializationRequest {
-            codeScannerView!.configure(delegate: self, focusSettings: focusSettings, objectDetectionConfiguration: objectDetectionConfiguration, cameraSettings: cameraSettings, captureMode: (self.codeScannerMode == .ocr) ? .manual : .auto, captureType: .single, scanMode: self.codeScannerMode ?? .barCode)
-        }
-        else {
-            codeScannerView!.configure(delegate: self, focusSettings: focusSettings, objectDetectionConfiguration: objectDetectionConfiguration, cameraSettings: cameraSettings, captureMode: (self.codeScannerMode == .ocr) ? .manual : .auto, captureType: .single, scanMode: .barCode)
-        }
-    }
-    
     //MARK: - Initializer
     init() {
         
@@ -90,19 +64,6 @@ class RNCodeScannerView: UIView {
         codeScannerView?.stopRunning()
         codeScannerView = CodeScannerView()
         ConfigureCodeScannerView()
-    }
-    
-    /// This functions Re-Initializes SDK with the new updated frame, i.e. width/height once setHeight parameter is received.
-    func ReInitializeSDK() {
-        
-        codeScannerView?.stopRunning()
-        codeScannerView = CodeScannerView(frame: CGRect(x: 0, y: 0, width: UIScreen.main.bounds.width, height: UIScreen.main.bounds.height * (height ?? 1.0)))
-        
-        ConfigureCodeScannerView(isReinitializationRequest: true)
-        
-        self.backgroundColor = UIColor.black
-        codeScannerView!.startRunning()
-        self.addSubview(codeScannerView!)
     }
     
     required init?(coder aDecoder: NSCoder) {
@@ -288,7 +249,36 @@ extension RNCodeScannerView {
         videoDevice.videoZoomFactor = CGFloat(zoomLevel)
         videoDevice.unlockForConfiguration()
     }
+
+    /// Sets the custom camera screen height from client/React Native side to control camera screen height
+    /// - Parameter height: height description - > The possible value of height can be between 0.0 to 1.0, i.e. 0.5 means 50% of height of screen.
+    @objc func setHeight(_ height: NSNumber) {
+      
+        codeScannerView?.deConfigure()
+        codeScannerView?.stopRunning()
+        codeScannerView?.frame = CGRect(x: 0, y: 0, width: UIScreen.main.bounds.width, height: UIScreen.main.bounds.height * CGFloat((height)))
     
+        ConfigureCodeScannerView(isReinitializationRequest: true)
+        
+        self.backgroundColor = UIColor.black
+        codeScannerView!.startRunning()
+        self.addSubview(codeScannerView!)
+        codeScannerView?.layoutIfNeeded()
+        
+    }
+    /// Sets the custom metaData from client/React Native side to control scanning inputs/outputs
+    /// - Parameter metaData: metaData description
+    @objc func setMetaData(_ metaData: NSString) {
+
+        self.metaData = convertToDictionary(text: metaData as? String ?? "")
+    }
+    
+    /// Sets the pre-selected recipeint from client/React Native side to bulk scan and assign all the items to same recipient whoms contact_id has been passed
+    /// - Parameter recipient: recipient description
+    @objc func setRecipient(_ recipient: NSString) {
+
+        self.recipient = convertToDictionary(text: recipient as? String ?? "")
+    }
     @objc func setShowScanFrame(_ showScanFrame: Bool) {
         self.showScanFrame = showScanFrame
         let focusSetting = VisionSDK.CodeScannerView.FocusSettings(focusImage: nil, focusImageRect: .zero, shouldDisplayFocusImage: self.showScanFrame ??  true, shouldScanInFocusImageRect: self.captureWithScanFrame ?? true, showDocumentBoundries: true, documentBoundryBorderColor: .orange, documentBoundryFillColor: UIColor.orange.withAlphaComponent(0.3), focusImageTintColor: .white, focusImageHighlightedColor: .white)
@@ -404,38 +394,38 @@ extension RNCodeScannerView {
         self.options = convertToDictionary(text: options as? String ?? "")
     }
     
-    /// Sets the custom metaData from client/React Native side to control scanning inputs/outputs
-    /// - Parameter metaData: metaData description
-    @objc func setMetaData(_ metaData: NSString) {
-        self.metaData = convertToDictionary(text: metaData as? String ?? "")
-    }
     
-    /// Sets the pre-selected recipeint from client/React Native side to bulk scan and assign all the items to same recipient whoms contact_id has been passed
-    /// - Parameter recipient: recipient description
-    @objc func setRecipient(_ recipient: NSString) {
-        self.recipient = convertToDictionary(text: recipient as? String ?? "")
-    }
     
-    /// Sets the custom camera screen height from client/React Native side to control camera screen height
-    /// - Parameter height: height description - > The possible value of height can be between 0.0 to 1.0, i.e. 0.5 means 50% of height of screen.
-    @objc func setHeight(_ height: NSNumber) {
-        
-        if height != nil {
-            self.height = (height as? Double)
-        }
-        else {
-            self.height = 1.0
-        }
-        
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15, execute: {
-            self.ReInitializeSDK()
-        })
-    }
 }
 
 //MARK: - Other Helper functions
 //MARK: -
 extension RNCodeScannerView {
+    
+    /// This function reconfigure the changes requested by ReInitializeSDK method, or if its called from Init() then first time properties are set.
+    /// - Parameter isReinitializationRequest: isReinitializationRequest defines whether user called this method while re-initialising or it is called from Init(),
+    /// isReinitializationRequest: true mean user called this function
+    /// isReinitializationRequest: false mean, method is called from Init()
+    func ConfigureCodeScannerView(isReinitializationRequest: Bool = false) {
+        let focusSettings = VisionSDK.CodeScannerView.FocusSettings(focusImage: nil, focusImageRect: .zero, shouldDisplayFocusImage: self.showScanFrame ??  false, shouldScanInFocusImageRect: self.captureWithScanFrame ?? true, showDocumentBoundries: true, documentBoundryBorderColor: .orange, documentBoundryFillColor: UIColor.orange.withAlphaComponent(0.3), focusImageTintColor: .white, focusImageHighlightedColor: .white)
+        
+        let objectDetectionConfiguration = VisionSDK.CodeScannerView.ObjectDetectionConfiguration(isTextIndicationOn: true, isBarCodeOrQRCodeIndicationOn: true, isDocumentIndicationOn: false, codeDetectionConfidence: 0.5, documentDetectionConfidence: 0.9)
+        
+        var sessionPreset: AVCaptureSession.Preset = .high
+        
+        if UIDevice.current.userInterfaceIdiom == .pad {
+            sessionPreset = .hd1920x1080
+        }
+        
+        let cameraSettings = VisionSDK.CodeScannerView.CameraSettings(sessionPreset: sessionPreset, nthFrameToProcess: 10, shouldAutoSaveCapturedImage: true)
+        
+        if isReinitializationRequest {
+            codeScannerView!.configure(delegate: self, focusSettings: focusSettings, objectDetectionConfiguration: objectDetectionConfiguration, cameraSettings: cameraSettings, captureMode: (self.codeScannerMode == .ocr) ? .manual : .auto, captureType: .single, scanMode: self.codeScannerMode ?? .barCode)
+        }
+        else {
+            codeScannerView!.configure(delegate: self, focusSettings: focusSettings, objectDetectionConfiguration: objectDetectionConfiguration, cameraSettings: cameraSettings, captureMode: (self.codeScannerMode == .ocr) ? .manual : .auto, captureType: .single, scanMode: .barCode)
+        }
+    }
     
     /// Converts the string input to swift supported dictionary
     /// - Parameter text: Inputs JSON formatted string

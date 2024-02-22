@@ -20,6 +20,7 @@ import com.google.mlkit.vision.barcode.common.Barcode
 import io.packagex.visionsdk.Authentication
 import io.packagex.visionsdk.Environment
 import io.packagex.visionsdk.VisionSDK
+import io.packagex.visionsdk.config.FocusSettings
 import io.packagex.visionsdk.core.DetectionMode
 import io.packagex.visionsdk.core.ScanningMode
 import io.packagex.visionsdk.core.ScreenState
@@ -75,8 +76,8 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
       if (shouldStartScanning) {
         shouldStartScanning = false
         startScanning()
-      } else {
-        restartScanning()
+//            } else {
+//                restartScanning()
       }
     }
   }
@@ -111,7 +112,9 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
     visionCameraView?.shouldAutoSaveCapturedImage(true)
     visionCameraView?.setCameraLifecycleCallback(this)
     visionCameraView?.setScannerCallback(this)
-    visionCameraView?.startCameraAndScanning()
+    visionCameraView?.startPreview {
+      visionCameraView?.initiateCamera()
+    }
 
     viewTreeObserver()
   }
@@ -191,15 +194,23 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
 
   override fun getCommandsMap(): Map<String?, Int?>? {
     Log.d("React", " View manager getCommandsMap:")
-    return MapBuilder.of(
-      "captureImage",
-      0,
-      "stopRunning",
-      1,
-      "startRunning",
-      2,
-      "toggleTorch",
-      3
+    return mapOf(
+      "captureImage" to
+              0,
+      "stopRunning" to
+              1,
+      "startRunning" to
+              2,
+      "toggleTorch" to
+              3,
+      "setZoomTo" to
+              4,
+      "setHeight" to
+              5,
+      "setMetaData" to
+              6,
+      "setRecipient" to
+              7,
     )
   }
 
@@ -228,6 +239,26 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
 
       3 -> {
         toggleTorch(args?.getBoolean(0))
+        return
+      }
+
+      4 -> {
+        setZoomTo(args?.getDouble(0)?.toFloat())
+        return
+      }
+
+      5 -> {
+        setHeight(args?.getInt(0))
+        return
+      }
+
+      6 -> {
+        setMetaData(args?.getString(0))
+        return
+      }
+
+      7 -> {
+        setRecipient(args?.getString(0))
         return
       }
 
@@ -260,6 +291,26 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
     Log.d(TAG, "enableTorch: ")
     setStates(boolean)
   }
+
+  private fun setZoomTo(zoom: Float? = 1f) {
+    Log.d(TAG, "setZoomTo: ")
+    visionCameraView?.setZoomRatio(zoom ?: 1f)
+  }
+
+  private fun setHeight(height: Int?) {
+    Log.d(TAG, "setHeight: ")
+  }
+
+  fun setMetaData(metaData: String?) {
+    Log.d(TAG, "metaData: " + metaData)
+    this.metaData = JSONObject(metaData).toMap()
+  }
+
+  fun setRecipient(recipient: String?) {
+    Log.d(TAG, "recipient: " + recipient)
+    this.recipient = JSONObject(recipient).toMap()
+  }
+
 
   @ReactProp(name = "apiKey")
   fun setApiKey(view: View, apiKey: String = "") {
@@ -320,17 +371,6 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
     this.options = JSONObject(options).toMap()
   }
 
-  @ReactProp(name = "metaData")
-  fun setMetaData(view: View, metaData: String) {
-    Log.d(TAG, "metaData: " + metaData)
-    this.metaData = JSONObject(metaData).toMap()
-  }
-
-  @ReactProp(name = "recipient")
-  fun setRecipient(view: View, recipient: String) {
-    Log.d(TAG, "recipient: " + recipient)
-    this.recipient = JSONObject(recipient).toMap()
-  }
 
   private fun JSONObject.toMap(): Map<String, Any> = keys().asSequence().associateWith {
     when (val value = this[it]) {
@@ -366,6 +406,7 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
       }
     }
   }
+
   override fun onOCRResponse(response: String?) {
 
     Log.d(TAG, "api responded with  ${response}")
@@ -375,7 +416,8 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
 //          val reactContext = context as ReactContext
     appContext
       .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
-      .emit("onOCRDataReceived", event)    }
+      .emit("onOCRDataReceived", event)
+  }
 
   override fun onOCRResponseFailed(throwable: Throwable?) {
     Log.d(VisionSdkViewManager.TAG, "Something went wrong ${throwable?.message}")
