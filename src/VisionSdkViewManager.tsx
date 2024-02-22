@@ -21,12 +21,9 @@ type VisionSdkProps = {
   token?: String;
   locationId?: String;
   options?: any;
-  metaData?: any;
-  recipient?: any;
   environment?: String;
   captureMode?: String;
   delayTime: number;
-  height: number;
   showScanFrame?: boolean;
   captureWithScanFrame?: boolean;
   onBarcodeScanSuccess?: (e: any) => void;

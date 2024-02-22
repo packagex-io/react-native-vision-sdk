@@ -9,15 +9,12 @@ export default function App() {
       'auto',
       'ocr',
       'idToken',
-      1,
       'location.id',
       {
         parse_addresses: 'true',
         match_contacts: 'true',
       },
-      'staging',
-      { service: 'inbound' },
-      { recipient: '' }
+      'staging'
     );
 
     // setInterval(() => {
