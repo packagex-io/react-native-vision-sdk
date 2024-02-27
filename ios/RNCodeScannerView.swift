@@ -28,42 +28,33 @@ class RNCodeScannerView: UIView {
     var showScanFrame: Bool?
     var captureWithScanFrame:Bool?
     var codeScannerMode: CodeScannerMode?
-    
-//     init() {
-//
-//        codeScannerView?.stopRunning()
-//        super.init(frame: UIScreen.main.bounds)
-////        super.init(frame: CGRect(x: 0, y: 0, width: UIScreen.main.bounds.width, height: UIScreen.main.bounds.height * (height ?? 0.8)))
-//        codeScannerView = CodeScannerView(frame: CGRect(x: 0, y: 0, width: UIScreen.main.bounds.width, height: UIScreen.main.bounds.height))
-//        
-//        let focusSettings = VisionSDK.CodeScannerView.FocusSettings(focusImage: nil, focusImageRect: .zero, shouldDisplayFocusImage: self.showScanFrame ??  false, shouldScanInFocusImageRect: self.captureWithScanFrame ?? true, showDocumentBoundries: true, documentBoundryBorderColor: .orange, documentBoundryFillColor: UIColor.orange.withAlphaComponent(0.3), focusImageTintColor: .white, focusImageHighlightedColor: .white)
-//        
-//        let objectDetectionConfiguration = VisionSDK.CodeScannerView.ObjectDetectionConfiguration(isTextIndicationOn: true, isBarCodeOrQRCodeIndicationOn: true, isDocumentIndicationOn: false, codeDetectionConfidence: 0.5, documentDetectionConfidence: 0.9)
-//        
-//        var sessionPreset: AVCaptureSession.Preset = .high
-//        
-//        if UIDevice.current.userInterfaceIdiom == .pad {
-//            sessionPreset = .hd1920x1080
-//        }
-//        
-//        let cameraSettings = VisionSDK.CodeScannerView.CameraSettings(sessionPreset: sessionPreset, nthFrameToProcess: 10, shouldAutoSaveCapturedImage: true)
-//        
-//        codeScannerView!.configure(delegate: self, focusSettings: focusSettings, objectDetectionConfiguration: objectDetectionConfiguration, cameraSettings: cameraSettings, captureMode: .manual, captureType: .single, scanMode: .barCode)
-//        
-//        self.backgroundColor = UIColor.black
-//
-//        codeScannerView!.startRunning()
-//        
-//        self.addSubview(codeScannerView!)
-//    }
+    var currentMode: String?
     
     //MARK: - Initializer
     init() {
         
         super.init(frame: UIScreen.main.bounds)
         codeScannerView?.stopRunning()
-        codeScannerView = CodeScannerView()
-        ConfigureCodeScannerView()
+        codeScannerView = CodeScannerView(frame: CGRect(x: 0, y: 0, width: UIScreen.main.bounds.width, height: UIScreen.main.bounds.height))
+        
+        let focusSettings = VisionSDK.CodeScannerView.FocusSettings(focusImage: nil, focusImageRect: .zero, shouldDisplayFocusImage: self.showScanFrame ??  false, shouldScanInFocusImageRect: self.captureWithScanFrame ?? true, showDocumentBoundries: true, documentBoundryBorderColor: .orange, documentBoundryFillColor: UIColor.orange.withAlphaComponent(0.3), focusImageTintColor: .white, focusImageHighlightedColor: .white)
+        
+        let objectDetectionConfiguration = VisionSDK.CodeScannerView.ObjectDetectionConfiguration(isTextIndicationOn: true, isBarCodeOrQRCodeIndicationOn: true, isDocumentIndicationOn: false, codeDetectionConfidence: 0.5, documentDetectionConfidence: 0.9)
+        
+        var sessionPreset: AVCaptureSession.Preset = .high
+        
+        if UIDevice.current.userInterfaceIdiom == .pad {
+            sessionPreset = .hd1920x1080
+        }
+        
+        let cameraSettings = VisionSDK.CodeScannerView.CameraSettings(sessionPreset: sessionPreset, nthFrameToProcess: 10, shouldAutoSaveCapturedImage: true)
+        
+        codeScannerView!.configure(delegate: self, focusSettings: focusSettings, objectDetectionConfiguration: objectDetectionConfiguration, cameraSettings: cameraSettings, captureMode: (self.codeScannerMode == .ocr) ? .manual : .auto, captureType: .single, scanMode: .barCode)
+        
+        self.backgroundColor = UIColor.black
+        codeScannerView!.startRunning()
+        self.addSubview(codeScannerView!)
+        codeScannerView?.layoutIfNeeded()
     }
     
     required init?(coder aDecoder: NSCoder) {
@@ -78,8 +69,13 @@ extension RNCodeScannerView: CodeScannerViewDelegate {
     func codeScannerView(_ scannerView: VisionSDK.CodeScannerView, didSuccess code: [String]) {
         if onBarcodeScanSuccess != nil {
             onBarcodeScanSuccess!(["code": code])
-            DispatchQueue.main.asyncAfter(deadline: .now() + ((delayTime ?? 100)/1000)) {
-                scannerView.rescan()
+            if currentMode == "barcodeSingleCapture" {
+                
+            }
+            else {
+                DispatchQueue.main.asyncAfter(deadline: .now() + ((delayTime ?? 100)/1000)) {
+                    scannerView.rescan()
+                }
             }
         }
     }
@@ -229,54 +225,57 @@ extension RNCodeScannerView {
 //MARK: - Props from JS to Swift functions
 //MARK: -
 extension RNCodeScannerView {
-    
     /// Handles the Device Torch to set it to On/Off
     /// - Parameter setOn: setOn true means device torch is on and vice versa.
-    func setTorchActive(_ setOn: Bool) {
-        assert(Thread.isMainThread)
-        let videoDevice: AVCaptureDevice = VisionSDK.CodeScannerView.videoDevice
-        try? videoDevice.lockForConfiguration()
-        videoDevice.torchMode = setOn ? .on : .off
-        videoDevice.unlockForConfiguration()
+    func setTorchActive(isOn: Bool) {
+        let videoDevice: AVCaptureDevice = CodeScannerView.videoDevice
+        
+        DispatchQueue.main.async {
+            if videoDevice.isTorchAvailable {
+                try? videoDevice.lockForConfiguration()
+                videoDevice.torchMode = isOn ? .on : .off
+                videoDevice.unlockForConfiguration()
+            }
+        }
     }
     
     /// Handles the Zoom Level of the Camera Device
     /// - Parameter zoomLevel: zoomLevel can be any Integar Number
     func setZoomTo(_ zoomLevel: NSNumber) {
-        assert(Thread.isMainThread)
+//        assert(Thread.isMainThread)
         let videoDevice: AVCaptureDevice = VisionSDK.CodeScannerView.videoDevice
-        try? videoDevice.lockForConfiguration()
-        videoDevice.videoZoomFactor = CGFloat(zoomLevel)
-        videoDevice.unlockForConfiguration()
+        DispatchQueue.main.async {
+            try? videoDevice.lockForConfiguration()
+            videoDevice.videoZoomFactor = CGFloat(zoomLevel)
+            videoDevice.unlockForConfiguration()
+        }
     }
 
     /// Sets the custom camera screen height from client/React Native side to control camera screen height
     /// - Parameter height: height description - > The possible value of height can be between 0.0 to 1.0, i.e. 0.5 means 50% of height of screen.
     @objc func setHeight(_ height: NSNumber) {
       
-        codeScannerView?.deConfigure()
-        codeScannerView?.stopRunning()
-        codeScannerView?.frame = CGRect(x: 0, y: 0, width: UIScreen.main.bounds.width, height: UIScreen.main.bounds.height * CGFloat((height)))
+        codeScannerView!.deConfigure()
+        codeScannerView!.stopRunning()
+        codeScannerView!.frame = CGRect(x: 0, y: 0, width: UIScreen.main.bounds.width, height: UIScreen.main.bounds.height * CGFloat((height)))
     
         ConfigureCodeScannerView(isReinitializationRequest: true)
         
         self.backgroundColor = UIColor.black
         codeScannerView!.startRunning()
         self.addSubview(codeScannerView!)
-        codeScannerView?.layoutIfNeeded()
+        codeScannerView!.layoutIfNeeded()
         
     }
     /// Sets the custom metaData from client/React Native side to control scanning inputs/outputs
     /// - Parameter metaData: metaData description
     @objc func setMetaData(_ metaData: NSString) {
-
         self.metaData = convertToDictionary(text: metaData as? String ?? "")
     }
     
     /// Sets the pre-selected recipeint from client/React Native side to bulk scan and assign all the items to same recipient whoms contact_id has been passed
     /// - Parameter recipient: recipient description
     @objc func setRecipient(_ recipient: NSString) {
-
         self.recipient = convertToDictionary(text: recipient as? String ?? "")
     }
     @objc func setShowScanFrame(_ showScanFrame: Bool) {
@@ -313,7 +312,8 @@ extension RNCodeScannerView {
             codeScannerMode = .ocr
             codeScannerView!.objectDetectionConfiguration.isBarCodeOrQRCodeIndicationOn = true
         }
-        else if mode == "barcode" {
+        else if mode == "barcode" || mode == "barcodeSingleCapture" {
+            currentMode = String(mode)
             codeScannerView!.setScanModeTo(.barCode)
             codeScannerMode = .barCode
             codeScannerView!.objectDetectionConfiguration.isBarCodeOrQRCodeIndicationOn = true
@@ -419,12 +419,8 @@ extension RNCodeScannerView {
         
         let cameraSettings = VisionSDK.CodeScannerView.CameraSettings(sessionPreset: sessionPreset, nthFrameToProcess: 10, shouldAutoSaveCapturedImage: true)
         
-        if isReinitializationRequest {
-            codeScannerView!.configure(delegate: self, focusSettings: focusSettings, objectDetectionConfiguration: objectDetectionConfiguration, cameraSettings: cameraSettings, captureMode: (self.codeScannerMode == .ocr) ? .manual : .auto, captureType: .single, scanMode: self.codeScannerMode ?? .barCode)
-        }
-        else {
-            codeScannerView!.configure(delegate: self, focusSettings: focusSettings, objectDetectionConfiguration: objectDetectionConfiguration, cameraSettings: cameraSettings, captureMode: (self.codeScannerMode == .ocr) ? .manual : .auto, captureType: .single, scanMode: .barCode)
-        }
+        codeScannerView!.configure(delegate: self, focusSettings: focusSettings, objectDetectionConfiguration: objectDetectionConfiguration, cameraSettings: cameraSettings, captureMode: (self.codeScannerMode == .ocr) ? .manual : .auto, captureType: .single, scanMode: self.codeScannerMode ?? .barCode)
+        
     }
     
     /// Converts the string input to swift supported dictionary
