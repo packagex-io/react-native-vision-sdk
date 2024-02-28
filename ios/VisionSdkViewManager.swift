@@ -52,7 +52,7 @@ class VisionSdkViewManager: RCTViewManager {
             forReactTag: node
           ) as! RNCodeScannerView
 
-          component.setTorchActive(isEnabled)
+          component.setTorchActive(isOn: isEnabled)
       }
 
     }
@@ -81,8 +81,6 @@ class VisionSdkViewManager: RCTViewManager {
    }
 
 @objc func setMetaData(_ node: NSNumber, metaData: NSString) {
-    print("setMetaData=======>",metaData)
-
     DispatchQueue.main.async {
       let component =
         self.bridge.uiManager.view(
@@ -91,11 +89,8 @@ class VisionSdkViewManager: RCTViewManager {
         component.setMetaData(metaData as NSString)
     }
    }
- 
 
 @objc func setRecipient(_ node: NSNumber, recipient: NSString) {
-    print("setRecipient=======>",recipient)
-
     DispatchQueue.main.async {
       let component =
         self.bridge.uiManager.view(
@@ -103,9 +98,18 @@ class VisionSdkViewManager: RCTViewManager {
         ) as! RNCodeScannerView
         component.setRecipient(recipient as NSString)
     }
-   }
+}
+    
+@objc func setSender(_ node: NSNumber, sender: NSString) {
+    DispatchQueue.main.async {
+        let component =
+        self.bridge.uiManager.view(
+            forReactTag: node
+        ) as! RNCodeScannerView
+        component.setSender(sender as NSString)
+    }
+}
  
-
 
   override func view() -> UIView! {
 

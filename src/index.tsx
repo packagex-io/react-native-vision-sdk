@@ -80,6 +80,9 @@ const Camera: React.FC<Props> = ({
     setRecipient: (val: any) => {
       setRecipient(val);
     },
+    setSender: (val: any) => {
+      setSender(val);
+    },
     changeModeHandler: (
       c_mode: React.SetStateAction<any>,
       receivedInput: React.SetStateAction<ScanMode>,
@@ -154,7 +157,6 @@ const Camera: React.FC<Props> = ({
     );
   };
   const setHeight = (value: any) => {
-    console.log('Height================>', value);
     UIManager.dispatchViewManagerCommand(
       findNodeHandle(VisionSDKViewRef.current),
       (UIManager.hasViewManagerConfig('VisionSDKView') &&
@@ -165,7 +167,6 @@ const Camera: React.FC<Props> = ({
   };
 
   const setMetadata = (value: any) => {
-    console.log('Metadata================>', value);
     UIManager.dispatchViewManagerCommand(
       findNodeHandle(VisionSDKViewRef.current),
       (UIManager.hasViewManagerConfig('VisionSDKView') &&
@@ -175,13 +176,23 @@ const Camera: React.FC<Props> = ({
     );
   };
   const setRecipient = (value: any) => {
-    console.log('Recipient================>', value);
     UIManager.dispatchViewManagerCommand(
       findNodeHandle(VisionSDKViewRef.current),
       (UIManager.hasViewManagerConfig('VisionSDKView') &&
         UIManager.getViewManagerConfig('VisionSDKView').Commands
           .setRecipient) ||
         7,
+      [value]
+    );
+  };
+
+  const setSender = (value: any) => {
+    UIManager.dispatchViewManagerCommand(
+      findNodeHandle(VisionSDKViewRef.current),
+      (UIManager.hasViewManagerConfig('VisionSDKView') &&
+        UIManager.getViewManagerConfig('VisionSDKView').Commands
+          .setSender) ||
+        8,
       [value]
     );
   };

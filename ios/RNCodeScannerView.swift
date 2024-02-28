@@ -25,6 +25,7 @@ class RNCodeScannerView: UIView {
     var metaData: [String: Any]?
     var height: Double?
     var recipient: [String: Any]?
+    var sender: [String: Any]?
     var showScanFrame: Bool?
     var captureWithScanFrame:Bool?
     var codeScannerMode: CodeScannerMode?
@@ -94,6 +95,7 @@ extension RNCodeScannerView: CodeScannerViewDelegate {
     }
     
     func codeScannerView(_ scannerView: CodeScannerView, didCaptureOCRImage image: UIImage, withCroppedImge croppedImage: UIImage?, withbarCodes barcodes: [String], savedImageURL: URL?) {
+        
         if ((codeScannerView?.scanMode == .photo) ) {
 //           self.callForImageCaptured(image:image)
             if savedImageURL == nil {
@@ -129,7 +131,7 @@ extension RNCodeScannerView {
             onImageCaptured!(["image": "\(savedImageURL!)"])
         }
         
-        VisionAPIManager.shared.callScanAPIWith(image, andBarcodes: barcodes, andApiKey: !Constants.apiKey.isEmpty ? Constants.apiKey : nil, andToken: token ?? "", andLocationId: locationId ?? "", andOptions: options ?? [:], andMetaData: metaData ?? [:], andRecipient: recipient ?? [:]
+        VisionAPIManager.shared.callScanAPIWith(image, andBarcodes: barcodes, andApiKey: !Constants.apiKey.isEmpty ? Constants.apiKey : nil, andToken: token ?? "", andLocationId: locationId ?? "", andOptions: options ?? [:], andMetaData: metaData ?? [:], andRecipient: recipient ?? [:], andSender: sender ?? [:]
         ) {
             
             [weak self] data, response, error in
@@ -278,6 +280,13 @@ extension RNCodeScannerView {
     @objc func setRecipient(_ recipient: NSString) {
         self.recipient = convertToDictionary(text: recipient as? String ?? "")
     }
+    
+    /// Sets the pre-selected sender from client/React Native side
+    /// - Parameter sender: sender description
+    @objc func setSender(_ sender: NSString) {
+        self.sender = convertToDictionary(text: sender as? String ?? "")
+    }
+    
     @objc func setShowScanFrame(_ showScanFrame: Bool) {
         self.showScanFrame = showScanFrame
         let focusSetting = VisionSDK.CodeScannerView.FocusSettings(focusImage: nil, focusImageRect: .zero, shouldDisplayFocusImage: self.showScanFrame ??  true, shouldScanInFocusImageRect: self.captureWithScanFrame ?? true, showDocumentBoundries: true, documentBoundryBorderColor: .orange, documentBoundryFillColor: UIColor.orange.withAlphaComponent(0.3), focusImageTintColor: .white, focusImageHighlightedColor: .white)
@@ -437,3 +446,4 @@ extension RNCodeScannerView {
         return nil
     }
 }
+
