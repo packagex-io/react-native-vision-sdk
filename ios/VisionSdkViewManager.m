@@ -24,4 +24,5 @@ RCT_EXTERN_METHOD(setZoomTo:(nonnull NSNumber *)node  zoomValue:(nonnull NSNumbe
 RCT_EXTERN_METHOD(setHeight:(nonnull NSNumber *)node  height:(nonnull NSNumber *)height)
 RCT_EXTERN_METHOD(setMetaData:(nonnull NSNumber *)node  metaData:(nonnull NSString *)metaData)
 RCT_EXTERN_METHOD(setRecipient:(nonnull NSNumber *)node  recipient:(nonnull NSString *)recipient)
+RCT_EXTERN_METHOD(setSender:(nonnull NSNumber *)node  sender:(nonnull NSString *)sender)
 @end
