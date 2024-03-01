@@ -73,13 +73,14 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
     super.onAfterUpdateTransaction(view)
     visionCameraView = view
     Log.d(TAG, "onAfterUpdateTransaction: ")
-//    if (token!!.isNotEmpty()) {
-//      if (shouldStartScanning) {
-//        shouldStartScanning = false
-////            } else {
-////                restartScanning()
-//      }
-//    }
+    if (token!!.isNotEmpty()) {
+      if (shouldStartScanning) {
+        shouldStartScanning = false
+        startScanning()
+//            } else {
+//                restartScanning()
+      }
+    }
   }
 
   override fun onDropViewInstance(view: VisionCameraView) {
@@ -112,9 +113,7 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
     visionCameraView?.shouldAutoSaveCapturedImage(true)
     visionCameraView?.setCameraLifecycleCallback(this)
     visionCameraView?.setScannerCallback(this)
-    visionCameraView?.startPreview {
-      visionCameraView?.initiateCamera()
-    }
+
 
     viewTreeObserver()
   }
@@ -197,23 +196,23 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
     Log.d("React", " View manager getCommandsMap:")
     return mapOf(
       "captureImage" to
-              0,
+        0,
       "stopRunning" to
-              1,
+        1,
       "startRunning" to
-              2,
+        2,
       "toggleTorch" to
-              3,
+        3,
       "setZoomTo" to
-              4,
+        4,
       "setHeight" to
-              5,
+        5,
       "setMetaData" to
-              6,
+        6,
       "setRecipient" to
-              7,
+        7,
       "setSender" to
-              8,
+        8,
     )
   }
 
@@ -292,8 +291,11 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
 
   private fun restartScanning() {
     Log.d(TAG, "restartScanning: ")
+    visionCameraView?.startPreview {
+      visionCameraView?.initiateCamera()
+    }
 //    visionCameraView!!.rescan()
-    startScanning()
+//    startScanning()
 
   }
 
