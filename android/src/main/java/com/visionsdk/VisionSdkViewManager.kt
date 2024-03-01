@@ -45,6 +45,7 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
   private var options: Map<String, Any>? = emptyMap()
   private var metaData: Map<String, Any>? = emptyMap()
   private var recipient: Map<String, Any>? = emptyMap()
+  private var sender: Map<String, Any>? = emptyMap()
   private var environment: Environment = Environment.DEV
   private var visionCameraView: VisionCameraView? = null
   private var detectionMode: DetectionMode = DetectionMode.Barcode
@@ -72,14 +73,13 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
     super.onAfterUpdateTransaction(view)
     visionCameraView = view
     Log.d(TAG, "onAfterUpdateTransaction: ")
-    if (token!!.isNotEmpty()) {
-      if (shouldStartScanning) {
-        shouldStartScanning = false
-        startScanning()
-//            } else {
-//                restartScanning()
-      }
-    }
+//    if (token!!.isNotEmpty()) {
+//      if (shouldStartScanning) {
+//        shouldStartScanning = false
+////            } else {
+////                restartScanning()
+//      }
+//    }
   }
 
   override fun onDropViewInstance(view: VisionCameraView) {
@@ -188,6 +188,7 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
       options = options ?: emptyMap(),
       metadata = metaData ?: emptyMap(),
       recipient = recipient ?: emptyMap(),
+      sender = sender ?: emptyMap(),
       onScanResult = this
     )
   }
@@ -211,6 +212,8 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
               6,
       "setRecipient" to
               7,
+      "setSender" to
+              8,
     )
   }
 
@@ -262,6 +265,11 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
         return
       }
 
+      8 -> {
+        setSender(args?.getString(0))
+        return
+      }
+
       else -> throw IllegalArgumentException(
         String.format(
           "Unsupported command %d received by %s.",
@@ -284,7 +292,9 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
 
   private fun restartScanning() {
     Log.d(TAG, "restartScanning: ")
-    visionCameraView!!.rescan()
+//    visionCameraView!!.rescan()
+    startScanning()
+
   }
 
   private fun toggleTorch(boolean: Boolean?) {
@@ -293,7 +303,7 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
   }
 
   private fun setZoomTo(zoom: Float? = 1f) {
-    Log.d(TAG, "setZoomTo: ")
+    Log.d(TAG, "setZoomTo: " + zoom)
     visionCameraView?.setZoomRatio(zoom ?: 1f)
   }
 
@@ -309,6 +319,11 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
   fun setRecipient(recipient: String?) {
     Log.d(TAG, "recipient: " + recipient)
     this.recipient = JSONObject(recipient).toMap()
+  }
+
+  fun setSender(sender: String?) {
+    Log.d(TAG, "recipient: " + recipient)
+    this.sender = JSONObject(sender).toMap()
   }
 
 
