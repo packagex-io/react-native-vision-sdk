@@ -291,8 +291,8 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
 
   private fun restartScanning() {
     Log.d(TAG, "restartScanning: ")
-    visionCameraView?.startPreview {
-      visionCameraView?.initiateCamera()
+    visionCameraView?.addPreviewView {
+      visionCameraView?.startCamera()
     }
 //    visionCameraView!!.rescan()
 //    startScanning()
