@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.util.Log
 import android.view.View
+import android.widget.Toast
 import androidx.annotation.Nullable
 import androidx.core.net.toUri
 import androidx.lifecycle.LifecycleOwner
@@ -349,7 +350,9 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
     environment = when (env.lowercase()) {
       "dev" -> Environment.DEV
       "staging" -> Environment.STAGING
-      else -> Environment.DEV
+      "sandbox" -> Environment.SANDBOX
+      "prod" -> Environment.PRODUCTION
+      else -> Environment.PRODUCTION
     }
     initializeSdk()
   }
@@ -437,6 +440,7 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
   }
 
   override fun onOCRResponseFailed(throwable: Throwable?) {
+    Toast.makeText(context,"Something went wrong ${throwable?.message}",Toast.LENGTH_LONG).show()
     Log.d(VisionSdkViewManager.TAG, "Something went wrong ${throwable?.message}")
   }
 }
