@@ -352,7 +352,7 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
       "staging" -> Environment.STAGING
       "sandbox" -> Environment.SANDBOX
       "prod" -> Environment.PRODUCTION
-      else -> Environment.PRODUCTION
+      else -> Environment.STAGING
     }
     initializeSdk()
   }
