@@ -25,7 +25,7 @@ type Props = {
   ImageCaptured?: (_e: any) => void;
   OCRScanHandler?: (_e: any) => void;
   OnDetectedHandler?: (_e: any) => void;
-  onError?: (e: { nativeEvent: { message: any } }) => void;
+  onError?: (e: any) => void;
 };
 
 const Camera: React.FC<Props> = ({
@@ -39,7 +39,7 @@ const Camera: React.FC<Props> = ({
   ImageCaptured = (_e: any) => {},
   OCRScanHandler = (_e: any) => {},
   OnDetectedHandler = (_e: any) => {},
-  onError = (_e: any): void => {},
+  onError = (_e: any) => {},
 }: Props) => {
   const defaultScanMode = ScanMode.BARCODE;
   const [mode, setMode] = useState<ScanMode>(defaultScanMode);
@@ -211,12 +211,14 @@ const Camera: React.FC<Props> = ({
     DeviceEventEmitter.addListener('onImageCaptured', ImageCaptured);
     DeviceEventEmitter.addListener('onOCRDataReceived', OCRScanHandler);
     DeviceEventEmitter.addListener('onDetected', OnDetectedHandler);
+    DeviceEventEmitter.addListener('onError', onError);
 
     return () => {
       DeviceEventEmitter.removeAllListeners('onBarcodeScanSuccess');
       DeviceEventEmitter.removeAllListeners('onOCRDataReceived');
       DeviceEventEmitter.removeAllListeners('onDetected');
       DeviceEventEmitter.removeAllListeners('onImageCaptured');
+      DeviceEventEmitter.removeAllListeners('onError');
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
