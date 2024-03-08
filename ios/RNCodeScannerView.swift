@@ -38,24 +38,23 @@ class RNCodeScannerView: UIView {
         codeScannerView?.stopRunning()
         codeScannerView = CodeScannerView(frame: CGRect(x: 0, y: 0, width: UIScreen.main.bounds.width, height: UIScreen.main.bounds.height))
         
-        let focusSettings = VisionSDK.CodeScannerView.FocusSettings(focusImage: nil, focusImageRect: .zero, shouldDisplayFocusImage: self.showScanFrame ??  false, shouldScanInFocusImageRect: self.captureWithScanFrame ?? true, showDocumentBoundries: true, documentBoundryBorderColor: .orange, documentBoundryFillColor: UIColor.orange.withAlphaComponent(0.3), focusImageTintColor: .white, focusImageHighlightedColor: .white)
-        
-        let objectDetectionConfiguration = VisionSDK.CodeScannerView.ObjectDetectionConfiguration(isTextIndicationOn: true, isBarCodeOrQRCodeIndicationOn: true, isDocumentIndicationOn: false, codeDetectionConfidence: 0.5, documentDetectionConfidence: 0.9)
-        
-        var sessionPreset: AVCaptureSession.Preset = .high
-        
-        if UIDevice.current.userInterfaceIdiom == .pad {
-            sessionPreset = .hd1920x1080
-        }
-        
-        let cameraSettings = VisionSDK.CodeScannerView.CameraSettings(sessionPreset: sessionPreset, nthFrameToProcess: 10, shouldAutoSaveCapturedImage: true)
-        
-        codeScannerView!.configure(delegate: self, focusSettings: focusSettings, objectDetectionConfiguration: objectDetectionConfiguration, cameraSettings: cameraSettings, captureMode: (self.codeScannerMode == .ocr) ? .manual : .auto, captureType: .single, scanMode: .barCode)
-        
+//        let focusSettings = VisionSDK.CodeScannerView.FocusSettings(focusImage: nil, focusImageRect: .zero, shouldDisplayFocusImage: self.showScanFrame ??  false, shouldScanInFocusImageRect: self.captureWithScanFrame ?? true, showDocumentBoundries: true, documentBoundryBorderColor: .orange, documentBoundryFillColor: UIColor.orange.withAlphaComponent(0.3), focusImageTintColor: .white, focusImageHighlightedColor: .white)
+//        
+//        let objectDetectionConfiguration = VisionSDK.CodeScannerView.ObjectDetectionConfiguration(isTextIndicationOn: true, isBarCodeOrQRCodeIndicationOn: true, isDocumentIndicationOn: false, codeDetectionConfidence: 0.5, documentDetectionConfidence: 0.9)
+//        
+//        var sessionPreset: AVCaptureSession.Preset = .high
+//        
+//        if UIDevice.current.userInterfaceIdiom == .pad {
+//            sessionPreset = .hd1920x1080
+//        }
+//        
+//        let cameraSettings = VisionSDK.CodeScannerView.CameraSettings(sessionPreset: sessionPreset, nthFrameToProcess: 10, shouldAutoSaveCapturedImage: true)
+//        
+//        codeScannerView!.configure(delegate: self, focusSettings: focusSettings, objectDetectionConfiguration: objectDetectionConfiguration, cameraSettings: cameraSettings, captureMode: (self.codeScannerMode == .ocr) ? .manual : .auto, captureType: .single, scanMode: .barCode)
+//        
         self.backgroundColor = UIColor.black
         codeScannerView!.startRunning()
         self.addSubview(codeScannerView!)
-        codeScannerView?.layoutIfNeeded()
     }
     
     required init?(coder aDecoder: NSCoder) {
@@ -258,17 +257,15 @@ extension RNCodeScannerView {
     @objc func setHeight(_ height: NSNumber) {
       
         codeScannerView!.deConfigure()
-        codeScannerView!.stopRunning()
+//        codeScannerView!.stopRunning()
         codeScannerView!.frame = CGRect(x: 0, y: 0, width: UIScreen.main.bounds.width, height: UIScreen.main.bounds.height * CGFloat((height)))
-    
         ConfigureCodeScannerView(isReinitializationRequest: true)
-        
-        self.backgroundColor = UIColor.black
+//        self.backgroundColor = UIColor.black
         codeScannerView!.startRunning()
-        self.addSubview(codeScannerView!)
+//        self.addSubview(codeScannerView!)
         codeScannerView!.layoutIfNeeded()
-        
     }
+    
     /// Sets the custom metaData from client/React Native side to control scanning inputs/outputs
     /// - Parameter metaData: metaData description
     @objc func setMetaData(_ metaData: NSString) {

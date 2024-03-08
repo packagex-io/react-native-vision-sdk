@@ -30,7 +30,7 @@ type VisionSdkProps = {
   onImageCaptured?: (e: any) => void;
   onOCRDataReceived?: (e: any) => void;
   onDetected?: (e: any) => void;
-  onError?: (e: { nativeEvent: { message: any } }) => void;
+  onError?: (e: any) => void;
 };
 
 const ComponentName = 'VisionSdkView';

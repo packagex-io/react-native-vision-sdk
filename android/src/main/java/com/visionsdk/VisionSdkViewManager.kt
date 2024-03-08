@@ -26,6 +26,7 @@ import io.packagex.visionsdk.core.DetectionMode
 import io.packagex.visionsdk.core.ScanningMode
 import io.packagex.visionsdk.core.ScreenState
 import io.packagex.visionsdk.core.ScreenViewType
+import io.packagex.visionsdk.exceptions.APIErrorResponse
 import io.packagex.visionsdk.exceptions.ScannerException
 import io.packagex.visionsdk.interfaces.CameraLifecycleCallback
 import io.packagex.visionsdk.interfaces.OCRResult
@@ -440,7 +441,17 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
   }
 
   override fun onOCRResponseFailed(throwable: Throwable?) {
-    Toast.makeText(context,"Something went wrong ${throwable?.message}",Toast.LENGTH_LONG).show()
-    Log.d(VisionSdkViewManager.TAG, "Something went wrong ${throwable?.message}")
+    val message = if (throwable is APIErrorResponse){
+      (throwable as APIErrorResponse).errorModel.message
+    }else{
+      throwable?.message ?: "Unknown error occurred"
+    }
+    val event = Arguments.createMap().apply {
+      putString("message", message)
+    }
+    appContext
+      .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
+      .emit("onError", event)
+    Log.d(TAG, "${message}")
   }
 }
