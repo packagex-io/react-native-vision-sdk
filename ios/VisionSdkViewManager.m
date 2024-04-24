@@ -25,4 +25,5 @@ RCT_EXTERN_METHOD(setHeight:(nonnull NSNumber *)node  height:(nonnull NSNumber *
 RCT_EXTERN_METHOD(setMetaData:(nonnull NSNumber *)node  metaData:(nonnull NSString *)metaData)
 RCT_EXTERN_METHOD(setRecipient:(nonnull NSNumber *)node  recipient:(nonnull NSString *)recipient)
 RCT_EXTERN_METHOD(setSender:(nonnull NSNumber *)node  sender:(nonnull NSString *)sender)
+RCT_EXTERN_METHOD(setDocumentColor:(nonnull NSNumber *)node  documentColor:(nonnull NSString *)documentColor)
 @end

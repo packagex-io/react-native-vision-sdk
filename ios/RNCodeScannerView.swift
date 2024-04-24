@@ -28,6 +28,7 @@ class RNCodeScannerView: UIView {
     var sender: [String: Any]?
     var showScanFrame: Bool?
     var captureWithScanFrame:Bool?
+    var detectedDocumentRectangleColor: UIColor = .clear
     var codeScannerMode: CodeScannerMode?
     var currentMode: String?
     
@@ -246,7 +247,7 @@ extension RNCodeScannerView {
         codeScannerView!.deConfigure()
 //        codeScannerView!.stopRunning()
         codeScannerView!.frame = CGRect(x: 0, y: 0, width: UIScreen.main.bounds.width, height: UIScreen.main.bounds.height * CGFloat((height)))
-        ConfigureCodeScannerView(isReinitializationRequest: true)
+        ConfigureCodeScannerView()
 //        self.backgroundColor = UIColor.black
         codeScannerView!.startRunning()
 //        self.addSubview(codeScannerView!)
@@ -273,13 +274,13 @@ extension RNCodeScannerView {
     
     @objc func setShowScanFrame(_ showScanFrame: Bool) {
         self.showScanFrame = showScanFrame
-        let focusSetting = VisionSDK.CodeScannerView.FocusSettings(focusImage: nil, focusImageRect: .zero, shouldDisplayFocusImage: self.showScanFrame ??  true, shouldScanInFocusImageRect: self.captureWithScanFrame ?? true, showDocumentBoundries: true, documentBoundryBorderColor: .green, documentBoundryFillColor: UIColor.green.withAlphaComponent(0.3), focusImageTintColor: .white, focusImageHighlightedColor: .white)
+        let focusSetting = VisionSDK.CodeScannerView.FocusSettings(focusImage: nil, focusImageRect: .zero, shouldDisplayFocusImage: self.showScanFrame ??  true, shouldScanInFocusImageRect: self.captureWithScanFrame ?? true, showDocumentBoundries: true, documentBoundryBorderColor: detectedDocumentRectangleColor, documentBoundryFillColor: detectedDocumentRectangleColor.withAlphaComponent(0.1), focusImageTintColor: .white, focusImageHighlightedColor: .white)
         codeScannerView!.focusSettings = focusSetting
     }
     
     @objc func setCaptureWithScanFrame(_ captureWithScanFrame: Bool) {
         self.captureWithScanFrame = captureWithScanFrame
-        let focusSetting = VisionSDK.CodeScannerView.FocusSettings(focusImage: nil, focusImageRect: .zero, shouldDisplayFocusImage: self.showScanFrame ??  true, shouldScanInFocusImageRect: self.captureWithScanFrame ?? true, showDocumentBoundries: true, documentBoundryBorderColor: .green, documentBoundryFillColor: UIColor.green.withAlphaComponent(0.3), focusImageTintColor: .white, focusImageHighlightedColor: .white)
+        let focusSetting = VisionSDK.CodeScannerView.FocusSettings(focusImage: nil, focusImageRect: .zero, shouldDisplayFocusImage: self.showScanFrame ??  true, shouldScanInFocusImageRect: self.captureWithScanFrame ?? true, showDocumentBoundries: true, documentBoundryBorderColor: detectedDocumentRectangleColor, documentBoundryFillColor: detectedDocumentRectangleColor.withAlphaComponent(0.1), focusImageTintColor: .white, focusImageHighlightedColor: .white)
         codeScannerView!.focusSettings = focusSetting
     }
     
@@ -321,6 +322,20 @@ extension RNCodeScannerView {
             codeScannerMode = .qrCode
             codeScannerView!.objectDetectionConfiguration.isBarCodeOrQRCodeIndicationOn = true
         }
+    }
+    
+    /// Sets the Focus Setting's property documentBoundryFillColor/documentBoundryBorderColor color to user desired color
+    /// - Parameter color: color as NSString
+    @objc func setDocumentColor(_ documentColor: NSString) {
+        if codeScannerView == nil {
+            return
+        }
+  
+        if let color = UIColor(hex: documentColor as String) {
+            // Use 'color' wherever a UIColor is needed
+            codeScannerView!.focusSettings.documentBoundryFillColor = color.withAlphaComponent(0.1)
+            codeScannerView!.focusSettings.documentBoundryBorderColor = color
+        } 
     }
     
     /// Sets the Camera Capture mode for the user desired setting.
@@ -396,11 +411,8 @@ extension RNCodeScannerView {
 extension RNCodeScannerView {
     
     /// This function reconfigure the changes requested by ReInitializeSDK method, or if its called from Init() then first time properties are set.
-    /// - Parameter isReinitializationRequest: isReinitializationRequest defines whether user called this method while re-initialising or it is called from Init(),
-    /// isReinitializationRequest: true mean user called this function
-    /// isReinitializationRequest: false mean, method is called from Init()
-    func ConfigureCodeScannerView(isReinitializationRequest: Bool = false) {
-        let focusSettings = VisionSDK.CodeScannerView.FocusSettings(focusImage: nil, focusImageRect: .zero, shouldDisplayFocusImage: self.showScanFrame ??  false, shouldScanInFocusImageRect: self.captureWithScanFrame ?? true, showDocumentBoundries: true, documentBoundryBorderColor: .green, documentBoundryFillColor: UIColor.green.withAlphaComponent(0.3), focusImageTintColor: .white, focusImageHighlightedColor: .white)
+    func ConfigureCodeScannerView() {
+        let focusSettings = VisionSDK.CodeScannerView.FocusSettings(focusImage: nil, focusImageRect: .zero, shouldDisplayFocusImage: self.showScanFrame ??  false, shouldScanInFocusImageRect: self.captureWithScanFrame ?? true, showDocumentBoundries: true, documentBoundryBorderColor: detectedDocumentRectangleColor, documentBoundryFillColor: detectedDocumentRectangleColor.withAlphaComponent(0.1), focusImageTintColor: .white, focusImageHighlightedColor: .white)
         
         let objectDetectionConfiguration = VisionSDK.CodeScannerView.ObjectDetectionConfiguration(isTextIndicationOn: true, isBarCodeOrQRCodeIndicationOn: true, isDocumentIndicationOn: true, codeDetectionConfidence: 0.5, documentDetectionConfidence: 0.8, secondsToWaitBeforeDocumentCapture: 3)
         
