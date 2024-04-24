@@ -203,7 +203,8 @@ const Camera: React.FC<Props> = ({
     UIManager.dispatchViewManagerCommand(
       findNodeHandle(VisionSDKViewRef.current),
       (UIManager.hasViewManagerConfig('VisionSDKView') &&
-        UIManager.getViewManagerConfig('VisionSDKView').Commands.setDocumentColor) ||
+        UIManager.getViewManagerConfig('VisionSDKView').Commands
+          .setDocumentColor) ||
         9,
       [value]
     );
