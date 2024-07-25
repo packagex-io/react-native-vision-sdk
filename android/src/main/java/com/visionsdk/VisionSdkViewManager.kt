@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.util.Log
 import android.view.View
+import android.view.ViewGroup
 import android.widget.Toast
 import androidx.annotation.Nullable
 import androidx.core.net.toUri
@@ -22,6 +23,7 @@ import io.packagex.visionsdk.Authentication
 import io.packagex.visionsdk.Environment
 import io.packagex.visionsdk.VisionSDK
 import io.packagex.visionsdk.config.FocusSettings
+import io.packagex.visionsdk.config.ObjectDetectionConfiguration
 import io.packagex.visionsdk.core.DetectionMode
 import io.packagex.visionsdk.core.ScanningMode
 import io.packagex.visionsdk.core.ScreenState
@@ -50,8 +52,12 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
   private var sender: Map<String, Any>? = emptyMap()
   private var environment: Environment = Environment.DEV
   private var visionCameraView: VisionCameraView? = null
+  private var screenState:ScreenState? = null
+  private var focusSettings: FocusSettings? = null
   private var detectionMode: DetectionMode = DetectionMode.Barcode
   private var scanningMode: ScanningMode = ScanningMode.Manual
+//  private var shouldDisplayFocusImage:Boolean = false
+//  private var shouldScanInFocusImageRect: Boolean = false
   private var lifecycleOwner: LifecycleOwner? = null
   private var shouldStartScanning = true
   private lateinit var authentication: Authentication
@@ -65,6 +71,7 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
     context = appContext.currentActivity!!
     lifecycleOwner = context as LifecycleOwner
     visionCameraView = VisionCameraView(context!!, null)
+//    visionCameraView?.layoutParams = ViewGroup.LayoutParams(100,100)
     return visionCameraView!!
   }
 
@@ -75,14 +82,16 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
     super.onAfterUpdateTransaction(view)
     visionCameraView = view
     Log.d(TAG, "onAfterUpdateTransaction: ")
-    if (token!!.isNotEmpty()) {
-      if (shouldStartScanning) {
-        shouldStartScanning = false
-        startScanning()
-//            } else {
-//                restartScanning()
-      }
-    }
+    configureCamera()
+//    if (token!!.isNotEmpty()) {
+//      startCamera()
+//      if (shouldStartScanning) {
+//        shouldStartScanning = false
+//        startScanning()
+////            } else {
+////                restartScanning()
+//      }
+//    }
   }
 
   override fun onDropViewInstance(view: VisionCameraView) {
@@ -94,6 +103,7 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
 
 
   private fun initializeSdk() {
+    Log.d(TAG, "initializeSdk: ")
 
     if (apiKey?.isNotEmpty() == true)
       authentication = Authentication.API(apiKey!!)
@@ -104,14 +114,16 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
     VisionSDK.getInstance().initialize(
       environment,
       authentication,
-      ""
+      Authentication.API(""),
+      Authentication.API("")
     )
   }
 
-  private fun startScanning() {
+  private fun configureCamera() {
 
-    Log.d(TAG, "startScanning: ")
-    setStates(false)
+    Log.d(TAG, "configureCamera: ")
+    configureScreenState()
+    visionCameraView?.setObjectDetectionConfiguration(ObjectDetectionConfiguration(isDocumentIndicationOn = false))
     visionCameraView?.shouldAutoSaveCapturedImage(true)
     visionCameraView?.setCameraLifecycleCallback(this)
     visionCameraView?.setScannerCallback(this)
@@ -120,21 +132,15 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
     viewTreeObserver()
   }
 
-  private fun setStates(isFlashOn: Boolean? = false) {
-    visionCameraView?.setStateAndFocusSettings(
-      ScreenState(
-        screenViewType = ScreenViewType.FullScreen,
-        detectionMode = detectionMode,
-        scanningMode = scanningMode,
-        isFlashTurnedOn = isFlashOn!!
-      )
-    )
+  private fun setStateAndFocusSettings() {
+    visionCameraView?.setStateAndFocusSettings(screenState,focusSettings)
   }
 
   override fun detectionCallbacks(
     barcodeDetected: Boolean,
     qrCodeDetected: Boolean,
-    textDetected: Boolean
+    textDetected: Boolean,
+    documentDetected: Boolean
   ) {
 //        Log.d(TAG, "detectionCallbacks: "+barcodeDetected)
     val event = Arguments.createMap().apply {
@@ -170,7 +176,8 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
 
     visionCameraView?.rescan()
 
-    if (detectionMode == DetectionMode.OCR) {
+    if (screenState?.detectionMode == DetectionMode.OCR) {
+      initializeSdk()
       triggerOCRCalls(bitmap, value ?: mutableListOf())
     }
     val event = Arguments.createMap().apply {
@@ -198,23 +205,23 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
     Log.d("React", " View manager getCommandsMap:")
     return mapOf(
       "captureImage" to
-        0,
+              0,
       "stopRunning" to
-        1,
+              1,
       "startRunning" to
-        2,
+              2,
       "toggleTorch" to
-        3,
+              3,
       "setZoomTo" to
-        4,
+              4,
       "setHeight" to
-        5,
+              5,
       "setMetaData" to
-        6,
+              6,
       "setRecipient" to
-        7,
+              7,
       "setSender" to
-        8,
+              8,
     )
   }
 
@@ -237,7 +244,7 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
       }
 
       2 -> {
-        restartScanning()
+        startCamera()
         return
       }
 
@@ -281,6 +288,15 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
     }
   }
 
+  private fun configureScreenState(){
+    screenState = ScreenState(detectionMode = detectionMode, scanningMode = scanningMode)
+    setStateAndFocusSettings()
+  }
+  private fun configureFocusSettings(shouldDisplayFocusImage:Boolean = false, shouldScanInFocusImageRect: Boolean = false){
+    focusSettings = FocusSettings(shouldDisplayFocusImage =  shouldDisplayFocusImage, shouldScanInFocusImageRect = shouldScanInFocusImageRect)
+    setStateAndFocusSettings()
+  }
+
   private fun captureImage() {
     Log.d(TAG, "captureImage: ")
     visionCameraView!!.capture()
@@ -291,19 +307,18 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
     visionCameraView!!.stopCamera()
   }
 
-  private fun restartScanning() {
-    Log.d(TAG, "restartScanning: ")
-    visionCameraView?.addPreviewView {
+  private fun startCamera() {
+//    configureCamera()
+    Log.d(TAG, "startCamera: ")
+    visionCameraView?.initialize {
       visionCameraView?.startCamera()
     }
-//    visionCameraView!!.rescan()
-//    startScanning()
-
   }
 
   private fun toggleTorch(boolean: Boolean?) {
     Log.d(TAG, "enableTorch: ")
-    setStates(boolean)
+    screenState = screenState?.copy(isFlashTurnedOn = boolean!!)
+    setStateAndFocusSettings()
   }
 
   private fun setZoomTo(zoom: Float? = 1f) {
@@ -322,12 +337,20 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
 
   fun setRecipient(recipient: String?) {
     Log.d(TAG, "recipient: " + recipient)
-    this.recipient = JSONObject(recipient).toMap()
+    if (recipient?.isEmpty() == true){
+      this.recipient = emptyMap()
+    }else{
+      this.recipient = JSONObject(recipient).toMap()
+    }
   }
 
   fun setSender(sender: String?) {
-    Log.d(TAG, "recipient: " + recipient)
-    this.sender = JSONObject(sender).toMap()
+    Log.d(TAG, "sender: " + sender)
+    if (sender?.isEmpty() == true){
+      this.sender = emptyMap()
+    }else{
+      this.sender = JSONObject(sender).toMap()
+    }
   }
 
 
@@ -335,14 +358,12 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
   fun setApiKey(view: View, apiKey: String = "") {
     Log.d(TAG, "apiKey: " + apiKey)
     this.apiKey = apiKey
-    initializeSdk()
   }
 
   @ReactProp(name = "token")
   fun setToken(view: View, token: String = "") {
     Log.d(TAG, "token: " + token)
     this.token = token
-    initializeSdk()
   }
 
   @ReactProp(name = "environment")
@@ -355,7 +376,6 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
       "prod" -> Environment.PRODUCTION
       else -> Environment.STAGING
     }
-    initializeSdk()
   }
 
   @ReactProp(name = "captureMode")
@@ -378,6 +398,18 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
       "photo" -> DetectionMode.Photo
       else -> DetectionMode.OCR
     }
+  }
+
+  @ReactProp(name = "showScanFrame")
+  fun showScanFrame(view: View, showScanFrame: Boolean = false) {
+    Log.d(TAG, "showScanFrame: " + showScanFrame)
+    configureFocusSettings(shouldDisplayFocusImage = showScanFrame)
+  }
+
+  @ReactProp(name = "captureWithScanFrame")
+  fun captureWithScanFrame(view: View, captureWithScanFrame: Boolean = false) {
+    Log.d(TAG, "captureWithScanFrame: " + captureWithScanFrame)
+    configureFocusSettings(shouldScanInFocusImageRect = captureWithScanFrame)
   }
 
   @ReactProp(name = "locationId")

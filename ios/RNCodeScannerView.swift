@@ -176,7 +176,13 @@ extension RNCodeScannerView {
                        let responseJson = jsonResponse["data"] {
                         
                         if (try? JSONSerialization.data(withJSONObject: responseJson)) != nil {
-                            self.callForOCRWithImageCompletedWithData(data: jsonResponse)
+                            print(jsonResponse)
+                            if jsonResponse["status"] as? Int == 401 {
+                                self.callForOCRWithImageFailedWithMessage(message: jsonResponse["message"] as? String ?? "Something went wrong!")
+                            }
+                            else {
+                                self.callForOCRWithImageCompletedWithData(data: jsonResponse)
+                            }
                         }
                     }
                 }
