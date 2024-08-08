@@ -83,6 +83,9 @@ const Camera: React.FC<Props> = ({
     setSender: (val: any) => {
       setSender(val);
     },
+    setDocumentColor: (val: any) => {
+      setDocumentColor(val);
+    },
     changeModeHandler: (
       c_mode: React.SetStateAction<any>,
       receivedInput: React.SetStateAction<ScanMode>,
@@ -192,6 +195,17 @@ const Camera: React.FC<Props> = ({
       (UIManager.hasViewManagerConfig('VisionSDKView') &&
         UIManager.getViewManagerConfig('VisionSDKView').Commands.setSender) ||
         8,
+      [value]
+    );
+  };
+
+  const setDocumentColor = (value: any) => {
+    UIManager.dispatchViewManagerCommand(
+      findNodeHandle(VisionSDKViewRef.current),
+      (UIManager.hasViewManagerConfig('VisionSDKView') &&
+        UIManager.getViewManagerConfig('VisionSDKView').Commands
+          .setDocumentColor) ||
+        9,
       [value]
     );
   };
