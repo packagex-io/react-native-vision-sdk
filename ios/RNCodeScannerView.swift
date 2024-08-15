@@ -133,7 +133,7 @@ extension RNCodeScannerView {
         VisionAPIManager.shared.callScanAPIWith(image, andBarcodes: barcodes, andApiKey: !Constants.apiKey.isEmpty ? Constants.apiKey : nil, andToken: token ?? "", andLocationId: locationId ?? "", andOptions: options ?? [:], andMetaData: metaData ?? [:], andRecipient: recipient ?? [:], andSender: sender ?? [:]
         ) {
             
-            [weak self] data, response, error in
+            [weak self] data, error in
             
 //            debugPrint(response)
 //            debugPrint(error)
@@ -152,12 +152,12 @@ extension RNCodeScannerView {
                 return
             }
             
-            guard let response = response else {
-                DispatchQueue.main.async {
-                    self.callForOCRWithImageFailedWithMessage(message: "Response of request was found nil")
-                }
-                return
-            }
+//            guard let response = response else {
+//                DispatchQueue.main.async {
+//                    self.callForOCRWithImageFailedWithMessage(message: "Response of request was found nil")
+//                }
+//                return
+//            }
             
             guard let data = data else {
                 DispatchQueue.main.async {
@@ -166,7 +166,7 @@ extension RNCodeScannerView {
                 return
             }
             
-            _ = (response as! HTTPURLResponse).statusCode
+//            _ = (response as! HTTPURLResponse).statusCode
             
             DispatchQueue.main.async {
                 

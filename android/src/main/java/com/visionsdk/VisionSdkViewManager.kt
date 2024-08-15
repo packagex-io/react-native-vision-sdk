@@ -19,6 +19,7 @@ import com.facebook.react.uimanager.ThemedReactContext
 import com.facebook.react.uimanager.ViewGroupManager
 import com.facebook.react.uimanager.annotations.ReactProp
 import com.google.mlkit.vision.barcode.common.Barcode
+//import io.packagex.visionsdk.ApiManager
 import io.packagex.visionsdk.Authentication
 import io.packagex.visionsdk.Environment
 import io.packagex.visionsdk.VisionSDK
@@ -27,7 +28,6 @@ import io.packagex.visionsdk.config.ObjectDetectionConfiguration
 import io.packagex.visionsdk.core.DetectionMode
 import io.packagex.visionsdk.core.ScanningMode
 import io.packagex.visionsdk.core.ScreenState
-import io.packagex.visionsdk.core.ScreenViewType
 import io.packagex.visionsdk.exceptions.APIErrorResponse
 import io.packagex.visionsdk.exceptions.ScannerException
 import io.packagex.visionsdk.interfaces.CameraLifecycleCallback
@@ -115,7 +115,7 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
       environment,
       authentication,
       Authentication.API(""),
-      Authentication.API("")
+      Authentication.API(""),
     )
   }
 
@@ -178,7 +178,7 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
 
     if (screenState?.detectionMode == DetectionMode.OCR) {
       initializeSdk()
-      triggerOCRCalls(bitmap, value ?: mutableListOf())
+      triggerOCRCalls(bitmap, value )
     }
     val event = Arguments.createMap().apply {
       putString("image", imageFile?.toUri().toString())
@@ -189,7 +189,8 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
   }
 
   private fun triggerOCRCalls(bitmap: Bitmap, list: List<Barcode>) {
-    visionCameraView!!.makeOCRApiCall(
+//    val apiManager = ApiManager()
+    visionCameraView?.makeOCRApiCall(
       bitmap = bitmap,
       barcodeList = list,
       locationId = locationId ?: "",

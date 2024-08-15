@@ -74,15 +74,17 @@ locationId // your location id if you have
 ### Capture Image
 
 You can capture an image when mode is OCR. In OCR mode when capture is called, then in the callback, it will return an image.
+
 ```js
-visionSdk.current.cameraCaptureHandler()
+visionSdk.current.cameraCaptureHandler();
 ```
 
 ### Close Camera
 
 Stops camera session and scanning.
+
 ```js
-visionSdk.current.stopRunningHandler()
+visionSdk.current.stopRunningHandler();
 ```
 
 ### Props
@@ -99,6 +101,7 @@ environment: You can set your development environment like ‘dev’, ‘staging
 ### The callback will be called with a response object
 
 ### The Response Object
+
 ```js
 OCRScanHandler: Return ocr detected data
 onDetectedHandler: Return the detected data for ‘barcode’ and ‘text’
@@ -109,6 +112,7 @@ ErrorCode: Description camera_unavailable camera not available on device
 permission: Permission not satisfied
 others: other errors (check errorMessage for description)
 ```
+
 ### In the callbacks, Success or error will be returned. It returns with the OCR Response from PackageX Platform API Response.
 
 ## Contributing
@@ -116,4 +120,5 @@ others: other errors (check errorMessage for description)
 See the [contributing guide](CONTRIBUTING.md) to learn how to contribute to the repository and the development workflow.
 
 ## License
+
 MIT
