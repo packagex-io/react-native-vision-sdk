@@ -2,11 +2,13 @@ package com.visionsdk
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.RectF
 import android.util.Log
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
 import androidx.annotation.Nullable
+import androidx.constraintlayout.motion.utils.ViewState
 import androidx.core.net.toUri
 import androidx.lifecycle.LifecycleOwner
 import com.facebook.infer.annotation.Assertions
@@ -19,6 +21,7 @@ import com.facebook.react.uimanager.ThemedReactContext
 import com.facebook.react.uimanager.ViewGroupManager
 import com.facebook.react.uimanager.annotations.ReactProp
 import com.google.mlkit.vision.barcode.common.Barcode
+import io.packagex.visionsdk.ApiManager
 //import io.packagex.visionsdk.ApiManager
 import io.packagex.visionsdk.Authentication
 import io.packagex.visionsdk.Environment
@@ -27,13 +30,13 @@ import io.packagex.visionsdk.config.FocusSettings
 import io.packagex.visionsdk.config.ObjectDetectionConfiguration
 import io.packagex.visionsdk.core.DetectionMode
 import io.packagex.visionsdk.core.ScanningMode
-import io.packagex.visionsdk.core.ScreenState
+import io.packagex.visionsdk.core.VisionViewState
 import io.packagex.visionsdk.exceptions.APIErrorResponse
 import io.packagex.visionsdk.exceptions.ScannerException
 import io.packagex.visionsdk.interfaces.CameraLifecycleCallback
 import io.packagex.visionsdk.interfaces.OCRResult
 import io.packagex.visionsdk.interfaces.ScannerCallback
-import io.packagex.visionsdk.views.VisionCameraView
+import io.packagex.visionsdk.ui.views.VisionCameraView
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
@@ -52,7 +55,7 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
   private var sender: Map<String, Any>? = emptyMap()
   private var environment: Environment = Environment.DEV
   private var visionCameraView: VisionCameraView? = null
-  private var screenState:ScreenState? = null
+  private var screenState:VisionViewState? = null
   private var focusSettings: FocusSettings? = null
   private var detectionMode: DetectionMode = DetectionMode.Barcode
   private var scanningMode: ScanningMode = ScanningMode.Manual
@@ -114,7 +117,6 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
     VisionSDK.getInstance().initialize(
       environment,
       authentication,
-      Authentication.API(""),
       Authentication.API(""),
     )
   }
@@ -178,7 +180,7 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
 
     if (screenState?.detectionMode == DetectionMode.OCR) {
       initializeSdk()
-      triggerOCRCalls(bitmap, value )
+      triggerOCRCalls(bitmap, value.map { it.displayValue }.filterNotNull() )
     }
     val event = Arguments.createMap().apply {
       putString("image", imageFile?.toUri().toString())
@@ -188,9 +190,9 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
       .emit("onImageCaptured", event)
   }
 
-  private fun triggerOCRCalls(bitmap: Bitmap, list: List<Barcode>) {
-//    val apiManager = ApiManager()
-    visionCameraView?.makeOCRApiCall(
+  private fun triggerOCRCalls(bitmap: Bitmap, list: List<String>) {
+    val apiManager = ApiManager()
+    apiManager.shippingLabelApiCallAsync(
       bitmap = bitmap,
       barcodeList = list,
       locationId = locationId ?: "",
@@ -290,11 +292,11 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
   }
 
   private fun configureScreenState(){
-    screenState = ScreenState(detectionMode = detectionMode, scanningMode = scanningMode)
+    screenState = VisionViewState(detectionMode = detectionMode, scanningMode = scanningMode)
     setStateAndFocusSettings()
   }
   private fun configureFocusSettings(shouldDisplayFocusImage:Boolean = false, shouldScanInFocusImageRect: Boolean = false){
-    focusSettings = FocusSettings(shouldDisplayFocusImage =  shouldDisplayFocusImage, shouldScanInFocusImageRect = shouldScanInFocusImageRect)
+    focusSettings = FocusSettings(focusImageRect = RectF(100f,100f,200f,200f), shouldDisplayFocusImage =  shouldDisplayFocusImage, shouldScanInFocusImageRect = shouldScanInFocusImageRect)
     setStateAndFocusSettings()
   }
 
@@ -395,7 +397,7 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
     detectionMode = when (mode.lowercase()) {
       "ocr" -> DetectionMode.OCR
       "barcode" -> DetectionMode.Barcode
-      "qrcode" -> DetectionMode.QR
+      "qrcode" -> DetectionMode.QRCode
       "photo" -> DetectionMode.Photo
       else -> DetectionMode.OCR
     }
