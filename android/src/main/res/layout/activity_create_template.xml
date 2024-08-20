@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/rootView"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".ui.activities.CreateTemplateActivity">
+
+    <androidx.camera.view.PreviewView
+        android:id="@+id/cameraPreviewView"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/topGuideline"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:orientation="horizontal"
+        app:layout_constraintGuide_begin="12dp" />
+
+    <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/bottomGuideline"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:orientation="horizontal"
+        app:layout_constraintGuide_end="12dp" />
+
+    <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/startGuideline"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:orientation="vertical"
+        app:layout_constraintGuide_begin="12dp" />
+
+    <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/endGuideline"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:orientation="vertical"
+        app:layout_constraintGuide_end="12dp" />
+
+    <com.google.android.material.imageview.ShapeableImageView
+        android:id="@+id/imageView"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/cancelButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:background="@drawable/button_bg"
+        android:text="Cancel"
+        android:textColor="@color/abs_black"
+        android:textSize="12sp"
+        app:backgroundTint="@null"
+        app:layout_constraintStart_toStartOf="@id/startGuideline"
+        app:layout_constraintTop_toTopOf="@+id/topGuideline" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/saveButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:background="@drawable/button_bg"
+        android:enabled="false"
+        android:text="Save"
+        android:textColor="@color/abs_black"
+        android:textSize="12sp"
+        app:backgroundTint="@null"
+        app:layout_constraintEnd_toEndOf="@id/endGuideline"
+        app:layout_constraintTop_toTopOf="@+id/topGuideline" />
+
+    <ProgressBar
+        android:id="@+id/saveProgressView"
+        android:layout_width="24dp"
+        android:layout_height="24dp"
+        android:indeterminateTint="#FFFF0000"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="@id/saveButton"
+        app:layout_constraintEnd_toEndOf="@id/saveButton"
+        app:layout_constraintStart_toStartOf="@id/saveButton"
+        app:layout_constraintTop_toTopOf="@id/saveButton" />
+
+    <com.google.android.material.textview.MaterialTextView
+        android:id="@+id/titleView"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:gravity="center"
+        android:text="Create Template"
+        android:textColor="@color/black"
+        android:textSize="18sp"
+        app:layout_constraintBottom_toBottomOf="@id/cancelButton"
+        app:layout_constraintEnd_toStartOf="@id/saveButton"
+        app:layout_constraintStart_toEndOf="@id/cancelButton"
+        app:layout_constraintTop_toTopOf="@id/topGuideline" />
+
+    <com.google.android.material.textview.MaterialTextView
+        android:id="@+id/subtitleView"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:background="@color/abs_black"
+        android:gravity="center"
+        android:padding="6dp"
+        android:text="Tap the barcodes you want to add to your template"
+        android:textColor="@color/abs_white"
+        android:textSize="14sp"
+        android:visibility="gone"
+        app:layout_constraintEnd_toEndOf="@id/endGuideline"
+        app:layout_constraintStart_toStartOf="@id/startGuideline"
+        app:layout_constraintTop_toBottomOf="@id/titleView" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/freezeButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:background="@drawable/button_bg"
+        android:text="Freeze"
+        android:textColor="@color/abs_black"
+        android:textSize="12sp"
+        app:backgroundTint="@null"
+        app:layout_constraintBottom_toBottomOf="@id/bottomGuideline"
+        app:layout_constraintEnd_toEndOf="@id/endGuideline"
+        app:layout_constraintStart_toStartOf="@id/startGuideline" />
+</androidx.constraintlayout.widget.ConstraintLayout>
