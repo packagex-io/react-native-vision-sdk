@@ -26,6 +26,7 @@ import io.packagex.visionsdk.ApiManager
 import io.packagex.visionsdk.Authentication
 import io.packagex.visionsdk.Environment
 import io.packagex.visionsdk.VisionSDK
+import io.packagex.visionsdk.analyzers.BarcodeResult
 import io.packagex.visionsdk.config.FocusSettings
 import io.packagex.visionsdk.config.ObjectDetectionConfiguration
 import io.packagex.visionsdk.core.DetectionMode
@@ -155,13 +156,13 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
       .emit("onDetected", event)
   }
 
-  override fun onBarcodesDetected(barcodeList: List<Barcode>) {
+  override fun onBarcodesDetected(barcodeList: List<BarcodeResult>) {
     Log.d(TAG, "onBarcodeDetected: ")
     visionCameraView?.rescan()
     val event = Arguments.createMap().apply {
       putArray(
         "code",
-        Arguments.fromArray(barcodeList.map { it.displayValue }.toTypedArray())
+        Arguments.fromArray(barcodeList.map { it.barcode.displayValue }.toTypedArray())
       )
     }
     appContext
@@ -169,18 +170,20 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
       .emit("onBarcodeScanSuccess", event)
   }
 
+
   override fun onFailure(exception: ScannerException) {
     exception.printStackTrace()
   }
 
-  override fun onImageCaptured(bitmap: Bitmap, imageFile: File?, value: List<Barcode>) {
+
+  override fun onImageCaptured(bitmap: Bitmap, imageFile: File?, value: List<BarcodeResult>) {
     Log.d(TAG, "onImageCaptured: " + imageFile?.toUri().toString())
 
     visionCameraView?.rescan()
 
     if (screenState?.detectionMode == DetectionMode.OCR) {
       initializeSdk()
-      triggerOCRCalls(bitmap, value.map { it.displayValue }.filterNotNull() )
+      triggerOCRCalls(bitmap, value.map { it.barcode.displayValue }.filterNotNull() )
     }
     val event = Arguments.createMap().apply {
       putString("image", imageFile?.toUri().toString())
@@ -296,8 +299,9 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
     setStateAndFocusSettings()
   }
   private fun configureFocusSettings(shouldDisplayFocusImage:Boolean = false, shouldScanInFocusImageRect: Boolean = false){
-    focusSettings = FocusSettings(focusImageRect = RectF(100f,100f,200f,200f), shouldDisplayFocusImage =  shouldDisplayFocusImage, shouldScanInFocusImageRect = shouldScanInFocusImageRect)
+    focusSettings = FocusSettings( shouldDisplayFocusImage =  shouldDisplayFocusImage, shouldScanInFocusImageRect = shouldScanInFocusImageRect)
     setStateAndFocusSettings()
+//    focusImageRect = RectF(100f,100f,200f,200f),
   }
 
   private fun captureImage() {
