@@ -26,6 +26,7 @@ export default function App() {
       'staging'
     );
     visionSdk?.current?.setMetadata({ service: 'inbound' });
+    visionSdk?.current?.setHeight(1);
     visionSdk?.current?.startRunningHandler();
 
     // setInterval(() => {
@@ -39,6 +40,7 @@ export default function App() {
         refProp={visionSdk}
         BarCodeScanHandler={(e: any) => console.log('BarCodeScanHandler', e)}
         OCRScanHandler={(e: any) => console.log('OCRScanHandler', e)}
+        onError={(e: any) => console.log('onError', e)}
         // OnDetectedHandler={(e: any) => console.log('OnDetectedHandler', e)}
         showScanFrame={true}
         captureWithScanFrame={true}

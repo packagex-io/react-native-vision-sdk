@@ -2,27 +2,20 @@ package com.visionsdk
 
 import android.content.Context
 import android.graphics.Bitmap
-import android.graphics.RectF
 import android.util.Log
 import android.view.View
-import android.view.ViewGroup
-import android.widget.Toast
 import androidx.annotation.Nullable
-import androidx.constraintlayout.motion.utils.ViewState
 import androidx.core.net.toUri
 import androidx.lifecycle.LifecycleOwner
 import com.facebook.infer.annotation.Assertions
 import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.ReadableArray
-import com.facebook.react.common.MapBuilder
 import com.facebook.react.modules.core.DeviceEventManagerModule
 import com.facebook.react.uimanager.ThemedReactContext
 import com.facebook.react.uimanager.ViewGroupManager
 import com.facebook.react.uimanager.annotations.ReactProp
-import com.google.mlkit.vision.barcode.common.Barcode
 import io.packagex.visionsdk.ApiManager
-//import io.packagex.visionsdk.ApiManager
 import io.packagex.visionsdk.Authentication
 import io.packagex.visionsdk.Environment
 import io.packagex.visionsdk.VisionSDK
@@ -491,6 +484,6 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
     appContext
       .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
       .emit("onError", event)
-    Log.d(TAG, "${message}")
+    Log.d(TAG, "onOCRResponseFailed ${message}")
   }
 }
