@@ -12,9 +12,6 @@ jobs:
       - name: Setup
         uses: ./.github/actions/setup
 
-      - name: Set Yarn Version
-        run: yarn set version 3.6.4
-
       - name: Lint files
         run: yarn lint
 
@@ -30,9 +27,6 @@ jobs:
       - name: Setup
         uses: ./.github/actions/setup
 
-      - name: Set Yarn Version
-        run: yarn set version 3.6.4
-
       - name: Run unit tests
         run: yarn test --maxWorkers=2 --coverage
 
@@ -44,9 +38,6 @@ jobs:
 
       - name: Setup
         uses: ./.github/actions/setup
-
-      - name: Set Yarn Version
-        run: yarn set version 3.6.4
 
       - name: Build package
         run: yarn prepare
