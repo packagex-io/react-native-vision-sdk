@@ -4,8 +4,6 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.util.Log
 import android.view.View
-import android.view.ViewGroup
-import android.widget.Toast
 import androidx.annotation.Nullable
 import androidx.core.net.toUri
 import androidx.lifecycle.LifecycleOwner
@@ -13,27 +11,26 @@ import com.facebook.infer.annotation.Assertions
 import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.ReadableArray
-import com.facebook.react.common.MapBuilder
 import com.facebook.react.modules.core.DeviceEventManagerModule
 import com.facebook.react.uimanager.ThemedReactContext
 import com.facebook.react.uimanager.ViewGroupManager
 import com.facebook.react.uimanager.annotations.ReactProp
-import com.google.mlkit.vision.barcode.common.Barcode
+import io.packagex.visionsdk.ApiManager
 import io.packagex.visionsdk.Authentication
 import io.packagex.visionsdk.Environment
 import io.packagex.visionsdk.VisionSDK
+import io.packagex.visionsdk.analyzers.BarcodeResult
 import io.packagex.visionsdk.config.FocusSettings
 import io.packagex.visionsdk.config.ObjectDetectionConfiguration
 import io.packagex.visionsdk.core.DetectionMode
 import io.packagex.visionsdk.core.ScanningMode
-import io.packagex.visionsdk.core.ScreenState
-import io.packagex.visionsdk.core.ScreenViewType
+import io.packagex.visionsdk.core.VisionViewState
 import io.packagex.visionsdk.exceptions.APIErrorResponse
 import io.packagex.visionsdk.exceptions.ScannerException
 import io.packagex.visionsdk.interfaces.CameraLifecycleCallback
 import io.packagex.visionsdk.interfaces.OCRResult
 import io.packagex.visionsdk.interfaces.ScannerCallback
-import io.packagex.visionsdk.views.VisionCameraView
+import io.packagex.visionsdk.ui.views.VisionCameraView
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
@@ -52,7 +49,7 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
   private var sender: Map<String, Any>? = emptyMap()
   private var environment: Environment = Environment.DEV
   private var visionCameraView: VisionCameraView? = null
-  private var screenState:ScreenState? = null
+  private var screenState:VisionViewState? = null
   private var focusSettings: FocusSettings? = null
   private var detectionMode: DetectionMode = DetectionMode.Barcode
   private var scanningMode: ScanningMode = ScanningMode.Manual
@@ -115,7 +112,6 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
       environment,
       authentication,
       Authentication.API(""),
-      Authentication.API("")
     )
   }
 
@@ -153,13 +149,13 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
       .emit("onDetected", event)
   }
 
-  override fun onBarcodesDetected(barcodeList: List<Barcode>) {
+  override fun onBarcodesDetected(barcodeList: List<BarcodeResult>) {
     Log.d(TAG, "onBarcodeDetected: ")
     visionCameraView?.rescan()
     val event = Arguments.createMap().apply {
       putArray(
         "code",
-        Arguments.fromArray(barcodeList.map { it.displayValue }.toTypedArray())
+        Arguments.fromArray(barcodeList.map { it.barcode.displayValue }.toTypedArray())
       )
     }
     appContext
@@ -167,18 +163,20 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
       .emit("onBarcodeScanSuccess", event)
   }
 
+
   override fun onFailure(exception: ScannerException) {
     exception.printStackTrace()
   }
 
-  override fun onImageCaptured(bitmap: Bitmap, imageFile: File?, value: List<Barcode>) {
+
+  override fun onImageCaptured(bitmap: Bitmap, imageFile: File?, value: List<BarcodeResult>) {
     Log.d(TAG, "onImageCaptured: " + imageFile?.toUri().toString())
 
     visionCameraView?.rescan()
 
     if (screenState?.detectionMode == DetectionMode.OCR) {
       initializeSdk()
-      triggerOCRCalls(bitmap, value ?: mutableListOf())
+      triggerOCRCalls(bitmap, value.map { it.barcode.displayValue }.filterNotNull() )
     }
     val event = Arguments.createMap().apply {
       putString("image", imageFile?.toUri().toString())
@@ -188,8 +186,9 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
       .emit("onImageCaptured", event)
   }
 
-  private fun triggerOCRCalls(bitmap: Bitmap, list: List<Barcode>) {
-    visionCameraView!!.makeOCRApiCall(
+  private fun triggerOCRCalls(bitmap: Bitmap, list: List<String>) {
+    val apiManager = ApiManager()
+    apiManager.shippingLabelApiCallAsync(
       bitmap = bitmap,
       barcodeList = list,
       locationId = locationId ?: "",
@@ -289,12 +288,13 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
   }
 
   private fun configureScreenState(){
-    screenState = ScreenState(detectionMode = detectionMode, scanningMode = scanningMode)
+    screenState = VisionViewState(detectionMode = detectionMode, scanningMode = scanningMode)
     setStateAndFocusSettings()
   }
   private fun configureFocusSettings(shouldDisplayFocusImage:Boolean = false, shouldScanInFocusImageRect: Boolean = false){
-    focusSettings = FocusSettings(shouldDisplayFocusImage =  shouldDisplayFocusImage, shouldScanInFocusImageRect = shouldScanInFocusImageRect)
+    focusSettings = FocusSettings( shouldDisplayFocusImage =  shouldDisplayFocusImage, shouldScanInFocusImageRect = shouldScanInFocusImageRect)
     setStateAndFocusSettings()
+//    focusImageRect = RectF(100f,100f,200f,200f),
   }
 
   private fun captureImage() {
@@ -394,7 +394,7 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
     detectionMode = when (mode.lowercase()) {
       "ocr" -> DetectionMode.OCR
       "barcode" -> DetectionMode.Barcode
-      "qrcode" -> DetectionMode.QR
+      "qrcode" -> DetectionMode.QRCode
       "photo" -> DetectionMode.Photo
       else -> DetectionMode.OCR
     }
@@ -484,6 +484,6 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
     appContext
       .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
       .emit("onError", event)
-    Log.d(TAG, "${message}")
+    Log.d(TAG, "onOCRResponseFailed ${message}")
   }
 }
