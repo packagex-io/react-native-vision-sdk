@@ -29,7 +29,7 @@ const styles = StyleSheet.create({
   mainContainer: {
     flexDirection: 'row',
     position: 'absolute',
-    top: 5,
+    top: 0,
     backgroundColor: 'grey',
     borderRadius: 10,
   },

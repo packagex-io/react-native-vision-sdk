@@ -71,6 +71,7 @@ const styles = StyleSheet.create({
     height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
+    top: 10,
     // bottom: 10,
   },
   outerCircle: {
