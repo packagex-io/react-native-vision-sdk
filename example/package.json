@@ -12,7 +12,8 @@
     "@react-native/metro-config": "^0.74.87",
     "react": "^18.2.0",
     "react-native": "0.74.5",
-    "react-native-progress": "^5.0.1",
+    "react-native-circular-progress": "^1.4.0",
+    "react-native-svg": "^15.6.0",
     "react-native-vector-icons": "^10.1.0"
   },
   "devDependencies": {

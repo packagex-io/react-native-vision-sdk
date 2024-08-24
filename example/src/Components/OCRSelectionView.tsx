@@ -31,7 +31,7 @@ function OCRSelectionView({
             }}
             style={styles.rowStyle}
           >
-            <Text style={styles.textStyle}>Sl Cloud OCR</Text>
+            <Text style={styles.textStyle}>SL Cloud OCR</Text>
             {isOnDeviceOCR && (
               <MaterialIcons name="done" size={20} color="white" />
             )}
@@ -44,7 +44,7 @@ function OCRSelectionView({
             }}
             style={styles.rowStyle}
           >
-            <Text style={styles.textStyle}>Sl On-Device OCR</Text>
+            <Text style={styles.textStyle}>SL On-Device OCR</Text>
             {!isOnDeviceOCR && (
               <MaterialIcons name="done" size={20} color="white" />
             )}

@@ -1,14 +1,23 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, Platform, Alert } from 'react-native';
 import VisionSdkView from 'react-native-vision-sdk';
 import CameraFooterView from './Components/CameraFooterView';
+import DownloadingProgressView from './Components/DownloadingProgressView';
 
+interface downloadingProgress {
+  downloadStatus: boolean;
+  progress: number;
+}
 export default function App() {
   const visionSdk = React.useRef<any>(null);
   const [captureMode, setCaptureMode] = useState<string>('auto');
   const [showOcrTypes, setShowOcrTypes] = useState<boolean>(false);
   const [isOnDeviceOCR, setIsOnDeviceOCR] = useState<boolean>(false);
-
+  const [modelDownloadingProgress, setModelDownloadingProgress] =
+    useState<downloadingProgress>({
+      downloadStatus: true,
+      progress: 0,
+    });
   React.useEffect(() => {
     visionSdk?.current?.changeModeHandler(
       captureMode,
@@ -33,11 +42,18 @@ export default function App() {
     // visionSdk?.current?.setMetadata({ service: 'inbound' });
     visionSdk?.current?.setHeight(1);
     visionSdk?.current?.startRunningHandler();
-    // visionSdk?.current?.configureOnDeviceModel();
   }, [captureMode]);
   const onPressCapture = () => {
     visionSdk?.current?.cameraCaptureHandler();
   };
+  function isMultipleOfTen(number: any) {
+    return number % 5 === 0;
+  }
+  // useEffect(() => {
+  //   if (isOnDeviceOCR) {
+  //     visionSdk?.current?.configureOnDeviceModel();
+  //   }
+  // }, [isOnDeviceOCR]);
   return (
     <View style={styles.mainContainer}>
       <VisionSdkView
@@ -49,16 +65,20 @@ export default function App() {
         apiKey="key_141b2eda27Z0Cm2y0h0P6waB3Z6pjPgrmGAHNSU62rZelUthBEOOdsVTqZQCRVgPLqI5yMPqpw2ZBy2z"
         BarCodeScanHandler={(e: any) => console.log('BarCodeScanHandler', e)}
         OCRScanHandler={(e: any) => console.log('OCRScanHandler', e)}
-        ModelDownloadProgress={(e: any) =>
-          console.log(
-            'ModelDownloadProgress',
-            Platform.OS === 'android' ? e : e.nativeEvent
-          )
-        }
+        ModelDownloadProgress={(e: any) => {
+          let response = Platform.OS === 'android' ? e : e.nativeEvent;
+          if (isMultipleOfTen(Math.floor(response.progress * 100))) {
+            setModelDownloadingProgress(response);
+          }
+        }}
         onError={(e: any) => {
           console.log('onError', e);
           Alert.alert(JSON.stringify(e));
         }}
+      />
+      <DownloadingProgressView
+        visible={!modelDownloadingProgress.downloadStatus}
+        progress={modelDownloadingProgress?.progress}
       />
       <CameraFooterView
         setCaptureMode={setCaptureMode}
@@ -69,15 +89,6 @@ export default function App() {
         isOnDeviceOCR={isOnDeviceOCR}
         onPressCapture={onPressCapture}
       />
-      {/* <View style={styles.buttonContainer}>
-        <TouchableOpacity
-          onPress={() => {
-            visionSdk?.current?.cameraCaptureHandler();
-          }}
-        >
-          <Text style={styles.buttonTextStyle}> Button</Text>
-        </TouchableOpacity>
-      </View> */}
     </View>
   );
 }
