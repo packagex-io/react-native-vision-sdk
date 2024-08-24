@@ -60,10 +60,10 @@ const Camera: React.FC<Props> = ({
   const VisionSDKViewRef = useRef(null);
 
   useImperativeHandle(refProp, () => ({
-    modelType: (val: string) => {
+    setModelType: (val: string) => {
       setModelType(val);
     },
-    modelSize: (val: string) => {
+    setModelSize: (val: string) => {
       setModelSize(val);
     },
     cameraCaptureHandler: () => {

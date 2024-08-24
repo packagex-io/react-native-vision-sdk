@@ -9,6 +9,7 @@ class RNCodeScannerView: UIView {
     
     //MARK: - Events from swift to Js, on any update to sent back
     @objc var onBarcodeScanSuccess: RCTDirectEventBlock?
+    @objc var onModelDownloadProgress: RCTDirectEventBlock?
     @objc var onImageCaptured: RCTDirectEventBlock?
     @objc var onOCRDataReceived: RCTDirectEventBlock?
     @objc var onDetected: RCTDirectEventBlock?
@@ -30,6 +31,12 @@ class RNCodeScannerView: UIView {
     var captureWithScanFrame:Bool?
     var codeScannerMode: CodeScannerMode?
     var currentMode: String?
+    
+    // On-Device OCR Specific Variables
+    var isOnDeviceOCR: Bool?
+    var onDeviceModelType: VSDKModelClass = VSDKModelClass.shippingLabel
+    var onDeviceModelSize: VSDKModelSize = VSDKModelSize.large
+    
     
     //MARK: - Initializer
     init() {
@@ -105,11 +112,83 @@ extension RNCodeScannerView: CodeScannerViewDelegate {
             }
         }
         else {
-            self.callOCRAPIWithImage(image, andBarcodes: barcodes, savedImageURL: savedImageURL)
+            if let onDeviceOCR = isOnDeviceOCR {
+                
+//                setupDownloadOnDeviceOCR() {
+                    // On-Device Case
+                    self.callOCROnDeviceAPI(image.ciImage!, withbarCodes: barcodes)
+//                }
+            }
+            else {
+                self.callOCRAPIWithImage(image, andBarcodes: barcodes, savedImageURL: savedImageURL)
+            }
         }
     }
 }
 
+// MARK: - VisionSDK On-Device call function, callOCROnDeviceAPI
+//MARK: -
+extension RNCodeScannerView {
+    
+    
+    func configureOnDeviceModel() {
+        setupDownloadOnDeviceOCR { }
+    }
+    
+    /// This Method downloads and prepare offline / On Device OCR for use in the App.
+    /// - Parameter completion: completionHandler
+    func setupDownloadOnDeviceOCR(completion: @escaping () -> Void) {
+        OnDeviceOCRManager.shared.prepareOfflineOCR(withApiKey: !VSDKConstants.apiKey.isEmpty ? VSDKConstants.apiKey : nil, forModelClass: onDeviceModelType, withModelSize: onDeviceModelSize) { currentProgress, totalSize in
+//            debugPrint(((currentProgress / totalSize) * 100))
+            self.onModelDownloadProgress!(["progress": ((currentProgress / totalSize) * 100), "downloadStatus": false])
+        } withCompletion: { error in
+            
+            if error == nil {
+                self.onModelDownloadProgress!(["progress": (100), "downloadStatus": true])
+                completion()
+            }
+            else {
+                self.callForOCRWithImageFailedWithMessage(message: error?.localizedDescription ?? "We got On-Device OCR error!")
+            }
+        }
+    }
+    
+    /// This method pass ciImage of label to downloaded on-device OCR model that extracts informations from label and returns the response
+    /// - Parameters:
+    ///   - ciImage: ciImage
+    ///   - barcodes: barcodes that are detected by SDK within the label
+    func callOCROnDeviceAPI( _ ciImage: CIImage, withbarCodes barcodes: [String]) {
+        
+        OnDeviceOCRManager.shared.extractDataFromImage(ciImage, withBarcodes: barcodes) { [weak self] data, error in
+            if let error = error {
+                self?.callForOCRWithImageFailedWithMessage(message: error.localizedDescription)
+            }
+            
+            else {
+                guard let responseData = data else {
+                    DispatchQueue.main.async {
+                        self?.callForOCRWithImageFailedWithMessage(message: "Data of request was found nil")
+                    }
+                    return
+                }
+                
+                DispatchQueue.main.async {
+                    do {
+                        if let jsonResponse = try JSONSerialization.jsonObject(with: responseData) as? [String: Any] {
+                            self?.callForOCRWithImageCompletedWithData(data: jsonResponse)
+                        }
+                        else {
+                            self?.callForOCRWithImageFailedWithMessage(message: "Something went wrong!")
+                        }
+                    }
+                    catch let error {
+                        self?.callForOCRWithImageFailedWithMessage(message: error.localizedDescription)
+                    }
+                }
+            }
+        }
+    }
+}
 // MARK: - VisionSDK API call function, callOCRAPIWithImage
 //MARK: -
 extension RNCodeScannerView {
@@ -406,7 +485,65 @@ extension RNCodeScannerView {
         self.options = convertToDictionary(text: options as? String ?? "")
     }
     
+    /// Sets the ondeviceOCR, i.e. is user scanning in On Device OCR mode or not.
+    /// - Parameter onDeviceOCR: returns true or false
+    @objc func setIsOnDeviceOCR(_ isOnDeviceOCR: Bool) {
+        self.isOnDeviceOCR = isOnDeviceOCR
+    }
     
+    /// Sets the ModelType for On Device, i.e. Which model class should be used for scanning
+    /// - Parameter modelType: parameter describes the Model Class type
+    ///  Parameter : possible values
+    ///  itemLabel | shippingLabel | billOfLading
+    @objc func setModelType(_ modelType: NSString) {
+        
+        switch modelType {
+        case "item_label":
+            onDeviceModelType = VSDKModelClass.itemLabel
+            break
+        case "shipping_label":
+            onDeviceModelType = VSDKModelClass.shippingLabel
+            break
+        case "bill_of_lading":
+            onDeviceModelType = VSDKModelClass.billOfLading
+            break
+        default:
+            onDeviceModelType = VSDKModelClass.shippingLabel
+            break
+        }
+    }
+    
+    /// Sets the ModelSize for On Device Camera, i.e. Which model size should be used for scanning
+    /// - Parameter modelSize: parameter describes the Model size
+    ///  Parameter : possible values
+    ///  nano | micro | small | medium | large | xlarge
+    ///
+    @objc func setModelSize(_ modelSize: NSString) {
+        
+        switch modelSize {
+        case "nano":
+            onDeviceModelSize = VSDKModelSize.nano
+            break
+        case "micro":
+            onDeviceModelSize = VSDKModelSize.micro
+            break
+        case "small":
+            onDeviceModelSize = VSDKModelSize.small
+            break
+        case "medium":
+            onDeviceModelSize = VSDKModelSize.medium
+            break
+        case "large":
+            onDeviceModelSize = VSDKModelSize.large
+            break
+        case "xlarge":
+            onDeviceModelSize = VSDKModelSize.xlarge
+            break
+        default:
+            onDeviceModelSize = VSDKModelSize.micro
+            break
+        }
+    }
     
 }
 
