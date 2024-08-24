@@ -109,7 +109,43 @@ class VisionSdkViewManager: RCTViewManager {
         component.setSender(sender as NSString)
     }
 }
- 
+    
+    @objc func setModelType(_ node: NSNumber, modelType: NSString) {
+        DispatchQueue.main.async {
+            let component =
+            self.bridge.uiManager.view(
+                forReactTag: node
+            ) as! RNCodeScannerView
+            component.setModelType(modelType as NSString)
+        }
+    }
+    
+    @objc func setModelSize(_ node: NSNumber, modelSize: NSString) {
+        DispatchQueue.main.async {
+            let component =
+            self.bridge.uiManager.view(
+                forReactTag: node
+            ) as! RNCodeScannerView
+            component.setModelSize(modelSize as NSString)
+        }
+    }
+    
+
+    
+    @objc func configureOnDeviceModel(_ node: NSNumber) {
+
+      DispatchQueue.main.async {
+        let component =
+          self.bridge.uiManager.view(
+            forReactTag: node
+          ) as! RNCodeScannerView
+
+        component.configureOnDeviceModel()
+
+      }
+
+    }
+    
 
   override func view() -> UIView! {
 

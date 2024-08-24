@@ -28,7 +28,7 @@ export default function App() {
           parse_addresses: ['sender', 'recipient'],
         },
       },
-      'staging'
+      'sandbox'
     );
     // visionSdk?.current?.setMetadata({ service: 'inbound' });
     visionSdk?.current?.setHeight(1);
@@ -43,10 +43,11 @@ export default function App() {
         showScanFrame={true}
         captureWithScanFrame={true}
         // OnDetectedHandler={(e: any) => console.log('OnDetectedHandler', e)}
+        apiKey='key_141b2eda27Z0Cm2y0h0P6waB3Z6pjPgrmGAHNSU62rZelUthBEOOdsVTqZQCRVgPLqI5yMPqpw2ZBy2z'
         BarCodeScanHandler={(e: any) => console.log('BarCodeScanHandler', e)}
         OCRScanHandler={(e: any) => console.log('OCRScanHandler', e)}
         ModelDownloadProgress={(e: any) =>
-          console.log('ModelDownloadProgress', e)
+          console.log('ModelDownloadProgress', e.nativeEvent)
         }
         onError={(e: any) => console.log('onError', e)}
       />
