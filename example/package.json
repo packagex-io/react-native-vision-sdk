@@ -11,7 +11,8 @@
   "dependencies": {
     "@react-native/metro-config": "^0.74.87",
     "react": "^18.2.0",
-    "react-native": "0.74.5"
+    "react-native": "0.74.5",
+    "react-native-vector-icons": "^10.1.0"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
