@@ -26,26 +26,26 @@ function OCRSelectionView({
         <View style={styles.modalView}>
           <TouchableOpacity
             onPress={() => {
-              setIsOnDeviceOCR(true);
+              setIsOnDeviceOCR(!isOnDeviceOCR);
               closeModal();
             }}
             style={styles.rowStyle}
           >
             <Text style={styles.textStyle}>SL Cloud OCR</Text>
-            {isOnDeviceOCR && (
+            {!isOnDeviceOCR && (
               <MaterialIcons name="done" size={20} color="white" />
             )}
           </TouchableOpacity>
           <View style={styles.horizontalLine} />
           <TouchableOpacity
             onPress={() => {
-              setIsOnDeviceOCR(false);
+              setIsOnDeviceOCR(!isOnDeviceOCR);
               closeModal();
             }}
             style={styles.rowStyle}
           >
             <Text style={styles.textStyle}>SL On-Device OCR</Text>
-            {!isOnDeviceOCR && (
+            {isOnDeviceOCR && (
               <MaterialIcons name="done" size={20} color="white" />
             )}
           </TouchableOpacity>

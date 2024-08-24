@@ -45,7 +45,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderColor: 'red',
-    borderWidth: 2,
+    borderWidth: 0,
   },
   modalView: {
     backgroundColor: '#33343A',

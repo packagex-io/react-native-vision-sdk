@@ -49,11 +49,11 @@ export default function App() {
   function isMultipleOfTen(number: any) {
     return number % 5 === 0;
   }
-  // useEffect(() => {
-  //   if (isOnDeviceOCR) {
-  //     visionSdk?.current?.configureOnDeviceModel();
-  //   }
-  // }, [isOnDeviceOCR]);
+  useEffect(() => {
+    if (isOnDeviceOCR) {
+      visionSdk?.current?.configureOnDeviceModel();
+    }
+  }, [isOnDeviceOCR]);
   return (
     <View style={styles.mainContainer}>
       <VisionSdkView
@@ -64,7 +64,10 @@ export default function App() {
         // OnDetectedHandler={(e: any) => console.log('OnDetectedHandler', e)}
         apiKey="key_141b2eda27Z0Cm2y0h0P6waB3Z6pjPgrmGAHNSU62rZelUthBEOOdsVTqZQCRVgPLqI5yMPqpw2ZBy2z"
         BarCodeScanHandler={(e: any) => console.log('BarCodeScanHandler', e)}
-        OCRScanHandler={(e: any) => console.log('OCRScanHandler', e)}
+        OCRScanHandler={(e: any) => {
+          console.log('OCRScanHandler', e);
+          Alert.alert('Data has been Extracted');
+        }}
         ModelDownloadProgress={(e: any) => {
           let response = Platform.OS === 'android' ? e : e.nativeEvent;
           if (isMultipleOfTen(Math.floor(response.progress * 100))) {
