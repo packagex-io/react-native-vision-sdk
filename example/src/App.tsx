@@ -34,7 +34,9 @@ export default function App() {
     visionSdk?.current?.setHeight(1);
     visionSdk?.current?.startRunningHandler();
   }, [captureMode]);
-
+  const onPressCapture = () => {
+    visionSdk?.current?.cameraCaptureHandler();
+  };
   return (
     <View style={styles.mainContainer}>
       <VisionSdkView
@@ -43,7 +45,7 @@ export default function App() {
         showScanFrame={true}
         captureWithScanFrame={true}
         // OnDetectedHandler={(e: any) => console.log('OnDetectedHandler', e)}
-        apiKey='key_141b2eda27Z0Cm2y0h0P6waB3Z6pjPgrmGAHNSU62rZelUthBEOOdsVTqZQCRVgPLqI5yMPqpw2ZBy2z'
+        apiKey="key_141b2eda27Z0Cm2y0h0P6waB3Z6pjPgrmGAHNSU62rZelUthBEOOdsVTqZQCRVgPLqI5yMPqpw2ZBy2z"
         BarCodeScanHandler={(e: any) => console.log('BarCodeScanHandler', e)}
         OCRScanHandler={(e: any) => console.log('OCRScanHandler', e)}
         ModelDownloadProgress={(e: any) =>
@@ -58,6 +60,7 @@ export default function App() {
         showOcrTypes={showOcrTypes}
         setIsOnDeviceOCR={setIsOnDeviceOCR}
         isOnDeviceOCR={isOnDeviceOCR}
+        onPressCapture={onPressCapture}
       />
       {/* <View style={styles.buttonContainer}>
         <TouchableOpacity

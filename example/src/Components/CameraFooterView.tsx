@@ -11,6 +11,7 @@ function CameraFooterView({
   showOcrTypes,
   setIsOnDeviceOCR,
   isOnDeviceOCR,
+  onPressCapture,
 }: any) {
   return (
     <View style={styles.mainContainer}>
@@ -27,9 +28,9 @@ function CameraFooterView({
           setCaptureMode={setCaptureMode}
           captureMode={captureMode}
         />
-        <View style={styles.outerCircle}>
+        <TouchableOpacity onPress={onPressCapture} style={styles.outerCircle}>
           <View style={styles.innerCircle} />
-        </View>
+        </TouchableOpacity>
       </View>
       <View style={styles.sideContainer} />
       <OCRSelectionView
