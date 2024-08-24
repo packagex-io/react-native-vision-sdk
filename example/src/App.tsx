@@ -1,5 +1,5 @@
 import React from 'react';
-import { Text, TouchableOpacity, View } from 'react-native';
+import { Text, TouchableOpacity, View, StyleSheet } from 'react-native';
 import VisionSdkView from 'react-native-vision-sdk';
 
 export default function App() {
@@ -26,50 +26,51 @@ export default function App() {
       },
       'staging'
     );
-    visionSdk?.current?.setMetadata({ service: 'inbound' });
+    // visionSdk?.current?.setMetadata({ service: 'inbound' });
     visionSdk?.current?.setHeight(1);
     visionSdk?.current?.startRunningHandler();
-
-    // setInterval(() => {
-    //   setMode(mode === 'manual' ? 'auto' : 'manual');
-    // }, 5000);
   }, []);
 
   return (
     <>
       <VisionSdkView
         refProp={visionSdk}
-        BarCodeScanHandler={(e: any) => console.log('BarCodeScanHandler', e)}
-        OCRScanHandler={(e: any) => console.log('OCRScanHandler', e)}
-        onError={(e: any) => console.log('onError', e)}
-        // OnDetectedHandler={(e: any) => console.log('OnDetectedHandler', e)}
+        isOnDeviceOCR={true}
         showScanFrame={true}
         captureWithScanFrame={true}
+        OnDetectedHandler={(e: any) => console.log('OnDetectedHandler', e)}
+        BarCodeScanHandler={(e: any) => console.log('BarCodeScanHandler', e)}
+        OCRScanHandler={(e: any) => console.log('OCRScanHandler', e)}
+        ModelDownloadProgress={(e: any) =>
+          console.log('ModelDownloadProgress', e)
+        }
+        onError={(e: any) => console.log('onError', e)}
       />
-      <View
-        style={{
-          zIndex: 1,
-          position: 'absolute',
-          width: '100%',
-          height: 46,
-          alignItems: 'center',
-          justifyContent: 'center',
-          backgroundColor: 'blue',
-          bottom: 100,
-        }}
-      >
+      <View style={styles.buttonContainer}>
         <TouchableOpacity
           onPress={() => {
             visionSdk?.current?.cameraCaptureHandler();
-            // setTimeout(() => {
-            //   visionSdk?.current?.onPressCaptures()
-
-            // }, 2000);
           }}
         >
-          <Text style={{ color: 'white', fontStyle: 'normal' }}> Button</Text>
+          <Text style={styles.buttonTextStyle}> Button</Text>
         </TouchableOpacity>
       </View>
     </>
   );
 }
+const styles = StyleSheet.create({
+  buttonContainer: {
+    zIndex: 1,
+    position: 'absolute',
+    width: '100%',
+    height: 46,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'blue',
+    bottom: 100,
+  },
+  buttonTextStyle: {
+    color: 'white',
+    fontStyle: 'normal',
+  },
+});

@@ -194,13 +194,22 @@ const Camera: React.FC<Props> = ({
       [value]
     );
   };
+  const setSender = (value: any) => {
+    UIManager.dispatchViewManagerCommand(
+      findNodeHandle(VisionSDKViewRef.current),
+      (UIManager.hasViewManagerConfig('VisionSDKView') &&
+        UIManager.getViewManagerConfig('VisionSDKView').Commands.setSender) ||
+        8,
+      [value]
+    );
+  };
   const setModelType = (value: string) => {
     UIManager.dispatchViewManagerCommand(
       findNodeHandle(VisionSDKViewRef.current),
       (UIManager.hasViewManagerConfig('VisionSDKView') &&
         UIManager.getViewManagerConfig('VisionSDKView').Commands
           .setModelType) ||
-        8,
+        9,
       [value]
     );
   };
@@ -210,17 +219,7 @@ const Camera: React.FC<Props> = ({
       (UIManager.hasViewManagerConfig('VisionSDKView') &&
         UIManager.getViewManagerConfig('VisionSDKView').Commands
           .setModelSize) ||
-        9,
-      [value]
-    );
-  };
-
-  const setSender = (value: any) => {
-    UIManager.dispatchViewManagerCommand(
-      findNodeHandle(VisionSDKViewRef.current),
-      (UIManager.hasViewManagerConfig('VisionSDKView') &&
-        UIManager.getViewManagerConfig('VisionSDKView').Commands.setSender) ||
-        8,
+        10,
       [value]
     );
   };
