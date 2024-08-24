@@ -130,7 +130,7 @@ extension RNCodeScannerView {
             onImageCaptured!(["image": "\(savedImageURL!)"])
         }
         
-        VisionAPIManager.shared.callScanAPIWith(image, andBarcodes: barcodes, andApiKey: !Constants.apiKey.isEmpty ? Constants.apiKey : nil, andToken: token ?? "", andLocationId: locationId ?? "", andOptions: options ?? [:], andMetaData: metaData ?? [:], andRecipient: recipient ?? [:], andSender: sender ?? [:]
+        VisionAPIManager.shared.callScanAPIWith(image, andBarcodes: barcodes, andApiKey: !VSDKConstants.apiKey.isEmpty ? VSDKConstants.apiKey : nil, andToken: token ?? "", andLocationId: locationId ?? "", andOptions: options ?? [:], andMetaData: metaData ?? [:], andRecipient: recipient ?? [:], andSender: sender ?? [:]
         ) {
             
             [weak self] data, error in
@@ -359,7 +359,7 @@ extension RNCodeScannerView {
     /// API key for each Client, can be seperate for everyone.
     /// - Parameter apiKey: apiKey description
     @objc func setApiKey(_ apiKey: NSString) {
-        Constants.apiKey = apiKey as String
+        VSDKConstants.apiKey = apiKey as String
     }
     
     /// Sets the VisionSDK Environment for the desired outputs and connects to the desired Database
@@ -369,22 +369,22 @@ extension RNCodeScannerView {
         switch environment {
             
         case "dev":
-            Constants.apiEnvironment = .dev
+            VSDKConstants.apiEnvironment = .dev
             break
         case "qa":
-            Constants.apiEnvironment = .qa
+            VSDKConstants.apiEnvironment = .qa
             break
         case "sandbox":
-            Constants.apiEnvironment = .sandbox
+            VSDKConstants.apiEnvironment = .sandbox
             break
         case "prod":
-            Constants.apiEnvironment = .production
+            VSDKConstants.apiEnvironment = .production
             break
         case "staging":
-            Constants.apiEnvironment = .staging
+            VSDKConstants.apiEnvironment = .staging
             break
         default:
-            Constants.apiEnvironment = .dev
+            VSDKConstants.apiEnvironment = .dev
         }
     }
     

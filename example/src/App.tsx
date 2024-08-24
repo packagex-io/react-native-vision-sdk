@@ -46,7 +46,7 @@ export default function App() {
         showScanFrame={true}
         captureWithScanFrame={true}
       />
-       <View
+      <View
         style={{
           zIndex: 1,
           position: 'absolute',
@@ -63,13 +63,13 @@ export default function App() {
             visionSdk?.current?.cameraCaptureHandler();
             // setTimeout(() => {
             //   visionSdk?.current?.onPressCaptures()
-              
+
             // }, 2000);
           }}
         >
           <Text style={{ color: 'white', fontStyle: 'normal' }}> Button</Text>
         </TouchableOpacity>
-      </View> 
+      </View>
     </>
   );
 }

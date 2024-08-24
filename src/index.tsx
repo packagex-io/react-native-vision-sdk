@@ -16,11 +16,13 @@ enum ScanMode {
 type Props = {
   children?: React.ReactNode;
   refProp?: any;
-  key?: string;
+  apiKey?: string;
   reRender?: string;
   delayTime?: number;
+  isOnDeviceOCR?: boolean;
   showScanFrame?: boolean;
   captureWithScanFrame?: boolean;
+  ModelDownloadProgress?: (_e: any) => void;
   BarCodeScanHandler?: (_e: any) => void;
   ImageCaptured?: (_e: any) => void;
   OCRScanHandler?: (_e: any) => void;
@@ -31,10 +33,13 @@ type Props = {
 const Camera: React.FC<Props> = ({
   children,
   refProp,
+  apiKey = '',
   reRender,
   delayTime = 100,
+  isOnDeviceOCR = false,
   showScanFrame = true,
   captureWithScanFrame = true,
+  ModelDownloadProgress = (_e: any) => {},
   BarCodeScanHandler = (_e: any) => {},
   ImageCaptured = (_e: any) => {},
   OCRScanHandler = (_e: any) => {},
@@ -44,7 +49,6 @@ const Camera: React.FC<Props> = ({
   const defaultScanMode = ScanMode.BARCODE;
   const [mode, setMode] = useState<ScanMode>(defaultScanMode);
   const [token, setToken] = useState('');
-  const [apiKey, setApiKey] = useState('');
   const [cameraCaptureMode, setCameraCaptureMode] = useState('auto');
   const [environment, setEnvironment] = useState('staging');
   const [locationId, setLocationId] = useState('');
@@ -56,6 +60,12 @@ const Camera: React.FC<Props> = ({
   const VisionSDKViewRef = useRef(null);
 
   useImperativeHandle(refProp, () => ({
+    modelType: (val: string) => {
+      setModelType(val);
+    },
+    modelSize: (val: string) => {
+      setModelSize(val);
+    },
     cameraCaptureHandler: () => {
       onPressCaptures();
     },
@@ -94,7 +104,6 @@ const Camera: React.FC<Props> = ({
       setEnvironment(appEnvironment ? appEnvironment : environment);
       setToken(receivedToken);
       setLocationId(receivedLocationId);
-      setApiKey(apiKey);
       onChangeCaptureMode(c_mode);
       onChangeMode(receivedInput);
       onChangeOptions(option ? option : options);
@@ -185,6 +194,26 @@ const Camera: React.FC<Props> = ({
       [value]
     );
   };
+  const setModelType = (value: string) => {
+    UIManager.dispatchViewManagerCommand(
+      findNodeHandle(VisionSDKViewRef.current),
+      (UIManager.hasViewManagerConfig('VisionSDKView') &&
+        UIManager.getViewManagerConfig('VisionSDKView').Commands
+          .setModelType) ||
+        8,
+      [value]
+    );
+  };
+  const setModelSize = (value: string) => {
+    UIManager.dispatchViewManagerCommand(
+      findNodeHandle(VisionSDKViewRef.current),
+      (UIManager.hasViewManagerConfig('VisionSDKView') &&
+        UIManager.getViewManagerConfig('VisionSDKView').Commands
+          .setModelSize) ||
+        9,
+      [value]
+    );
+  };
 
   const setSender = (value: any) => {
     UIManager.dispatchViewManagerCommand(
@@ -207,6 +236,10 @@ const Camera: React.FC<Props> = ({
   };
 
   useEffect(() => {
+    DeviceEventEmitter.addListener(
+      'onModelDownloadProgress',
+      ModelDownloadProgress
+    );
     DeviceEventEmitter.addListener('onBarcodeScanSuccess', BarCodeScanHandler);
     DeviceEventEmitter.addListener('onImageCaptured', ImageCaptured);
     DeviceEventEmitter.addListener('onOCRDataReceived', OCRScanHandler);
@@ -214,6 +247,7 @@ const Camera: React.FC<Props> = ({
     DeviceEventEmitter.addListener('onError', onError);
 
     return () => {
+      DeviceEventEmitter.removeAllListeners('onModelDownloadProgress');
       DeviceEventEmitter.removeAllListeners('onBarcodeScanSuccess');
       DeviceEventEmitter.removeAllListeners('onOCRDataReceived');
       DeviceEventEmitter.removeAllListeners('onDetected');
@@ -227,15 +261,18 @@ const Camera: React.FC<Props> = ({
       <VisionSdkView
         key={reRender}
         style={styles.flex}
+        apiKey={apiKey}
         showScanFrame={showScanFrame}
         captureWithScanFrame={captureWithScanFrame}
         onBarcodeScanSuccess={BarCodeScanHandler}
+        onModelDownloadProgress={ModelDownloadProgress}
         onImageCaptured={ImageCaptured}
         onOCRDataReceived={OCRScanHandler}
         onDetected={OnDetectedHandler}
         mode={mode}
         captureMode={cameraCaptureMode}
         delayTime={delayTime ? delayTime : 100}
+        isOnDeviceOCR={isOnDeviceOCR}
         onError={onError}
         token={token}
         locationId={locationId}
