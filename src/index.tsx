@@ -60,10 +60,13 @@ const Camera: React.FC<Props> = ({
   const VisionSDKViewRef = useRef(null);
 
   useImperativeHandle(refProp, () => ({
-    modelType: (val: string) => {
+    configureOnDeviceModel: () => {
+      configureOnDeviceModel();
+    },
+    setModelType: (val: string) => {
       setModelType(val);
     },
-    modelSize: (val: string) => {
+    setModelSize: (val: string) => {
       setModelSize(val);
     },
     cameraCaptureHandler: () => {
@@ -221,6 +224,16 @@ const Camera: React.FC<Props> = ({
           .setModelSize) ||
         10,
       [value]
+    );
+  };
+  const configureOnDeviceModel = () => {
+    UIManager.dispatchViewManagerCommand(
+      findNodeHandle(VisionSDKViewRef.current),
+      (UIManager.hasViewManagerConfig('VisionSDKView') &&
+        UIManager.getViewManagerConfig('VisionSDKView').Commands
+          .configureOnDeviceModel) ||
+        11,
+      []
     );
   };
 
