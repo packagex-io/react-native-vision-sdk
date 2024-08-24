@@ -25,7 +25,7 @@ internal class FeatureConverter(
         val tokenizerOutput = tokenizer.encodeWithBoundingBoxes(textArray, boundingBoxes)
 
         val inputIds = mutableListOf<Long>(0)
-        val origTokens = mutableListOf("<s>")
+        val origTokens = mutableListOf<String>()
         val inputBboxs = mutableListOf<Long>(0, 0, 0, 0)
 
         for (i in 0 until min(tokenizerOutput.size, MAX_TOKENS - 2)) {
@@ -37,7 +37,6 @@ internal class FeatureConverter(
         }
 
         inputIds.add(2)
-        origTokens.add("</s>")
         inputBboxs.add(0)
         inputBboxs.add(0)
         inputBboxs.add(0)

@@ -14,6 +14,8 @@ limitations under the License.
 ==============================================================================*/
 package io.packagex.visionsdk.ocr.ml.process.sl.micro.tokenization;
 
+import android.util.Pair;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -34,12 +36,22 @@ public final class FullTokenizer {
     wordpieceTokenizer = new WordpieceTokenizer(inputDic);
   }
 
-  public List<String> tokenize(String text) {
+  public Pair<List<String>, List<Integer>> tokenize(List<String> textArray) {
     List<String> splitTokens = new ArrayList<>();
-    for (String token : basicTokenizer.tokenize(text)) {
-      splitTokens.addAll(wordpieceTokenizer.tokenize(token));
+    List<Integer> subWordMap = new ArrayList<>();
+    int wordIndex = 0;
+
+    for (String word : textArray) {
+      for (String token : basicTokenizer.tokenize(word)) {
+        for (String subToken: wordpieceTokenizer.tokenize(token)) {
+          splitTokens.add(subToken);
+          subWordMap.add(wordIndex);
+        }
+      }
+      wordIndex++;
     }
-    return splitTokens;
+
+    return new Pair<>(splitTokens, subWordMap);
   }
 
   public List<Long> convertTokensToIds(List<String> tokens) {

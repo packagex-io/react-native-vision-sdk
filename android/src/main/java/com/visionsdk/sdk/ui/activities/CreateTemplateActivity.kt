@@ -1,12 +1,12 @@
 package io.packagex.visionsdk.ui.activities
 
-import android.app.Activity
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.RectF
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
+import android.util.Size
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
@@ -39,12 +39,10 @@ import com.asadullah.handyutils.toNullIfEmptyOrBlank
 import com.asadullah.handyutils.visible
 import com.asadullah.handyutils.withContextMain
 import com.google.android.material.imageview.ShapeableImageView
-import com.google.mlkit.vision.text.Text
 import com.visionsdk.R
 import io.packagex.visionsdk.analyzers.BarcodeResult
 import io.packagex.visionsdk.analyzers.FullScreenImageAnalyzer
 import io.packagex.visionsdk.analyzers.ImageScanner
-import io.packagex.visionsdk.interfaces.CameraXBarcodeCallback
 import io.packagex.visionsdk.interfaces.CameraXBarcodeCallbackAdapter
 import io.packagex.visionsdk.preferences.VisionSdkSettings
 import io.packagex.visionsdk.preferences.dto.BarcodeTemplate
@@ -53,7 +51,6 @@ import io.packagex.visionsdk.utils.BitmapUtils
 import io.packagex.visionsdk.utils.LinearConversion
 import io.packagex.visionsdk.utils.isEmulator
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.concurrent.Executor
@@ -205,7 +202,8 @@ internal class CreateTemplateActivity : AppCompatActivity() {
     }
 
     private val imageAnalyzer = FullScreenImageAnalyzer(
-        ImageScanner(allInitialBarcodes = {it},
+        ImageScanner(
+            allInitialBarcodes = { it },
             object : CameraXBarcodeCallbackAdapter() {
 
                 override fun aggregatedBarcodeResults(barcodes: List<BarcodeResult>) {
@@ -298,8 +296,9 @@ internal class CreateTemplateActivity : AppCompatActivity() {
                 }
             }
         ).apply {
-            this.enableTextDetection( false)
+            this.enableTextDetection(false)
             this.scanningModeManual(true)
+            this.multipleScanEnabled(true)
         }
     ).apply {
         analyzeEveryFrame()
@@ -307,31 +306,33 @@ internal class CreateTemplateActivity : AppCompatActivity() {
 
     private fun startCamera() {
 
-        val analysis = ImageAnalysis
-            .Builder()
-            .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
-            .setOutputImageFormat(ImageAnalysis.OUTPUT_IMAGE_FORMAT_YUV_420_888)
-            .build()
-            .apply {
-                if (isEmulator().not()) {
-                    setAnalyzer(cameraExecutor, imageAnalyzer)
-                }
-            }
-
-        val previewUserCase = Preview
-            .Builder()
-            .build()
-            .apply {
-                setSurfaceProvider(cameraPreviewView.surfaceProvider)
-            }
-
-        val cameraxSelector = CameraSelector
-            .Builder()
-            .requireLensFacing(CameraSelector.LENS_FACING_BACK)
-            .build()
-
         lifecycleScope.launch {
             val cameraProvider = getCameraProvider()
+
+            val analysis = ImageAnalysis
+                .Builder()
+                .setTargetResolution(Size(cameraPreviewView.width, cameraPreviewView.height))
+                .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+                .setOutputImageFormat(ImageAnalysis.OUTPUT_IMAGE_FORMAT_YUV_420_888)
+                .build()
+                .apply {
+                    if (isEmulator().not()) {
+                        setAnalyzer(cameraExecutor, imageAnalyzer)
+                    }
+                }
+
+            val previewUserCase = Preview
+                .Builder()
+                .build()
+                .apply {
+                    setSurfaceProvider(cameraPreviewView.surfaceProvider)
+                }
+
+            val cameraxSelector = CameraSelector
+                .Builder()
+                .requireLensFacing(CameraSelector.LENS_FACING_BACK)
+                .build()
+
             cameraProvider.bindToLifecycle(
                 this@CreateTemplateActivity as LifecycleOwner,
                 cameraxSelector,

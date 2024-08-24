@@ -4,14 +4,15 @@ import android.graphics.Bitmap
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
-import io.packagex.visionsdk.ocr.ml.dto.WordWithBoundingBox
+import io.packagex.visionsdk.ocr.ml.dto.WordWithBoundingBoxAndLineNumber
+import io.packagex.visionsdk.ocr.ml.dto.WordWithLineNumber
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
 
 internal class LocalOCR {
 
-    suspend fun performLocalOCR(bitmap: Bitmap): String? {
+    suspend fun performLocalOCR(bitmap: Bitmap): Pair<String?, List<WordWithLineNumber>> {
 
         return suspendCoroutine { suspendCoroutine ->
 
@@ -19,67 +20,27 @@ internal class LocalOCR {
             val image = InputImage.fromBitmap(bitmap, 0)
             recognizer.process(image)
                 .addOnSuccessListener { recognizedText ->
-                    /*val resultText = recognizedText.text
+                    val results = mutableListOf<WordWithLineNumber>()
 
-                    val stringBuilder = StringBuilder()
-
+                    var lineNumber = 0
                     for (block in recognizedText.textBlocks) {
-
-                        stringBuilder.append('\n')
-
-                        val blockText = block.text
-                        val blockCornerPoints = block.cornerPoints
-                        val blockFrame = block.boundingBox
-
-                        stringBuilder.append(blockText).append('\n')
-                        stringBuilder.append(blockFrame.toString()).append('\n')
-
                         for (line in block.lines) {
-
-                            stringBuilder.append("    ").append('\n')
-
-                            val lineText = line.text
-                            val lineCornerPoints = line.cornerPoints
-                            val lineFrame = line.boundingBox
-
-                            stringBuilder.append("    ").append(lineText).append('\n')
-                            stringBuilder.append("    ").append(lineFrame.toString()).append('\n')
-
                             for (element in line.elements) {
-
-                                stringBuilder.append("        ").append('\n')
-
                                 val elementText = element.text
-                                val elementCornerPoints = element.cornerPoints
-                                val elementFrame = element.boundingBox
-
-                                stringBuilder.append("        ").append(elementText).append(" ").append(elementFrame.toString()).append('\n')
-
-                                for (symbol in element.symbols) {
-
-                                    stringBuilder.append("            ").append('\n')
-
-                                    val symbolText = symbol.text
-                                    val symbolCornerPoints = symbol.cornerPoints
-                                    val symbolFrame = symbol.boundingBox
-
-                                    stringBuilder.append("            ").append(symbolText).append(" ").append(symbolFrame.toString()).append('\n')
-
-                                }
+                                results.add(WordWithLineNumber(elementText, lineNumber))
                             }
+                            lineNumber++
                         }
-                    }*/
-
-                    suspendCoroutine.resume(recognizedText.text)
+                    }
+                    suspendCoroutine.resume(recognizedText.text to results)
                 }
                 .addOnFailureListener {
                     suspendCoroutine.resumeWithException(it)
                 }
-
         }
     }
 
-    suspend fun performLocalOCRWithBoundingBoxes(bitmap: Bitmap): Pair<String?, List<WordWithBoundingBox>> {
+    suspend fun performLocalOCRWithBoundingBoxes(bitmap: Bitmap): Pair<String?, List<WordWithBoundingBoxAndLineNumber>> {
         val imageHeight: Int = bitmap.height
         val imageWidth: Int = bitmap.width
 
@@ -89,8 +50,9 @@ internal class LocalOCR {
             val image = InputImage.fromBitmap(bitmap, 0)
             recognizer.process(image)
                 .addOnSuccessListener { recognizedText ->
-                    val results = mutableListOf<WordWithBoundingBox>()
+                    val results = mutableListOf<WordWithBoundingBoxAndLineNumber>()
 
+                    var lineNumber = 0
                     for (block in recognizedText.textBlocks) {
                         for (line in block.lines) {
                             for (element in line.elements) {
@@ -110,8 +72,9 @@ internal class LocalOCR {
                                     normalizedBoundingBox?.get(2) ?: 0,
                                     normalizedBoundingBox?.get(3) ?: 0
                                 ).toList()
-                                results.add(WordWithBoundingBox(elementText, boundingBox))
+                                results.add(WordWithBoundingBoxAndLineNumber(elementText, boundingBox, lineNumber))
                             }
+                            lineNumber++
                         }
                     }
                     suspendCoroutine.resume(recognizedText.text to results)

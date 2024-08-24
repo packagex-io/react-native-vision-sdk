@@ -2,6 +2,10 @@ package io.packagex.visionsdk.ocr.ml.process
 
 import android.content.Context
 import com.asadullah.handyutils.*
+import io.packagex.visionsdk.utils.lowercaseAndClean
+import io.packagex.visionsdk.utils.removeAccent
+import io.packagex.visionsdk.utils.removeDuplicateCharacters
+import io.packagex.visionsdk.utils.removeSpecialCharacters
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
@@ -12,6 +16,11 @@ import kotlin.math.min
 class LocationProcessor(private val context: Context) {
 
     private val distanceThreshold = 2
+    private var countryNameToCountryCodeLowercaseNoWhitespaceNoPunctuationNoDuplicateCharacters = mutableListOf<CountryData>()
+
+    suspend fun init() {
+        loadCountryNameToCountryCodeLowercaseNoWhitespaceNoPunctuationNoDuplicateCharacters()
+    }
 
     private suspend fun getMapFromJsonFile(jsonFileName: String): Map<String, *> {
         return withContext(Dispatchers.IO) {
@@ -33,56 +42,83 @@ class LocationProcessor(private val context: Context) {
         }
     }
 
-    suspend fun fuzzySearchCountryName(countryNamePrediction: String): String {
+    private suspend fun loadCountryNameToCountryCodeLowercaseNoWhitespaceNoPunctuationNoDuplicateCharacters() {
+        if (countryNameToCountryCodeLowercaseNoWhitespaceNoPunctuationNoDuplicateCharacters.isEmpty()) {
+            val countryNameToCountryCode: Map<String, String> = getMapFromJsonFile(jsonFileName = "countryNameToCountryCode.json") as Map<String, String>
 
-        val cleanCountryNamePrediction = countryNamePrediction.clean()
+            countryNameToCountryCode.forEach { (countryName, countryCode) ->
 
-        val map = getMapFromJsonFile("countryNameToCountryCode.json")
-        val countryNames = map.keys
+                val cleanCountryName = countryName.lowercaseAndClean()
+                val countryNameNoDuplicateCharacters = cleanCountryName.removeDuplicateCharacters()
+                val countryCodeLowercase = countryCode.lowercase()
 
-        for (countryName in countryNames) {
-            val cleanCountryName = countryName.clean()
+                countryNameToCountryCodeLowercaseNoWhitespaceNoPunctuationNoDuplicateCharacters.add(
+                    CountryData(
+                        countryNameNoDuplicateCharacters,
+                        countryCodeLowercase,
+                        countryName
+                    )
+                )
+            }
+        }
+    }
 
-            val distance = levenshtein(cleanCountryName, cleanCountryNamePrediction)
+    fun fuzzySearchCountryName(countryNamePrediction: String): String {
 
-            if (distance <= distanceThreshold) {
-                if (listOf("US", "USA").contains(countryName)) {
-                    return "United States"
-                }
-                if (countryName == "UK") {
-                    return "United Kingdom"
-                }
-                if (listOf("IT", "Italien").contains(countryName)) {
-                    return "Italy"
-                }
-                if (listOf("DE", "Deutschland", "Allemange").contains(countryName)) {
-                    return "Germany"
-                }
-                if (countryName == "UAE") {
-                    return "United Arab Emirates"
-                }
-                return countryName
+        val cleanCountryNamePrediction = countryNamePrediction.lowercaseAndClean()
+        val countryNamePredictionNoDuplicateCharacters = cleanCountryNamePrediction.removeDuplicateCharacters()
+
+        for ((countryName, countryCode, originalName) in countryNameToCountryCodeLowercaseNoWhitespaceNoPunctuationNoDuplicateCharacters) {
+            if (listOf(countryName, countryCode).contains(countryNamePredictionNoDuplicateCharacters)) {
+                return originalName
             }
         }
 
-        return countryNamePrediction
+        for ((countryName, _, originalName) in countryNameToCountryCodeLowercaseNoWhitespaceNoPunctuationNoDuplicateCharacters) {
+            val distance = levenshtein(countryName, countryNamePredictionNoDuplicateCharacters)
+
+            if (distance <= distanceThreshold) {
+                if (listOf("us", "usa").contains(countryName)) {
+                    return "United States"
+                }
+                if (countryNamePredictionNoDuplicateCharacters == "uk") {
+                    return "United Kingdom"
+                }
+                if (listOf("it", "italen").contains(countryNamePredictionNoDuplicateCharacters)) {
+                    return "Italy"
+                }
+                if (listOf("de", "deutschlan", "alemgn").contains(countryNamePredictionNoDuplicateCharacters)) {
+                    return "Germany"
+                }
+                if (countryNamePredictionNoDuplicateCharacters == "uae") {
+                    return "United Arab Emirates"
+                }
+                if (countryNamePredictionNoDuplicateCharacters == "ch") {
+                    return "Switzerland"
+                }
+                return originalName
+            }
+        }
+
+        return countryNamePrediction.removeSpecialCharacters()
     }
 
     suspend fun getCountryCodeFromCountryName(countryName: String): String {
+
         val map = getMapFromJsonFile("countryNameToCountryCode.json")
-        return map[countryName] as String? ?: ""
+        return map[countryName.capitalizeWords()] as String? ?: ""
     }
 
     suspend fun getCountryNameFromStateCode(stateCode: String): List<String> {
 
-        val cleanStateCode = stateCode.clean()
+        val cleanStateCode = stateCode.lowercaseAndClean()
         val map = getMapFromJsonFile("stateCodeToCountryName.json")
         return map[cleanStateCode] as List<String>? ?: emptyList()
     }
 
     suspend fun getCountryNameFromStateName(stateName: String): List<String> {
 
-        val cleanStateCode = stateName.clean()
+        val cleanStateCode = stateName.lowercaseAndClean()
         val map = getMapFromJsonFile("stateNameToStateCode.json")
         val stateNameCodeMap = map[cleanStateCode] as Map<String, String>?
         if (stateNameCodeMap != null) {
@@ -96,10 +132,10 @@ class LocationProcessor(private val context: Context) {
 
     suspend fun getCountryNameFromCityName(cityName: String): List<String> {
 
-        val cleanCityName = cityName.clean()
-        val firstTwoLettersOfCity = cleanCityName.substring(0, 2).uppercase()
-        val jsonFileName = "cityNameStartsWith$firstTwoLettersOfCity.json"
+        val cleanCityName = cityName.lowercaseAndClean()
         return try {
+            val firstTwoLettersOfCity = cleanCityName.substring(0, 2).uppercase().removeAccent()
+            val jsonFileName = "cityNameStartsWith$firstTwoLettersOfCity.json"
             val map = getMapFromJsonFile("cityNameToCountryName/$jsonFileName")
             map[cleanCityName] as List<String>? ?: emptyList()
         } catch (e: Exception) {
@@ -112,6 +148,14 @@ class LocationProcessor(private val context: Context) {
         countryNameListFromState: List<String>,
         countryNamePredictionRefined: String
     ): String {
+
+        val countryNamePredictionNoDuplicateCharacters = countryNamePredictionRefined.removeDuplicateCharacters()
+
+        for ((countryName, countryCode, originalName) in countryNameToCountryCodeLowercaseNoWhitespaceNoPunctuationNoDuplicateCharacters) {
+            if (listOf(countryName, countryCode).contains(countryNamePredictionNoDuplicateCharacters)) {
+                return originalName
+            }
+        }
 
         if (countryNameListFromState.size == 1) {
             return countryNameListFromState.first()
@@ -171,12 +215,12 @@ class LocationProcessor(private val context: Context) {
 
     suspend fun getStateCodeFromStateName(stateName: String, countryName: String): String {
 
-        val cleanStateName = stateName.clean()
+        val cleanStateName = stateName.lowercaseAndClean()
 
         val map = getMapFromJsonFile("stateNameToStateCode.json")
         val stateCodeMap = (map[cleanStateName] as Map<*, *>?) ?: return ""
 
-        return stateCodeMap[countryName] as String? ?: run {
+        return stateCodeMap[countryName.capitalizeWords()] as String? ?: run {
             val countries = stateCodeMap.keys.toMutableSet()
             countries.removeIf { it == "clean" }
             stateCodeMap[countries.first()] as String? ?: ""
@@ -184,12 +228,10 @@ class LocationProcessor(private val context: Context) {
     }
 
     suspend fun getStateNameFromStateCode(stateCode: String, countryName: String): String {
-
         val map = getMapFromJsonFile("stateCodeToStateName.json")
 
-        val stateNameMap = map[stateCode] as Map<*, *>? ?: return ""
-
-        return stateNameMap[countryName] as String? ?: run {
+        val stateNameMap = map[stateCode.uppercase()] as Map<*, *>? ?: return ""
+        return stateNameMap[countryName.capitalizeWords()] as String? ?: run {
             val countries = stateNameMap.keys
             stateNameMap[countries.first() as String] as String? ?: ""
         }
@@ -197,7 +239,7 @@ class LocationProcessor(private val context: Context) {
 
     suspend fun getPhoneCodeFromCountryName(countryName: String): String {
         val map = getMapFromJsonFile("countryNameToPhoneCode.json")
-        return map[countryName] as String? ?: ""
+        return map[countryName.capitalizeWords()] as String? ?: ""
     }
 
     private fun levenshtein(lhs : CharSequence, rhs : CharSequence) : Int {
@@ -232,7 +274,5 @@ class LocationProcessor(private val context: Context) {
         return cost[lhsLength - 1]
     }
 
-    private fun String.clean(): String {
-        return this.lowercase().trim().filter { it.isLetterOrDigit() }
-    }
+    data class CountryData(val countryName: String, val countryCode: String, val originalName: String)
 }

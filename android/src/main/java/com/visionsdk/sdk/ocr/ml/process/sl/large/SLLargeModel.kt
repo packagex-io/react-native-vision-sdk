@@ -77,7 +77,7 @@ internal class SLLargeModel(context: Context) : SLModel(context) {
         val (result, localOCRTime) = measureTimedValue { LocalOCR().performLocalOCRWithBoundingBoxes(bitmap) }
         Log.d(TAG, "Local OCR took ${localOCRTime.toReadableDuration()}.")
 
-        val (ocrExtractedText, wordWithBoundingBoxes) = result
+        val (ocrExtractedText, wordsWithBoundingBoxesAndLineNumbers) = result
 
         val (regexResult, regexDuration) = measureTimedValue {
             regexProcessing(barcodes, ocrExtractedText)
@@ -86,14 +86,16 @@ internal class SLLargeModel(context: Context) : SLModel(context) {
 
         val textArray = mutableListOf<String>()
         val boundingBoxes = mutableListOf<List<Int>>()
+        val lineNumbers = mutableListOf<Int>()
 
-        wordWithBoundingBoxes.forEach { item ->
+        wordsWithBoundingBoxesAndLineNumbers.forEach { item ->
             textArray.add(item.word)
             boundingBoxes.add(item.boundingBox)
+            lineNumbers.add(item.lineNumber)
         }
 
         val (mlResults, mlProcessDuration) = measureTimedValue {
-            ClassifierClient().predict(
+            LargeClassifierClient().predict(
                 vocabulary = vocabularyDictionary,
                 mergesList = mergesList,
                 ortEnvironment = ortEnvironment,
@@ -101,7 +103,8 @@ internal class SLLargeModel(context: Context) : SLModel(context) {
                 locationProcessor = locationProcessor,
                 image = bitmap,
                 textArray = textArray,
-                boundingBoxes = boundingBoxes
+                boundingBoxes = boundingBoxes,
+                lineNumbers = lineNumbers
             )
         }
 

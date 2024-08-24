@@ -46,22 +46,33 @@ internal class SLMicroModel(context: Context) : SLModel(context) {
 
         check(vocabularyDictionary.isNotEmpty()) { "Vocabulary was not loaded." }
 
-        val (ocrExtractedText, localOCRTime) = measureTimedValue { LocalOCR().performLocalOCR(bitmap) }
+        val (result, localOCRTime) = measureTimedValue { LocalOCR().performLocalOCR(bitmap) }
         Log.d(TAG, "Local OCR took ${localOCRTime.toReadableDuration()}.")
+
+        val (ocrExtractedText, wordsWithLineNumbers) = result
 
         val (regexResult, regexDuration) = measureTimedValue {
             regexProcessing(barcodes, ocrExtractedText)
         }
         Log.d(TAG, "Regex processing took ${regexDuration.toReadableDuration()}.")
 
+        val textArray = mutableListOf<String>()
+        val lineNumbers = mutableListOf<Int>()
+
+        wordsWithLineNumbers.forEach { item ->
+            textArray.add(item.word)
+            lineNumbers.add(item.lineNumber)
+        }
+
         val (mlResults, mlProcessDuration) = measureTimedValue {
             ocrExtractedText?.let {
-                ClassifierClient().predict(
+                MicroClassifierClient().predict(
                     vocabulary = vocabularyDictionary,
                     ortEnvironment = ortEnvironment,
                     ortSession = ortSession,
                     locationProcessor = locationProcessor,
-                    ocrExtractedText = it
+                    textArray = textArray,
+                    lineNumbers = lineNumbers
                 )
             }
         }

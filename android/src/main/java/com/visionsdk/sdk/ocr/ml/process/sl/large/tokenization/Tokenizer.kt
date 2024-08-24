@@ -8,6 +8,7 @@ package io.packagex.visionsdk.ocr.ml.process.sl.large.tokenization
 
 import android.util.Log
 import com.asadullah.handyutils.findWithObjectOrNull
+import com.asadullah.handyutils.isNeitherNullNorEmptyNorBlank
 import io.packagex.visionsdk.ocr.ml.process.sl.large.SLLargeModel
 import io.packagex.visionsdk.utils.TAG
 import java.text.Normalizer
@@ -58,26 +59,36 @@ internal class Tokenizer(
 
             val correctedText: String = if (index == 0) text else " $text"
 
-            val tokens = encodeRegex.findAll(correctedText).map { result ->
+            val matchResults = encodeRegex.findAll(correctedText)
+
+            val tokens = mutableListOf<String>()
+            for (result in matchResults) {
+
+                val intArray = result.value
+                    .removeAccent()
+                    .codePoints()
+                    .toArray()
+
                 buildString {
-                    result.value
-                        .removeAccent()
-                        .codePoints()
-                        .toArray()
-                        .also { intArray ->
-                            for (item in intArray) {
-                                val encodedValue = byteEncoder.getOrDefault(item, "")
-                                    .also { char ->
-                                        if (char == "") {
-                                            Log.d(TAG, "Unrecognized character in word: ${result.value}")
-                                        }
-                                    }
-                                if (encodedValue == "") continue
-                                append(encodedValue)
+                    for (item in intArray) {
+                        val encodedValue = byteEncoder.getOrDefault(item, "")
+                            .also { char ->
+                                if (char == "") {
+                                    Log.d(TAG, "Unrecognized character in word: ${result.value}")
+                                }
                             }
-                        }
+
+                        if (encodedValue == "") continue
+
+                        append(encodedValue)
+                    }
+
+                }.also {
+                    if (it.isNeitherNullNorEmptyNorBlank()) {
+                        tokens.add(it)
+                    }
                 }
-            }.toList()
+            }
 
             val bpeTokens = tokens.flatMap { bpe(it) }
 

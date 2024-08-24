@@ -9,8 +9,11 @@ import io.packagex.visionsdk.modelclasses.ocr_request.OutdatedOcrRequest
 import io.packagex.visionsdk.ocr.ml.model_manager.response.get_all_models_response.Data
 import io.packagex.visionsdk.ocr.ml.model_manager.response.get_license_info.GetLicenseInfoResponse
 import io.packagex.visionsdk.service.request.ConnectRequest
+import io.packagex.visionsdk.service.request.TelemetryRequest
 import io.packagex.visionsdk.service.response.ConnectResponse
+import okhttp3.ResponseBody
 import retrofit2.HttpException
+import retrofit2.Response
 
 internal class ApiServiceImpl {
 
@@ -30,6 +33,26 @@ internal class ApiServiceImpl {
         return try {
             Gson().fromJson(
                 apiService.connect(
+                    data = request,
+                    apiKey = when (val auth = VisionSDK.getInstance().auth) {
+                        is Authentication.API -> auth.apiKey
+                        is Authentication.BearerToken -> null
+                    }
+                ).string(),
+                ConnectResponse::class.java
+            )
+        } catch (e: HttpException) {
+            Gson().fromJson(
+                e.response()?.errorBody()?.string(),
+                ConnectResponse::class.java
+            )
+        }
+    }
+
+    suspend fun postTelemetryData(request: TelemetryRequest): ConnectResponse? {
+        return try {
+            Gson().fromJson(
+                apiService.postTelemetryData(
                     data = request,
                     apiKey = when (val auth = VisionSDK.getInstance().auth) {
                         is Authentication.API -> auth.apiKey

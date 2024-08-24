@@ -10,7 +10,7 @@ import com.visionsdk.R
 data class FocusSettings(
     @DrawableRes val focusImage: Int = R.drawable.default_focus_frame,
     val focusImageRect: RectF = RectF(0.0F, 0.0F, 0.0F, 0.0F),
-    val shouldDisplayFocusImage: Boolean = true,
+    val shouldDisplayFocusImage: Boolean = false,
     val shouldScanInFocusImageRect: Boolean = true,
 
     @ColorInt val focusImageTintColor: Int = Color.WHITE,

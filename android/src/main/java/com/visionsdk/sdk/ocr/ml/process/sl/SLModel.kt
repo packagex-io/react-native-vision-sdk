@@ -5,7 +5,6 @@ import ai.onnxruntime.OrtSession
 import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Bitmap
-import android.provider.Settings
 import android.security.keystore.KeyProperties
 import android.util.Log
 import androidx.work.Data
@@ -17,11 +16,13 @@ import com.asadullah.androidsecurity.decodeHex
 import com.asadullah.androidsecurity.enums.Efficiency
 import com.asadullah.handyutils.SDKHelper
 import com.asadullah.handyutils.capitalizeWords
+import com.asadullah.handyutils.chunked
 import com.asadullah.handyutils.findWithObjectOrNull
 import com.asadullah.handyutils.ifNeitherNullNorEmptyNorBlank
 import com.asadullah.handyutils.isNeitherNullNorEmptyNorBlank
 import com.asadullah.handyutils.isNetworkAvailable
 import com.asadullah.handyutils.isNullOrEmptyOrBlank
+import com.asadullah.handyutils.toReadableDuration
 import com.scottyab.rootbeer.RootBeer
 import io.packagex.visionsdk.ApiManager
 import io.packagex.visionsdk.VisionSDK
@@ -34,6 +35,7 @@ import io.packagex.visionsdk.exceptions.ondevice.SdkOnDeviceDisabledException
 import io.packagex.visionsdk.exceptions.ondevice.SdkProcessingDisabledException
 import io.packagex.visionsdk.exceptions.ondevice.UserRestrictedException
 import io.packagex.visionsdk.ocr.courier.Courier
+import io.packagex.visionsdk.ocr.courier.LabelsExtraction
 import io.packagex.visionsdk.ocr.courier.RegexResult
 import io.packagex.visionsdk.ocr.courier.allCouriers
 import io.packagex.visionsdk.ocr.ml.core.ModelClass
@@ -53,8 +55,9 @@ import io.packagex.visionsdk.utils.DownloadUtils
 import io.packagex.visionsdk.utils.TAG
 import io.packagex.visionsdk.utils.WORKER_PARAM_MODEL_CLASS
 import io.packagex.visionsdk.utils.WORKER_PARAM_MODEL_SIZE
-import com.asadullah.handyutils.toReadableDuration
-import io.packagex.visionsdk.ocr.courier.LabelsExtraction
+import io.packagex.visionsdk.utils.getAndroidDeviceId
+import io.packagex.visionsdk.utils.toSafeString
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -130,14 +133,16 @@ internal abstract class SLModel(context: Context) {
 
         checkForRootedDevice(context)
 
-        val deviceId = Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID)
+        makeTelemetryCall(context, platformType)
 
         val connectResponse = apiManager.connectCallSync(
             sdkId = VisionSDK.getInstance().environment.sdkId,
-            deviceId = deviceId,
+            deviceId = context.getAndroidDeviceId(),
             platformType = platformType,
-            modelToRequest = modelToRequest
-        ) ?: throw RuntimeException("Something went terrible wrong. Sorry!")
+            modelToRequest = modelToRequest,
+            usageCounter = VisionSdkSettings.getOnDeviceModelExecutionCount(),
+            timeCounter = VisionSdkSettings.getOnDeviceModelExecutionDurationInMillis()
+        ) ?: throw RuntimeException("Something went terribly wrong. Sorry!")
 
         if (connectResponse.status != 200) {
             val errorMessageBuilder = StringBuilder()
@@ -166,16 +171,32 @@ internal abstract class SLModel(context: Context) {
             throw errorToThrow
         }
 
+        VisionSdkSettings.resetOnDeviceModelExecutionCount()
+        VisionSdkSettings.resetOnDeviceModelExecutionDuration()
+
         if (isUserAllowedToConfigure(connectResponse).not()) {
             throw UserRestrictedException("You are currently being restricted from using OnDeviceOCRManager. Please contact our admins at support@packagex.io.")
         }
 
-        VisionSdkSettings.setLicenseCheckDateTime(
-            LocalDateTime.parse(
-                connectResponse.data?.u?.substringBefore("."),
-                DateTimeFormatter.ISO_LOCAL_DATE_TIME
+        connectResponse.data?.u.ifNeitherNullNorEmptyNorBlank {
+            VisionSdkSettings.setLicenseCheckDateTime(
+                LocalDateTime.parse(
+                    it.substringBefore("."),
+                    DateTimeFormatter.ISO_LOCAL_DATE_TIME
+                )
             )
-        )
+        } ?: throw RuntimeException("API did not provide vital information to proceed.")
+
+        connectResponse.data?.rq?.i.ifNeitherNullNorEmptyNorBlank { modelId ->
+            connectResponse.data?.rq?.mv?.i.ifNeitherNullNorEmptyNorBlank { modelVersionId ->
+                VisionSdkSettings.setModelIdAndModelVersionId(
+                    modelClass = getModelClass(),
+                    modelSize = getModelSize(),
+                    modelId = modelId,
+                    modelVersionId = modelVersionId
+                )
+            } ?: throw RuntimeException("API did not provide vital information to proceed.")
+        } ?: throw RuntimeException("API did not provide vital information to proceed.")
 
         connectResponse.data?.c?.let { pingTimeInMinutes ->
             pingTimeInMillis = pingTimeInMinutes * 3600L // converting minutes into millis
@@ -190,6 +211,42 @@ internal abstract class SLModel(context: Context) {
         }
 
         return connectResponse
+    }
+
+    private suspend fun makeTelemetryCall(context: Context, platformType: PlatformType) {
+        val telemetryDataToPost = VisionSdkSettings.getTelemetryData()
+        telemetryDataToPost.chunked(20).forEach {
+            try {
+                apiManager.internalTelemetryCallSync(
+                    sdkId = VisionSDK.getInstance().environment.sdkId,
+                    deviceId = context.getAndroidDeviceId(),
+                    platformType = platformType,
+                    telemetryDataList = it,
+                )
+                VisionSdkSettings.removeTelemetryData(it)
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+            }
+        }
+
+        /*  RESPONSE TYPE
+            {
+                "message": "Telemetry updated count: 3. Telemetry invalid count: 0",
+                "data": {
+                    "valid_telemetry_ids": [
+                        "162133dc-8cbb-4ff8-badb-e7665be4409b",
+                        "fcef74bf-797f-46a4-989c-f116e0c76df1",
+                        "08fc10a1-0614-4110-a6b9-366eb3756715"
+                    ],
+                    "invalid_telemetry_ids": []
+                },
+                "status": 200,
+                "errors": [],
+                "code": null,
+                "pagination": null,
+                "endpoint": null
+            }
+        */
     }
 
     private fun isUserAllowedToConfigure(connectResponse: ConnectResponse): Boolean {
@@ -222,7 +279,7 @@ internal abstract class SLModel(context: Context) {
 
         val isModelAlreadyDownloaded = isModelAlreadyDownloaded()
 
-        var connectResponse = makeConnectCall(
+        val connectResponse = makeConnectCall(
             context = context,
             platformType = platformType,
             modelToRequest = ApiManager.ModelToRequest(
@@ -265,17 +322,17 @@ internal abstract class SLModel(context: Context) {
 
         // If model was downloaded but it was not the correct version, then request
         // correct version download link.
-        if (isModelDownloadedWithCorrectVersionFromAPI.not()) {
-            connectResponse = makeConnectCall(
-                context = context,
-                platformType = platformType,
-                modelToRequest = ApiManager.ModelToRequest(
-                    modelClass = getModelClass(),
-                    modelSize = getModelSize(),
-                    getDownloadLink = true
-                )
-            )
-        }
+//        if (isModelDownloadedWithCorrectVersionFromAPI.not()) {
+//            connectResponse = makeConnectCall(
+//                context = context,
+//                platformType = platformType,
+//                modelToRequest = ApiManager.ModelToRequest(
+//                    modelClass = getModelClass(),
+//                    modelSize = getModelSize(),
+//                    getDownloadLink = true
+//                )
+//            )
+//        }
 
         val aes = AES(efficiency = Efficiency.HighPerformance)
 
@@ -323,9 +380,7 @@ internal abstract class SLModel(context: Context) {
         Log.d(TAG, "Downloading took ${downloadDuration.toReadableDuration()}.")
 
         // We're deleting the previous version of the model after successful download of newer version.
-        if (previousModelVersion != null) {
-            previousModelVersion.parentFile?.deleteRecursively()
-        }
+        previousModelVersion?.parentFile?.deleteRecursively()
 
         val extractFile = File(modelFile.parentFile, "extracted")
 
@@ -636,15 +691,21 @@ internal abstract class SLModel(context: Context) {
 
         assert(isConfigured()) { "You need to call function configure first." }
 
+        val locationProcessor = LocationProcessor(context)
+        locationProcessor.init()
         val predictionResult = predict(
             ortEnvironment = VisionOrtSession.ortEnv!!,
             ortSession = VisionOrtSession.ortSession!!,
-            locationProcessor = LocationProcessor(context),
+            locationProcessor = locationProcessor,
             bitmap = bitmap,
             barcodes = barcodes
         )
 
-        return createJsonOfGivenMLResults(predictionResult.ocrExtractedText, predictionResult.regexResult, predictionResult.mlResults)
+        return createJsonOfGivenMLResults(
+            rawText = predictionResult.ocrExtractedText,
+            regexResult = predictionResult.regexResult,
+            mlResults = predictionResult.mlResults?.let { MLResultsFormatter().format(it) }
+        )
     }
 
     protected suspend fun regexProcessing(
@@ -702,7 +763,7 @@ internal abstract class SLModel(context: Context) {
 
         return allCouriers.findWithObjectOrNull { courier ->
             val regexResult = courier.readFromBarcode(barcode!!, ocrExtractedText)
-            return@findWithObjectOrNull regexResult.courier?.trackingNo?.ifNeitherNullNorEmptyNorBlank {
+            return@findWithObjectOrNull regexResult.courier?.trackingNo.ifNeitherNullNorEmptyNorBlank {
                 courier to regexResult
             }
         }
@@ -720,10 +781,10 @@ internal abstract class SLModel(context: Context) {
     }
 
     private fun ocrExtractedTextReader(ocrExtractedText: String?): Pair<Courier?, RegexResult?>? {
-        return ocrExtractedText?.ifNeitherNullNorEmptyNorBlank {
+        return ocrExtractedText.ifNeitherNullNorEmptyNorBlank {
             allCouriers.findWithObjectOrNull { courier ->
                 val regexResult = courier.readFromOCR(it)
-                return@findWithObjectOrNull regexResult.courier?.trackingNo?.ifNeitherNullNorEmptyNorBlank {
+                return@findWithObjectOrNull regexResult.courier?.trackingNo.ifNeitherNullNorEmptyNorBlank {
                     courier to regexResult
                 }
             }
@@ -742,7 +803,7 @@ internal abstract class SLModel(context: Context) {
         regexResult: RegexResult?,
         mlResults: MLResults?
     ): String {
-        return JSONObject(
+        val j = JSONObject(
             mapOf(
                 "data" to JSONObject(
                     mapOf(
@@ -752,14 +813,14 @@ internal abstract class SLModel(context: Context) {
                         "account_id" to (regexResult?.courier?.accountId ?: regexResult?.extractedLabel?.accountId),
                         "organization_id" to null,
                         "purchase_order" to (mlResults?.logisticAttributes?.purchaseOrder ?: regexResult?.extractedLabel?.purchaseOrderNumber),
-                        "provider_name" to (regexResult?.courier?.name)?.uppercase(),
+                        "provider_name" to (regexResult?.courier?.name),
                         "raw_text" to rawText,
                         "reference_number" to (mlResults?.logisticAttributes?.referenceNumber ?: regexResult?.extractedLabel?.refNumber),
                         "tracking_number" to (regexResult?.courier?.trackingNo ?: mlResults?.packageInfo?.trackingNo),
                         "invoice_number" to (mlResults?.logisticAttributes?.invoiceNumber ?: regexResult?.extractedLabel?.invoiceNumber),
                         "type" to null,
                         "rma_number" to (mlResults?.logisticAttributes?.rmaNumber ?: regexResult?.extractedLabel?.rma),
-                        "service_level_name" to mlResults?.logisticAttributes?.labelShipmentType?.capitalizeWords(),
+                        "service_level_name" to mlResults?.logisticAttributes?.labelShipmentType,
                         "weight" to with(mlResults?.packageInfo) {
                             val weightUnit = this?.weightUnit
                                 ?.replace("lo", "lb")
@@ -770,7 +831,7 @@ internal abstract class SLModel(context: Context) {
                                 ?.replace("(", "")
                                 ?.replace(")", "")
 
-                            return@with if (weightUnit.isNullOrEmptyOrBlank() || weightUnit == "lb" || weightUnit == "lbs") {
+                            return@with if (weightUnit.isNullOrEmptyOrBlank() || weightUnit!!.lowercase() == "lb" || weightUnit.lowercase() == "lbs") {
                                 this?.weight
                             } else {
                                 this?.weight?.let { it * 2.2 }
@@ -781,57 +842,57 @@ internal abstract class SLModel(context: Context) {
                         "tags" to null,
                         "recipient" to JSONObject(
                             mapOf(
-                                "business" to mlResults?.receiver?.personBusinessName?.capitalizeWords(),
+                                "business" to mlResults?.receiver?.personBusinessName,
                                 "contact_id" to null,
                                 "email" to null,
-                                "name" to mlResults?.receiver?.personName?.capitalizeWords(),
+                                "name" to mlResults?.receiver?.personName,
                                 "phone" to mlResults?.receiver?.personPhone,
                                 "address" to JSONObject(
                                     mapOf(
                                         "id" to null,
                                         "hash" to null,
                                         "object" to "address",
-                                        "city" to mlResults?.receiver?.city?.capitalizeWords(),
+                                        "city" to mlResults?.receiver?.city,
                                         "coordinates" to null,
-                                        "country" to mlResults?.receiver?.country?.capitalizeWords(),
-                                        "country_code" to mlResults?.receiver?.countryCode?.uppercase(),
+                                        "country" to mlResults?.receiver?.country,
+                                        "country_code" to mlResults?.receiver?.countryCode,
                                         "line1" to createLine1(mlResults?.receiver),
                                         "line2" to createLine2(mlResults?.receiver),
                                         "postal_code" to mlResults?.receiver?.zipcode,
-                                        "state" to mlResults?.receiver?.state?.uppercase(),
-                                        "state_code" to mlResults?.receiver?.stateCode?.uppercase(),
+                                        "state" to mlResults?.receiver?.state,
+                                        "state_code" to mlResults?.receiver?.stateCode,
                                         "textarea" to null,
                                         "timezone" to null,
                                         "formatted_address" to createFormattedAddress(mlResults?.receiver),
-                                    ).toMap()
+                                    )
                                 )
                             )
                         ),
                         "sender" to JSONObject(
                             mapOf(
-                                "business" to mlResults?.sender?.personBusinessName?.capitalizeWords(),
+                                "business" to mlResults?.sender?.personBusinessName,
                                 "contact_id" to null,
                                 "email" to null,
-                                "name" to mlResults?.sender?.personName?.capitalizeWords(),
+                                "name" to mlResults?.sender?.personName,
                                 "phone" to mlResults?.sender?.personPhone,
                                 "address" to JSONObject(
                                     mapOf(
                                         "id" to null,
                                         "hash" to null,
                                         "object" to "address",
-                                        "city" to mlResults?.sender?.city?.capitalizeWords(),
+                                        "city" to mlResults?.sender?.city,
                                         "coordinates" to null,
-                                        "country" to mlResults?.sender?.country?.capitalizeWords(),
-                                        "country_code" to mlResults?.sender?.countryCode?.uppercase(),
+                                        "country" to mlResults?.sender?.country,
+                                        "country_code" to mlResults?.sender?.countryCode,
                                         "line1" to createLine1(mlResults?.sender),
                                         "line2" to createLine2(mlResults?.sender),
                                         "postal_code" to mlResults?.sender?.zipcode,
-                                        "state" to mlResults?.sender?.state?.uppercase(),
-                                        "state_code" to mlResults?.sender?.stateCode?.uppercase(),
+                                        "state" to mlResults?.sender?.state,
+                                        "state_code" to mlResults?.sender?.stateCode,
                                         "textarea" to null,
                                         "timezone" to null,
                                         "formatted_address" to createFormattedAddress(mlResults?.sender),
-                                    ).toMap()
+                                    )
                                 )
                             )
                         ),
@@ -840,84 +901,78 @@ internal abstract class SLModel(context: Context) {
                                 "length" to mlResults?.packageInfo?.dimension,
                                 "width" to mlResults?.packageInfo?.dimension,
                                 "height" to mlResults?.packageInfo?.dimension,
-                            ).toMap()
+                            )
                         )
                     )
                 )
             )
-        ).toString()
+        )
+
+        return j.toSafeString()
     }
 
-    private fun createLine1(exchangeInfo: ExchangeInfo?): String {
-        val stringBuilder = StringBuilder()
-
+    private fun createLine1(exchangeInfo: ExchangeInfo?) = buildString {
         if (exchangeInfo?.floor.isNeitherNullNorEmptyNorBlank()) {
-            stringBuilder.append(exchangeInfo?.floor)
-            stringBuilder.append(" ")
+            append(exchangeInfo?.floor)
+            append(" ")
         }
 
         if (exchangeInfo?.building.isNeitherNullNorEmptyNorBlank()) {
-            stringBuilder.append(exchangeInfo?.building)
-            stringBuilder.append(" ")
+            append(exchangeInfo?.building)
+            append(" ")
         }
 
         if (exchangeInfo?.street.isNeitherNullNorEmptyNorBlank()) {
-            stringBuilder.append(exchangeInfo?.street)
+            append(exchangeInfo?.street)
         }
+    }.trim()
 
-        return stringBuilder.toString().trim().capitalizeWords()
-    }
-
-    private fun createLine2(exchangeInfo: ExchangeInfo?): String {
-        val stringBuilder = StringBuilder()
-
+    private fun createLine2(exchangeInfo: ExchangeInfo?) = buildString {
         if (exchangeInfo?.officeNo.isNeitherNullNorEmptyNorBlank()) {
-            stringBuilder.append(exchangeInfo?.officeNo)
-            stringBuilder.append(" ")
+            append(exchangeInfo?.officeNo)
+            append(" ")
         }
 
         if (exchangeInfo?.poBox.isNeitherNullNorEmptyNorBlank()) {
-            stringBuilder.append(exchangeInfo?.poBox)
+            append(exchangeInfo?.poBox)
         }
+    }.trim()
 
-        return stringBuilder.toString().trim().capitalizeWords()
-    }
-
-    private fun createFormattedAddress(exchangeInfo: ExchangeInfo?): String {
-        val stringBuilder = StringBuilder()
+    private fun createFormattedAddress(exchangeInfo: ExchangeInfo?) = buildString {
 
         val line1 = createLine1(exchangeInfo)
         val line2 = createLine2(exchangeInfo)
 
         if (line1.isNeitherNullNorEmptyNorBlank()) {
-            stringBuilder.append(line1)
-            stringBuilder.append(" ")
+            append(line1)
+            append(" ")
         }
 
         if (line2.isNeitherNullNorEmptyNorBlank()) {
-            stringBuilder.append(line2)
-            stringBuilder.append(" ")
+            append(line2)
+            append(" ")
         }
 
         if (exchangeInfo?.city.isNeitherNullNorEmptyNorBlank()) {
-            stringBuilder.append(exchangeInfo?.city?.capitalizeWords())
-            stringBuilder.append(", ")
+            append(exchangeInfo?.city?.capitalizeWords())
+            append(", ")
         }
 
-        if (exchangeInfo?.state.isNeitherNullNorEmptyNorBlank()) {
-            stringBuilder.append(exchangeInfo?.state?.uppercase())
-            stringBuilder.append(" ")
+        if (exchangeInfo?.stateCode.isNeitherNullNorEmptyNorBlank()) {
+            append(exchangeInfo?.stateCode)
+            append(" ")
+        } else if (exchangeInfo?.state.isNeitherNullNorEmptyNorBlank()) {
+            append(exchangeInfo?.state)
+            append(" ")
         }
 
         if (exchangeInfo?.zipcode.isNeitherNullNorEmptyNorBlank()) {
-            stringBuilder.append(exchangeInfo?.zipcode)
-            stringBuilder.append(" ")
+            append(exchangeInfo?.zipcode)
+            append(" ")
         }
 
         if (exchangeInfo?.country.isNeitherNullNorEmptyNorBlank()) {
-            stringBuilder.append(exchangeInfo?.country?.capitalizeWords())
+            append(exchangeInfo?.country?.capitalizeWords())
         }
-
-        return stringBuilder.toString().trim()
-    }
+    }.trim()
 }

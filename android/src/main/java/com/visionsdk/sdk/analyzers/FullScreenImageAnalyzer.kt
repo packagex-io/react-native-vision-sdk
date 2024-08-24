@@ -6,8 +6,11 @@ import android.media.Image
 import android.util.Log
 import androidx.camera.core.ExperimentalGetImage
 import androidx.camera.core.ImageProxy
+import com.asadullah.handyutils.toReadableDuration
 import com.google.mlkit.vision.common.InputImage
 import io.packagex.visionsdk.utils.TAG
+import kotlin.time.measureTime
+import kotlin.time.measureTimedValue
 
 internal class FullScreenImageAnalyzer(
     private val imageScanner: ImageScanner
@@ -16,7 +19,7 @@ internal class FullScreenImageAnalyzer(
     var lastNthFrameValue = -1
 
     init {
-        imageScanner.setImageScannerLifecycleListener( object : ImageScanner.ImageScannerLifecycleListener() {
+        imageScanner.setImageScannerLifecycleListener(object : ImageScanner.ImageScannerLifecycleListener() {
             override fun onScanningStarted() {
                 lastNthFrameValue = nthFrame
                 analyzeEveryFrame()
@@ -65,17 +68,29 @@ internal class FullScreenImageAnalyzer(
 
             Log.d(TAG, "Frame format: $formatInString: ${mediaImage.format}")*/
 
-            val croppedImageByteArray = cropYUV420Image(mediaImage, imageProxy.cropRect)
+            val (croppedImageByteArray, cropDuration) = measureTimedValue { cropYUV420Image(mediaImage, imageProxy.cropRect) }
 
-            val inputImage = InputImage.fromByteArray(
-                croppedImageByteArray,
-                imageProxy.cropRect.width(),
-                imageProxy.cropRect.height(),
-                imageProxy.imageInfo.rotationDegrees,
-                InputImage.IMAGE_FORMAT_NV21
-            )
+            val (inputImage, byteArrayConversionDuration) = measureTimedValue {
+                InputImage.fromByteArray(
+                    croppedImageByteArray,
+                    imageProxy.cropRect.width(),
+                    imageProxy.cropRect.height(),
+                    imageProxy.imageInfo.rotationDegrees,
+                    InputImage.IMAGE_FORMAT_NV21
+                )
+            }
 
-            imageScanner.scanFrame(imageProxy, inputImage)
+            val processDuration = measureTime { imageScanner.scanFrame(imageProxy, inputImage) }
+
+//            println(
+//                "Crop: ${cropDuration.toReadableDuration()}\t\tConversion: ${byteArrayConversionDuration.toReadableDuration()}\t\tProcess: ${processDuration.toReadableDuration()}"
+//            )
+
+            /*val processDuration = measureTime { imageScanner.scanFrame(imageProxy, InputImage.fromMediaImage(mediaImage, 90)) }
+
+            println(
+                "Process: ${processDuration.toReadableDuration()}"
+            )*/
         }
     }
 

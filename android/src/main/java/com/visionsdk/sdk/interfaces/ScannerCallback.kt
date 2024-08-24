@@ -13,7 +13,7 @@ interface ScannerCallback {
         textDetected: Boolean,
         documentDetected: Boolean
     )
-    fun onBarcodesDetected(barcodeList: List<BarcodeResult>)
+    fun onBarcodesDetected(barcodeList: List<String>)
     fun onFailure(exception: ScannerException)
-    fun onImageCaptured(bitmap: Bitmap, imageFile: File?, value: List<BarcodeResult>)
+    fun onImageCaptured(bitmap: Bitmap, imageFile: File?, value: List<String>)
 }

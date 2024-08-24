@@ -1,18 +1,27 @@
 package io.packagex.visionsdk
 
+import android.content.Context
 import android.graphics.Bitmap
-import com.asadullah.handyutils.format
+import com.asadullah.handyutils.isNeitherNullNorEmptyNorBlank
+import com.asadullah.handyutils.withContextMain
+import io.packagex.visionsdk.exceptions.APIErrorResponse
+import io.packagex.visionsdk.interfaces.OCRResult
 import io.packagex.visionsdk.ocr.ml.core.ModelClass
 import io.packagex.visionsdk.ocr.ml.core.ModelSize
 import io.packagex.visionsdk.ocr.ml.core.PlatformType
-import io.packagex.visionsdk.exceptions.APIErrorResponse
-import io.packagex.visionsdk.interfaces.OCRResult
+import io.packagex.visionsdk.preferences.VisionSdkSettings
 import io.packagex.visionsdk.service.ApiServiceImpl
 import io.packagex.visionsdk.service.manifest.ManifestApiServiceImpl
 import io.packagex.visionsdk.service.request.ConnectModelRequest
 import io.packagex.visionsdk.service.request.ConnectRequest
+import io.packagex.visionsdk.service.request.ModelInfo
+import io.packagex.visionsdk.service.request.ModelVersion
+import io.packagex.visionsdk.service.request.TelemetryData
+import io.packagex.visionsdk.service.request.TelemetryRequest
 import io.packagex.visionsdk.service.response.ConnectResponse
 import io.packagex.visionsdk.utils.BitmapUtils
+import io.packagex.visionsdk.utils.getAndroidDeviceId
+import io.packagex.visionsdk.utils.isoFormat
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -126,27 +135,115 @@ class ApiManager {
 
         return manifestApiServiceImpl.manifestApiAsync(
             manifestApiServiceImpl.createManifestRequest(
-                extractTime = Date().format("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"),
+                extractTime = Date().isoFormat(),
                 barcodesList = barcodeList,
                 baseImage = string64
             )
         )
     }
 
+    suspend fun reportAnIssueSync(
+        context: Context,
+        platformType: PlatformType = PlatformType.Native,
+        modelClass: ModelClass,
+        modelSize: ModelSize,
+        report: String,
+        customData: Map<String, Any?>? = null,
+        base64ImageToReportOn: String? = null
+    ) {
+
+        assert(report.length <= 1000) { "Report is exceeding the character limit. (Max characters 1000)" }
+
+        val modelId = VisionSdkSettings.getModelId(modelClass, modelSize)
+        val modelVersionId = VisionSdkSettings.getModelVersionId(modelClass, modelSize)
+
+        assert(modelId.isNeitherNullNorEmptyNorBlank()) { "Model Id was not found. You should call connect API before calling report info." }
+        assert(modelVersionId.isNeitherNullNorEmptyNorBlank()) { "Model Version Id was not found. You should call connect API before calling report info." }
+
+        val apiManager = ApiManager()
+        apiManager.internalTelemetryCallSync(
+            sdkId = VisionSDK.getInstance().environment.sdkId,
+            deviceId = context.getAndroidDeviceId(),
+            platformType = platformType,
+            telemetryDataList = listOf(
+                TelemetryData(
+                    action = "shipping_label_extraction",
+                    actionPerformedAt = Date().isoFormat(),
+                    extractionTimeInMillis = 0L,
+                    modelInfo = ModelInfo(
+                        modelId = modelId!!,
+                        modelVersion = ModelVersion(
+                            modelVersionId = modelVersionId!!
+                        )
+                    ),
+                    report = report,
+                    object1 = customData,
+                    base64ImageToReportOn = base64ImageToReportOn
+                )
+            )
+        )
+    }
+
+    fun reportAnIssueAsync(
+        context: Context,
+        platformType: PlatformType = PlatformType.Native,
+        modelClass: ModelClass,
+        modelSize: ModelSize,
+        report: String,
+        customData: Map<String, Any?>? = null,
+        base64ImageToReportOn: String? = null,
+        onComplete: (success: Boolean) -> Unit
+    ) {
+        CoroutineScope(Dispatchers.IO).launch {
+            reportAnIssueSync(
+                context = context,
+                platformType = platformType,
+                report = report,
+                modelClass = modelClass,
+                modelSize = modelSize,
+                customData = customData,
+                base64ImageToReportOn = base64ImageToReportOn
+            )
+            withContextMain {
+                onComplete(true)
+            }
+        }
+    }
+
     internal suspend fun connectCallSync(
         sdkId: String,
         deviceId: String,
         platformType: PlatformType = PlatformType.Native,
-        modelToRequest: ModelToRequest? = null
+        modelToRequest: ModelToRequest? = null,
+        usageCounter: Int? = null,
+        timeCounter: Long? = null
     ): ConnectResponse? {
         return apiServiceImpl.connect(
             ConnectRequest(
                 _i = sdkId,
                 _d = deviceId,
                 _f = platformType.value,
-                _m = modelToRequest?.toConnectModelRequest()
+                _m = modelToRequest?.toConnectModelRequest(),
+                _uc = usageCounter,
+                _tc = timeCounter
             )
         )
+    }
+
+    internal suspend fun internalTelemetryCallSync(
+        sdkId: String,
+        deviceId: String,
+        platformType: PlatformType = PlatformType.Native,
+        telemetryDataList: List<TelemetryData>
+    ) {
+        /*apiServiceImpl.postTelemetryData(
+            TelemetryRequest(
+                deviceId = deviceId,
+                sdkId = sdkId,
+                framework = platformType.value,
+                telemetryDataList = telemetryDataList
+            )
+        )*/
     }
 
     internal data class ModelToRequest(

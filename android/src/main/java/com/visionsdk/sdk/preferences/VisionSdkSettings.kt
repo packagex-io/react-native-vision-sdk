@@ -3,8 +3,15 @@ package io.packagex.visionsdk.preferences
 import android.content.Context
 import android.content.SharedPreferences
 import com.asadullah.handyutils.ifNeitherNullNorEmptyNorBlank
+import com.asadullah.handyutils.toMap
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
+import io.packagex.visionsdk.ocr.ml.core.ModelClass
+import io.packagex.visionsdk.ocr.ml.core.ModelSize
 import io.packagex.visionsdk.preferences.dto.BarcodeTemplate
 import io.packagex.visionsdk.preferences.dto.BarcodeTemplateData
+import io.packagex.visionsdk.service.request.TelemetryData
+import io.packagex.visionsdk.utils.toSafeString
 import org.json.JSONArray
 import org.json.JSONObject
 import java.time.LocalDateTime
@@ -33,6 +40,114 @@ internal object VisionSdkSettings {
         )
     }
 
+    fun setModelIdAndModelVersionId(modelClass: ModelClass, modelSize: ModelSize, modelId: String, modelVersionId: String) {
+
+        val dataSaved = getDownloadedModelsMetadata()
+
+        if (dataSaved.has(modelClass.value)) {
+
+            val secondLevelData = dataSaved.getJSONObject(modelClass.value)
+
+            if (secondLevelData.has(modelSize.value)) {
+
+                val thirdLevelData = secondLevelData.getJSONObject(modelSize.value)
+                thirdLevelData.apply {
+                    put("model_id", modelId)
+                    put("model_version_id", modelVersionId)
+                }
+
+            } else {
+
+                secondLevelData.apply {
+                    put(modelSize.value, JSONObject().apply {
+                        put("model_id", modelId)
+                        put("model_version_id", modelVersionId)
+                    })
+                }
+
+            }
+        } else {
+            dataSaved.apply {
+                put(modelClass.value, JSONObject().apply {
+                    put(modelSize.value, JSONObject().apply {
+                        put("model_id", modelId)
+                        put("model_version_id", modelVersionId)
+                    })
+                })
+            }
+        }
+
+        prefs!!
+            .edit()
+            .putString("DownloadedModelsMetadata", dataSaved.toSafeString())
+            .apply()
+    }
+
+    fun clear() {
+        prefs!!
+            .edit()
+            .clear()
+            .apply()
+    }
+
+    private fun getDownloadedModelsMetadata(): JSONObject {
+        return prefs!!
+            .getString("DownloadedModelsMetadata", null)
+            .ifNeitherNullNorEmptyNorBlank {
+                JSONObject(it)
+            } ?: JSONObject()
+    }
+
+    fun getModelId(modelClass: ModelClass, modelSize: ModelSize): String? {
+        return getDownloadedModelsMetadata()
+            .optJSONObject(modelClass.value)
+            ?.optJSONObject(modelSize.value)
+            ?.getString("model_id")
+    }
+
+    fun getModelVersionId(modelClass: ModelClass, modelSize: ModelSize): String? {
+        return getDownloadedModelsMetadata()
+            .optJSONObject(modelClass.value)
+            ?.optJSONObject(modelSize.value)
+            ?.getString("model_version_id")
+    }
+
+    fun onDeviceModelExecutionCountPlusPlus() {
+        prefs!!
+            .edit()
+            .putInt("OnDeviceModelExecutionCount", getOnDeviceModelExecutionCount() + 1)
+            .apply()
+    }
+
+    fun getOnDeviceModelExecutionCount(): Int {
+        return prefs!!.getInt("OnDeviceModelExecutionCount", 0)
+    }
+
+    fun resetOnDeviceModelExecutionCount() {
+        prefs!!
+            .edit()
+            .putInt("OnDeviceModelExecutionCount", 0)
+            .apply()
+    }
+
+    fun addOnDeviceModelExecutionDurationInMillis(duration: Long) {
+        prefs!!
+            .edit()
+            .putLong("OnDeviceModelExecutionDurationInMillis", getOnDeviceModelExecutionDurationInMillis() + duration)
+            .apply()
+    }
+
+    fun getOnDeviceModelExecutionDurationInMillis(): Long {
+        return prefs!!.getLong("OnDeviceModelExecutionDurationInMillis", 0L)
+    }
+
+    fun resetOnDeviceModelExecutionDuration() {
+        prefs!!
+            .edit()
+            .putLong("OnDeviceModelExecutionDurationInMillis", 0)
+            .apply()
+    }
+
     fun saveBarcodeTemplate(barcodeTemplate: BarcodeTemplate) {
         val allBarcodeTemplates = getAllBarcodeTemplates().toMutableList()
         allBarcodeTemplates.add(barcodeTemplate)
@@ -50,54 +165,59 @@ internal object VisionSdkSettings {
             .edit()
             .putString(
                 "AllBarcodeTemplates",
-                JSONArray().also { barcodeTemplateJsonArray ->
-                    allBarcodeTemplates.forEach { barcodeTemplate ->
-                        barcodeTemplateJsonArray.put(
-                            JSONObject().also { barcodeTemplateJsonObject ->
-                                barcodeTemplateJsonObject.put("name", barcodeTemplate.name)
-                                barcodeTemplateJsonObject.put(
-                                    "data",
-                                    JSONArray().also { barcodeTemplateDataJsonArray ->
-                                        barcodeTemplate.barcodeTemplateData.forEach { barcodeTemplateData ->
-                                            barcodeTemplateDataJsonArray.put(
-                                                JSONObject().also { barcodeTemplateDataJsonObject ->
-                                                    barcodeTemplateDataJsonObject.put("length", barcodeTemplateData.barcodeLength)
-                                                    barcodeTemplateDataJsonObject.put("type", barcodeTemplateData.barcodeFormat)
-                                                }
-                                            )
-                                        }
-                                    }
-                                )
-                            }
-                        )
-                    }
-                }.toString()
+                Gson().toJson(allBarcodeTemplates)
             )
             .apply()
     }
 
     fun getAllBarcodeTemplates(): List<BarcodeTemplate> {
-        return prefs!!.getString("AllBarcodeTemplates", null)?.ifNeitherNullNorEmptyNorBlank {
-            val jsonArray = JSONArray(it)
-            buildList {
-                for (i in 0 until jsonArray.length()) {
-                    val templateAsJson = jsonArray.getJSONObject(i)
-                    val templateName = templateAsJson.getString("name")
-                    val templateDataJsonArray = templateAsJson.getJSONArray("data")
-                    val templateData = buildList {
-                        for (j in 0 until templateDataJsonArray.length()) {
-                            val templateDataAsJson = templateDataJsonArray.getJSONObject(j)
-                            this.add(
-                                BarcodeTemplateData(
-                                    barcodeLength = templateDataAsJson.getInt("length"),
-                                    barcodeFormat = templateDataAsJson.getInt("type")
-                                )
-                            )
-                        }
-                    }
-                    this.add(BarcodeTemplate(templateName, templateData))
-                }
-            }
+        return prefs!!.getString("AllBarcodeTemplates", null).ifNeitherNullNorEmptyNorBlank {
+            Gson().fromJson(it, object : TypeToken<List<BarcodeTemplate>>(){}.type)
         } ?: emptyList()
+    }
+
+    fun addTelemetryData(data: TelemetryData) {
+
+        val telemetryDataList = buildList {
+            addAll(getTelemetryData())
+            add(data)
+        }
+
+        prefs!!
+            .edit()
+            .putString("TelemetryDataList", Gson().toJson(telemetryDataList))
+            .apply()
+    }
+
+    fun addTelemetryData(data: List<TelemetryData>) {
+        val telemetryDataList = getTelemetryData() + data
+
+        prefs!!
+            .edit()
+            .putString("TelemetryDataList", Gson().toJson(telemetryDataList))
+            .apply()
+    }
+
+    fun getTelemetryData(): List<TelemetryData> {
+        return prefs!!.getString("TelemetryDataList", null).ifNeitherNullNorEmptyNorBlank {
+            Gson().fromJson(it, object : TypeToken<List<TelemetryData>>(){}.type)
+        } ?: emptyList()
+    }
+
+    fun removeTelemetryData(data: List<TelemetryData>) {
+        val previousTelemetryData = getTelemetryData()
+        val resultingList = previousTelemetryData - data.toSet()
+        if (resultingList.isEmpty()) {
+            clearTelemetryData()
+        } else {
+            addTelemetryData(resultingList)
+        }
+    }
+
+    fun clearTelemetryData() {
+        prefs!!
+            .edit()
+            .clear()
+            .apply()
     }
 }

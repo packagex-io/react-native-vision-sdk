@@ -90,7 +90,7 @@ internal class LabelsExtraction(private val barcodeList: List<String>, private v
             refNumber
         }
 
-        return if (listOf('-', '.', '#', ':').contains(refNumber?.get(0))) {
+        return if (listOf('-', '.', '#', ':').contains(refNumber?.getOrNull(0))) {
             refNumber?.substring(1)
         } else {
             refNumber

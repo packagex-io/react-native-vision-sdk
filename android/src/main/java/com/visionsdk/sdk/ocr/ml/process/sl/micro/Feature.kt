@@ -18,5 +18,6 @@ package io.packagex.visionsdk.ocr.ml.process.sl.micro
 class Feature(
     val inputIds: LongArray,
     val inputMask: LongArray,
-    val origTokens: List<String>
+    val origTokens: List<String>,
+    val subWordMap: List<Int>
 )

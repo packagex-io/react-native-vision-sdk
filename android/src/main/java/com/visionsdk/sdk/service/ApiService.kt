@@ -5,6 +5,7 @@ import io.packagex.visionsdk.ocr.ml.model_manager.response.get_all_models_respon
 import io.packagex.visionsdk.ocr.ml.model_manager.response.get_license_info.GetLicenseInfoResponse
 import io.packagex.visionsdk.ocr.ml.model_manager.response.model_download_link_response.MLModelDownloadLinkResponse
 import io.packagex.visionsdk.service.request.ConnectRequest
+import io.packagex.visionsdk.service.request.TelemetryRequest
 import io.packagex.visionsdk.service.response.ConnectResponse
 import okhttp3.ResponseBody
 import retrofit2.http.Body
@@ -33,6 +34,16 @@ internal interface ApiService {
     @POST("sdk/connect")
     suspend fun connect(
         @Body data: ConnectRequest,
+        @Header("x-api-key") apiKey: String?,
+    ): ResponseBody
+
+    @Headers(
+        "Content-Type: application/json",
+        "Accept: application/json",
+    )
+    @POST("sdk/telemetry")
+    suspend fun postTelemetryData(
+        @Body data: TelemetryRequest,
         @Header("x-api-key") apiKey: String?,
     ): ResponseBody
 

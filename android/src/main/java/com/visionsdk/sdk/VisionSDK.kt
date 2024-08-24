@@ -1,5 +1,8 @@
 package io.packagex.visionsdk
 
+import android.content.Context
+import io.packagex.visionsdk.preferences.VisionSdkSettings
+
 class VisionSDK private constructor() {
 
     private var _environment: Environment? = null
@@ -18,6 +21,7 @@ class VisionSDK private constructor() {
         get() = _manifestAuth ?: throw Exception("Manifest Authorization mechanism not set")
 
     fun initialize(
+        context: Context,
         environment: Environment,
         auth: Authentication,
         manifestAuth: Authentication
@@ -25,6 +29,7 @@ class VisionSDK private constructor() {
         this._environment = environment
         this._auth = auth
         this._manifestAuth = manifestAuth
+        VisionSdkSettings.initialize(context)
     }
 
     companion object {

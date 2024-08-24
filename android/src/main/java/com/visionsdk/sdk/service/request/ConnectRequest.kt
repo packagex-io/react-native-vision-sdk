@@ -4,7 +4,9 @@ internal data class ConnectRequest(
     val _i: String,
     val _d: String,
     val _f: String,
-    val _m: ConnectModelRequest? = null
+    val _m: ConnectModelRequest? = null,
+    val _uc: Int? = null,
+    val _tc: Long? = null
 ) {
     val _p = "android"
 }

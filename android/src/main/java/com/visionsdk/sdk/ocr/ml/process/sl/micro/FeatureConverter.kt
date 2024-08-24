@@ -1,5 +1,7 @@
 package io.packagex.visionsdk.ocr.ml.process.sl.micro
 
+import androidx.core.util.component1
+import androidx.core.util.component2
 import io.packagex.visionsdk.ocr.ml.process.sl.micro.tokenization.FullTokenizer
 import kotlin.math.min
 
@@ -11,13 +13,13 @@ class FeatureConverter(inputDictionary: Map<String, Long>) {
 
     private val tokenizer: FullTokenizer = FullTokenizer(inputDictionary, true)
 
-    fun convert(ocrExtractedText: String): Feature {
+    fun convert(textArray: List<String>): Feature {
 
-        val tokens = tokenizer.tokenize(ocrExtractedText)
+        val (tokens, subWordMap) = tokenizer.tokenize(textArray)
 
         val truncatedTokens = listOf(
             "[CLS]",
-            *tokenizer.tokenize(ocrExtractedText).subList(0, min(tokens.size, MAX_TOKENS - 2)).toTypedArray(),
+            *tokens.subList(0, min(tokens.size, MAX_TOKENS - 2)).toTypedArray(),
             "[SEP]"
         )
 
@@ -32,7 +34,8 @@ class FeatureConverter(inputDictionary: Map<String, Long>) {
         return Feature(
             inputIds.toLongArray(),
             inputMask.toLongArray(),
-            truncatedTokens
+            truncatedTokens,
+            subWordMap
         )
     }
 }
