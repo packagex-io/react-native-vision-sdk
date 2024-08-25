@@ -77,7 +77,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     top: 10,
-    // bottom: 10,
   },
   outerCircle: {
     borderColor: 'white',

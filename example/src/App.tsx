@@ -77,9 +77,9 @@ export default function App() {
         isOnDeviceOCR={isOnDeviceOCR}
         showScanFrame={true}
         captureWithScanFrame={true}
-        OnDetectedHandler={(e: any) =>
-          setDeectedData(Platform.OS === 'android' ? e : e.native)
-        }
+        OnDetectedHandler={(e: any) => {
+          setDeectedData(Platform.OS === 'android' ? e : e.nativeEvent);
+        }}
         apiKey="key_141b2eda27Z0Cm2y0h0P6waB3Z6pjPgrmGAHNSU62rZelUthBEOOdsVTqZQCRVgPLqI5yMPqpw2ZBy2z"
         BarCodeScanHandler={(e: any) => console.log('BarCodeScanHandler', e)}
         OCRScanHandler={(e: any) => {

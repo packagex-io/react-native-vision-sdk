@@ -15,21 +15,29 @@ function CameraHeaderView({ detectedData, toggleTorch }: any) {
           <Icon
             name={'text-outline'}
             size={20}
-            color={checkIconColor(detectedData.text)}
+            color={checkIconColor(detectedData?.text)}
           />
         </View>
         <View style={styles.itemIconContainer}>
           <FontAwesome
             name="barcode"
             size={20}
-            color={checkIconColor(detectedData.barcode)}
+            color={checkIconColor(
+              Platform.OS === 'android'
+                ? detectedData?.barcode
+                : detectedData?.barCode
+            )}
           />
         </View>
         <View style={styles.itemIconContainer}>
           <Icon
             name="qr-code-outline"
             size={20}
-            color={checkIconColor(detectedData.qrcode)}
+            color={checkIconColor(
+              Platform.OS === 'android'
+                ? detectedData?.qrcode
+                : detectedData?.qrCode
+            )}
           />
         </View>
       </View>
@@ -55,7 +63,7 @@ const styles = StyleSheet.create({
   mainContainer: {
     position: 'absolute',
     width: '100%',
-    top: 10,
+    top: Platform.OS === 'android' ? 10 : 45,
     zIndex: 1,
     paddingHorizontal: 5,
     flexDirection: 'row',
