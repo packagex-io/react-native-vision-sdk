@@ -131,16 +131,12 @@ extension RNCodeScannerView: CodeScannerViewDelegate {
 extension RNCodeScannerView {
     
     
-    func configureOnDeviceModel() {
-        setupDownloadOnDeviceOCR { }
-    }
-    
     /// This Method downloads and prepare offline / On Device OCR for use in the App.
     /// - Parameter completion: completionHandler
     func setupDownloadOnDeviceOCR(completion: @escaping () -> Void) {
         OnDeviceOCRManager.shared.prepareOfflineOCR(withApiKey: !VSDKConstants.apiKey.isEmpty ? VSDKConstants.apiKey : nil, forModelClass: onDeviceModelType, withModelSize: onDeviceModelSize) { currentProgress, totalSize in
-//            debugPrint(((currentProgress / totalSize) * 100))
-            self.onModelDownloadProgress!(["progress": ((currentProgress / totalSize) * 100), "downloadStatus": false])
+            debugPrint(((currentProgress / totalSize) * 100))
+            self.onModelDownloadProgress!(["progress": ((currentProgress / totalSize)), "downloadStatus": false])
         } withCompletion: { error in
             
             if error == nil {
@@ -495,53 +491,59 @@ extension RNCodeScannerView {
     /// - Parameter modelType: parameter describes the Model Class type
     ///  Parameter : possible values
     ///  itemLabel | shippingLabel | billOfLading
-    @objc func setModelType(_ modelType: NSString) {
-        
-        switch modelType {
-        case "item_label":
-            onDeviceModelType = VSDKModelClass.itemLabel
-            break
-        case "shipping_label":
-            onDeviceModelType = VSDKModelClass.shippingLabel
-            break
-        case "bill_of_lading":
-            onDeviceModelType = VSDKModelClass.billOfLading
-            break
-        default:
-            onDeviceModelType = VSDKModelClass.shippingLabel
-            break
-        }
-    }
+//    @objc func setModelType(_ modelType: NSString) {
+//        
+//        switch modelType {
+//        case "item_label":
+//            onDeviceModelType = VSDKModelClass.itemLabel
+//            break
+//        case "shipping_label":
+//            onDeviceModelType = VSDKModelClass.shippingLabel
+//            break
+//        case "bill_of_lading":
+//            onDeviceModelType = VSDKModelClass.billOfLading
+//            break
+//        default:
+//            onDeviceModelType = VSDKModelClass.shippingLabel
+//            break
+//        }
+//    }
+//    
+//    /// Sets the ModelSize for On Device Camera, i.e. Which model size should be used for scanning
+//    /// - Parameter modelSize: parameter describes the Model size
+//    ///  Parameter : possible values
+//    ///  nano | micro | small | medium | large | xlarge
+//    ///
+//    @objc func setModelSize(_ modelSize: NSString) {
+//        
+//        switch modelSize {
+//        case "nano":
+//            onDeviceModelSize = VSDKModelSize.nano
+//            break
+//        case "micro":
+//            onDeviceModelSize = VSDKModelSize.micro
+//            break
+//        case "small":
+//            onDeviceModelSize = VSDKModelSize.small
+//            break
+//        case "medium":
+//            onDeviceModelSize = VSDKModelSize.medium
+//            break
+//        case "large":
+//            onDeviceModelSize = VSDKModelSize.large
+//            break
+//        case "xlarge":
+//            onDeviceModelSize = VSDKModelSize.xlarge
+//            break
+//        default:
+//            onDeviceModelSize = VSDKModelSize.micro
+//            break
+//        }
+//    }
     
-    /// Sets the ModelSize for On Device Camera, i.e. Which model size should be used for scanning
-    /// - Parameter modelSize: parameter describes the Model size
-    ///  Parameter : possible values
-    ///  nano | micro | small | medium | large | xlarge
-    ///
-    @objc func setModelSize(_ modelSize: NSString) {
-        
-        switch modelSize {
-        case "nano":
-            onDeviceModelSize = VSDKModelSize.nano
-            break
-        case "micro":
-            onDeviceModelSize = VSDKModelSize.micro
-            break
-        case "small":
-            onDeviceModelSize = VSDKModelSize.small
-            break
-        case "medium":
-            onDeviceModelSize = VSDKModelSize.medium
-            break
-        case "large":
-            onDeviceModelSize = VSDKModelSize.large
-            break
-        case "xlarge":
-            onDeviceModelSize = VSDKModelSize.xlarge
-            break
-        default:
-            onDeviceModelSize = VSDKModelSize.micro
-            break
+    func configureOnDeviceModel() {
+        if isOnDeviceOCR ?? false {
+            setupDownloadOnDeviceOCR { }
         }
     }
     

@@ -70,27 +70,31 @@ class VisionSdkViewManager: RCTViewManager {
 
     }
 
-@objc func setHeight(_ node: NSNumber, height: NSNumber) {
-    DispatchQueue.main.async {
-      let component =
-        self.bridge.uiManager.view(
-          forReactTag: node
-        ) as! RNCodeScannerView
-        component.setHeight(height as NSNumber)
-    }
-   }
+    @objc func setHeight(_ node: NSNumber, height: NSNumber) {
+        DispatchQueue.main.async {
+         let component =
+           self.bridge.uiManager.view(
+             forReactTag: node
+           ) as! RNCodeScannerView
+           component.setHeight(height as NSNumber)
+       }
 
-@objc func setMetaData(_ node: NSNumber, metaData: NSString) {
-    DispatchQueue.main.async {
-      let component =
-        self.bridge.uiManager.view(
-          forReactTag: node
-        ) as! RNCodeScannerView
-        component.setMetaData(metaData as NSString)
-    }
-   }
+     }
+    
+    @objc func setMetaData(_ node: NSNumber, metaData: NSString) {
+       DispatchQueue.main.async {
+         let component =
+           self.bridge.uiManager.view(
+             forReactTag: node
+           ) as! RNCodeScannerView
+           component.setMetaData(metaData as NSString)
+       }
+        
+     }
 
-@objc func setRecipient(_ node: NSNumber, recipient: NSString) {
+
+
+ @objc func setRecipient(_ node: NSNumber, recipient: NSString) {
     DispatchQueue.main.async {
       let component =
         self.bridge.uiManager.view(
@@ -98,9 +102,10 @@ class VisionSdkViewManager: RCTViewManager {
         ) as! RNCodeScannerView
         component.setRecipient(recipient as NSString)
     }
-}
+     
+  }
     
-@objc func setSender(_ node: NSNumber, sender: NSString) {
+ @objc func setSender(_ node: NSNumber, sender: NSString) {
     DispatchQueue.main.async {
         let component =
         self.bridge.uiManager.view(
@@ -108,43 +113,38 @@ class VisionSdkViewManager: RCTViewManager {
         ) as! RNCodeScannerView
         component.setSender(sender as NSString)
     }
+     
+  }
+    
+@objc func configureOnDeviceModel(_ node: NSNumber) {
+    DispatchQueue.main.async {
+        let component =
+        self.bridge.uiManager.view(
+            forReactTag: node
+        ) as! RNCodeScannerView
+        component.configureOnDeviceModel()
+    }
 }
     
-    @objc func setModelType(_ node: NSNumber, modelType: NSString) {
-        DispatchQueue.main.async {
-            let component =
-            self.bridge.uiManager.view(
-                forReactTag: node
-            ) as! RNCodeScannerView
-            component.setModelType(modelType as NSString)
-        }
-    }
-    
-    @objc func setModelSize(_ node: NSNumber, modelSize: NSString) {
-        DispatchQueue.main.async {
-            let component =
-            self.bridge.uiManager.view(
-                forReactTag: node
-            ) as! RNCodeScannerView
-            component.setModelSize(modelSize as NSString)
-        }
-    }
-    
-
-    
-    @objc func configureOnDeviceModel(_ node: NSNumber) {
-
-      DispatchQueue.main.async {
-        let component =
-          self.bridge.uiManager.view(
-            forReactTag: node
-          ) as! RNCodeScannerView
-
-        component.configureOnDeviceModel()
-
-      }
-
-    }
+//    @objc func setModelType(_ node: NSNumber, modelType: NSString) {
+//        DispatchQueue.main.async {
+//            let component =
+//            self.bridge.uiManager.view(
+//                forReactTag: node
+//            ) as! RNCodeScannerView
+//            component.setModelType(modelType as NSString)
+//        }
+//    }
+//    
+//    @objc func setModelSize(_ node: NSNumber, modelSize: NSString) {
+//        DispatchQueue.main.async {
+//            let component =
+//            self.bridge.uiManager.view(
+//                forReactTag: node
+//            ) as! RNCodeScannerView
+//            component.setModelSize(modelSize as NSString)
+//        }
+//    }
     
 
   override func view() -> UIView! {

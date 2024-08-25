@@ -26,7 +26,7 @@ function DownloadingProgressView({ visible, progress }: any) {
             </AnimatedCircularProgress>
           </View>
           <Text style={styles.descriptionTextStyle}>
-            Model Downloading in progress...
+          Please wait while on-device OCR model initializes. Once ready, you can proceed with regular scanning. This initialization is a one-time process.
           </Text>
         </View>
       </TouchableOpacity>
@@ -36,7 +36,10 @@ function DownloadingProgressView({ visible, progress }: any) {
 const styles = StyleSheet.create({
   descriptionTextStyle: {
     color: 'white',
-    marginTop: 20,
+    marginHorizontal: 10,
+    marginTop: 30,
+    letterSpacing: 2,
+    textAlign: 'center',
     fontSize: 14,
     fontWeight: 'bold',
   },

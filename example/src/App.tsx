@@ -51,7 +51,9 @@ export default function App() {
   }
   useEffect(() => {
     if (isOnDeviceOCR) {
-      visionSdk?.current?.configureOnDeviceModel();
+      setTimeout(() => {
+        visionSdk?.current?.configureOnDeviceModel();
+      }, 2000);
     }
   }, [isOnDeviceOCR]);
   return (
@@ -66,7 +68,7 @@ export default function App() {
         BarCodeScanHandler={(e: any) => console.log('BarCodeScanHandler', e)}
         OCRScanHandler={(e: any) => {
           console.log('OCRScanHandler', e);
-          Alert.alert('Data has been Extracted');
+          Alert.alert('Extracted Label Data \n \n Tracking No: ' + e.nativeEvent.data.tracking_number + '\n Sender: ' + e.nativeEvent.data.sender.name + '\n Recipient: ' + e.nativeEvent.data.recipient.name + '\n Provider: ' + e.nativeEvent.data.provider_name + '\n Type: ' + e.nativeEvent.data.type);
         }}
         ModelDownloadProgress={(e: any) => {
           let response = Platform.OS === 'android' ? e : e.nativeEvent;
@@ -76,7 +78,7 @@ export default function App() {
         }}
         onError={(e: any) => {
           console.log('onError', e);
-          Alert.alert(JSON.stringify(e));
+          // Alert.alert(JSON.stringify(e));
         }}
       />
       <DownloadingProgressView
