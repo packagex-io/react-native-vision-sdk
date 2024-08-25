@@ -60,15 +60,6 @@ const Camera: React.FC<Props> = ({
   const VisionSDKViewRef = useRef(null);
 
   useImperativeHandle(refProp, () => ({
-    configureOnDeviceModel: () => {
-      configureOnDeviceModel();
-    },
-    setModelType: (val: string) => {
-      setModelType(val);
-    },
-    setModelSize: (val: string) => {
-      setModelSize(val);
-    },
     cameraCaptureHandler: () => {
       onPressCaptures();
     },
@@ -95,6 +86,15 @@ const Camera: React.FC<Props> = ({
     },
     setSender: (val: any) => {
       setSender(val);
+    },
+    configureOnDeviceModel: () => {
+      configureOnDeviceModel();
+    },
+    setModelType: (val: string) => {
+      setModelType(val);
+    },
+    setModelSize: (val: string) => {
+      setModelSize(val);
     },
     changeModeHandler: (
       c_mode: React.SetStateAction<any>,
@@ -206,13 +206,21 @@ const Camera: React.FC<Props> = ({
       [value]
     );
   };
+  const configureOnDeviceModel = () => {
+    UIManager.dispatchViewManagerCommand(
+      findNodeHandle(VisionSDKViewRef.current),
+      (UIManager.hasViewManagerConfig('VisionSDKView') &&
+        UIManager.getViewManagerConfig('VisionSDKView').Commands.configureOnDeviceModel) ||
+        9,
+      []
+    );
+  };
   const setModelType = (value: string) => {
     UIManager.dispatchViewManagerCommand(
       findNodeHandle(VisionSDKViewRef.current),
       (UIManager.hasViewManagerConfig('VisionSDKView') &&
-        UIManager.getViewManagerConfig('VisionSDKView').Commands
-          .setModelType) ||
-        9,
+        UIManager.getViewManagerConfig('VisionSDKView').Commands.setModelType) ||
+        10,
       [value]
     );
   };
@@ -220,20 +228,9 @@ const Camera: React.FC<Props> = ({
     UIManager.dispatchViewManagerCommand(
       findNodeHandle(VisionSDKViewRef.current),
       (UIManager.hasViewManagerConfig('VisionSDKView') &&
-        UIManager.getViewManagerConfig('VisionSDKView').Commands
-          .setModelSize) ||
-        10,
-      [value]
-    );
-  };
-  const configureOnDeviceModel = () => {
-    UIManager.dispatchViewManagerCommand(
-      findNodeHandle(VisionSDKViewRef.current),
-      (UIManager.hasViewManagerConfig('VisionSDKView') &&
-        UIManager.getViewManagerConfig('VisionSDKView').Commands
-          .configureOnDeviceModel) ||
+        UIManager.getViewManagerConfig('VisionSDKView').Commands.setModelSize) ||
         11,
-      []
+      [value]
     );
   };
 
