@@ -3,16 +3,27 @@ import { View, StyleSheet, Platform, Alert } from 'react-native';
 import VisionSdkView from 'react-native-vision-sdk';
 import CameraFooterView from './Components/CameraFooterView';
 import DownloadingProgressView from './Components/DownloadingProgressView';
+import CameraHeaderView from './Components/CameraHeaderView';
 
 interface downloadingProgress {
   downloadStatus: boolean;
   progress: number;
 }
+interface detectedDataProps {
+  barcode: boolean;
+  qrcode: boolean;
+  text: boolean;
+}
 export default function App() {
   const visionSdk = React.useRef<any>(null);
-  const [captureMode, setCaptureMode] = useState<string>('auto');
+  const [captureMode, setCaptureMode] = useState<string>('manual');
   const [showOcrTypes, setShowOcrTypes] = useState<boolean>(false);
   const [isOnDeviceOCR, setIsOnDeviceOCR] = useState<boolean>(false);
+  const [detectedData, setDeectedData] = useState<detectedDataProps>({
+    barcode: false,
+    qrcode: false,
+    text: false,
+  });
   const [modelDownloadingProgress, setModelDownloadingProgress] =
     useState<downloadingProgress>({
       downloadStatus: true,
@@ -46,6 +57,9 @@ export default function App() {
   const onPressCapture = () => {
     visionSdk?.current?.cameraCaptureHandler();
   };
+  const toggleTorch = (val: boolean) => {
+    visionSdk?.current?.onPressToggleTorchHandler(val);
+  };
   function isMultipleOfTen(number: any) {
     return number % 5 === 0;
   }
@@ -54,6 +68,7 @@ export default function App() {
       visionSdk?.current?.configureOnDeviceModel();
     }
   }, [isOnDeviceOCR]);
+
   return (
     <View style={styles.mainContainer}>
       <VisionSdkView
@@ -61,7 +76,9 @@ export default function App() {
         isOnDeviceOCR={isOnDeviceOCR}
         showScanFrame={true}
         captureWithScanFrame={true}
-        // OnDetectedHandler={(e: any) => console.log('OnDetectedHandler', e)}
+        OnDetectedHandler={(e: any) =>
+          setDeectedData(Platform.OS === 'android' ? e : e.native)
+        }
         apiKey="key_141b2eda27Z0Cm2y0h0P6waB3Z6pjPgrmGAHNSU62rZelUthBEOOdsVTqZQCRVgPLqI5yMPqpw2ZBy2z"
         BarCodeScanHandler={(e: any) => console.log('BarCodeScanHandler', e)}
         OCRScanHandler={(e: any) => {
@@ -72,6 +89,11 @@ export default function App() {
           let response = Platform.OS === 'android' ? e : e.nativeEvent;
           if (isMultipleOfTen(Math.floor(response.progress * 100))) {
             setModelDownloadingProgress(response);
+            if (response.downloadStatus) {
+              visionSdk?.current?.startRunningHandler();
+            } else {
+              visionSdk?.current?.stopRunningHandler();
+            }
           }
         }}
         onError={(e: any) => {
@@ -79,6 +101,7 @@ export default function App() {
           Alert.alert(JSON.stringify(e));
         }}
       />
+      <CameraHeaderView detectedData={detectedData} toggleTorch={toggleTorch} />
       <DownloadingProgressView
         visible={!modelDownloadingProgress.downloadStatus}
         progress={modelDownloadingProgress?.progress}

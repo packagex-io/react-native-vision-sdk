@@ -26,7 +26,7 @@ function OCRSelectionView({
         <View style={styles.modalView}>
           <TouchableOpacity
             onPress={() => {
-              setIsOnDeviceOCR(!isOnDeviceOCR);
+              setIsOnDeviceOCR(false);
               closeModal();
             }}
             style={styles.rowStyle}
@@ -39,7 +39,7 @@ function OCRSelectionView({
           <View style={styles.horizontalLine} />
           <TouchableOpacity
             onPress={() => {
-              setIsOnDeviceOCR(!isOnDeviceOCR);
+              setIsOnDeviceOCR(true);
               closeModal();
             }}
             style={styles.rowStyle}

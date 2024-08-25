@@ -1,5 +1,11 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Platform,
+} from 'react-native';
 import Octicons from 'react-native-vector-icons/Octicons';
 import OCRSelectionView from './OCRSelectionView';
 import CaptureModesView from './CaptureModesView';
@@ -28,9 +34,11 @@ function CameraFooterView({
           setCaptureMode={setCaptureMode}
           captureMode={captureMode}
         />
-        <TouchableOpacity onPress={onPressCapture} style={styles.outerCircle}>
-          <View style={styles.innerCircle} />
-        </TouchableOpacity>
+        {captureMode === 'manual' && (
+          <TouchableOpacity onPress={onPressCapture} style={styles.outerCircle}>
+            <View style={styles.innerCircle} />
+          </TouchableOpacity>
+        )}
       </View>
       <View style={styles.sideContainer} />
       <OCRSelectionView
@@ -54,11 +62,14 @@ const styles = StyleSheet.create({
     transform: [{ rotate: '90deg' }],
   },
   mainContainer: {
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor:
+      Platform.OS === 'android' ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.5)',
     height: 150,
     width: '100%',
     flexDirection: 'row',
     justifyContent: 'space-between',
+    position: 'absolute',
+    bottom: 0,
   },
   sideContainer: {
     width: '30%',

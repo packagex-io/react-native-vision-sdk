@@ -1,5 +1,12 @@
 import React from 'react';
-import { View, StyleSheet, Text, TouchableOpacity, Modal } from 'react-native';
+import {
+  View,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  Modal,
+  Platform,
+} from 'react-native';
 import { AnimatedCircularProgress } from 'react-native-circular-progress';
 
 function DownloadingProgressView({ visible, progress }: any) {
@@ -46,6 +53,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderColor: 'red',
     borderWidth: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
   },
   modalView: {
     backgroundColor: '#33343A',
