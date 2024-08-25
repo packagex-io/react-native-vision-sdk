@@ -1,11 +1,5 @@
 import React from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  Platform,
-} from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Platform } from 'react-native';
 import Octicons from 'react-native-vector-icons/Octicons';
 import OCRSelectionView from './OCRSelectionView';
 import CaptureModesView from './CaptureModesView';

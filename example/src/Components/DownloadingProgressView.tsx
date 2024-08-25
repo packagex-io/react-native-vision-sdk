@@ -1,12 +1,5 @@
 import React from 'react';
-import {
-  View,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  Modal,
-  Platform,
-} from 'react-native';
+import { View, StyleSheet, Text, TouchableOpacity, Modal } from 'react-native';
 import { AnimatedCircularProgress } from 'react-native-circular-progress';
 
 function DownloadingProgressView({ visible, progress }: any) {
@@ -33,7 +26,9 @@ function DownloadingProgressView({ visible, progress }: any) {
             </AnimatedCircularProgress>
           </View>
           <Text style={styles.descriptionTextStyle}>
-          Please wait while on-device OCR model initializes. Once ready, you can proceed with regular scanning. This initialization is a one-time process.
+            Please wait while on-device OCR model initializes. Once ready, you
+            can proceed with regular scanning. This initialization is a one-time
+            process.
           </Text>
         </View>
       </TouchableOpacity>
