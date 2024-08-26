@@ -133,7 +133,7 @@ export default function App() {
         onError={(e: any) => {
           console.log('onError', e);
 
-          Alert.alert(JSON.stringify(e));
+          // Alert.alert(JSON.stringify(e));
         }}
       />
       <LoaderView visible={loading} />
