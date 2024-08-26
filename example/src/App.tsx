@@ -17,8 +17,8 @@ interface detectedDataProps {
 export default function App() {
   const visionSdk = React.useRef<any>(null);
   const [captureMode, setCaptureMode] = useState<string>('manual');
-  const [showOcrTypes, setShowOcrTypes] = useState<boolean>(false);
   const [isOnDeviceOCR, setIsOnDeviceOCR] = useState<boolean>(false);
+  const [modelSize, setModelSize] = useState<string>('large');
   const [detectedData, setDeectedData] = useState<detectedDataProps>({
     barcode: false,
     qrcode: false,
@@ -62,19 +62,16 @@ export default function App() {
   function isMultipleOfTen(number: any) {
     return number % 5 === 0;
   }
-  useEffect(() => {
-    if (isOnDeviceOCR) {
-      visionSdk?.current?.configureOnDeviceModel({
-        type: 'shipping_label',
-        size: 'large',
-      });
-    }
-  }, [isOnDeviceOCR]);
-  const onPressOnDeviceOcr = () => {
+  const onPressOnDeviceOcr = (type = 'shipping_label', size = 'large') => {
+    console.log('onPressOnDeviceOcr===--->>', type, size);
     visionSdk?.current?.stopRunningHandler();
     setModelDownloadingProgress({
       downloadStatus: false,
       progress: 0,
+    });
+    visionSdk?.current?.configureOnDeviceModel({
+      type: type,
+      size: size,
     });
   };
   return (
@@ -112,9 +109,6 @@ export default function App() {
             if (response.downloadStatus) {
               visionSdk?.current?.startRunningHandler();
             }
-            // else {
-            //   visionSdk?.current?.stopRunningHandler();
-            // }
           }
         }}
         onError={(e: any) => {
@@ -130,12 +124,12 @@ export default function App() {
       <CameraFooterView
         setCaptureMode={setCaptureMode}
         captureMode={captureMode}
-        setShowOcrTypes={setShowOcrTypes}
-        showOcrTypes={showOcrTypes}
         setIsOnDeviceOCR={setIsOnDeviceOCR}
         isOnDeviceOCR={isOnDeviceOCR}
         onPressCapture={onPressCapture}
         onPressOnDeviceOcr={onPressOnDeviceOcr}
+        setModelSize={setModelSize}
+        modelSize={modelSize}
       />
     </View>
   );

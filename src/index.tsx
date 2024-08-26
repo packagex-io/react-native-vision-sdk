@@ -240,7 +240,6 @@ const Camera: React.FC<Props> = ({
       DeviceEventEmitter.removeAllListeners('onImageCaptured');
       DeviceEventEmitter.removeAllListeners('onError');
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   return (
     <>
