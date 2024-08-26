@@ -100,7 +100,7 @@ extension RNCodeScannerView: CodeScannerViewDelegate {
     func codeScannerViewDidDetect(_ text: Bool, barCode: Bool, qrCode: Bool, document: Bool) {
         
         if onDetected != nil {
-            onDetected!(["text": text, "barcode": barCode, "qrcode": qrCode])
+            onDetected!(["text": text, "barcode": barCode, "qrcode": qrCode, "document": document])
         }
     }
     

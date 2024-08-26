@@ -40,7 +40,6 @@ function OCRSelectionView({
           <View style={styles.horizontalLine} />
           <TouchableOpacity
             onPress={() => {
-              onPressOnDeviceOcr();
               setIsOnDeviceOCR(true);
               closeModal();
             }}

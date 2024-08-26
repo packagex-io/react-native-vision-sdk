@@ -60,8 +60,13 @@ export default function App() {
     visionSdk?.current?.onPressToggleTorchHandler(val);
   };
   function isMultipleOfTen(number: any) {
-    return number % 5 === 0;
+    return number % 1 === 0;
   }
+  useEffect(()=>{
+    if(isOnDeviceOCR){
+      onPressOnDeviceOcr();
+    }
+  },[isOnDeviceOCR])
   const onPressOnDeviceOcr = (type = 'shipping_label', size = 'large') => {
     console.log('onPressOnDeviceOcr===--->>', type, size);
     visionSdk?.current?.stopRunningHandler();
