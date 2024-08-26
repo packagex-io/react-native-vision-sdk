@@ -19,6 +19,7 @@ type Props = {
   apiKey?: string;
   reRender?: string;
   delayTime?: number;
+  showDocumentBoundaries?: boolean;
   isOnDeviceOCR?: boolean;
   showScanFrame?: boolean;
   captureWithScanFrame?: boolean;
@@ -36,6 +37,7 @@ const Camera: React.FC<Props> = ({
   apiKey = '',
   reRender,
   delayTime = 100,
+  showDocumentBoundaries = false,
   isOnDeviceOCR = false,
   showScanFrame = true,
   captureWithScanFrame = true,
@@ -257,6 +259,7 @@ const Camera: React.FC<Props> = ({
         mode={mode}
         captureMode={cameraCaptureMode}
         delayTime={delayTime ? delayTime : 100}
+        showDocumentBoundaries={showDocumentBoundaries}
         isOnDeviceOCR={isOnDeviceOCR}
         onError={onError}
         token={token}

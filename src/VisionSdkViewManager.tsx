@@ -24,6 +24,7 @@ type VisionSdkProps = {
   environment?: String;
   captureMode?: String;
   delayTime: number;
+  showDocumentBoundaries?: boolean;
   isOnDeviceOCR: boolean;
   showScanFrame?: boolean;
   captureWithScanFrame?: boolean;
