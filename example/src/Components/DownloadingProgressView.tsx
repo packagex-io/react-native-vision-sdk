@@ -43,7 +43,8 @@ const styles = StyleSheet.create({
     letterSpacing: 2,
     textAlign: 'center',
     fontSize: 14,
-    fontWeight: 'bold',
+    fontWeight: '500',
+    textAlignVertical: 'center',
   },
   centeredViewModal: {
     flex: 1,

@@ -1,9 +1,16 @@
 import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, Platform, Alert } from 'react-native';
+import {
+  View,
+  StyleSheet,
+  Platform,
+  Alert,
+  ActivityIndicator,
+} from 'react-native';
 import VisionSdkView from 'react-native-vision-sdk';
 import CameraFooterView from './Components/CameraFooterView';
 import DownloadingProgressView from './Components/DownloadingProgressView';
 import CameraHeaderView from './Components/CameraHeaderView';
+import LoaderView from './Components/LoaderView';
 
 interface downloadingProgress {
   downloadStatus: boolean;
@@ -13,17 +20,21 @@ interface detectedDataProps {
   barcode: boolean;
   qrcode: boolean;
   text: boolean;
+  document: boolean;
 }
 export default function App() {
   const visionSdk = React.useRef<any>(null);
   const [captureMode, setCaptureMode] = useState<string>('manual');
   const [isOnDeviceOCR, setIsOnDeviceOCR] = useState<boolean>(false);
   const [modelSize, setModelSize] = useState<string>('large');
+  const [loading, setLoading] = useState(false);
   const [detectedData, setDeectedData] = useState<detectedDataProps>({
     barcode: false,
     qrcode: false,
     text: false,
+    document: false,
   });
+
   const [modelDownloadingProgress, setModelDownloadingProgress] =
     useState<downloadingProgress>({
       downloadStatus: true,
@@ -52,6 +63,7 @@ export default function App() {
     );
     visionSdk?.current?.setHeight(1);
     visionSdk?.current?.startRunningHandler();
+    setLoading(false);
   }, [captureMode]);
   const onPressCapture = () => {
     visionSdk?.current?.cameraCaptureHandler();
@@ -62,18 +74,15 @@ export default function App() {
   function isMultipleOfTen(number: any) {
     return number % 1 === 0;
   }
-  useEffect(()=>{
-    if(isOnDeviceOCR){
+  useEffect(() => {
+    if (isOnDeviceOCR) {
       onPressOnDeviceOcr();
     }
-  },[isOnDeviceOCR])
+  }, [isOnDeviceOCR]);
   const onPressOnDeviceOcr = (type = 'shipping_label', size = 'large') => {
     console.log('onPressOnDeviceOcr===--->>', type, size);
     visionSdk?.current?.stopRunningHandler();
-    setModelDownloadingProgress({
-      downloadStatus: false,
-      progress: 0,
-    });
+    setLoading(true);
     visionSdk?.current?.configureOnDeviceModel({
       type: type,
       size: size,
@@ -119,6 +128,7 @@ export default function App() {
               visionSdk?.current?.startRunningHandler();
             }
           }
+          setLoading(false);
         }}
         onError={(e: any) => {
           console.log('onError', e);
@@ -126,6 +136,7 @@ export default function App() {
           Alert.alert(JSON.stringify(e));
         }}
       />
+      <LoaderView visible={loading} />
       <CameraHeaderView detectedData={detectedData} toggleTorch={toggleTorch} />
       <DownloadingProgressView
         visible={!modelDownloadingProgress.downloadStatus}

@@ -27,8 +27,10 @@ function ModelSizeSelectionView({
         <View style={styles.modalView}>
           <TouchableOpacity
             onPress={() => {
-              setModelSize('micro');
-              onPressOnDeviceOcr(undefined, 'micro');
+              if (modelSize !== 'micro') {
+                setModelSize('micro');
+                onPressOnDeviceOcr(undefined, 'micro');
+              }
               closeModal();
             }}
             style={styles.rowStyle}
@@ -41,8 +43,10 @@ function ModelSizeSelectionView({
           <View style={styles.horizontalLine} />
           <TouchableOpacity
             onPress={() => {
-              setModelSize('large');
-              onPressOnDeviceOcr(undefined, 'large');
+              if (modelSize !== 'large') {
+                setModelSize('large');
+                onPressOnDeviceOcr(undefined, 'large');
+              }
               closeModal();
             }}
             style={styles.rowStyle}
