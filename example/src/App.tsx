@@ -100,8 +100,7 @@ export default function App() {
         BarCodeScanHandler={(e: any) => console.log('BarCodeScanHandler', e)}
         OCRScanHandler={(e: any) => {
           let scanRes = Platform.OS === 'android' ? e : e.nativeEvent;
-          console.log('OCRScanHandler', JSON.stringify(scanRes));
-          setResult(scanRes?.data);
+          setResult(scanRes.data);
           setLoading(false);
           Vibration.vibrate(100);
         }}
@@ -123,6 +122,7 @@ export default function App() {
           let error = Platform.OS === 'android' ? e : e.nativeEvent;
           console.log('onError', error);
           Alert.alert('ERROR', error?.message);
+          setLoading(false);
         }}
       />
       <ResultView
