@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, StyleSheet, Platform, TouchableOpacity } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 
 function CameraHeaderView({ detectedData, toggleTorch }: any) {
   const [isFlashOn, setIsFlashOn] = useState<boolean>(false);
@@ -22,22 +23,21 @@ function CameraHeaderView({ detectedData, toggleTorch }: any) {
           <FontAwesome
             name="barcode"
             size={20}
-            color={checkIconColor(
-              Platform.OS === 'android'
-                ? detectedData?.barcode
-                : detectedData?.barCode
-            )}
+            color={checkIconColor(detectedData?.barcode)}
           />
         </View>
         <View style={styles.itemIconContainer}>
           <Icon
             name="qr-code-outline"
             size={20}
-            color={checkIconColor(
-              Platform.OS === 'android'
-                ? detectedData?.qrcode
-                : detectedData?.qrCode
-            )}
+            color={checkIconColor(detectedData?.qrcode)}
+          />
+        </View>
+        <View style={styles.itemIconContainer}>
+          <MaterialCommunityIcons
+            name="file-document-outline"
+            size={20}
+            color={checkIconColor(detectedData?.document)}
           />
         </View>
       </View>

@@ -17,7 +17,7 @@ interface detectedDataProps {
 export default function App() {
   const visionSdk = React.useRef<any>(null);
   const [captureMode, setCaptureMode] = useState<string>('manual');
-  const [isOnDeviceOCR, setIsOnDeviceOCR] = useState<boolean>(true);
+  const [isOnDeviceOCR, setIsOnDeviceOCR] = useState<boolean>(false);
   const [modelSize, setModelSize] = useState<string>('large');
   const [detectedData, setDeectedData] = useState<detectedDataProps>({
     barcode: false,
@@ -85,6 +85,7 @@ export default function App() {
         refProp={visionSdk}
         isOnDeviceOCR={isOnDeviceOCR}
         showScanFrame={true}
+        showDocumentBoundaries={true}
         captureWithScanFrame={true}
         OnDetectedHandler={(e: any) => {
           setDeectedData(Platform.OS === 'android' ? e : e.nativeEvent);
@@ -108,7 +109,10 @@ export default function App() {
         }}
         ModelDownloadProgress={(e: any) => {
           let response = Platform.OS === 'android' ? e : e.nativeEvent;
-          console.log('ModelDownloadProgress==------>>', response);
+          console.log(
+            'ModelDownloadProgress==------>>',
+            Math.floor(response.progress * 100)
+          );
           if (isMultipleOfTen(Math.floor(response.progress * 100))) {
             setModelDownloadingProgress(response);
             if (response.downloadStatus) {
@@ -118,7 +122,8 @@ export default function App() {
         }}
         onError={(e: any) => {
           console.log('onError', e);
-          // Alert.alert(JSON.stringify(e));
+
+          Alert.alert(JSON.stringify(e));
         }}
       />
       <CameraHeaderView detectedData={detectedData} toggleTorch={toggleTorch} />
