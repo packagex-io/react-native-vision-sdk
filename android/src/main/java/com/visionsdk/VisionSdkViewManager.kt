@@ -612,7 +612,7 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
 //          val reactContext = context as ReactContext
     appContext
       .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
-      .emit("onOCRDataReceived", response)
+      .emit("onOCRDataReceived", event)
   }
 
   override fun onOCRResponseFailed(throwable: Throwable?) {

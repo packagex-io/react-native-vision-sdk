@@ -101,9 +101,10 @@ export default function App() {
         apiKey="key_141b2eda27Z0Cm2y0h0P6waB3Z6pjPgrmGAHNSU62rZelUthBEOOdsVTqZQCRVgPLqI5yMPqpw2ZBy2z"
         BarCodeScanHandler={(e: any) => console.log('BarCodeScanHandler', e)}
         OCRScanHandler={(e: any) => {
-          let scanRes = Platform.OS === 'android' ? e : e.nativeEvent;
-          console.log('scanRes==--->>', scanRes);
-          setResult(scanRes.data);
+          const scanRes = Platform.OS === 'ios' ? e.nativeEvent : e;
+          const parsedOuterJson = JSON.parse(scanRes.data);
+          const nestedData = parsedOuterJson.data;
+          setResult(Platform.OS === 'android' ? nestedData : scanRes.data);
           setLoading(false);
           Vibration.vibrate(100);
         }}
