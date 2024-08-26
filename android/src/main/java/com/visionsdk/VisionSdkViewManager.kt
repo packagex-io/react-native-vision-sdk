@@ -86,7 +86,7 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
 
     visionCameraView?.setObjectDetectionConfiguration(
       ObjectDetectionConfiguration(
-        isDocumentIndicationOn = false,
+//        isDocumentIndicationOn = false,
       )
     )
     visionCameraView?.shouldAutoSaveCapturedImage(true)
@@ -154,7 +154,7 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
   }
 
   private fun setFocusSettings() {
-    if (visionCameraView?.isCameraStarted()?.not()==true) return
+    if (visionCameraView?.isCameraStarted()?.not() == true) return
     visionCameraView?.getFocusRegionManager()?.setFocusSettings(focusSettings)
   }
 
@@ -169,6 +169,7 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
       putBoolean("barcode", barcodeDetected)
       putBoolean("qrcode", qrCodeDetected)
       putBoolean("text", textDetected)
+      putBoolean("document", documentDetected)
     }
     appContext
       .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
@@ -453,21 +454,18 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
     lifecycleOwner?.lifecycle?.coroutineScope?.launchOnIO {
       try {
         if (onDeviceOCRManager?.isConfigured()?.not() == true) {
-          val installationDuration = measureTime {
-            onDeviceOCRManager?.configure {
-              UiThreadUtil.runOnUiThread {
+          onDeviceOCRManager?.configure {
 //                Log.d(TAG, "Install Progress: $it")
-                val event = Arguments.createMap().apply {
-                  putDouble("progress", it.toDouble())
-                  putBoolean("downloadStatus", false)
-                }
-                appContext
-                  .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
-                  .emit("onModelDownloadProgress", event)
+            if (onDeviceOCRManager?.isModelAlreadyDownloaded() == false) {
+              val event = Arguments.createMap().apply {
+                putDouble("progress", it.toDouble())
+                putBoolean("downloadStatus", false)
               }
+              appContext
+                .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
+                .emit("onModelDownloadProgress", event)
             }
           }
-//          Log.d(TAG, "Installation took ${installationDuration.toReadableDuration()}.")
         }
         val event = Arguments.createMap().apply {
           putDouble("progress", 1.0)
