@@ -7,6 +7,7 @@ function OCRSelectionView({
   showOcrTypes,
   setIsOnDeviceOCR,
   isOnDeviceOCR,
+  onPressOnDeviceOcr,
 }: any) {
   const closeModal = () => {
     setShowOcrTypes(false);
@@ -39,6 +40,7 @@ function OCRSelectionView({
           <View style={styles.horizontalLine} />
           <TouchableOpacity
             onPress={() => {
+              onPressOnDeviceOcr();
               setIsOnDeviceOCR(true);
               closeModal();
             }}

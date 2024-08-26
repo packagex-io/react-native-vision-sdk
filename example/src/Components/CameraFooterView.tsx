@@ -12,6 +12,7 @@ function CameraFooterView({
   setIsOnDeviceOCR,
   isOnDeviceOCR,
   onPressCapture,
+  onPressOnDeviceOcr,
 }: any) {
   return (
     <View style={styles.mainContainer}>
@@ -40,6 +41,7 @@ function CameraFooterView({
         showOcrTypes={showOcrTypes}
         setIsOnDeviceOCR={setIsOnDeviceOCR}
         isOnDeviceOCR={isOnDeviceOCR}
+        onPressOnDeviceOcr={onPressOnDeviceOcr}
       />
     </View>
   );

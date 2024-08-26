@@ -26,7 +26,7 @@ export default function App() {
   });
   const [modelDownloadingProgress, setModelDownloadingProgress] =
     useState<downloadingProgress>({
-      downloadStatus: false,
+      downloadStatus: true,
       progress: 0,
     });
   React.useEffect(() => {
@@ -70,7 +70,13 @@ export default function App() {
       });
     }
   }, [isOnDeviceOCR]);
-
+  const onPressOnDeviceOcr = () => {
+    visionSdk?.current?.stopRunningHandler();
+    setModelDownloadingProgress({
+      downloadStatus: false,
+      progress: 0,
+    });
+  };
   return (
     <View style={styles.mainContainer}>
       <VisionSdkView
@@ -100,13 +106,15 @@ export default function App() {
         }}
         ModelDownloadProgress={(e: any) => {
           let response = Platform.OS === 'android' ? e : e.nativeEvent;
+          console.log('ModelDownloadProgress==------>>', response);
           if (isMultipleOfTen(Math.floor(response.progress * 100))) {
             setModelDownloadingProgress(response);
             if (response.downloadStatus) {
               visionSdk?.current?.startRunningHandler();
-            } else {
-              visionSdk?.current?.stopRunningHandler();
             }
+            // else {
+            //   visionSdk?.current?.stopRunningHandler();
+            // }
           }
         }}
         onError={(e: any) => {
@@ -127,6 +135,7 @@ export default function App() {
         setIsOnDeviceOCR={setIsOnDeviceOCR}
         isOnDeviceOCR={isOnDeviceOCR}
         onPressCapture={onPressCapture}
+        onPressOnDeviceOcr={onPressOnDeviceOcr}
       />
     </View>
   );
