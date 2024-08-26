@@ -1,18 +1,23 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, StyleSheet, TouchableOpacity, Platform } from 'react-native';
 import Octicons from 'react-native-vector-icons/Octicons';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import OCRSelectionView from './OCRSelectionView';
 import CaptureModesView from './CaptureModesView';
+import ModelSizeSelectionView from './ModelSizeSelectionView';
 
 function CameraFooterView({
   setCaptureMode,
   captureMode,
-  setShowOcrTypes,
-  showOcrTypes,
   setIsOnDeviceOCR,
   isOnDeviceOCR,
   onPressCapture,
+  onPressOnDeviceOcr,
+  setModelSize,
+  modelSize,
 }: any) {
+  const [showOcrTypes, setShowOcrTypes] = useState<boolean>(false);
+  const [showOcrSize, setShowOcrSize] = useState<boolean>(false);
   return (
     <View style={styles.mainContainer}>
       <View style={[styles.sideContainer, styles.rotatedIcon]}>
@@ -20,7 +25,7 @@ function CameraFooterView({
           onPress={() => setShowOcrTypes(true)}
           style={styles.switchIconContainer}
         >
-          <Octicons name="arrow-switch" size={35} color="white" />
+          <Octicons name="arrow-switch" size={30} color="white" />
         </TouchableOpacity>
       </View>
       <View style={styles.centerContainer}>
@@ -34,12 +39,29 @@ function CameraFooterView({
           </TouchableOpacity>
         )}
       </View>
-      <View style={styles.sideContainer} />
+      <View style={[styles.sideContainer]}>
+        {isOnDeviceOCR && (
+          <TouchableOpacity
+            onPress={() => setShowOcrSize(true)}
+            style={styles.sizeIconContainer}
+          >
+            <MaterialCommunityIcons name="resize" size={30} color="white" />
+          </TouchableOpacity>
+        )}
+      </View>
       <OCRSelectionView
         setShowOcrTypes={setShowOcrTypes}
         showOcrTypes={showOcrTypes}
         setIsOnDeviceOCR={setIsOnDeviceOCR}
         isOnDeviceOCR={isOnDeviceOCR}
+        onPressOnDeviceOcr={onPressOnDeviceOcr}
+      />
+      <ModelSizeSelectionView
+        setShowOcrSize={setShowOcrSize}
+        showOcrSize={showOcrSize}
+        onPressOnDeviceOcr={onPressOnDeviceOcr}
+        setModelSize={setModelSize}
+        modelSize={modelSize}
       />
     </View>
   );
@@ -49,6 +71,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#7420E2',
     paddingVertical: 8,
     paddingHorizontal: 15,
+    borderRadius: 10,
+  },
+  sizeIconContainer: {
+    backgroundColor: '#7420E2',
+    paddingVertical: 10,
+    paddingHorizontal: 10,
     borderRadius: 10,
   },
   rotatedIcon: {

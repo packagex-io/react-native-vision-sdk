@@ -2,21 +2,21 @@ import React from 'react';
 import { View, StyleSheet, Text, TouchableOpacity, Modal } from 'react-native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 
-function OCRSelectionView({
-  setShowOcrTypes,
-  showOcrTypes,
-  setIsOnDeviceOCR,
-  isOnDeviceOCR,
+function ModelSizeSelectionView({
+  setShowOcrSize,
+  showOcrSize,
   onPressOnDeviceOcr,
+  setModelSize,
+  modelSize,
 }: any) {
   const closeModal = () => {
-    setShowOcrTypes(false);
+    setShowOcrSize(false);
   };
   return (
     <Modal
       animationType="fade"
       transparent
-      visible={showOcrTypes}
+      visible={showOcrSize}
       onRequestClose={closeModal}
     >
       <TouchableOpacity
@@ -27,27 +27,28 @@ function OCRSelectionView({
         <View style={styles.modalView}>
           <TouchableOpacity
             onPress={() => {
-              setIsOnDeviceOCR(false);
+              setModelSize('micro');
+              onPressOnDeviceOcr(undefined, 'micro');
               closeModal();
             }}
             style={styles.rowStyle}
           >
-            <Text style={styles.textStyle}>SL Cloud OCR</Text>
-            {!isOnDeviceOCR && (
+            <Text style={styles.textStyle}>Micro</Text>
+            {modelSize === 'micro' && (
               <MaterialIcons name="done" size={20} color="white" />
             )}
           </TouchableOpacity>
           <View style={styles.horizontalLine} />
           <TouchableOpacity
             onPress={() => {
-              onPressOnDeviceOcr();
-              setIsOnDeviceOCR(true);
+              setModelSize('large');
+              onPressOnDeviceOcr(undefined, 'large');
               closeModal();
             }}
             style={styles.rowStyle}
           >
-            <Text style={styles.textStyle}>SL On-Device OCR</Text>
-            {isOnDeviceOCR && (
+            <Text style={styles.textStyle}>Large</Text>
+            {modelSize === 'large' && (
               <MaterialIcons name="done" size={20} color="white" />
             )}
           </TouchableOpacity>
@@ -60,16 +61,16 @@ const styles = StyleSheet.create({
   centeredViewModal: {
     flex: 1,
     marginRight: 10,
-    alignItems: 'flex-start',
+    alignItems: 'flex-end',
     justifyContent: 'flex-end',
-    left: 20,
+    right: 20,
     bottom: 100,
   },
   modalView: {
     backgroundColor: '#33343A',
     borderRadius: 12,
     paddingVertical: 10,
-    width: '55%',
+    width: '35%',
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -99,4 +100,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default OCRSelectionView;
+export default ModelSizeSelectionView;
