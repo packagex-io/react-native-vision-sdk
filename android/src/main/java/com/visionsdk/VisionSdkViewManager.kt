@@ -65,6 +65,7 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
   private var scanningMode: ScanningMode = ScanningMode.Manual
   private var shouldDisplayFocusImage: Boolean = false
   private var shouldScanInFocusImageRect: Boolean = false
+  private var showDocumentBoundaries: Boolean = false
   private var lifecycleOwner: LifecycleOwner? = null
   private var shouldStartScanning = true
   private lateinit var authentication: Authentication
@@ -82,6 +83,15 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
     context = appContext.currentActivity!!
     lifecycleOwner = context as LifecycleOwner
     visionCameraView = VisionCameraView(context!!, null)
+
+    visionCameraView?.setObjectDetectionConfiguration(
+      ObjectDetectionConfiguration(
+        isDocumentIndicationOn = false,
+      )
+    )
+    visionCameraView?.shouldAutoSaveCapturedImage(true)
+    visionCameraView?.setCameraLifecycleCallback(this)
+    visionCameraView?.setScannerCallback(this)
 //    visionCameraView?.layoutParams = ViewGroup.LayoutParams(100,100)
     return visionCameraView!!
   }
@@ -93,7 +103,9 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
     super.onAfterUpdateTransaction(view)
     visionCameraView = view
     Log.d(TAG, "onAfterUpdateTransaction: ")
-    configureCamera()
+    configureViewState()
+    configureFocusSettings()
+    initializeSdk()
 
   }
 
@@ -122,29 +134,28 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
     )
   }
 
-  private fun configureCamera() {
-
-    Log.d(TAG, "configureCamera: ")
+  private fun configureViewState() {
+    visionViewState =
+      VisionViewState(detectionMode = detectionMode, scanningMode = scanningMode)
     setVisionViewState()
-    visionCameraView?.setObjectDetectionConfiguration(
-      ObjectDetectionConfiguration(
-        isDocumentIndicationOn = false
-      )
-    )
-    visionCameraView?.shouldAutoSaveCapturedImage(true)
-    visionCameraView?.setCameraLifecycleCallback(this)
-    visionCameraView?.setScannerCallback(this)
-    initializeSdk()
-//    configureOnDeviceModel()
+  }
 
-//    viewTreeObserver()
+  private fun configureFocusSettings() {
+    focusSettings = FocusSettings(
+      shouldDisplayFocusImage = shouldDisplayFocusImage,
+      shouldScanInFocusImageRect = shouldScanInFocusImageRect,
+      showDocumentBoundaries = showDocumentBoundaries
+    )
+    setFocusSettings()
   }
 
   private fun setVisionViewState() {
-
-    visionViewState =
-      VisionViewState(detectionMode = DetectionMode.OCR, scanningMode = ScanningMode.Manual)
     visionCameraView?.setVisionViewState(visionViewState)
+  }
+
+  private fun setFocusSettings() {
+    if (visionCameraView?.isCameraStarted()?.not()==true) return
+    visionCameraView?.getFocusRegionManager()?.setFocusSettings(focusSettings)
   }
 
   override fun detectionCallbacks(
@@ -223,17 +234,17 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
 
   private fun performLocalOCR(bitmap: Bitmap, list: List<String>) {
 
-    if (onDeviceOCRManager?.isModelAlreadyDownloaded()?.not() == true){
+    if (onDeviceOCRManager?.isModelAlreadyDownloaded()?.not() == true) {
       onOCRResponseFailed(Exception("Please download the required files before proceeding with on-device AI capabilities."))
       return
     }
 
     lifecycleOwner?.lifecycle?.coroutineScope?.launchOnIO {
       try {
-      val result = onDeviceOCRManager?.getPredictions(bitmap, list)
-      withContextMain {
-        onOCRResponse(result)
-      }
+        val result = onDeviceOCRManager?.getPredictions(bitmap, list)
+        withContextMain {
+          onOCRResponse(result)
+        }
       } catch (e: Exception) {
         e.printStackTrace()
         withContextMain {
@@ -264,6 +275,8 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
         7,
       "setSender" to
         8,
+      "configureOnDeviceModel" to
+        9,
     )
   }
 
@@ -321,17 +334,7 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
       }
 
       9 -> {
-        setModelType(args?.getString(0))
-        return
-      }
-
-      10 -> {
-        setModelSize(args?.getString(0))
-        return
-      }
-
-      11 -> {
-        configureOnDeviceModel()
+        configureOnDeviceModel(args?.getMap(0).toString())
         return
       }
 
@@ -348,14 +351,15 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
 
   private fun captureImage() {
     Log.d(TAG, "captureImage: ")
-    visionCameraView!!.capture()
+    visionCameraView?.capture()
 //    val bitmap = BitmapFactory.decodeResource(context?.resources, R.drawable.sample_ocr)
 //    onImageCaptured(bitmap, null, emptyList())
   }
 
   private fun stopScanning() {
     Log.d(TAG, "stopScanning: ")
-    visionCameraView!!.stopCamera()
+    if (visionCameraView?.isCameraStarted()?.not() == true) return
+    visionCameraView?.stopCamera()
   }
 
   private fun startCamera() {
@@ -431,8 +435,13 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
   }
 
 
-  private fun configureOnDeviceModel() {
-    Log.d(TAG, "configureOnDeviceModel: ")
+  private fun configureOnDeviceModel(onDeviceConfigs: String?) {
+    Log.d(TAG, "configureOnDeviceModel: $onDeviceConfigs")
+
+    if (JSONObject(onDeviceConfigs).has("size"))
+      setModelSize(JSONObject(onDeviceConfigs).getString("size"))
+    if (JSONObject(onDeviceConfigs).has("type"))
+      setModelType(JSONObject(onDeviceConfigs).getString("type"))
 
     onDeviceOCRManager?.destroy()
     onDeviceOCRManager = OnDeviceOCRManager(
@@ -442,12 +451,12 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
       modelSize = modelSize
     )
     lifecycleOwner?.lifecycle?.coroutineScope?.launchOnIO {
-//      try {
+      try {
         if (onDeviceOCRManager?.isConfigured()?.not() == true) {
           val installationDuration = measureTime {
             onDeviceOCRManager?.configure {
               UiThreadUtil.runOnUiThread {
-                Log.d(TAG, "Install Progress: $it")
+//                Log.d(TAG, "Install Progress: $it")
                 val event = Arguments.createMap().apply {
                   putDouble("progress", it.toDouble())
                   putBoolean("downloadStatus", false)
@@ -458,7 +467,7 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
               }
             }
           }
-          Log.d(TAG, "Installation took ${installationDuration.toReadableDuration()}.")
+//          Log.d(TAG, "Installation took ${installationDuration.toReadableDuration()}.")
         }
         val event = Arguments.createMap().apply {
           putDouble("progress", 1.0)
@@ -468,12 +477,12 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
           .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
           .emit("onModelDownloadProgress", event)
 
-//      } catch (e: Exception) {
-//        e.printStackTrace()
-//        withContextMain {
-//          onOCRResponseFailed(e)
-//        }
-//      }
+      } catch (e: Exception) {
+        e.printStackTrace()
+        withContextMain {
+          onOCRResponseFailed(e)
+        }
+      }
     }
   }
 
@@ -541,6 +550,12 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
     shouldScanInFocusImageRect = captureWithScanFrame
   }
 
+  @ReactProp(name = "showDocumentBoundaries")
+  fun showDocumentBoundaries(view: View, showDocumentBoundaries: Boolean = false) {
+    Log.d(TAG, "showDocumentBoundaries: " + showDocumentBoundaries)
+    this.showDocumentBoundaries = showDocumentBoundaries
+  }
+
   @ReactProp(name = "locationId")
   fun setLocationId(view: View, locationId: String = "") {
     Log.d(TAG, "locationId: " + locationId)
@@ -570,14 +585,7 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
   override fun onCameraStarted() {
     Log.d(TAG, "onCameraStarted: ")
 
-    focusSettings = FocusSettings(
-      shouldDisplayFocusImage = shouldDisplayFocusImage,
-      shouldScanInFocusImageRect = shouldScanInFocusImageRect
-    )
-    visionCameraView?.getFocusRegionManager()?.setFocusSettings(focusSettings)
-    visionCameraView?.requestLayout();
-
-//    viewTreeObserver()
+    setFocusSettings()
   }
 
   override fun onCameraStopped() {
