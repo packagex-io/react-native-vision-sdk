@@ -38,6 +38,10 @@ class RNCodeScannerView: UIView {
     var onDeviceModelSize: VSDKModelSize = VSDKModelSize.large
     
     
+    override func layoutSubviews() {
+        configureOnDeviceModel()
+    }
+    
     //MARK: - Initializer
     init() {
         
