@@ -93,7 +93,7 @@ export default function App() {
         OnDetectedHandler={(e: any) => {
           setDeectedData(Platform.OS === 'android' ? e : e.nativeEvent);
         }}
-        apiKey="wkey_141b2eda27Z0Cm2y0h0P6waB3Z6pjPgrmGAHNSU62rZelUthBEOOdsVTqZQCRVgPLqI5yMPqpw2ZBy2z"
+        apiKey="key_141b2eda27Z0Cm2y0h0P6waB3Z6pjPgrmGAHNSU62rZelUthBEOOdsVTqZQCRVgPLqI5yMPqpw2ZBy2z"
         BarCodeScanHandler={(e: any) => console.log('BarCodeScanHandler', e)}
         OCRScanHandler={(e: any) => {
           console.log('OCRScanHandler', e);
