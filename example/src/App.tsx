@@ -62,7 +62,9 @@ export default function App() {
     setLoading(false);
   }, [captureMode]);
   const onPressCapture = () => {
-    setLoading(true);
+    if (Platform.OS === 'android') {
+      setLoading(true);
+    }
     visionSdk?.current?.cameraCaptureHandler();
   };
   const toggleTorch = (val: boolean) => {
@@ -100,6 +102,7 @@ export default function App() {
         BarCodeScanHandler={(e: any) => console.log('BarCodeScanHandler', e)}
         OCRScanHandler={(e: any) => {
           let scanRes = Platform.OS === 'android' ? e : e.nativeEvent;
+          console.log('scanRes==--->>', scanRes);
           setResult(scanRes.data);
           setLoading(false);
           Vibration.vibrate(100);
