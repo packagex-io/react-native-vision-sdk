@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, Platform, Alert } from 'react-native';
+import { View, StyleSheet, Platform, Alert, Vibration } from 'react-native';
 import VisionSdkView from 'react-native-vision-sdk';
 import CameraFooterView from './Components/CameraFooterView';
 import DownloadingProgressView from './Components/DownloadingProgressView';
 import CameraHeaderView from './Components/CameraHeaderView';
 import LoaderView from './Components/LoaderView';
+import ResultView from './Components/ResultView';
 
 interface downloadingProgress {
   downloadStatus: boolean;
@@ -21,7 +22,8 @@ export default function App() {
   const [captureMode, setCaptureMode] = useState<string>('manual');
   const [isOnDeviceOCR, setIsOnDeviceOCR] = useState<boolean>(false);
   const [modelSize, setModelSize] = useState<string>('large');
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [result, setResult] = useState<any>('');
   const [detectedData, setDeectedData] = useState<detectedDataProps>({
     barcode: false,
     qrcode: false,
@@ -60,6 +62,7 @@ export default function App() {
     setLoading(false);
   }, [captureMode]);
   const onPressCapture = () => {
+    setLoading(true);
     visionSdk?.current?.cameraCaptureHandler();
   };
   const toggleTorch = (val: boolean) => {
@@ -96,19 +99,11 @@ export default function App() {
         apiKey="key_141b2eda27Z0Cm2y0h0P6waB3Z6pjPgrmGAHNSU62rZelUthBEOOdsVTqZQCRVgPLqI5yMPqpw2ZBy2z"
         BarCodeScanHandler={(e: any) => console.log('BarCodeScanHandler', e)}
         OCRScanHandler={(e: any) => {
-          console.log('OCRScanHandler', e);
-          Alert.alert(
-            'Extracted Label Data \n \n Tracking No: ' +
-              e.nativeEvent.data.tracking_number +
-              '\n Sender: ' +
-              e.nativeEvent.data.sender.name +
-              '\n Recipient: ' +
-              e.nativeEvent.data.recipient.name +
-              '\n Provider: ' +
-              e.nativeEvent.data.provider_name +
-              '\n Type: ' +
-              e.nativeEvent.data.type
-          );
+          let scanRes = Platform.OS === 'android' ? e : e.nativeEvent;
+          console.log('OCRScanHandler', JSON.stringify(scanRes));
+          setResult(scanRes?.data);
+          setLoading(false);
+          Vibration.vibrate(100);
         }}
         ModelDownloadProgress={(e: any) => {
           let response = Platform.OS === 'android' ? e : e.nativeEvent;
@@ -129,6 +124,11 @@ export default function App() {
           console.log('onError', error);
           Alert.alert('ERROR', error?.message);
         }}
+      />
+      <ResultView
+        visible={result ? true : false}
+        result={result}
+        setResult={setResult}
       />
       <LoaderView visible={loading} />
       <CameraHeaderView detectedData={detectedData} toggleTorch={toggleTorch} />
