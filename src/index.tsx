@@ -87,8 +87,8 @@ const Camera: React.FC<Props> = ({
     setSender: (val: any) => {
       setSender(val);
     },
-    configureOnDeviceModel: () => {
-      configureOnDeviceModel();
+    configureOnDeviceModel: (val: any) => {
+      configureOnDeviceModel(val);
     },
     setModelType: (val: string) => {
       setModelType(val);
@@ -206,20 +206,22 @@ const Camera: React.FC<Props> = ({
       [value]
     );
   };
-  const configureOnDeviceModel = () => {
+  const configureOnDeviceModel = (val: any) => {
     UIManager.dispatchViewManagerCommand(
       findNodeHandle(VisionSDKViewRef.current),
       (UIManager.hasViewManagerConfig('VisionSDKView') &&
-        UIManager.getViewManagerConfig('VisionSDKView').Commands.configureOnDeviceModel) ||
+        UIManager.getViewManagerConfig('VisionSDKView').Commands
+          .configureOnDeviceModel) ||
         9,
-      []
+      [val]
     );
   };
   const setModelType = (value: string) => {
     UIManager.dispatchViewManagerCommand(
       findNodeHandle(VisionSDKViewRef.current),
       (UIManager.hasViewManagerConfig('VisionSDKView') &&
-        UIManager.getViewManagerConfig('VisionSDKView').Commands.setModelType) ||
+        UIManager.getViewManagerConfig('VisionSDKView').Commands
+          .setModelType) ||
         10,
       [value]
     );
@@ -228,7 +230,8 @@ const Camera: React.FC<Props> = ({
     UIManager.dispatchViewManagerCommand(
       findNodeHandle(VisionSDKViewRef.current),
       (UIManager.hasViewManagerConfig('VisionSDKView') &&
-        UIManager.getViewManagerConfig('VisionSDKView').Commands.setModelSize) ||
+        UIManager.getViewManagerConfig('VisionSDKView').Commands
+          .setModelSize) ||
         11,
       [value]
     );
