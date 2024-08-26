@@ -116,12 +116,22 @@ class VisionSdkViewManager: RCTViewManager {
      
   }
     
-@objc func configureOnDeviceModel(_ node: NSNumber) {
+    @objc func configureOnDeviceModel(_ node: NSNumber, onDeviceConfigs: NSDictionary) {
+        
     DispatchQueue.main.async {
         let component =
         self.bridge.uiManager.view(
             forReactTag: node
         ) as! RNCodeScannerView
+        
+        if onDeviceConfigs["size"] != nil {
+            component.setModelSize(onDeviceConfigs["size"] as! NSString)
+        }
+        
+        if onDeviceConfigs["type"] != nil {
+            component.setModelType(onDeviceConfigs["type"] as! NSString)
+        }
+        
         component.configureOnDeviceModel()
     }
 }
