@@ -99,8 +99,15 @@ export default function App() {
         apiKey="key_141b2eda27Z0Cm2y0h0P6waB3Z6pjPgrmGAHNSU62rZelUthBEOOdsVTqZQCRVgPLqI5yMPqpw2ZBy2z"
         BarCodeScanHandler={(e: any) => console.log('BarCodeScanHandler', e)}
         OCRScanHandler={(e: any) => {
-          let scanRes = Platform.OS === 'android' ? e : e.nativeEvent;
-          setResult(scanRes.data);
+          const scanRes = Platform.OS === 'ios' ? e.nativeEvent : e;
+          console.log('scanRes----->', scanRes);
+          // console.log('scanRes.data----->', scanRes.data);
+          const parsedOuterJson = JSON.parse(scanRes.data);
+          // Step 2: Access the nested 'data' key
+          const nestedData = parsedOuterJson.data;
+          console.log('useEffect==------>>>', nestedData);
+
+          setResult(Platform.OS === 'android' ? nestedData : scanRes.data);
           setLoading(false);
           Vibration.vibrate(100);
         }}
