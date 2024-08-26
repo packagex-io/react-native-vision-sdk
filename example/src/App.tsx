@@ -17,7 +17,7 @@ interface detectedDataProps {
 export default function App() {
   const visionSdk = React.useRef<any>(null);
   const [captureMode, setCaptureMode] = useState<string>('manual');
-  const [isOnDeviceOCR, setIsOnDeviceOCR] = useState<boolean>(false);
+  const [isOnDeviceOCR, setIsOnDeviceOCR] = useState<boolean>(true);
   const [modelSize, setModelSize] = useState<string>('large');
   const [detectedData, setDeectedData] = useState<detectedDataProps>({
     barcode: false,
