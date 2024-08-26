@@ -144,7 +144,7 @@ extension RNCodeScannerView {
         } withCompletion: { error in
             
             if error == nil {
-                self.onModelDownloadProgress!(["progress": (100), "downloadStatus": true])
+                self.onModelDownloadProgress!(["progress": (1), "downloadStatus": true])
                 completion()
             }
             else {
