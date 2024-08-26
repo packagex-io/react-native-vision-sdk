@@ -1,11 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import {
-  View,
-  StyleSheet,
-  Platform,
-  Alert,
-  ActivityIndicator,
-} from 'react-native';
+import { View, StyleSheet, Platform, Alert } from 'react-native';
 import VisionSdkView from 'react-native-vision-sdk';
 import CameraFooterView from './Components/CameraFooterView';
 import DownloadingProgressView from './Components/DownloadingProgressView';
@@ -99,7 +93,7 @@ export default function App() {
         OnDetectedHandler={(e: any) => {
           setDeectedData(Platform.OS === 'android' ? e : e.nativeEvent);
         }}
-        apiKey="key_141b2eda27Z0Cm2y0h0P6waB3Z6pjPgrmGAHNSU62rZelUthBEOOdsVTqZQCRVgPLqI5yMPqpw2ZBy2z"
+        apiKey="wkey_141b2eda27Z0Cm2y0h0P6waB3Z6pjPgrmGAHNSU62rZelUthBEOOdsVTqZQCRVgPLqI5yMPqpw2ZBy2z"
         BarCodeScanHandler={(e: any) => console.log('BarCodeScanHandler', e)}
         OCRScanHandler={(e: any) => {
           console.log('OCRScanHandler', e);
@@ -131,9 +125,9 @@ export default function App() {
           setLoading(false);
         }}
         onError={(e: any) => {
-          console.log('onError', e);
-
-          // Alert.alert(JSON.stringify(e));
+          let error = Platform.OS === 'android' ? e : e.nativeEvent;
+          console.log('onError', error);
+          Alert.alert('ERROR', error?.message);
         }}
       />
       <LoaderView visible={loading} />
