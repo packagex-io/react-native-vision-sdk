@@ -90,12 +90,6 @@ const Camera: React.FC<Props> = ({
     configureOnDeviceModel: (val: any) => {
       configureOnDeviceModel(val);
     },
-    setModelType: (val: string) => {
-      setModelType(val);
-    },
-    setModelSize: (val: string) => {
-      setModelSize(val);
-    },
     changeModeHandler: (
       c_mode: React.SetStateAction<any>,
       receivedInput: React.SetStateAction<ScanMode>,
@@ -214,26 +208,6 @@ const Camera: React.FC<Props> = ({
           .configureOnDeviceModel) ||
         9,
       [val]
-    );
-  };
-  const setModelType = (value: string) => {
-    UIManager.dispatchViewManagerCommand(
-      findNodeHandle(VisionSDKViewRef.current),
-      (UIManager.hasViewManagerConfig('VisionSDKView') &&
-        UIManager.getViewManagerConfig('VisionSDKView').Commands
-          .setModelType) ||
-        10,
-      [value]
-    );
-  };
-  const setModelSize = (value: string) => {
-    UIManager.dispatchViewManagerCommand(
-      findNodeHandle(VisionSDKViewRef.current),
-      (UIManager.hasViewManagerConfig('VisionSDKView') &&
-        UIManager.getViewManagerConfig('VisionSDKView').Commands
-          .setModelSize) ||
-        11,
-      [value]
     );
   };
 

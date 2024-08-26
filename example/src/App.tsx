@@ -26,7 +26,7 @@ export default function App() {
   });
   const [modelDownloadingProgress, setModelDownloadingProgress] =
     useState<downloadingProgress>({
-      downloadStatus: true,
+      downloadStatus: false,
       progress: 0,
     });
   React.useEffect(() => {
