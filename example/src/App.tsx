@@ -64,9 +64,10 @@ export default function App() {
   }
   useEffect(() => {
     if (isOnDeviceOCR) {
-      setTimeout(() => {
-        visionSdk?.current?.configureOnDeviceModel();
-      }, 2000);
+      visionSdk?.current?.configureOnDeviceModel({
+        type: 'shipping_label',
+        size: 'large',
+      });
     }
   }, [isOnDeviceOCR]);
 
