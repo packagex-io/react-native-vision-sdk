@@ -83,3 +83,6 @@ example/.yarn/*
 !.yarn/releases
 !.yarn/sdks
 !.yarn/versions
+
+# apk
+*.apk
