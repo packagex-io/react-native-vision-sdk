@@ -9,7 +9,6 @@ import androidx.core.net.toUri
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.coroutineScope
 import com.asadullah.handyutils.launchOnIO
-import com.asadullah.handyutils.toReadableDuration
 import com.asadullah.handyutils.withContextMain
 import com.facebook.infer.annotation.Assertions
 import com.facebook.react.bridge.Arguments
@@ -42,7 +41,6 @@ import io.packagex.visionsdk.ui.views.VisionCameraView
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
-import kotlin.time.measureTime
 
 class VisionSdkViewManager(val appContext: ReactApplicationContext) :
   ViewGroupManager<VisionCameraView>(), ScannerCallback, CameraLifecycleCallback, OCRResult {
@@ -57,20 +55,20 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
   private var metaData: Map<String, Any>? = emptyMap()
   private var recipient: Map<String, Any>? = emptyMap()
   private var sender: Map<String, Any>? = emptyMap()
-  private var environment: Environment = Environment.DEV
+  private var environment: Environment = Environment.PRODUCTION
   private var visionCameraView: VisionCameraView? = null
   private var visionViewState: VisionViewState? = null
   private var focusSettings: FocusSettings? = null
   private var detectionMode: DetectionMode = DetectionMode.Barcode
   private var scanningMode: ScanningMode = ScanningMode.Manual
-  private var shouldDisplayFocusImage: Boolean = false
-  private var shouldScanInFocusImageRect: Boolean = false
+  private var shouldDisplayFocusImage: Boolean = true
+  private var shouldScanInFocusImageRect: Boolean = true
   private var showDocumentBoundaries: Boolean = false
   private var lifecycleOwner: LifecycleOwner? = null
   private var shouldStartScanning = true
   private var authentication: Authentication? = null
   private var onDeviceOCRManager: OnDeviceOCRManager? = null
-  private var modelSize: ModelSize = ModelSize.Micro
+  private var modelSize: ModelSize = ModelSize.Large
   private var modelType: ModelClass = ModelClass.ShippingLabel
 
 
@@ -106,7 +104,6 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
     configureViewState()
     configureFocusSettings()
     initializeSdk()
-
   }
 
   override fun onDropViewInstance(view: VisionCameraView) {
@@ -141,8 +138,8 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
 
   private fun configureFocusSettings() {
     focusSettings = FocusSettings(
-      shouldDisplayFocusImage = shouldDisplayFocusImage,
-      shouldScanInFocusImageRect = shouldScanInFocusImageRect,
+      shouldDisplayFocusImage = true,
+      shouldScanInFocusImageRect = false,
       showDocumentBoundaries = showDocumentBoundaries
     )
     setFocusSettings()
@@ -186,7 +183,7 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
     }
     appContext
       .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
-      .emit("onBarcodeScanSuccess", event)
+      .emit("onBarcodeScan", event)
   }
 
 
@@ -434,9 +431,10 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
 
   }
 
-
   private fun configureOnDeviceModel(onDeviceConfigs: String?) {
     Log.d(TAG, "configureOnDeviceModel: $onDeviceConfigs")
+
+    if (visionViewState?.detectionMode == DetectionMode.OCR) return
 
     if (JSONObject(onDeviceConfigs).has("size"))
       setModelSize(JSONObject(onDeviceConfigs).getString("size"))
@@ -503,7 +501,7 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
       "staging" -> Environment.STAGING
       "sandbox" -> Environment.SANDBOX
       "prod" -> Environment.PRODUCTION
-      else -> Environment.STAGING
+      else -> Environment.PRODUCTION
     }
   }
 
@@ -611,7 +609,7 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
 //          val reactContext = context as ReactContext
     appContext
       .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
-      .emit("onOCRDataReceived", event)
+      .emit("onOCRScan", event)
   }
 
   override fun onOCRResponseFailed(throwable: Throwable?) {

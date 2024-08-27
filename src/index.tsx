@@ -7,7 +7,7 @@ import {
 } from 'react-native';
 import { VisionSdkView } from './VisionSdkViewManager';
 
-enum ScanMode {
+export enum ScanMode {
   OCR = 'ocr',
   BARCODE = 'barcode',
   QRCODE = 'qrcode',
@@ -19,22 +19,21 @@ type Props = {
   apiKey?: string;
   reRender?: string;
   delayTime?: number;
-  cameraCaptureMode?: string;
-  mode?: ScanMode;
+  captureMode?: string;
+  mode?: string;
   token?: string;
   locationId?: string;
   options?: any;
   environment?: string;
-
   showDocumentBoundaries?: boolean;
   isOnDeviceOCR?: boolean;
   showScanFrame?: boolean;
   captureWithScanFrame?: boolean;
-  ModelDownloadProgress?: (_e: any) => void;
-  BarCodeScanHandler?: (_e: any) => void;
-  ImageCaptured?: (_e: any) => void;
-  OCRScanHandler?: (_e: any) => void;
-  OnDetectedHandler?: (_e: any) => void;
+  onModelDownloadProgress?: (_e: any) => void;
+  onBarcodeScan?: (_e: any) => void;
+  onImageCaptured?: (_e: any) => void;
+  onOCRScan?: (_e: any) => void;
+  onDetected?: (_e: any) => void;
   onError?: (e: any) => void;
 };
 
@@ -44,23 +43,21 @@ const Camera: React.FC<Props> = ({
   apiKey = '',
   reRender,
   delayTime = 100,
-  cameraCaptureMode = 'auto',
-  mode = ScanMode.OCR,
+  captureMode = 'manual',
+  mode = ScanMode.BARCODE,
   token = '',
   locationId = '',
   options = {},
-  environment = 'staging',
-
-
+  environment = 'production',
   showDocumentBoundaries = false,
   isOnDeviceOCR = false,
   showScanFrame = true,
   captureWithScanFrame = true,
-  ModelDownloadProgress = (_e: any) => {},
-  BarCodeScanHandler = (_e: any) => {},
-  ImageCaptured = (_e: any) => {},
-  OCRScanHandler = (_e: any) => {},
-  OnDetectedHandler = (_e: any) => {},
+  onModelDownloadProgress = (_e: any) => {},
+  onBarcodeScan = (_e: any) => {},
+  onImageCaptured = (_e: any) => {},
+  onOCRScan = (_e: any) => {},
+  onDetected = (_e: any) => {},
   onError = (_e: any) => {},
 }: Props) => {
   // const defaultScanMode = ScanMode.BARCODE;
@@ -106,21 +103,6 @@ const Camera: React.FC<Props> = ({
     },
     configureOnDeviceModel: (val: any) => {
       configureOnDeviceModel(val);
-    },
-    changeModeHandler: (
-      c_mode: React.SetStateAction<any>,
-      receivedInput: React.SetStateAction<ScanMode>,
-      receivedToken: React.SetStateAction<string>,
-      receivedLocationId: React.SetStateAction<string>,
-      option: React.SetStateAction<any>,
-      appEnvironment: React.SetStateAction<string>
-    ) => {
-      // setEnvironment(appEnvironment ? appEnvironment : environment);
-      // setToken(receivedToken);
-      // setLocationId(receivedLocationId);
-      onChangeCaptureMode(c_mode);
-      onChangeMode(receivedInput);
-      onChangeOptions(option ? option : options);
     },
   }));
 
@@ -228,31 +210,21 @@ const Camera: React.FC<Props> = ({
     );
   };
 
-  const onChangeCaptureMode = (c_mode: React.SetStateAction<any>) => {
-    setCameraCaptureMode(c_mode);
-  };
-  const onChangeMode = (input: React.SetStateAction<ScanMode>) => {
-    setMode(input);
-  };
-  const onChangeOptions = (input: React.SetStateAction<any>) => {
-    setOptions(input);
-  };
-
   useEffect(() => {
     DeviceEventEmitter.addListener(
       'onModelDownloadProgress',
-      ModelDownloadProgress
+      onModelDownloadProgress
     );
-    DeviceEventEmitter.addListener('onBarcodeScanSuccess', BarCodeScanHandler);
-    DeviceEventEmitter.addListener('onImageCaptured', ImageCaptured);
-    DeviceEventEmitter.addListener('onOCRDataReceived', OCRScanHandler);
-    DeviceEventEmitter.addListener('onDetected', OnDetectedHandler);
+    DeviceEventEmitter.addListener('onBarcodeScan', onBarcodeScan);
+    DeviceEventEmitter.addListener('onImageCaptured', onImageCaptured);
+    DeviceEventEmitter.addListener('onOCRScan', onOCRScan);
+    DeviceEventEmitter.addListener('onDetected', onDetected);
     DeviceEventEmitter.addListener('onError', onError);
 
     return () => {
       DeviceEventEmitter.removeAllListeners('onModelDownloadProgress');
-      DeviceEventEmitter.removeAllListeners('onBarcodeScanSuccess');
-      DeviceEventEmitter.removeAllListeners('onOCRDataReceived');
+      DeviceEventEmitter.removeAllListeners('onBarcodeScan');
+      DeviceEventEmitter.removeAllListeners('onOCRScan');
       DeviceEventEmitter.removeAllListeners('onDetected');
       DeviceEventEmitter.removeAllListeners('onImageCaptured');
       DeviceEventEmitter.removeAllListeners('onError');
@@ -261,27 +233,27 @@ const Camera: React.FC<Props> = ({
   return (
     <>
       <VisionSdkView
+        ref={VisionSDKViewRef}
         key={reRender}
         style={styles.flex}
         apiKey={apiKey}
         showScanFrame={showScanFrame}
         captureWithScanFrame={captureWithScanFrame}
-        onBarcodeScanSuccess={BarCodeScanHandler}
-        onModelDownloadProgress={ModelDownloadProgress}
-        onImageCaptured={ImageCaptured}
-        onOCRDataReceived={OCRScanHandler}
-        onDetected={OnDetectedHandler}
         mode={mode}
-        captureMode={cameraCaptureMode}
+        captureMode={captureMode}
         delayTime={delayTime ? delayTime : 100}
         showDocumentBoundaries={showDocumentBoundaries}
         isOnDeviceOCR={isOnDeviceOCR}
-        onError={onError}
         token={token}
         locationId={locationId}
         options={JSON.stringify(options)} // ideally this should be passed from variable, that is receiving data from ScannerContainer
         environment={environment}
-        ref={VisionSDKViewRef}
+        onBarcodeScan={onBarcodeScan}
+        onModelDownloadProgress={onModelDownloadProgress}
+        onImageCaptured={onImageCaptured}
+        onOCRScan={onOCRScan}
+        onDetected={onDetected}
+        onError={onError}
       >
         {children}
       </VisionSdkView>

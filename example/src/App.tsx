@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, Platform, Alert, Vibration } from 'react-native';
-import VisionSdkView from 'react-native-vision-sdk';
+import VisionSdkView, { ScanMode } from 'react-native-vision-sdk';
 import CameraFooterView from './Components/CameraFooterView';
 import DownloadingProgressView from './Components/DownloadingProgressView';
 import CameraHeaderView from './Components/CameraHeaderView';
@@ -74,7 +74,8 @@ export default function App() {
         showScanFrame={true}
         showDocumentBoundaries={true}
         captureWithScanFrame={true}
-        cameraCaptureMode={captureMode}
+        captureMode={captureMode}
+        mode={ScanMode.OCR}
         locationId=""
         options={{
           tracker: {
@@ -100,7 +101,7 @@ export default function App() {
         OnDetectedHandler={(e: any) => {
           setDeectedData(Platform.OS === 'android' ? e : e.nativeEvent);
         }}
-        BarCodeScanHandler={(e: any) => console.log('BarCodeScanHandler', e)}
+        onBarcodeScan={(e: any) => console.log('BarCodeScanHandler', e)}
         OCRScanHandler={(e: any) => {
           let scanRes = Platform.OS === 'ios' ? e.nativeEvent : e;
           if (Platform.OS === 'android') {
@@ -125,7 +126,7 @@ export default function App() {
           }
           setLoading(false);
         }}
-        onError={(e: any) => {
+        OnError={(e: any) => {
           let error = Platform.OS === 'android' ? e : e.nativeEvent;
           console.log('onError', error);
           Alert.alert('ERROR', error?.message);
