@@ -80,7 +80,7 @@ extension RNCodeScannerView: CodeScannerViewDelegate {
     func codeScannerView(
         _ scannerView: VisionSDK.CodeScannerView, didFailure error: VisionSDK.CodeScannerError
     ) {
-        onError!(["message":error]);
+        onError!(["message":error.rawValue]);
     }
     
     func codeScannerViewDidDetect(_ text: Bool, barCode: Bool, qrCode: Bool, document: Bool) {
