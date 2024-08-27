@@ -8,10 +8,10 @@ import AVFoundation
 class RNCodeScannerView: UIView {
     
     //MARK: - Events from Swift to Js, on any update to sent back
-    @objc var onBarcodeScanSuccess: RCTDirectEventBlock?
+    @objc var onBarcodeScan: RCTDirectEventBlock?
     @objc var onModelDownloadProgress: RCTDirectEventBlock?
     @objc var onImageCaptured: RCTDirectEventBlock?
-    @objc var onOCRDataReceived: RCTDirectEventBlock?
+    @objc var onOCRScan: RCTDirectEventBlock?
     @objc var onDetected: RCTDirectEventBlock?
     @objc var onError: RCTDirectEventBlock?
     
@@ -30,6 +30,7 @@ class RNCodeScannerView: UIView {
     var showScanFrame: Bool = true
     var captureWithScanFrame:Bool = true
     var codeScannerMode: CodeScannerMode?
+    var captureMode: CaptureMode = .manual
     var currentMode: String = "barcode"
     
     //MARK: - On-Device OCR Specific Variables
@@ -52,7 +53,6 @@ class RNCodeScannerView: UIView {
                 
         self.backgroundColor = UIColor.black
 //        codeScannerView!.startRunning()
-        VSDKConstants.apiEnvironment = .production
         self.addSubview(codeScannerView!)
     }
     
@@ -66,8 +66,8 @@ class RNCodeScannerView: UIView {
 extension RNCodeScannerView: CodeScannerViewDelegate {
    
     func codeScannerView(_ scannerView: VisionSDK.CodeScannerView, didSuccess code: [String]) {
-        if onBarcodeScanSuccess != nil {
-            onBarcodeScanSuccess!(["code": code])
+        if onBarcodeScan != nil {
+            onBarcodeScan!(["code": code])
             if currentMode == "barcodeSingleCapture" {
                 
             }
@@ -311,8 +311,8 @@ extension RNCodeScannerView {
     /// This function returns the API response/data from here to React Native App as a prop in case of success.
     /// - Parameter data: Data to be sent to the React Native side
     func callForOCRWithImageCompletedWithData(data: [AnyHashable: Any]) {
-        if onOCRDataReceived != nil {
-            onOCRDataReceived!(["data": data])
+        if onOCRScan != nil {
+            onOCRScan!(["data": data])
         } else {
             onError!(["message": "not found"])
         }
@@ -442,9 +442,11 @@ extension RNCodeScannerView {
     @objc func setCaptureMode(_ captureMode: NSString) {
     
         if captureMode == "auto" {
+            self.captureMode = CaptureMode.auto
             codeScannerView?.setCaptureModeTo(.auto)
         }
         else {
+            self.captureMode = CaptureMode.manual
             codeScannerView?.setCaptureModeTo(.manual)
         }
     }
@@ -457,7 +459,7 @@ extension RNCodeScannerView {
     
     /// Sets the VisionSDK Environment for the desired outputs and connects to the desired Database
     /// - Parameter environment: possible values | dev | qa | sandbox | prod | staging |
-    @objc func setEnvironment(_ environment: String) {
+    @objc func setEnvironment(_ environment: NSString) {
        
         switch environment {
             
@@ -567,7 +569,7 @@ extension RNCodeScannerView {
     func ConfigureCodeScannerView() {
         let focusSettings = VisionSDK.CodeScannerView.FocusSettings(focusImage: nil, focusImageRect: .zero, shouldDisplayFocusImage: self.showScanFrame, shouldScanInFocusImageRect: self.captureWithScanFrame, showDocumentBoundries: true, documentBoundryBorderColor: .orange, documentBoundryFillColor: UIColor.orange.withAlphaComponent(0.3), focusImageTintColor: .white, focusImageHighlightedColor: .white)
         
-        let objectDetectionConfiguration = VisionSDK.CodeScannerView.ObjectDetectionConfiguration(isTextIndicationOn: true, isBarCodeOrQRCodeIndicationOn: true, isDocumentIndicationOn: false, codeDetectionConfidence: 0.5, documentDetectionConfidence: 0.9)
+        let objectDetectionConfiguration = VisionSDK.CodeScannerView.ObjectDetectionConfiguration(isTextIndicationOn: true, isBarCodeOrQRCodeIndicationOn: true, isDocumentIndicationOn: false, codeDetectionConfidence: 0.5, documentDetectionConfidence: 0.6)
         
         var sessionPreset: AVCaptureSession.Preset = .high
         
@@ -577,7 +579,7 @@ extension RNCodeScannerView {
         
         let cameraSettings = VisionSDK.CodeScannerView.CameraSettings(sessionPreset: sessionPreset, nthFrameToProcess: 10, shouldAutoSaveCapturedImage: true)
         
-        codeScannerView!.configure(delegate: self, focusSettings: focusSettings, objectDetectionConfiguration: objectDetectionConfiguration, cameraSettings: cameraSettings, captureMode: .manual, captureType: .single, scanMode: self.codeScannerMode ?? .barCode)
+        codeScannerView!.configure(delegate: self, focusSettings: focusSettings, objectDetectionConfiguration: objectDetectionConfiguration, cameraSettings: cameraSettings, captureMode: captureMode, captureType: .single, scanMode: self.codeScannerMode ?? .barCode)
         
     }
     
