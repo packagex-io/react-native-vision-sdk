@@ -89,7 +89,6 @@ const Camera: React.FC<Props> = ({
   }));
 
   const onPressCaptures = () => {
-    console.log('Image Captured');
     UIManager.dispatchViewManagerCommand(
       findNodeHandle(VisionSDKViewRef.current),
       (UIManager.hasViewManagerConfig('VisionSDKView') &&
@@ -101,7 +100,6 @@ const Camera: React.FC<Props> = ({
   };
 
   const onPressStopRunning = () => {
-    console.log('onPressStopRunning');
     UIManager.dispatchViewManagerCommand(
       findNodeHandle(VisionSDKViewRef.current),
       (UIManager.hasViewManagerConfig('VisionSDKView') &&
@@ -112,7 +110,6 @@ const Camera: React.FC<Props> = ({
   };
 
   const onPressStartRunning = () => {
-    console.log('onPressStartRunning');
     UIManager.dispatchViewManagerCommand(
       findNodeHandle(VisionSDKViewRef.current),
       (UIManager.hasViewManagerConfig('VisionSDKView') &&
@@ -124,7 +121,6 @@ const Camera: React.FC<Props> = ({
   };
 
   const onPressToggleTorch = (value: any) => {
-    console.log('Toggle Torch', value);
     UIManager.dispatchViewManagerCommand(
       findNodeHandle(VisionSDKViewRef.current),
       (UIManager.hasViewManagerConfig('VisionSDKView') &&
@@ -134,7 +130,6 @@ const Camera: React.FC<Props> = ({
     );
   };
   const onPressZoom = (value: any) => {
-    console.log('Zoom value', value);
     UIManager.dispatchViewManagerCommand(
       findNodeHandle(VisionSDKViewRef.current),
       (UIManager.hasViewManagerConfig('VisionSDKView') &&

@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import {
   View,
   StyleSheet,
@@ -10,9 +10,6 @@ import {
 import Icon from 'react-native-vector-icons/Ionicons';
 
 function ResultView({ visible, result, setResult }: any) {
-  useEffect(() => {
-    console.log('result==------>>>', result);
-  }, [result]);
   const renderItemView = (heading = '', value = '') => {
     return (
       value && (

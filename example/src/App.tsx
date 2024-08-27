@@ -58,7 +58,6 @@ export default function App() {
     }
   }, [isOnDeviceOCR]);
   const onPressOnDeviceOcr = (type = 'shipping_label', size = 'large') => {
-    console.log('onPressOnDeviceOcr===--->>', type, size);
     visionSdk?.current?.stopRunningHandler();
     setLoading(true);
     visionSdk?.current?.configureOnDeviceModel({
