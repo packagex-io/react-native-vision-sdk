@@ -434,7 +434,7 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
   private fun configureOnDeviceModel(onDeviceConfigs: String?) {
     Log.d(TAG, "configureOnDeviceModel: $onDeviceConfigs")
 
-    if (visionViewState?.detectionMode == DetectionMode.OCR) return
+    if (visionViewState?.detectionMode != DetectionMode.OCR) return
 
     if (JSONObject(onDeviceConfigs).has("size"))
       setModelSize(JSONObject(onDeviceConfigs).getString("size"))
