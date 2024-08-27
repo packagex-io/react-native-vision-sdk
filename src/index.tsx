@@ -13,14 +13,14 @@ type Props = {
   apiKey?: string;
   reRender?: string;
   delayTime?: number;
-  captureMode?: string;
+  captureMode?: 'manual' | 'auto';
   mode?: 'barcode' | 'qrcode' | 'ocr' | 'photo';
   token?: string;
   locationId?: string;
   options?: any;
-  environment?: string;
+  environment?: 'prod' | 'sandbox';
   showDocumentBoundaries?: boolean;
-  isOnDeviceOCR?: boolean;
+  isOnDeviceOCR?: true | false;
   showScanFrame?: boolean;
   captureWithScanFrame?: boolean;
   onModelDownloadProgress?: (_e: any) => void;

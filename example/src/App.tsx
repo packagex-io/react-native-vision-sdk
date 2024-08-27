@@ -74,8 +74,8 @@ export default function App() {
         showScanFrame={true}
         showDocumentBoundaries={true}
         captureWithScanFrame={true}
-        captureMode={captureMode}
-        mode="barcode"
+        captureMode="manual"
+        mode="ocr"
         locationId=""
         options={{
           tracker: {
@@ -94,7 +94,7 @@ export default function App() {
             parse_addresses: ['sender', 'recipient'],
           },
         }}
-        environment='sandbox'
+        environment="sandbox"
         delayTime={0}
         token=""
         apiKey="key_141b2eda27Z0Cm2y0h0P6waB3Z6pjPgrmGAHNSU62rZelUthBEOOdsVTqZQCRVgPLqI5yMPqpw2ZBy2z"
