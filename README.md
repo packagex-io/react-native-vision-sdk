@@ -142,23 +142,21 @@ qrCode - Detects qr codes only in this mode.
 ocr - Use this mode to capture photos for later user in OCR API call.
 photo - You can capture simple photos.
 
-### The callback will be called with a response object
-
 ### The Response Object
 
+In the callbacks, Success or error will be returned. It returns with the OCR Response from PackageX Platform API Response.
+
 ```js
-OCRScanHandler: Return ocr detected data
-OnDetectedHandler: Return the detected data for ‘barcode’,'qrcode' and ‘text’
-BarCodeScanHandler: Return the detected data for barcode
-ModelDownloadProgress: : Return the OCR model dowmloading status
-OnError: Description of the error, use it for debug purpose only
-ImageCaptured: whenever image is capture in OCR mode
+onOCRScan: Return ocr detected data
+onDetected: Return the detected data for ‘barcode’,'qrcode' and ‘text’
+onBarcodeScan: Return the detected data for barcode in barcode mode
+onModelDownloadProgress: : Return the OCR model dowmloading status
+onError: Description of the error, use it for debug purpose only
+onImageCaptured: whenever image is capture in photo mode
 ErrorCode: Description camera_unavailable camera not available on device
 permission: Permission not satisfied
 others: other errors (check errorMessage for description)
 ```
-
-### In the callbacks, Success or error will be returned. It returns with the OCR Response from PackageX Platform API Response.
 
 ## Contributing
 
