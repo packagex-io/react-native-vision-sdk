@@ -20,7 +20,7 @@ function DownloadingProgressView({ visible, progress }: any) {
                 <Text
                   style={{ color: 'white', fontSize: 30, fontWeight: 'bold' }}
                 >
-                  {Number(Math.floor(fill))}%
+                  {Math.floor(progress * 100)}%
                 </Text>
               )}
             </AnimatedCircularProgress>
