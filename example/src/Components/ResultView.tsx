@@ -52,48 +52,42 @@ function ResultView({ visible, result, setResult }: any) {
             {renderItemView('Reference Number #', result?.reference_number)}
             {renderItemView('Courier', result?.provider_name)}
             {renderItemView('Weight', result?.weight)}
-            {result?.recipient?.name && (
-              <>
-                {renderHeadingItemView('Receiver Info')}
-                {renderItemView('Name', result?.recipient?.name)}
-                {renderItemView('Business Name', result?.recipient?.business)}
-                {renderItemView(
-                  'Street Address',
-                  result?.recipient?.address?.line1
-                )}
-                {renderItemView('City', result?.recipient?.address?.city)}
-                {renderItemView('State', result?.recipient?.address?.state)}
-                {renderItemView(
-                  'Zip Code',
-                  result?.recipient?.address?.postal_code
-                )}
-                {renderItemView(
-                  'Address',
-                  result?.recipient?.address?.formatted_address
-                )}
-              </>
-            )}
-            {result?.sender?.name && (
-              <>
-                {renderHeadingItemView('Sender Info')}
-                {renderItemView('Name', result?.sender?.name)}
-                {renderItemView('Business Name', result?.sender?.business)}
-                {renderItemView(
-                  'Street Address',
-                  result?.sender?.address?.line1
-                )}
-                {renderItemView('City', result?.sender?.address?.city)}
-                {renderItemView('State', result?.sender?.address?.state)}
-                {renderItemView(
-                  'Zip Code',
-                  result?.sender?.address?.postal_code
-                )}
-                {renderItemView(
-                  'Address',
-                  result?.sender?.address?.formatted_address
-                )}
-              </>
-            )}
+            {/* {result?.recipient?.name && ( */}
+            <>
+              {renderHeadingItemView('Receiver Info')}
+              {renderItemView('Name', result?.recipient?.name)}
+              {renderItemView('Business Name', result?.recipient?.business)}
+              {renderItemView(
+                'Street Address',
+                result?.recipient?.address?.line1
+              )}
+              {renderItemView('City', result?.recipient?.address?.city)}
+              {renderItemView('State', result?.recipient?.address?.state)}
+              {renderItemView(
+                'Zip Code',
+                result?.recipient?.address?.postal_code
+              )}
+              {renderItemView(
+                'Address',
+                result?.recipient?.address?.formatted_address
+              )}
+            </>
+            {/* )} */}
+            {/* {result?.sender?.name && ( */}
+            <>
+              {renderHeadingItemView('Sender Info')}
+              {renderItemView('Name', result?.sender?.name)}
+              {renderItemView('Business Name', result?.sender?.business)}
+              {renderItemView('Street Address', result?.sender?.address?.line1)}
+              {renderItemView('City', result?.sender?.address?.city)}
+              {renderItemView('State', result?.sender?.address?.state)}
+              {renderItemView('Zip Code', result?.sender?.address?.postal_code)}
+              {renderItemView(
+                'Address',
+                result?.sender?.address?.formatted_address
+              )}
+            </>
+            {/* )} */}
             {renderItemView('Shipment Type', result?.type)}
           </ScrollView>
         </View>
