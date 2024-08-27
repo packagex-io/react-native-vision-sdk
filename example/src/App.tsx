@@ -18,7 +18,7 @@ interface detectedDataProps {
 }
 export default function App() {
   const visionSdk = React.useRef<any>(null);
-  const [captureMode, setCaptureMode] = useState<string>('manual');
+  const [captureMode, setCaptureMode] = useState<'manual' | 'auto'>('manual');
   const [isOnDeviceOCR, setIsOnDeviceOCR] = useState<boolean>(false);
   const [modelSize, setModelSize] = useState<string>('large');
   const [loading, setLoading] = useState<boolean>(false);
@@ -58,7 +58,6 @@ export default function App() {
     }
   }, [isOnDeviceOCR]);
   const onPressOnDeviceOcr = (type = 'shipping_label', size = 'large') => {
-    console.log('onPressOnDeviceOcr===--->>', type, size);
     visionSdk?.current?.stopRunningHandler();
     setLoading(true);
     visionSdk?.current?.configureOnDeviceModel({
@@ -74,29 +73,9 @@ export default function App() {
         showScanFrame={true}
         showDocumentBoundaries={true}
         captureWithScanFrame={true}
-        captureMode="manual"
+        captureMode={captureMode}
         mode="ocr"
-        locationId=""
-        options={{
-          tracker: {
-            type: 'inbound',
-            create_automatically: 'false',
-            status: 'pickup_available',
-          },
-          transform: { use_existing_tracking_number: true, tracker: null },
-          match: {
-            location: true,
-            use_best_match: true,
-            search: ['recipient'],
-          },
-          postprocess: {
-            require_unique_hash: true,
-            parse_addresses: ['sender', 'recipient'],
-          },
-        }}
         environment="sandbox"
-        delayTime={0}
-        token=""
         apiKey="key_141b2eda27Z0Cm2y0h0P6waB3Z6pjPgrmGAHNSU62rZelUthBEOOdsVTqZQCRVgPLqI5yMPqpw2ZBy2z"
         onDetected={(e: any) => {
           setDeectedData(Platform.OS === 'android' ? e : e.nativeEvent);

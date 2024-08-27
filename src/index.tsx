@@ -20,7 +20,7 @@ type Props = {
   options?: any;
   environment?: 'prod' | 'sandbox';
   showDocumentBoundaries?: boolean;
-  isOnDeviceOCR?: true | false;
+  isOnDeviceOCR?: boolean;
   showScanFrame?: boolean;
   captureWithScanFrame?: boolean;
   onModelDownloadProgress?: (_e: any) => void;
@@ -42,7 +42,7 @@ const Camera: React.FC<Props> = ({
   token = '',
   locationId = '',
   options = {},
-  environment = 'production',
+  environment = 'prod',
   showDocumentBoundaries = false,
   isOnDeviceOCR = false,
   showScanFrame = true,
@@ -54,19 +54,7 @@ const Camera: React.FC<Props> = ({
   onDetected = (_e: any) => {},
   onError = (_e: any) => {},
 }: Props) => {
-  // const defaultScanMode = ScanMode.BARCODE;
-  // const [mode, setMode] = useState<ScanMode>(defaultScanMode);
-  // const [token, setToken] = useState('');
-  // const [cameraCaptureMode, setCameraCaptureMode] = useState('auto');
-  // const [environment, setEnvironment] = useState('staging');
-  // const [locationId, setLocationId] = useState('');
-  // const [options, setOptions] = useState({
-  //   match: { location: true, search: ['recipients'] },
-  //   postprocess: { require_unique_hash: false },
-  //   transform: { tracker: 'inbound', use_existing_tracking_number: false },
-  // });
   const VisionSDKViewRef = useRef(null);
-
   useImperativeHandle(refProp, () => ({
     cameraCaptureHandler: () => {
       onPressCaptures();
@@ -101,7 +89,6 @@ const Camera: React.FC<Props> = ({
   }));
 
   const onPressCaptures = () => {
-    console.log('Image Captured');
     UIManager.dispatchViewManagerCommand(
       findNodeHandle(VisionSDKViewRef.current),
       (UIManager.hasViewManagerConfig('VisionSDKView') &&
@@ -113,7 +100,6 @@ const Camera: React.FC<Props> = ({
   };
 
   const onPressStopRunning = () => {
-    console.log('onPressStopRunning');
     UIManager.dispatchViewManagerCommand(
       findNodeHandle(VisionSDKViewRef.current),
       (UIManager.hasViewManagerConfig('VisionSDKView') &&
@@ -124,7 +110,6 @@ const Camera: React.FC<Props> = ({
   };
 
   const onPressStartRunning = () => {
-    console.log('onPressStartRunning');
     UIManager.dispatchViewManagerCommand(
       findNodeHandle(VisionSDKViewRef.current),
       (UIManager.hasViewManagerConfig('VisionSDKView') &&
@@ -136,7 +121,6 @@ const Camera: React.FC<Props> = ({
   };
 
   const onPressToggleTorch = (value: any) => {
-    console.log('Toggle Torch', value);
     UIManager.dispatchViewManagerCommand(
       findNodeHandle(VisionSDKViewRef.current),
       (UIManager.hasViewManagerConfig('VisionSDKView') &&
@@ -146,7 +130,6 @@ const Camera: React.FC<Props> = ({
     );
   };
   const onPressZoom = (value: any) => {
-    console.log('Zoom value', value);
     UIManager.dispatchViewManagerCommand(
       findNodeHandle(VisionSDKViewRef.current),
       (UIManager.hasViewManagerConfig('VisionSDKView') &&
