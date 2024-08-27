@@ -68,7 +68,7 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
   private var showDocumentBoundaries: Boolean = false
   private var lifecycleOwner: LifecycleOwner? = null
   private var shouldStartScanning = true
-  private lateinit var authentication: Authentication
+  private var authentication: Authentication? = null
   private var onDeviceOCRManager: OnDeviceOCRManager? = null
   private var modelSize: ModelSize = ModelSize.Micro
   private var modelType: ModelClass = ModelClass.ShippingLabel
@@ -124,12 +124,11 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
       authentication = Authentication.API(apiKey!!)
     else if (token?.isNotEmpty() == true)
       authentication = Authentication.BearerToken(token!!)
-    else return
 
     VisionSDK.getInstance().initialize(
       context ?: return,
       environment,
-      authentication,
+      authentication ?: Authentication.API(""),
       Authentication.API(""),
     )
   }

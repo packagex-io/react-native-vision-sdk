@@ -19,6 +19,13 @@ type Props = {
   apiKey?: string;
   reRender?: string;
   delayTime?: number;
+  cameraCaptureMode?: string;
+  mode?: ScanMode;
+  token?: string;
+  locationId?: string;
+  options?: any;
+  environment?: string;
+
   showDocumentBoundaries?: boolean;
   isOnDeviceOCR?: boolean;
   showScanFrame?: boolean;
@@ -37,6 +44,14 @@ const Camera: React.FC<Props> = ({
   apiKey = '',
   reRender,
   delayTime = 100,
+  cameraCaptureMode = 'auto',
+  mode = ScanMode.OCR,
+  token = '',
+  locationId = '',
+  options = {},
+  environment = 'staging',
+
+
   showDocumentBoundaries = false,
   isOnDeviceOCR = false,
   showScanFrame = true,
@@ -48,17 +63,17 @@ const Camera: React.FC<Props> = ({
   OnDetectedHandler = (_e: any) => {},
   onError = (_e: any) => {},
 }: Props) => {
-  const defaultScanMode = ScanMode.BARCODE;
-  const [mode, setMode] = useState<ScanMode>(defaultScanMode);
-  const [token, setToken] = useState('');
-  const [cameraCaptureMode, setCameraCaptureMode] = useState('auto');
-  const [environment, setEnvironment] = useState('staging');
-  const [locationId, setLocationId] = useState('');
-  const [options, setOptions] = useState({
-    match: { location: true, search: ['recipients'] },
-    postprocess: { require_unique_hash: false },
-    transform: { tracker: 'inbound', use_existing_tracking_number: false },
-  });
+  // const defaultScanMode = ScanMode.BARCODE;
+  // const [mode, setMode] = useState<ScanMode>(defaultScanMode);
+  // const [token, setToken] = useState('');
+  // const [cameraCaptureMode, setCameraCaptureMode] = useState('auto');
+  // const [environment, setEnvironment] = useState('staging');
+  // const [locationId, setLocationId] = useState('');
+  // const [options, setOptions] = useState({
+  //   match: { location: true, search: ['recipients'] },
+  //   postprocess: { require_unique_hash: false },
+  //   transform: { tracker: 'inbound', use_existing_tracking_number: false },
+  // });
   const VisionSDKViewRef = useRef(null);
 
   useImperativeHandle(refProp, () => ({
@@ -100,9 +115,9 @@ const Camera: React.FC<Props> = ({
       option: React.SetStateAction<any>,
       appEnvironment: React.SetStateAction<string>
     ) => {
-      setEnvironment(appEnvironment ? appEnvironment : environment);
-      setToken(receivedToken);
-      setLocationId(receivedLocationId);
+      // setEnvironment(appEnvironment ? appEnvironment : environment);
+      // setToken(receivedToken);
+      // setLocationId(receivedLocationId);
       onChangeCaptureMode(c_mode);
       onChangeMode(receivedInput);
       onChangeOptions(option ? option : options);
