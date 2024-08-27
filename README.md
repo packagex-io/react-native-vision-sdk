@@ -56,9 +56,10 @@ const ScannerView = () => {
   return (
     <VisionSdkView
       refProp={visionSdk}
-      BarCodeScanHandler={(value) => console.log('BarCodeScanHandler', value)}
-      OCRScanHandler={(value) => console.log('on OCR Detected', value)}
-      OnDetectedHandler={(value) => {
+      mode="barcode"
+      onBarcodeScan={(value) => console.log('BarCodeScanHandler', value)}
+      onOCRScan={(value) => console.log('on OCR Detected', value)}
+      onDetected={(value) => {
         console.log(
           'Detected Barcode =',
           value.nativeEvent ? value.nativeEvent.barCode : value.barcode
