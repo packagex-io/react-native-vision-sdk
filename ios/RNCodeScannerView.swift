@@ -50,7 +50,7 @@ class RNCodeScannerView: UIView {
         codeScannerView = CodeScannerView(frame: CGRect(x: 0, y: 0, width: UIScreen.main.bounds.width, height: UIScreen.main.bounds.height))
                 
         self.backgroundColor = UIColor.black
-        codeScannerView!.startRunning()
+//        codeScannerView!.startRunning()
         self.addSubview(codeScannerView!)
     }
     
@@ -80,7 +80,7 @@ extension RNCodeScannerView: CodeScannerViewDelegate {
     func codeScannerView(
         _ scannerView: VisionSDK.CodeScannerView, didFailure error: VisionSDK.CodeScannerError
     ) {
-        //          onError!(["message":error]);
+        onError!(["message":error]);
     }
     
     func codeScannerViewDidDetect(_ text: Bool, barCode: Bool, qrCode: Bool, document: Bool) {

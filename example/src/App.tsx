@@ -6,7 +6,6 @@ import DownloadingProgressView from './Components/DownloadingProgressView';
 import CameraHeaderView from './Components/CameraHeaderView';
 import LoaderView from './Components/LoaderView';
 import ResultView from './Components/ResultView';
-
 interface downloadingProgress {
   downloadStatus: boolean;
   progress: number;
@@ -157,6 +156,7 @@ export default function App() {
       />
       <LoaderView visible={loading} />
       <CameraHeaderView detectedData={detectedData} toggleTorch={toggleTorch} />
+
       <DownloadingProgressView
         visible={!modelDownloadingProgress.downloadStatus}
         progress={modelDownloadingProgress?.progress}

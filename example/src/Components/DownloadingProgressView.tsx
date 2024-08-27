@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, StyleSheet, Text, TouchableOpacity, Modal } from 'react-native';
-import { AnimatedCircularProgress } from 'react-native-circular-progress';
+import { Circle } from 'react-native-progress';
 
 function DownloadingProgressView({ visible, progress }: any) {
   return (
@@ -8,22 +8,26 @@ function DownloadingProgressView({ visible, progress }: any) {
       <TouchableOpacity activeOpacity={1} style={styles.centeredViewModal}>
         <View style={styles.modalView}>
           <View style={{ alignSelf: 'center' }}>
-            <AnimatedCircularProgress
-              size={180}
-              width={3}
-              rotation={0}
-              fill={Math.floor(progress * 100)}
-              tintColor="#00e0ff"
-              backgroundColor="#3d5875"
+            <Circle
+              size={200}
+              progress={progress}
+              color="#3498db"
+              strokeCap="round"
+            />
+            <Text
+              style={{
+                color: 'white',
+                fontSize: 30,
+                fontWeight: 'bold',
+                position: 'absolute',
+                alignSelf: 'center',
+                justifyContent: 'center',
+                top: '40%',
+                // top: '50%',
+              }}
             >
-              {(fill) => (
-                <Text
-                  style={{ color: 'white', fontSize: 30, fontWeight: 'bold' }}
-                >
-                  {Math.floor(progress * 100)}%
-                </Text>
-              )}
-            </AnimatedCircularProgress>
+              {Math.floor(progress * 100)}%
+            </Text>
           </View>
           <Text style={styles.descriptionTextStyle}>
             Please wait while on-device OCR model initializes. Once ready, you
