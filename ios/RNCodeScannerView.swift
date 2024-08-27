@@ -27,10 +27,10 @@ class RNCodeScannerView: UIView {
     var height: Double?
     var recipient: [String: Any]?
     var sender: [String: Any]?
-    var showScanFrame: Bool?
-    var captureWithScanFrame:Bool?
+    var showScanFrame: Bool = true
+    var captureWithScanFrame:Bool = true
     var codeScannerMode: CodeScannerMode?
-    var currentMode: String?
+    var currentMode: String = "barcode"
     
     //MARK: - On-Device OCR Specific Variables
     var isOnDeviceOCR: Bool?
@@ -39,6 +39,7 @@ class RNCodeScannerView: UIView {
     
     
     override func layoutSubviews() {
+        // If user initially set isOnDeviceOCR = true then configureOnDeviceModel method will be called from here
         configureOnDeviceModel()
     }
     
@@ -51,6 +52,7 @@ class RNCodeScannerView: UIView {
                 
         self.backgroundColor = UIColor.black
 //        codeScannerView!.startRunning()
+        VSDKConstants.apiEnvironment = .production
         self.addSubview(codeScannerView!)
     }
     
@@ -80,7 +82,8 @@ extension RNCodeScannerView: CodeScannerViewDelegate {
     func codeScannerView(
         _ scannerView: VisionSDK.CodeScannerView, didFailure error: VisionSDK.CodeScannerError
     ) {
-        onError!(["message":error.rawValue]);
+        print("error -------------->", error.rawValue)
+//        onError!(["message":error.rawValue]);
     }
     
     func codeScannerViewDidDetect(_ text: Bool, barCode: Bool, qrCode: Bool, document: Bool) {
@@ -120,10 +123,12 @@ extension RNCodeScannerView: CodeScannerViewDelegate {
 //MARK: -
 extension RNCodeScannerView {
     
-    /// This method initialises and setup On-Device OCR model to detect labels, can be called from client side
+    /// This method initialises and setup On-Device OCR model to detect labels, can be called from client side, will download and prepare model only if codeScannerMode == ocr
     func configureOnDeviceModel() {
-        if isOnDeviceOCR ?? false {
-            setupDownloadOnDeviceOCR { }
+        if (isOnDeviceOCR ?? false) && self.codeScannerMode == .ocr {
+//            if self.codeScannerMode == .ocr { // as we will download on-device model only when mode == ocr
+                setupDownloadOnDeviceOCR { }
+//            }
         }
 //        else {
 //            debugPrint("isOnDeviceOCR is false ---------------- >")
@@ -133,18 +138,40 @@ extension RNCodeScannerView {
     /// This Method downloads and prepare offline / On Device OCR for use in the App.
     /// - Parameter completion: completionHandler
     func setupDownloadOnDeviceOCR(completion: @escaping () -> Void) {
-        OnDeviceOCRManager.shared.prepareOfflineOCR(withApiKey: !VSDKConstants.apiKey.isEmpty ? VSDKConstants.apiKey : nil, forModelClass: onDeviceModelType, withModelSize: onDeviceModelSize) { currentProgress, totalSize in
-            debugPrint(((currentProgress / totalSize) * 100))
-            self.onModelDownloadProgress!(["progress": ((currentProgress / totalSize)), "downloadStatus": false])
-        } withCompletion: { error in
-            
-            if error == nil {
-                self.onModelDownloadProgress!(["progress": (1), "downloadStatus": true])
-                completion()
+        
+        if !VSDKConstants.apiKey.isEmpty {
+            OnDeviceOCRManager.shared.prepareOfflineOCR(withApiKey: VSDKConstants.apiKey, forModelClass: onDeviceModelType, withModelSize: onDeviceModelSize) { currentProgress, totalSize in
+                debugPrint(((currentProgress / totalSize) * 100))
+                self.onModelDownloadProgress!(["progress": ((currentProgress / totalSize)), "downloadStatus": false])
+            } withCompletion: { error in
+                
+                if error == nil {
+                    self.onModelDownloadProgress!(["progress": (1), "downloadStatus": true])
+                    completion()
+                }
+                else {
+                    self.callForOCRWithImageFailedWithMessage(message: error?.localizedDescription ?? "We got On-Device OCR error!")
+                }
             }
-            else {
-                self.callForOCRWithImageFailedWithMessage(message: error?.localizedDescription ?? "We got On-Device OCR error!")
+        }
+        
+        else if let tkn = self.token, !tkn.isEmpty {
+            OnDeviceOCRManager.shared.prepareOfflineOCR(andToken: tkn, forModelClass: onDeviceModelType, withModelSize: onDeviceModelSize) { currentProgress, totalSize in
+                debugPrint(((currentProgress / totalSize) * 100))
+                self.onModelDownloadProgress!(["progress": ((currentProgress / totalSize)), "downloadStatus": false])
+            } withCompletion: { error in
+                
+                if error == nil {
+                    self.onModelDownloadProgress!(["progress": (1), "downloadStatus": true])
+                    completion()
+                }
+                else {
+                    self.callForOCRWithImageFailedWithMessage(message: error?.localizedDescription ?? "We got On-Device OCR error!")
+                }
             }
+        }
+        else {
+            debugPrint("Empty Token")
         }
     }
     
@@ -358,13 +385,13 @@ extension RNCodeScannerView {
     
     @objc func setShowScanFrame(_ showScanFrame: Bool) {
         self.showScanFrame = showScanFrame
-        let focusSetting = VisionSDK.CodeScannerView.FocusSettings(focusImage: nil, focusImageRect: .zero, shouldDisplayFocusImage: self.showScanFrame ??  true, shouldScanInFocusImageRect: self.captureWithScanFrame ?? true, showDocumentBoundries: true, documentBoundryBorderColor: .orange, documentBoundryFillColor: UIColor.orange.withAlphaComponent(0.3), focusImageTintColor: .white, focusImageHighlightedColor: .white)
+        let focusSetting = VisionSDK.CodeScannerView.FocusSettings(focusImage: nil, focusImageRect: .zero, shouldDisplayFocusImage: self.showScanFrame, shouldScanInFocusImageRect: self.captureWithScanFrame, showDocumentBoundries: true, documentBoundryBorderColor: .orange, documentBoundryFillColor: UIColor.orange.withAlphaComponent(0.3), focusImageTintColor: .white, focusImageHighlightedColor: .white)
         codeScannerView!.focusSettings = focusSetting
     }
     
     @objc func setCaptureWithScanFrame(_ captureWithScanFrame: Bool) {
         self.captureWithScanFrame = captureWithScanFrame
-        let focusSetting = VisionSDK.CodeScannerView.FocusSettings(focusImage: nil, focusImageRect: .zero, shouldDisplayFocusImage: self.showScanFrame ??  true, shouldScanInFocusImageRect: self.captureWithScanFrame ?? true, showDocumentBoundries: true, documentBoundryBorderColor: .orange, documentBoundryFillColor: UIColor.orange.withAlphaComponent(0.3), focusImageTintColor: .white, focusImageHighlightedColor: .white)
+        let focusSetting = VisionSDK.CodeScannerView.FocusSettings(focusImage: nil, focusImageRect: .zero, shouldDisplayFocusImage: self.showScanFrame, shouldScanInFocusImageRect: self.captureWithScanFrame, showDocumentBoundries: true, documentBoundryBorderColor: .orange, documentBoundryFillColor: UIColor.orange.withAlphaComponent(0.3), focusImageTintColor: .white, focusImageHighlightedColor: .white)
         codeScannerView!.focusSettings = focusSetting
     }
     
@@ -450,7 +477,7 @@ extension RNCodeScannerView {
             VSDKConstants.apiEnvironment = .staging
             break
         default:
-            VSDKConstants.apiEnvironment = .dev
+            VSDKConstants.apiEnvironment = .production
         }
     }
     
@@ -538,7 +565,7 @@ extension RNCodeScannerView {
     
     /// This function reconfigure the changes requested by ReInitializeSDK method, or if its called from Init() then first time properties are set.
     func ConfigureCodeScannerView() {
-        let focusSettings = VisionSDK.CodeScannerView.FocusSettings(focusImage: nil, focusImageRect: .zero, shouldDisplayFocusImage: self.showScanFrame ??  false, shouldScanInFocusImageRect: self.captureWithScanFrame ?? true, showDocumentBoundries: true, documentBoundryBorderColor: .orange, documentBoundryFillColor: UIColor.orange.withAlphaComponent(0.3), focusImageTintColor: .white, focusImageHighlightedColor: .white)
+        let focusSettings = VisionSDK.CodeScannerView.FocusSettings(focusImage: nil, focusImageRect: .zero, shouldDisplayFocusImage: self.showScanFrame, shouldScanInFocusImageRect: self.captureWithScanFrame, showDocumentBoundries: true, documentBoundryBorderColor: .orange, documentBoundryFillColor: UIColor.orange.withAlphaComponent(0.3), focusImageTintColor: .white, focusImageHighlightedColor: .white)
         
         let objectDetectionConfiguration = VisionSDK.CodeScannerView.ObjectDetectionConfiguration(isTextIndicationOn: true, isBarCodeOrQRCodeIndicationOn: true, isDocumentIndicationOn: false, codeDetectionConfidence: 0.5, documentDetectionConfidence: 0.9)
         
@@ -550,7 +577,7 @@ extension RNCodeScannerView {
         
         let cameraSettings = VisionSDK.CodeScannerView.CameraSettings(sessionPreset: sessionPreset, nthFrameToProcess: 10, shouldAutoSaveCapturedImage: true)
         
-        codeScannerView!.configure(delegate: self, focusSettings: focusSettings, objectDetectionConfiguration: objectDetectionConfiguration, cameraSettings: cameraSettings, captureMode: (self.codeScannerMode == .ocr) ? .manual : .auto, captureType: .single, scanMode: self.codeScannerMode ?? .barCode)
+        codeScannerView!.configure(delegate: self, focusSettings: focusSettings, objectDetectionConfiguration: objectDetectionConfiguration, cameraSettings: cameraSettings, captureMode: .manual, captureType: .single, scanMode: self.codeScannerMode ?? .barCode)
         
     }
     
