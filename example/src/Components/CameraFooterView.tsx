@@ -1,7 +1,11 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, TouchableOpacity, Platform } from 'react-native';
-import Octicons from 'react-native-vector-icons/Octicons';
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import {
+  View,
+  StyleSheet,
+  TouchableOpacity,
+  Platform,
+  Text,
+} from 'react-native';
 import OCRSelectionView from './OCRSelectionView';
 import CaptureModesView from './CaptureModesView';
 import ModelSizeSelectionView from './ModelSizeSelectionView';
@@ -25,7 +29,10 @@ function CameraFooterView({
           onPress={() => setShowOcrTypes(true)}
           style={styles.switchIconContainer}
         >
-          <Octicons name="arrow-switch" size={30} color="white" />
+          {/* <Octicons name="arrow-switch" size={30} color="white" /> */}
+          <Text style={{ color: 'white' }}>
+            {isOnDeviceOCR ? 'On-Device' : 'Cloud'}
+          </Text>
         </TouchableOpacity>
       </View>
       <View style={styles.centerContainer}>
@@ -45,7 +52,10 @@ function CameraFooterView({
             onPress={() => setShowOcrSize(true)}
             style={styles.sizeIconContainer}
           >
-            <MaterialCommunityIcons name="resize" size={30} color="white" />
+            {/* <MaterialCommunityIcons name="resize" size={30} color="white" /> */}
+            <Text style={{ color: 'white' }}>
+              {modelSize === 'large' ? 'Large' : 'Micro'}
+            </Text>
           </TouchableOpacity>
         )}
       </View>
@@ -81,7 +91,7 @@ const styles = StyleSheet.create({
   },
   rotatedIcon: {
     flexDirection: 'row',
-    transform: [{ rotate: '90deg' }],
+    // transform: [{ rotate: '90deg' }],
   },
   mainContainer: {
     backgroundColor:
@@ -94,13 +104,15 @@ const styles = StyleSheet.create({
     bottom: 0,
   },
   sideContainer: {
-    width: '30%',
+    width: '35%',
     height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 0,
+    borderColor: 'black',
   },
   centerContainer: {
-    width: '40%',
+    width: '30%',
     height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
