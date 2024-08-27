@@ -1,4 +1,4 @@
-import React, { useEffect, useImperativeHandle, useRef, useState } from 'react';
+import React, { useEffect, useImperativeHandle, useRef } from 'react';
 import {
   UIManager,
   findNodeHandle,
@@ -7,12 +7,6 @@ import {
 } from 'react-native';
 import { VisionSdkView } from './VisionSdkViewManager';
 
-export enum ScanMode {
-  OCR = 'ocr',
-  BARCODE = 'barcode',
-  QRCODE = 'qrcode',
-}
-
 type Props = {
   children?: React.ReactNode;
   refProp?: any;
@@ -20,7 +14,7 @@ type Props = {
   reRender?: string;
   delayTime?: number;
   captureMode?: string;
-  mode?: string;
+  mode?: 'barcode' | 'qrcode' | 'ocr' | 'photo';
   token?: string;
   locationId?: string;
   options?: any;
@@ -44,7 +38,7 @@ const Camera: React.FC<Props> = ({
   reRender,
   delayTime = 100,
   captureMode = 'manual',
-  mode = ScanMode.BARCODE,
+  mode = 'barcode',
   token = '',
   locationId = '',
   options = {},

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, Platform, Alert, Vibration } from 'react-native';
-import VisionSdkView, { ScanMode } from 'react-native-vision-sdk';
+import VisionSdkView from 'react-native-vision-sdk';
 import CameraFooterView from './Components/CameraFooterView';
 import DownloadingProgressView from './Components/DownloadingProgressView';
 import CameraHeaderView from './Components/CameraHeaderView';
@@ -75,7 +75,7 @@ export default function App() {
         showDocumentBoundaries={true}
         captureWithScanFrame={true}
         captureMode={captureMode}
-        mode={ScanMode.OCR}
+        mode="barcode"
         locationId=""
         options={{
           tracker: {
@@ -98,11 +98,11 @@ export default function App() {
         delayTime={0}
         token=""
         apiKey="key_141b2eda27Z0Cm2y0h0P6waB3Z6pjPgrmGAHNSU62rZelUthBEOOdsVTqZQCRVgPLqI5yMPqpw2ZBy2z"
-        OnDetectedHandler={(e: any) => {
+        onDetected={(e: any) => {
           setDeectedData(Platform.OS === 'android' ? e : e.nativeEvent);
         }}
         onBarcodeScan={(e: any) => console.log('BarCodeScanHandler', e)}
-        OCRScanHandler={(e: any) => {
+        onOCRScan={(e: any) => {
           let scanRes = Platform.OS === 'ios' ? e.nativeEvent : e;
           if (Platform.OS === 'android') {
             const parsedOuterJson = JSON.parse(scanRes.data);
@@ -112,7 +112,7 @@ export default function App() {
           setLoading(false);
           Vibration.vibrate(100);
         }}
-        ModelDownloadProgress={(e: any) => {
+        onModelDownloadProgress={(e: any) => {
           let response = Platform.OS === 'android' ? e : e.nativeEvent;
           console.log(
             'ModelDownloadProgress==------>>',
@@ -126,7 +126,7 @@ export default function App() {
           }
           setLoading(false);
         }}
-        OnError={(e: any) => {
+        onError={(e: any) => {
           let error = Platform.OS === 'android' ? e : e.nativeEvent;
           console.log('onError', error);
           Alert.alert('ERROR', error?.message);
