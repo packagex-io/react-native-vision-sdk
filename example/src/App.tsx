@@ -87,7 +87,13 @@ export default function App() {
             const parsedOuterJson = JSON.parse(scanRes.data);
             scanRes = parsedOuterJson.data;
           }
-          setResult(Platform.OS === 'android' ? scanRes : scanRes.data.data);
+          setResult(
+            Platform.OS === 'android'
+              ? scanRes
+              : isOnDeviceOCR
+                ? scanRes.data
+                : scanRes.data.data
+          );
           setLoading(false);
           Vibration.vibrate(100);
         }}
