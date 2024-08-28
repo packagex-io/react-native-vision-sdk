@@ -4,7 +4,7 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 
-function CameraHeaderView({ detectedData, toggleTorch }: any) {
+function CameraHeaderView({ detectedData, toggleFlash }: any) {
   const [isFlashOn, setIsFlashOn] = useState<boolean>(false);
   const checkIconColor = (val: boolean) => {
     return val ? '#4FBF67' : 'white';
@@ -45,7 +45,7 @@ function CameraHeaderView({ detectedData, toggleTorch }: any) {
         <TouchableOpacity
           onPress={() => {
             setIsFlashOn(!isFlashOn);
-            toggleTorch(!isFlashOn);
+            toggleFlash(!isFlashOn);
           }}
           style={styles.rightIconContainer}
         >

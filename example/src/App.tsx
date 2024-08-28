@@ -23,6 +23,7 @@ export default function App() {
   const [modelSize, setModelSize] = useState<string>('large');
   const [loading, setLoading] = useState<boolean>(false);
   const [result, setResult] = useState<any>('');
+  const [flash, setFlash] = useState<boolean>(false);
   const [detectedData, setDeectedData] = useState<detectedDataProps>({
     barcode: false,
     qrcode: false,
@@ -46,8 +47,8 @@ export default function App() {
     }
     visionSdk?.current?.cameraCaptureHandler();
   };
-  const toggleTorch = (val: boolean) => {
-    visionSdk?.current?.onPressToggleTorchHandler(val);
+  const toggleFlash = (val: boolean) => {
+    setFlash(val);
   };
   function isMultipleOfTen(number: any) {
     return number % 1 === 0;
@@ -57,6 +58,13 @@ export default function App() {
       onPressOnDeviceOcr();
     }
   }, [isOnDeviceOCR]);
+
+  useEffect(() => {
+    if (flash) {
+      toggleFlash(flash);
+    }
+  }, [flash]);
+
   const onPressOnDeviceOcr = (type = 'shipping_label', size = 'large') => {
     visionSdk?.current?.stopRunningHandler();
     setLoading(true);
@@ -77,6 +85,7 @@ export default function App() {
         mode="ocr"
         environment="sandbox"
         apiKey="key_141b2eda27Z0Cm2y0h0P6waB3Z6pjPgrmGAHNSU62rZelUthBEOOdsVTqZQCRVgPLqI5yMPqpw2ZBy2z"
+        flash={flash}
         onDetected={(e: any) => {
           setDeectedData(Platform.OS === 'android' ? e : e.nativeEvent);
         }}
@@ -118,7 +127,7 @@ export default function App() {
         setResult={setResult}
       />
       <LoaderView visible={loading} />
-      <CameraHeaderView detectedData={detectedData} toggleTorch={toggleTorch} />
+      <CameraHeaderView detectedData={detectedData} toggleFlash={toggleFlash} />
 
       <DownloadingProgressView
         visible={!modelDownloadingProgress.downloadStatus}

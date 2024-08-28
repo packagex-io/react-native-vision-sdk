@@ -19,6 +19,7 @@ type Props = {
   locationId?: string;
   options?: any;
   environment?: 'prod' | 'sandbox';
+  flash?: boolean;
   showDocumentBoundaries?: boolean;
   isOnDeviceOCR?: boolean;
   showScanFrame?: boolean;
@@ -43,6 +44,7 @@ const Camera: React.FC<Props> = ({
   locationId = '',
   options = {},
   environment = 'prod',
+  flash = false,
   showDocumentBoundaries = false,
   isOnDeviceOCR = false,
   showScanFrame = true,
@@ -64,9 +66,6 @@ const Camera: React.FC<Props> = ({
     },
     startRunningHandler: () => {
       onPressStartRunning();
-    },
-    onPressToggleTorchHandler: (val: any) => {
-      onPressToggleTorch(val);
     },
     setToDefaultZoom: (val: any) => {
       onPressZoom(val);
@@ -120,21 +119,12 @@ const Camera: React.FC<Props> = ({
     );
   };
 
-  const onPressToggleTorch = (value: any) => {
-    UIManager.dispatchViewManagerCommand(
-      findNodeHandle(VisionSDKViewRef.current),
-      (UIManager.hasViewManagerConfig('VisionSDKView') &&
-        UIManager.getViewManagerConfig('VisionSDKView').Commands.toggleTorch) ||
-        3,
-      [value]
-    );
-  };
   const onPressZoom = (value: any) => {
     UIManager.dispatchViewManagerCommand(
       findNodeHandle(VisionSDKViewRef.current),
       (UIManager.hasViewManagerConfig('VisionSDKView') &&
         UIManager.getViewManagerConfig('VisionSDKView').Commands.setZoomTo) ||
-        4,
+        3,
       [value]
     );
   };
@@ -143,7 +133,7 @@ const Camera: React.FC<Props> = ({
       findNodeHandle(VisionSDKViewRef.current),
       (UIManager.hasViewManagerConfig('VisionSDKView') &&
         UIManager.getViewManagerConfig('VisionSDKView').Commands.setHeight) ||
-        5,
+        4,
       [value]
     );
   };
@@ -153,7 +143,7 @@ const Camera: React.FC<Props> = ({
       findNodeHandle(VisionSDKViewRef.current),
       (UIManager.hasViewManagerConfig('VisionSDKView') &&
         UIManager.getViewManagerConfig('VisionSDKView').Commands.setMetaData) ||
-        6,
+        5,
       [value]
     );
   };
@@ -163,7 +153,7 @@ const Camera: React.FC<Props> = ({
       (UIManager.hasViewManagerConfig('VisionSDKView') &&
         UIManager.getViewManagerConfig('VisionSDKView').Commands
           .setRecipient) ||
-        7,
+        6,
       [value]
     );
   };
@@ -172,7 +162,7 @@ const Camera: React.FC<Props> = ({
       findNodeHandle(VisionSDKViewRef.current),
       (UIManager.hasViewManagerConfig('VisionSDKView') &&
         UIManager.getViewManagerConfig('VisionSDKView').Commands.setSender) ||
-        8,
+        7,
       [value]
     );
   };
@@ -182,7 +172,7 @@ const Camera: React.FC<Props> = ({
       (UIManager.hasViewManagerConfig('VisionSDKView') &&
         UIManager.getViewManagerConfig('VisionSDKView').Commands
           .configureOnDeviceModel) ||
-        9,
+        8,
       [val]
     );
   };
@@ -225,6 +215,7 @@ const Camera: React.FC<Props> = ({
         locationId={locationId}
         options={JSON.stringify(options)} // ideally this should be passed from variable, that is receiving data from ScannerContainer
         environment={environment}
+        flash={flash}
         onBarcodeScan={onBarcodeScan}
         onModelDownloadProgress={onModelDownloadProgress}
         onImageCaptured={onImageCaptured}
