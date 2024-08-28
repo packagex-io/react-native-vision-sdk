@@ -618,6 +618,7 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
     } else {
       throwable?.message ?: "Unknown error occurred"
     }
+    if (message=="No text detected") visionCameraView?.rescan()
     val event = Arguments.createMap().apply {
       putString("message", message)
     }

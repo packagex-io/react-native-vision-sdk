@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
   View,
   StyleSheet,
@@ -10,6 +10,9 @@ import {
 import Icon from 'react-native-vector-icons/Ionicons';
 
 function ResultView({ visible, result, setResult }: any) {
+  useEffect(() => {
+    console.log('result==------>>>', result);
+  }, [result]);
   const renderItemView = (heading = '', value = '') => {
     return (
       value && (
@@ -48,8 +51,7 @@ function ResultView({ visible, result, setResult }: any) {
             {renderItemView('RMA #', result?.rma_number)}
             {renderItemView('Reference Number #', result?.reference_number)}
             {renderItemView('Courier', result?.provider_name)}
-            {renderItemView('Weight', result?.weight)}
-            {/* {result?.recipient?.name && ( */}
+            {renderItemView('Weight', result?.weight?.toString())}
             <>
               {renderHeadingItemView('Receiver Info')}
               {renderItemView('Name', result?.recipient?.name)}
@@ -69,8 +71,6 @@ function ResultView({ visible, result, setResult }: any) {
                 result?.recipient?.address?.formatted_address
               )}
             </>
-            {/* )} */}
-            {/* {result?.sender?.name && ( */}
             <>
               {renderHeadingItemView('Sender Info')}
               {renderItemView('Name', result?.sender?.name)}
@@ -84,7 +84,6 @@ function ResultView({ visible, result, setResult }: any) {
                 result?.sender?.address?.formatted_address
               )}
             </>
-            {/* )} */}
             {renderItemView('Shipment Type', result?.type)}
           </ScrollView>
         </View>
