@@ -14,7 +14,6 @@ import com.facebook.infer.annotation.Assertions
 import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.ReadableArray
-import com.facebook.react.bridge.UiThreadUtil
 import com.facebook.react.modules.core.DeviceEventManagerModule
 import com.facebook.react.uimanager.ThemedReactContext
 import com.facebook.react.uimanager.ViewGroupManager
@@ -138,8 +137,8 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
 
   private fun configureFocusSettings() {
     focusSettings = FocusSettings(
-      shouldDisplayFocusImage = true,
-      shouldScanInFocusImageRect = false,
+      shouldDisplayFocusImage = shouldDisplayFocusImage,
+      shouldScanInFocusImageRect = shouldScanInFocusImageRect,
       showDocumentBoundaries = showDocumentBoundaries
     )
     setFocusSettings()
