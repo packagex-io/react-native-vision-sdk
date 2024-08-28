@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, Platform, TouchableOpacity } from 'react-native';
-// @ts-ignore
+// eslint-disable-next-line
 import Icon from 'react-native-vector-icons/Ionicons';
-// @ts-ignore
+// eslint-disable-next-line
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
-// @ts-ignore
+// eslint-disable-next-line
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 
 function CameraHeaderView({ detectedData, toggleTorch }: any) {

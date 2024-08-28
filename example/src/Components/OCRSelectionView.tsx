@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, StyleSheet, Text, TouchableOpacity, Modal } from 'react-native';
-// @ts-ignore
+// eslint-disable-next-line
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 
 function OCRSelectionView({
