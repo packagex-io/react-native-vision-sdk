@@ -7,7 +7,7 @@ import {
   Text,
   ScrollView,
 } from 'react-native';
-// eslint-disable-next-line
+// @ts-ignore
 import Icon from 'react-native-vector-icons/Ionicons';
 
 function ResultView({ visible, result, setResult }: any) {

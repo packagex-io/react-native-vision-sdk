@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, StyleSheet, Text, TouchableOpacity, Modal } from 'react-native';
-// eslint-disable-next-line
+// @ts-ignore
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 
 function ModelSizeSelectionView({
