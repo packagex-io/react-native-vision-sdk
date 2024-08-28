@@ -7,6 +7,7 @@ import {
   Text,
   ScrollView,
 } from 'react-native';
+// @ts-ignore
 import Icon from 'react-native-vector-icons/Ionicons';
 
 function ResultView({ visible, result, setResult }: any) {
