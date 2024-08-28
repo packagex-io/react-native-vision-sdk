@@ -56,9 +56,10 @@ const ScannerView = () => {
   return (
     <VisionSdkView
       refProp={visionSdk}
-      BarCodeScanHandler={(value) => console.log('BarCodeScanHandler', value)}
-      OCRScanHandler={(value) => console.log('on OCR Detected', value)}
-      OnDetectedHandler={(value) => {
+      mode="barcode"
+      onBarcodeScan={(value) => console.log('BarCodeScanHandler', value)}
+      onOCRScan={(value) => console.log('on OCR Detected', value)}
+      onDetected={(value) => {
         console.log(
           'Detected Barcode =',
           value.nativeEvent ? value.nativeEvent.barCode : value.barcode
@@ -75,6 +76,7 @@ const ScannerView = () => {
   );
 };
 ```
+
 ### Camera View Height
 
 Set Camera View Height
@@ -107,6 +109,31 @@ You can capture an image when captureMode is manual.
 ```js
 visionSdk.current.cameraCaptureHandler();
 ```
+
+### Set Zoom Value
+
+You can set the Zoom value. Zoom value is device dependent. It will be vary between 1 to 5.
+
+```js
+visionSdk.current.setToDefaultZoom(1.8); 
+```
+
+### Toggle Torch
+
+Toggle the torch ON/OFF.
+
+```js
+visionSdk.current.onPressToggleTorchHandler(true); //false for OFF
+```
+
+### Configure On-Device Model
+
+Configure on-device model by passing model type and model size. Before calling configureOnDeviceModel you have to set isOnDeviceOCR prop with true.
+
+```js
+visionSdk.current.configureOnDeviceModel({ type: 'shipping_label', size: 'large' });
+```
+
 
 ### Props
 
