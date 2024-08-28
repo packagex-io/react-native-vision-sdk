@@ -22,13 +22,11 @@ runs:
     - name: Install Yarn
       run: |
         corepack enable
-        corepack prepare yarn@3.6.4 --activate
+        corepack prepare yarn@1.22.22 --activate
       shell: bash
 
     - name: Install dependencies
       if: steps.yarn-cache.outputs.cache-hit != 'true'
       run: |
-        yarn set version 3.6.4
-        yarn install --cwd example --frozen-lockfile
-        yarn install --frozen-lockfile
+        yarn set version 1.22.22
       shell: bash

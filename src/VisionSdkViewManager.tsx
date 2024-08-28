@@ -24,11 +24,14 @@ type VisionSdkProps = {
   environment?: String;
   captureMode?: String;
   delayTime: number;
+  showDocumentBoundaries?: boolean;
+  isOnDeviceOCR: boolean;
   showScanFrame?: boolean;
   captureWithScanFrame?: boolean;
-  onBarcodeScanSuccess?: (e: any) => void;
+  onBarcodeScan?: (e: any) => void;
+  onModelDownloadProgress?: (e: any) => void;
   onImageCaptured?: (e: any) => void;
-  onOCRDataReceived?: (e: any) => void;
+  onOCRScan?: (e: any) => void;
   onDetected?: (e: any) => void;
   onError?: (e: any) => void;
 };

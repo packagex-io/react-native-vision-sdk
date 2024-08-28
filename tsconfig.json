@@ -2,7 +2,7 @@
   "compilerOptions": {
     "baseUrl": "./",
     "paths": {
-      "react-native-vision-sdk": ["./src/index"],
+      "react-native-vision-sdk": ["./src/index"]
     },
     "ignoreDeprecations": "5.0",
     "allowUnreachableCode": false,
@@ -25,5 +25,6 @@
     "skipLibCheck": true,
     "strict": true,
     "target": "esnext"
-  }
+  },
+  "include": ["src", "src/types/declarations.d.ts"]
 }
