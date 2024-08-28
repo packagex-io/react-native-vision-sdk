@@ -19,13 +19,15 @@ function CameraFooterView({
   onPressOnDeviceOcr,
   setModelSize,
   modelSize,
+  mode
 }: any) {
   const [showOcrTypes, setShowOcrTypes] = useState<boolean>(false);
   const [showOcrSize, setShowOcrSize] = useState<boolean>(false);
   return (
     <View style={styles.mainContainer}>
       <View style={[styles.sideContainer, styles.rotatedIcon]}>
-        <TouchableOpacity
+        {mode === 'ocr' && (
+          <TouchableOpacity
           onPress={() => setShowOcrTypes(true)}
           style={styles.switchIconContainer}
         >
@@ -34,6 +36,7 @@ function CameraFooterView({
             {isOnDeviceOCR ? 'On-Device' : 'Cloud'}
           </Text>
         </TouchableOpacity>
+        )}
       </View>
       <View style={styles.centerContainer}>
         <CaptureModesView

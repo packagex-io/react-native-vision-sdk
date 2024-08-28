@@ -23,6 +23,7 @@ export default function App() {
   const [modelSize, setModelSize] = useState<string>('large');
   const [loading, setLoading] = useState<boolean>(false);
   const [result, setResult] = useState<any>('');
+  const [mode, setMode] = useState<any>('ocr');
   const [flash, setFlash] = useState<boolean>(false);
   const [detectedData, setDeectedData] = useState<detectedDataProps>({
     barcode: false,
@@ -82,7 +83,7 @@ export default function App() {
         showDocumentBoundaries={true}
         captureWithScanFrame={true}
         captureMode={captureMode}
-        mode="ocr"
+        mode={mode}
         environment="sandbox"
         apiKey="key_141b2eda27Z0Cm2y0h0P6waB3Z6pjPgrmGAHNSU62rZelUthBEOOdsVTqZQCRVgPLqI5yMPqpw2ZBy2z"
         flash={flash}
@@ -99,6 +100,9 @@ export default function App() {
           setResult(Platform.OS === 'android' ? scanRes : scanRes.data);
           setLoading(false);
           Vibration.vibrate(100);
+        }}
+        onImageCaptured={(e: any) => {
+          console.log('ImageCapturedHandler==------>>', e);
         }}
         onModelDownloadProgress={(e: any) => {
           let response = Platform.OS === 'android' ? e : e.nativeEvent;
@@ -127,7 +131,7 @@ export default function App() {
         setResult={setResult}
       />
       <LoaderView visible={loading} />
-      <CameraHeaderView detectedData={detectedData} toggleFlash={toggleFlash} />
+      <CameraHeaderView detectedData={detectedData} toggleFlash={toggleFlash} mode={mode} setMode={setMode} />
 
       <DownloadingProgressView
         visible={!modelDownloadingProgress.downloadStatus}
@@ -142,6 +146,7 @@ export default function App() {
         onPressOnDeviceOcr={onPressOnDeviceOcr}
         setModelSize={setModelSize}
         modelSize={modelSize}
+        mode={mode}
       />
     </View>
   );
