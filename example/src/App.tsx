@@ -76,7 +76,7 @@ export default function App() {
         captureMode={captureMode}
         mode="ocr"
         environment="sandbox"
-        apiKey="key_141b2eda27Z0Cm2y0h0P6waB3Z6pjPgrmGAHNSU62rZelUthBEOOdsVTqZQCRVgPLqI5yMPqpw2ZBy2z"
+        apiKey="key_25b25115f9gJMn8ChDqw4RrE7n6rYw06v9tD4moEUDpE9C6eKP3rIsXU1rFwWZufmYNLudaFQPMuf3ym"
         onDetected={(e: any) => {
           setDeectedData(Platform.OS === 'android' ? e : e.nativeEvent);
         }}
@@ -87,7 +87,7 @@ export default function App() {
             const parsedOuterJson = JSON.parse(scanRes.data);
             scanRes = parsedOuterJson.data;
           }
-          setResult(Platform.OS === 'android' ? scanRes : scanRes.data);
+          setResult(Platform.OS === 'android' ? scanRes : scanRes.data.data);
           setLoading(false);
           Vibration.vibrate(100);
         }}
