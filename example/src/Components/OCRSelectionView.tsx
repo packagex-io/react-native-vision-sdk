@@ -7,7 +7,6 @@ function OCRSelectionView({
   showOcrTypes,
   setIsOnDeviceOCR,
   isOnDeviceOCR,
-  onPressOnDeviceOcr,
 }: any) {
   const closeModal = () => {
     setShowOcrTypes(false);
