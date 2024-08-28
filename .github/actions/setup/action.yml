@@ -29,6 +29,4 @@ runs:
       if: steps.yarn-cache.outputs.cache-hit != 'true'
       run: |
         yarn set version 1.22.22
-        yarn install --cwd example --frozen-lockfile
-        yarn install --frozen-lockfile
       shell: bash
