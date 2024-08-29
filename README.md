@@ -135,14 +135,6 @@ You can set the Zoom value. Zoom value is device dependent. It will be vary betw
 visionSdk.current.setToDefaultZoom(1.8); 
 ```
 
-### Toggle Torch
-
-Toggle the torch ON/OFF.
-
-```js
-visionSdk.current.onPressToggleTorchHandler(true); //false for OFF
-```
-
 ### Configure On-Device Model
 
 Configure on-device model by passing model type and model size. Before calling configureOnDeviceModel you have to set isOnDeviceOCR prop with true.
@@ -161,10 +153,11 @@ All the props will be passed.
 | `refProp`                   | `Function`                              | Catch the reference of the component to manipulate modes or to access callback functions.                         |
 | `mode`                      | `string: (ocr, barcode, qrcode, photo)` | Default mode is ‘barcode’, you can either use other like ocr, qrcode, photo.                                      |
 | `captureMode`               | `string: (manual, auto)`                | Default captureMode is ‘manual’, you can either use ‘auto’.                                                       |
-| `apiKey`                    | `string`                                | In order to use the OCR API/MODEL, You must set your API key or either an Auth token..                                     |
-| `token`                     | `string`                                | In order to use the OCR API/MODEL, You must set your API key or either an Auth token..                                     |
+| `apiKey`                    | `string`                                | In order to use the OCR API/MODEL, You must set your API key or either an Auth token..                            |
+| `token`                     | `string`                                | In order to use the OCR API/MODEL, You must set your API key or either an Auth token..                            |
 | `environment`               | `string: (sandbox, prod)`               | If you are using OCR mode then you can set your development environment. (Default env is prod)                    |
 | `isOnDeviceOCR`             | `boolean: (true, false)`                | This prop will work if the mode is ocr for document detection in OnDevice/Cloud based on value.                   |
+| `flash`                     | `boolean: (true, false)`                | You can turn ON/OFF camera flash by using this prop. (Default value is false)                                     |
 | `showDocumentBoundaries`    | `boolean: (true, false)`                | To draw boundaries around detected document in camera stream. (Default value is false)                            |
 | `delayTime`                 | `number: (milliseconds)`                | Time threshold to wait before capturing a document automatically in OCR mode. (Default value is 100 milliseconds) |
 | `locationId`                | `string: (ex# loc_2rpHXFf6ith)`         | By default your location will get from apiKey or either you can set location id.                                  |
