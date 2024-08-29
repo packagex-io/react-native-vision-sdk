@@ -1,11 +1,19 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, Platform, TouchableOpacity } from 'react-native';
+import {
+  View,
+  StyleSheet,
+  Platform,
+  TouchableOpacity,
+  Text,
+} from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import ModeSelectionView from './ModeSelectionView';
 
-function CameraHeaderView({ detectedData, toggleTorch }: any) {
+function CameraHeaderView({ detectedData, toggleFlash, mode, setMode }: any) {
   const [isFlashOn, setIsFlashOn] = useState<boolean>(false);
+  const [showModeTypes, setShowModeTypes] = useState<boolean>(false);
   const checkIconColor = (val: boolean) => {
     return val ? '#4FBF67' : 'white';
   };
@@ -41,11 +49,25 @@ function CameraHeaderView({ detectedData, toggleTorch }: any) {
           />
         </View>
       </View>
+
+      <View style={[styles.sideContainer, styles.rotatedIcon]}>
+        <TouchableOpacity
+          onPress={() => {
+            setShowModeTypes(true);
+          }}
+          style={styles.switchIconContainer}
+        >
+          <Text style={{ color: 'white' }}>
+            {mode.charAt(0).toUpperCase() + mode.slice(1)}
+          </Text>
+        </TouchableOpacity>
+      </View>
+
       <View>
         <TouchableOpacity
           onPress={() => {
             setIsFlashOn(!isFlashOn);
-            toggleTorch(!isFlashOn);
+            toggleFlash(!isFlashOn);
           }}
           style={styles.rightIconContainer}
         >
@@ -56,6 +78,13 @@ function CameraHeaderView({ detectedData, toggleTorch }: any) {
           />
         </TouchableOpacity>
       </View>
+
+      <ModeSelectionView
+        showModeTypes={showModeTypes}
+        setShowModeTypes={setShowModeTypes}
+        mode={mode}
+        setMode={setMode}
+      />
     </View>
   );
 }
@@ -65,7 +94,7 @@ const styles = StyleSheet.create({
     width: '100%',
     top: Platform.OS === 'android' ? 10 : 45,
     zIndex: 1,
-    paddingHorizontal: 5,
+    paddingHorizontal: 10,
     flexDirection: 'row',
     justifyContent: 'space-between',
   },
@@ -83,6 +112,23 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     backgroundColor:
       Platform.OS === 'android' ? 'rgba(0, 0, 0, 0.7)' : 'rgba(0, 0, 0, 0.5)',
+  },
+  sideContainer: {
+    width: '35%',
+    height: '30%',
+    justifyContent: 'center',
+    alignItems: 'flex-end',
+    borderWidth: 0,
+    borderColor: 'black',
+  },
+  rotatedIcon: {
+    flexDirection: 'row',
+  },
+  switchIconContainer: {
+    backgroundColor: '#7420E2',
+    paddingVertical: 8,
+    paddingHorizontal: 15,
+    borderRadius: 10,
   },
 });
 export default CameraHeaderView;

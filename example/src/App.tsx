@@ -6,6 +6,8 @@ import DownloadingProgressView from './Components/DownloadingProgressView';
 import CameraHeaderView from './Components/CameraHeaderView';
 import LoaderView from './Components/LoaderView';
 import ResultView from './Components/ResultView';
+import { PERMISSIONS, RESULTS, request } from 'react-native-permissions';
+
 interface downloadingProgress {
   downloadStatus: boolean;
   progress: number;
@@ -23,31 +25,68 @@ export default function App() {
   const [modelSize, setModelSize] = useState<string>('large');
   const [loading, setLoading] = useState<boolean>(false);
   const [result, setResult] = useState<any>('');
-  const [detectedData, setDeectedData] = useState<detectedDataProps>({
+  const [mode, setMode] = useState<any>('ocr');
+  const [flash, setFlash] = useState<boolean>(false);
+  const [detectedData, setDetectedData] = useState<detectedDataProps>({
     barcode: false,
     qrcode: false,
     text: false,
     document: false,
   });
 
+  const handleCameraPress = async () => {
+    try {
+      let cameraPermission;
+      if (Platform.OS === 'ios') {
+        cameraPermission = PERMISSIONS.IOS.CAMERA;
+      } else {
+        cameraPermission = PERMISSIONS.ANDROID.CAMERA;
+      }
+
+      const result = await request(cameraPermission);
+
+      if (result === RESULTS.GRANTED) {
+        return true;
+      } else {
+        console.log('Camera Permission Error');
+
+        Alert.alert(
+          'Camera Permission Error',
+          'App needs camera permission to take pictures. Please go to app setting and enable camera permission.'
+        );
+        return false;
+      }
+    } catch (error) {
+      console.log('Error asking for camera permission', error);
+    }
+  };
+
   const [modelDownloadingProgress, setModelDownloadingProgress] =
     useState<downloadingProgress>({
       downloadStatus: true,
       progress: 0,
     });
+
+  React.useEffect(() => {
+    if (Platform.OS === 'android') {
+      handleCameraPress();
+    }
+  }, []);
+
   React.useEffect(() => {
     visionSdk?.current?.setHeight(1);
     visionSdk?.current?.startRunningHandler();
     setLoading(false);
   }, [captureMode]);
+
   const onPressCapture = () => {
     if (Platform.OS === 'android') {
       setLoading(true);
     }
     visionSdk?.current?.cameraCaptureHandler();
   };
-  const toggleTorch = (val: boolean) => {
-    visionSdk?.current?.onPressToggleTorchHandler(val);
+  const toggleFlash = (val: boolean) => {
+    setFlash(val);
   };
   function isMultipleOfTen(number: any) {
     return number % 1 === 0;
@@ -57,6 +96,13 @@ export default function App() {
       onPressOnDeviceOcr();
     }
   }, [isOnDeviceOCR]);
+
+  useEffect(() => {
+    if (flash) {
+      toggleFlash(flash);
+    }
+  }, [flash]);
+
   const onPressOnDeviceOcr = (type = 'shipping_label', size = 'large') => {
     visionSdk?.current?.stopRunningHandler();
     setLoading(true);
@@ -74,11 +120,12 @@ export default function App() {
         showDocumentBoundaries={true}
         captureWithScanFrame={true}
         captureMode={captureMode}
-        mode="ocr"
+        mode={mode}
         environment="sandbox"
         apiKey="key_141b2eda27Z0Cm2y0h0P6waB3Z6pjPgrmGAHNSU62rZelUthBEOOdsVTqZQCRVgPLqI5yMPqpw2ZBy2z"
+        flash={flash}
         onDetected={(e: any) => {
-          setDeectedData(Platform.OS === 'android' ? e : e.nativeEvent);
+          setDetectedData(Platform.OS === 'android' ? e : e.nativeEvent);
         }}
         onBarcodeScan={(e: any) => console.log('BarCodeScanHandler', e)}
         onOCRScan={(e: any) => {
@@ -87,9 +134,18 @@ export default function App() {
             const parsedOuterJson = JSON.parse(scanRes.data);
             scanRes = parsedOuterJson.data;
           }
-          setResult(Platform.OS === 'android' ? scanRes : scanRes.data);
+          setResult(
+            Platform.OS === 'android'
+              ? scanRes
+              : isOnDeviceOCR
+                ? scanRes.data
+                : scanRes.data.data
+          );
           setLoading(false);
           Vibration.vibrate(100);
+        }}
+        onImageCaptured={(e: any) => {
+          console.log('onImageCaptured==------>>', e);
         }}
         onModelDownloadProgress={(e: any) => {
           let response = Platform.OS === 'android' ? e : e.nativeEvent;
@@ -118,7 +174,12 @@ export default function App() {
         setResult={setResult}
       />
       <LoaderView visible={loading} />
-      <CameraHeaderView detectedData={detectedData} toggleTorch={toggleTorch} />
+      <CameraHeaderView
+        detectedData={detectedData}
+        toggleFlash={toggleFlash}
+        mode={mode}
+        setMode={setMode}
+      />
 
       <DownloadingProgressView
         visible={!modelDownloadingProgress.downloadStatus}
@@ -133,6 +194,7 @@ export default function App() {
         onPressOnDeviceOcr={onPressOnDeviceOcr}
         setModelSize={setModelSize}
         modelSize={modelSize}
+        mode={mode}
       />
     </View>
   );

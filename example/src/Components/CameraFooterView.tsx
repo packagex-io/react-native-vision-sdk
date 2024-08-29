@@ -19,21 +19,24 @@ function CameraFooterView({
   onPressOnDeviceOcr,
   setModelSize,
   modelSize,
+  mode,
 }: any) {
   const [showOcrTypes, setShowOcrTypes] = useState<boolean>(false);
   const [showOcrSize, setShowOcrSize] = useState<boolean>(false);
   return (
     <View style={styles.mainContainer}>
       <View style={[styles.sideContainer, styles.rotatedIcon]}>
-        <TouchableOpacity
-          onPress={() => setShowOcrTypes(true)}
-          style={styles.switchIconContainer}
-        >
-          {/* <Octicons name="arrow-switch" size={30} color="white" /> */}
-          <Text style={{ color: 'white' }}>
-            {isOnDeviceOCR ? 'On-Device' : 'Cloud'}
-          </Text>
-        </TouchableOpacity>
+        {mode === 'ocr' && (
+          <TouchableOpacity
+            onPress={() => setShowOcrTypes(true)}
+            style={styles.switchIconContainer}
+          >
+            {/* <Octicons name="arrow-switch" size={30} color="white" /> */}
+            <Text style={{ color: 'white' }}>
+              {isOnDeviceOCR ? 'On-Device' : 'Cloud'}
+            </Text>
+          </TouchableOpacity>
+        )}
       </View>
       <View style={styles.centerContainer}>
         <CaptureModesView
@@ -52,7 +55,6 @@ function CameraFooterView({
             onPress={() => setShowOcrSize(true)}
             style={styles.sizeIconContainer}
           >
-            {/* <MaterialCommunityIcons name="resize" size={30} color="white" /> */}
             <Text style={{ color: 'white' }}>
               {modelSize === 'large' ? 'Large' : 'Micro'}
             </Text>
@@ -91,7 +93,6 @@ const styles = StyleSheet.create({
   },
   rotatedIcon: {
     flexDirection: 'row',
-    // transform: [{ rotate: '90deg' }],
   },
   mainContainer: {
     backgroundColor:

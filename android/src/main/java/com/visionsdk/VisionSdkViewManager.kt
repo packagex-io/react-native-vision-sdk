@@ -61,6 +61,7 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
   private var detectionMode: DetectionMode = DetectionMode.Barcode
   private var scanningMode: ScanningMode = ScanningMode.Manual
   private var shouldDisplayFocusImage: Boolean = true
+  private var flash: Boolean = false
   private var shouldScanInFocusImageRect: Boolean = true
   private var showDocumentBoundaries: Boolean = false
   private var lifecycleOwner: LifecycleOwner? = null
@@ -131,7 +132,7 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
 
   private fun configureViewState() {
     visionViewState =
-      VisionViewState(detectionMode = detectionMode, scanningMode = scanningMode)
+      VisionViewState(detectionMode = detectionMode, scanningMode = scanningMode, isFlashTurnedOn = flash)
     setVisionViewState()
   }
 
@@ -259,20 +260,18 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
         1,
       "startRunning" to
         2,
-      "toggleTorch" to
-        3,
       "setZoomTo" to
-        4,
+        3,
       "setHeight" to
-        5,
+        4,
       "setMetaData" to
-        6,
+        5,
       "setRecipient" to
-        7,
+        6,
       "setSender" to
-        8,
+        7,
       "configureOnDeviceModel" to
-        9,
+        8,
     )
   }
 
@@ -300,36 +299,31 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
       }
 
       3 -> {
-        toggleTorch(args?.getBoolean(0))
-        return
-      }
-
-      4 -> {
         setZoomTo(args?.getDouble(0)?.toFloat())
         return
       }
 
-      5 -> {
+      4 -> {
         setHeight(args?.getInt(0))
         return
       }
 
-      6 -> {
+      5 -> {
         setMetaData(args?.getString(0))
         return
       }
 
-      7 -> {
+      6 -> {
         setRecipient(args?.getString(0))
         return
       }
 
-      8 -> {
+      7 -> {
         setSender(args?.getString(0))
         return
       }
 
-      9 -> {
+      8 -> {
         configureOnDeviceModel(args?.getMap(0).toString())
         return
       }
@@ -368,10 +362,10 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
 
   }
 
-  private fun toggleTorch(boolean: Boolean?) {
-    Log.d(TAG, "enableTorch: ")
-    visionViewState = visionViewState?.copy(isFlashTurnedOn = boolean!!)
-    setVisionViewState()
+  @ReactProp(name = "flash")
+  fun flash(view: View, flash: Boolean = false) {
+    Log.d(TAG, "flash: ")
+    this.flash = flash
   }
 
   private fun setZoomTo(zoom: Float? = 1f) {
@@ -617,7 +611,7 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
     } else {
       throwable?.message ?: "Unknown error occurred"
     }
-    if (message=="No text detected") visionCameraView?.rescan()
+    if (message == "No text detected") visionCameraView?.rescan()
     val event = Arguments.createMap().apply {
       putString("message", message)
     }

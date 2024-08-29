@@ -23,7 +23,6 @@ function DownloadingProgressView({ visible, progress }: any) {
                 alignSelf: 'center',
                 justifyContent: 'center',
                 top: '40%',
-                // top: '50%',
               }}
             >
               {Math.floor(progress * 100)}%

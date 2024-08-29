@@ -231,7 +231,13 @@ extension RNCodeScannerView {
             onImageCaptured!(["image": "\(savedImageURL!)"])
         }
         
-        VisionAPIManager.shared.callScanAPIWith(image, andBarcodes: barcodes, andApiKey: !VSDKConstants.apiKey.isEmpty ? VSDKConstants.apiKey : nil, andToken: token ?? "", andLocationId: locationId ?? "", andOptions: options ?? [:], andMetaData: metaData ?? [:], andRecipient: recipient ?? [:], andSender: sender ?? [:]
+     
+        var tokenValue: String? = nil
+        if let token = token, !token.isEmpty {
+            tokenValue = token
+        }
+        
+        VisionAPIManager.shared.callScanAPIWith(image, andBarcodes: barcodes, andApiKey: !VSDKConstants.apiKey.isEmpty ? VSDKConstants.apiKey : nil, andToken: tokenValue, andLocationId: locationId ?? "", andOptions: options ?? [:], andMetaData: metaData ?? [:], andRecipient: recipient ?? [:], andSender: sender ?? [:]
         ) {
             
             [weak self] data, error in
@@ -389,6 +395,10 @@ extension RNCodeScannerView {
         self.showScanFrame = showScanFrame
         let focusSetting = VisionSDK.CodeScannerView.FocusSettings(focusImage: nil, focusImageRect: .zero, shouldDisplayFocusImage: self.showScanFrame, shouldScanInFocusImageRect: self.captureWithScanFrame, showDocumentBoundries: true, documentBoundryBorderColor: .orange, documentBoundryFillColor: UIColor.orange.withAlphaComponent(0.3), focusImageTintColor: .white, focusImageHighlightedColor: .white)
         codeScannerView!.focusSettings = focusSetting
+    }
+    
+    @objc func setFlash(_ flash: Bool) {
+        setTorchActive(isOn: flash)
     }
     
     @objc func setCaptureWithScanFrame(_ captureWithScanFrame: Bool) {
