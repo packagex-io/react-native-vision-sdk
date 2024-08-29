@@ -18,9 +18,20 @@ Some key features of the VisionSDK Integration include:
 
 ## Installation
 
-yarn add react-native-vision-sdk;
-// OR
+To install the `react-native-vision-sdk` package, you can use either `npm` or `yarn`:
+
+### Using Npm
+```sh
 npm install --save react-native-vision-sdk
+```
+
+### Using Yarn
+
+```sh
+yarn add react-native-vision-sdk
+```
+
+
 
 ### Manual installation
 
