@@ -397,6 +397,10 @@ extension RNCodeScannerView {
         codeScannerView!.focusSettings = focusSetting
     }
     
+    @objc func setFlash(_ flash: Bool) {
+        setTorchActive(isOn: flash)
+    }
+    
     @objc func setCaptureWithScanFrame(_ captureWithScanFrame: Bool) {
         self.captureWithScanFrame = captureWithScanFrame
         let focusSetting = VisionSDK.CodeScannerView.FocusSettings(focusImage: nil, focusImageRect: .zero, shouldDisplayFocusImage: self.showScanFrame, shouldScanInFocusImageRect: self.captureWithScanFrame, showDocumentBoundries: true, documentBoundryBorderColor: .orange, documentBoundryFillColor: UIColor.orange.withAlphaComponent(0.3), focusImageTintColor: .white, focusImageHighlightedColor: .white)

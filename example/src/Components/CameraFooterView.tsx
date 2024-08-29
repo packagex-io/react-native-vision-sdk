@@ -26,20 +26,12 @@ function CameraFooterView({
   return (
     <View style={styles.mainContainer}>
       <View style={[styles.sideContainer, styles.rotatedIcon]}>
-        <TouchableOpacity
-          onPress={() => setShowOcrTypes(true)}
-          style={styles.switchIconContainer}
-        >
-          {/* <Octicons name="arrow-switch" size={30} color="white" /> */}
-          <Text style={{ color: 'white' }}>
-            {isOnDeviceOCR ? 'On-Device' : 'Cloud'}
-          </Text>
-        </TouchableOpacity>
         {mode === 'ocr' && (
           <TouchableOpacity
             onPress={() => setShowOcrTypes(true)}
             style={styles.switchIconContainer}
           >
+            {/* <Octicons name="arrow-switch" size={30} color="white" /> */}
             <Text style={{ color: 'white' }}>
               {isOnDeviceOCR ? 'On-Device' : 'Cloud'}
             </Text>

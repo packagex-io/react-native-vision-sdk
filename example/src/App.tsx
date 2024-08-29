@@ -82,8 +82,8 @@ export default function App() {
     }
     visionSdk?.current?.cameraCaptureHandler();
   };
-  const toggleTorch = (val: boolean) => {
-    visionSdk?.current?.onPressToggleTorchHandler(val);
+  const toggleFlash = (val: boolean) => {
+    setFlash(val);
   };
   function isMultipleOfTen(number: any) {
     return number % 1 === 0;
@@ -93,6 +93,13 @@ export default function App() {
       onPressOnDeviceOcr();
     }
   }, [isOnDeviceOCR]);
+
+  useEffect(() => {
+    if (flash) {
+      toggleFlash(flash);
+    }
+  }, [flash]);
+
   const onPressOnDeviceOcr = (type = 'shipping_label', size = 'large') => {
     visionSdk?.current?.stopRunningHandler();
     setLoading(true);
@@ -110,9 +117,9 @@ export default function App() {
         showDocumentBoundaries={true}
         captureWithScanFrame={true}
         captureMode={captureMode}
-        mode="ocr"
+        mode={mode}
         environment="sandbox"
-        apiKey="key_25b25115f9gJMn8ChDqw4RrE7n6rYw06v9tD4moEUDpE9C6eKP3rIsXU1rFwWZufmYNLudaFQPMuf3ym"
+        apiKey="key_141b2eda27Z0Cm2y0h0P6waB3Z6pjPgrmGAHNSU62rZelUthBEOOdsVTqZQCRVgPLqI5yMPqpw2ZBy2z"
         flash={flash}
         onDetected={(e: any) => {
           setDetectedData(Platform.OS === 'android' ? e : e.nativeEvent);
@@ -164,7 +171,6 @@ export default function App() {
         setResult={setResult}
       />
       <LoaderView visible={loading} />
-      <CameraHeaderView detectedData={detectedData} toggleTorch={toggleTorch} />
       <CameraHeaderView
         detectedData={detectedData}
         toggleFlash={toggleFlash}
@@ -185,6 +191,7 @@ export default function App() {
         onPressOnDeviceOcr={onPressOnDeviceOcr}
         setModelSize={setModelSize}
         modelSize={modelSize}
+        mode={mode}
       />
     </View>
   );

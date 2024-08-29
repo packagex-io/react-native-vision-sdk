@@ -1,5 +1,11 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, Platform, TouchableOpacity } from 'react-native';
+import {
+  View,
+  StyleSheet,
+  Platform,
+  TouchableOpacity,
+  Text,
+} from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -61,7 +67,7 @@ function CameraHeaderView({ detectedData, toggleFlash, mode, setMode }: any) {
         <TouchableOpacity
           onPress={() => {
             setIsFlashOn(!isFlashOn);
-            toggleTorch(!isFlashOn);
+            toggleFlash(!isFlashOn);
           }}
           style={styles.rightIconContainer}
         >
@@ -88,7 +94,7 @@ const styles = StyleSheet.create({
     width: '100%',
     top: Platform.OS === 'android' ? 10 : 45,
     zIndex: 1,
-    paddingHorizontal: 5,
+    paddingHorizontal: 10,
     flexDirection: 'row',
     justifyContent: 'space-between',
   },

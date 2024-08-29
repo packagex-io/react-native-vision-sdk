@@ -22,6 +22,7 @@ type VisionSdkProps = {
   locationId?: String;
   options?: any;
   environment?: String;
+  flash?: boolean;
   captureMode?: String;
   delayTime: number;
   showDocumentBoundaries?: boolean;
