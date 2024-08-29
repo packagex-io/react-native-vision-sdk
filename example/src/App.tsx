@@ -49,6 +49,7 @@ export default function App() {
         return true;
       } else {
         console.log('Camera Permission Error');
+
         Alert.alert(
           'Camera Permission Error',
           'App needs camera permission to take pictures. Please go to app setting and enable camera permission.'
@@ -67,7 +68,9 @@ export default function App() {
     });
 
   React.useEffect(() => {
-    handleCameraPress();
+    if (Platform.OS === 'android') {
+      handleCameraPress();
+    }
   }, []);
 
   React.useEffect(() => {
