@@ -19,6 +19,7 @@ function CameraFooterView({
   onPressOnDeviceOcr,
   setModelSize,
   modelSize,
+  mode,
 }: any) {
   const [showOcrTypes, setShowOcrTypes] = useState<boolean>(false);
   const [showOcrSize, setShowOcrSize] = useState<boolean>(false);
@@ -34,6 +35,16 @@ function CameraFooterView({
             {isOnDeviceOCR ? 'On-Device' : 'Cloud'}
           </Text>
         </TouchableOpacity>
+        {mode === 'ocr' && (
+          <TouchableOpacity
+            onPress={() => setShowOcrTypes(true)}
+            style={styles.switchIconContainer}
+          >
+            <Text style={{ color: 'white' }}>
+              {isOnDeviceOCR ? 'On-Device' : 'Cloud'}
+            </Text>
+          </TouchableOpacity>
+        )}
       </View>
       <View style={styles.centerContainer}>
         <CaptureModesView
@@ -52,7 +63,6 @@ function CameraFooterView({
             onPress={() => setShowOcrSize(true)}
             style={styles.sizeIconContainer}
           >
-            {/* <MaterialCommunityIcons name="resize" size={30} color="white" /> */}
             <Text style={{ color: 'white' }}>
               {modelSize === 'large' ? 'Large' : 'Micro'}
             </Text>
@@ -91,7 +101,6 @@ const styles = StyleSheet.create({
   },
   rotatedIcon: {
     flexDirection: 'row',
-    // transform: [{ rotate: '90deg' }],
   },
   mainContainer: {
     backgroundColor:
