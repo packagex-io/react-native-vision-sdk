@@ -2,8 +2,12 @@ package com.visionsdk
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.Color
+import android.graphics.RectF
 import android.util.Log
 import android.view.View
+import androidx.annotation.ColorInt
+import androidx.annotation.DrawableRes
 import androidx.annotation.Nullable
 import androidx.core.net.toUri
 import androidx.lifecycle.LifecycleOwner
@@ -21,14 +25,14 @@ import com.facebook.react.uimanager.annotations.ReactProp
 import io.packagex.visionsdk.ApiManager
 import io.packagex.visionsdk.Authentication
 import io.packagex.visionsdk.Environment
+import io.packagex.visionsdk.R
 import io.packagex.visionsdk.VisionSDK
 import io.packagex.visionsdk.config.FocusSettings
 import io.packagex.visionsdk.config.ObjectDetectionConfiguration
 import io.packagex.visionsdk.core.DetectionMode
 import io.packagex.visionsdk.core.ScanningMode
 import io.packagex.visionsdk.core.VisionViewState
-import io.packagex.visionsdk.exceptions.APIErrorResponse
-import io.packagex.visionsdk.exceptions.ScannerException
+import io.packagex.visionsdk.exceptions.VisionSDKException
 import io.packagex.visionsdk.interfaces.CameraLifecycleCallback
 import io.packagex.visionsdk.interfaces.OCRResult
 import io.packagex.visionsdk.interfaces.ScannerCallback
@@ -37,6 +41,7 @@ import io.packagex.visionsdk.ocr.ml.core.ModelSize
 import io.packagex.visionsdk.ocr.ml.core.OnDeviceOCRManager
 import io.packagex.visionsdk.ocr.ml.core.PlatformType
 import io.packagex.visionsdk.ui.views.VisionCameraView
+import kotlinx.coroutines.CancellationException
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
@@ -57,19 +62,42 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
   private var environment: Environment = Environment.PRODUCTION
   private var visionCameraView: VisionCameraView? = null
   private var visionViewState: VisionViewState? = null
-  private var focusSettings: FocusSettings? = null
+
   private var detectionMode: DetectionMode = DetectionMode.Barcode
   private var scanningMode: ScanningMode = ScanningMode.Manual
-  private var shouldDisplayFocusImage: Boolean = true
   private var flash: Boolean = false
-  private var shouldScanInFocusImageRect: Boolean = true
-  private var showDocumentBoundaries: Boolean = false
   private var lifecycleOwner: LifecycleOwner? = null
   private var shouldStartScanning = true
   private var authentication: Authentication? = null
+
+  //on device OCR
   private var onDeviceOCRManager: OnDeviceOCRManager? = null
   private var modelSize: ModelSize = ModelSize.Large
   private var modelType: ModelClass = ModelClass.ShippingLabel
+
+  //focus default settings
+  private var focusSettings: FocusSettings? = null
+  @DrawableRes
+  private val focusImage: Int = R.drawable.default_focus_frame
+  private val focusImageRect: RectF = RectF(0.0F, 0.0F, 0.0F, 0.0F)
+  private var shouldDisplayFocusImage: Boolean = false
+  private var shouldScanInFocusImageRect: Boolean = true
+  @ColorInt
+  private val focusImageTintColor: Int = Color.WHITE
+  @ColorInt
+  private val focusImageHighlightedColor: Int = Color.WHITE
+  private val showCodeBoundariesInMultipleScan: Boolean = true
+  private val validCodeBoundaryBorderColor: Int = Color.GREEN
+  private val validCodeBoundaryBorderWidth: Int = 1
+  private val validCodeBoundaryFillColor: Int = Color.argb(76, 0, 255, 0) // Green color with 30% alpha value
+  private val invalidCodeBoundaryBorderColor: Int = Color.RED
+  private val invalidCodeBoundaryBorderWidth: Int = 1
+  private val invalidCodeBoundaryFillColor: Int = Color.argb(76, 255, 0, 0) // Red color with 30% alpha value
+  private var showDocumentBoundaries: Boolean = true
+  @ColorInt
+  private val documentBoundaryBorderColor: Int = Color.YELLOW
+  @ColorInt
+  private val documentBoundaryFillColor: Int = Color.argb(76, 255, 255, 0)
 
 
   companion object {
@@ -87,7 +115,7 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
 //        isDocumentIndicationOn = false,
       )
     )
-    visionCameraView?.shouldAutoSaveCapturedImage(true)
+    visionCameraView?.shouldAutoSaveCapturedImage(save = true)
     visionCameraView?.setCameraLifecycleCallback(this)
     visionCameraView?.setScannerCallback(this)
 //    visionCameraView?.layoutParams = ViewGroup.LayoutParams(100,100)
@@ -132,7 +160,11 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
 
   private fun configureViewState() {
     visionViewState =
-      VisionViewState(detectionMode = detectionMode, scanningMode = scanningMode, isFlashTurnedOn = flash)
+      VisionViewState(
+        detectionMode = detectionMode,
+        scanningMode = scanningMode,
+        isFlashTurnedOn = flash
+      )
     setVisionViewState()
   }
 
@@ -187,7 +219,7 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
   }
 
 
-  override fun onFailure(exception: ScannerException) {
+  override fun onFailure(exception: VisionSDKException) {
 //    exception.printStackTrace()
 //    Log.d(TAG, "onFailure: " + exception.message)
     onOCRResponseFailed(exception)
@@ -202,8 +234,6 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
     appContext
       .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
       .emit("onImageCaptured", event)
-
-    visionCameraView?.rescan()
 
     if (visionViewState?.detectionMode == DetectionMode.OCR) {
       initializeSdk()
@@ -231,21 +261,22 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
 
   private fun performLocalOCR(bitmap: Bitmap, list: List<String>) {
 
-    if (onDeviceOCRManager?.isModelAlreadyDownloaded()?.not() == true) {
-      onOCRResponseFailed(Exception("Please download the required files before proceeding with on-device AI capabilities."))
-      return
-    }
-
     lifecycleOwner?.lifecycle?.coroutineScope?.launchOnIO {
       try {
         val result = onDeviceOCRManager?.getPredictions(bitmap, list)
         withContextMain {
           onOCRResponse(result)
         }
-      } catch (e: Exception) {
+      } catch (e: VisionSDKException) {
         e.printStackTrace()
         withContextMain {
           onOCRResponseFailed(e)
+        }
+      } catch (e: Exception) {
+        e.printStackTrace()
+        if (e is CancellationException) throw e
+        withContextMain {
+          onOCRResponseFailed(VisionSDKException.UnknownException(e))
         }
       }
     }
@@ -271,6 +302,8 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
       "setSender" to
         7,
       "configureOnDeviceModel" to
+        8,
+      "restartScanning" to
         8,
     )
   }
@@ -328,6 +361,11 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
         return
       }
 
+      9 -> {
+        restartScanning()
+        return
+      }
+
       else -> throw IllegalArgumentException(
         String.format(
           "Unsupported command %d received by %s.",
@@ -338,6 +376,7 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
     }
 
   }
+
 
   private fun captureImage() {
     Log.d(TAG, "captureImage: ")
@@ -427,8 +466,6 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
   private fun configureOnDeviceModel(onDeviceConfigs: String?) {
     Log.d(TAG, "configureOnDeviceModel: $onDeviceConfigs")
 
-    if (visionViewState?.detectionMode != DetectionMode.OCR) return
-
     if (JSONObject(onDeviceConfigs).has("size"))
       setModelSize(JSONObject(onDeviceConfigs).getString("size"))
     if (JSONObject(onDeviceConfigs).has("type"))
@@ -465,13 +502,24 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
           .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
           .emit("onModelDownloadProgress", event)
 
-      } catch (e: Exception) {
+      } catch (e: VisionSDKException) {
         e.printStackTrace()
         withContextMain {
           onOCRResponseFailed(e)
         }
+      } catch (e: Exception) {
+        e.printStackTrace()
+        if (e is CancellationException) throw e
+        withContextMain {
+          onOCRResponseFailed(VisionSDKException.UnknownException(e))
+        }
       }
     }
+  }
+
+  private fun restartScanning() {
+    Log.d(TAG, "restartScanning: ")
+    visionCameraView?.rescan()
   }
 
   @ReactProp(name = "apiKey")
@@ -605,20 +653,18 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
       .emit("onOCRScan", event)
   }
 
-  override fun onOCRResponseFailed(throwable: Throwable?) {
-    val message = if (throwable is APIErrorResponse) {
-      (throwable as APIErrorResponse).errorModel.message
-    } else {
-      throwable?.message ?: "Unknown error occurred"
-    }
-    if (message == "No text detected") visionCameraView?.rescan()
+  override fun onOCRResponseFailed(exception: VisionSDKException) {
+    exception.printStackTrace()
     val event = Arguments.createMap().apply {
-      putString("message", message)
+      putString("message", exception.errorMessage)
+      putInt("code", exception.errorCode)
+      putString("detailedMessage", exception.detailedMessage)
     }
+    Log.d(TAG, "${event}")
     appContext
       .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
       .emit("onError", event)
-    Log.d(TAG, "${message}")
+
   }
 }
 
