@@ -133,16 +133,17 @@ class VisionSdkViewManager: RCTViewManager {
                 component.restartScanning()
             }
         }
-    //
-    //    @objc func setModelSize(_ node: NSNumber, modelSize: NSString) {
-    //        DispatchQueue.main.async {
-    //            let component =
-    //            self.bridge.uiManager.view(
-    //                forReactTag: node
-    //            ) as! RNCodeScannerView
-    //            component.setModelSize(modelSize as NSString)
-    //        }
-    //    }
+    
+        @objc func setFocusSettings(_ node: NSNumber, focusSettings: NSString) {
+            DispatchQueue.main.async {
+                let component =
+                self.bridge.uiManager.view(
+                    forReactTag: node
+                ) as! RNCodeScannerView
+                
+                print("focusSettings --------------- >", focusSettings)
+            }
+        }
     
     
     override func view() -> UIView! {

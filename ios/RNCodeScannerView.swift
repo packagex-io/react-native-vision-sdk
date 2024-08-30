@@ -33,6 +33,7 @@ class RNCodeScannerView: UIView {
     var recipient: [String: Any]? // Dynamic Prop | Optional:
     var sender: [String: Any]? // Dynamic Prop | Optional:
     
+    var focusImageRect: CGRect = .zero
     var shouldDisplayFocusImage: Bool = true // Dynamic Prop | Optional:
     var shouldScanInFocusImageRect: Bool = true // Dynamic Prop | Optional:
     var scanMode: CodeScannerMode = .barCode // Dynamic Prop | Optional:
@@ -92,7 +93,7 @@ class RNCodeScannerView: UIView {
         
         let focusSettings = VisionSDK.CodeScannerView.FocusSettings()
         focusSettings.focusImage = nil
-        focusSettings.focusImageRect = .zero
+        focusSettings.focusImageRect = focusImageRect
         focusSettings.shouldDisplayFocusImage = self.shouldDisplayFocusImage
         focusSettings.shouldScanInFocusImageRect = self.shouldScanInFocusImageRect
         focusSettings.showDocumentBoundries = self.showDocumentBoundries
@@ -118,7 +119,7 @@ class RNCodeScannerView: UIView {
         
         codeScannerView!.configure(delegate: self, focusSettings: focusSettings, objectDetectionConfiguration: objectDetectionConfiguration, cameraSettings: cameraSettings, captureMode: captureMode, captureType: captureType, scanMode: self.scanMode)
         
-        codeScannerView!.startRunning()
+//        codeScannerView!.startRunning()
     }
     
     required init?(coder aDecoder: NSCoder) {
