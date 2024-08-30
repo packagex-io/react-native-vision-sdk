@@ -133,9 +133,6 @@ extension RNCodeScannerView: CodeScannerViewDelegate {
         if onError != nil {
             onError!(["data": error.localizedDescription, "code": error.code])
         }
-        
-        // client side will call this ..
-//        restartScanning(scannerView: scannerView)
     }
     
    
@@ -143,9 +140,6 @@ extension RNCodeScannerView: CodeScannerViewDelegate {
         if onBarcodeScan != nil {
             onBarcodeScan!(["code": code])
         }
-        
-        // client side will call this ..
-//        restartScanning(scannerView: scannerView)
     }
     
     func codeScannerViewDidDetect(_ text: Bool, barCode: Bool, qrCode: Bool, document: Bool) {
@@ -169,9 +163,6 @@ extension RNCodeScannerView: CodeScannerViewDelegate {
                 self.callOCRAPIWithImage(image, andBarcodes: barcodes, savedImageURL: savedImageURL)
             }
         }
-        
-        // client side will call this ..
-//        restartScanning(scannerView: scannerView)
     }
 }
 

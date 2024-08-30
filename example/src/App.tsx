@@ -80,9 +80,9 @@ export default function App() {
   }, [captureMode]);
 
   const onPressCapture = () => {
-    if (Platform.OS === 'android') {
+    // if (Platform.OS === 'android') {
       setLoading(true);
-    }
+    // }
     visionSdk?.current?.cameraCaptureHandler();
   };
   const toggleFlash = (val: boolean) => {
@@ -127,18 +127,18 @@ export default function App() {
         onDetected={(e: any) => {
           setDetectedData(Platform.OS === 'android' ? e : e.nativeEvent);
         }}
-        onBarcodeScan={(e: any) => console.log('BarCodeScanHandler', e)}
+        onBarcodeScan={(e: any) => {
+          console.log('BarCodeScanHandler', e)
+          setLoading(false);
+          visionSdk?.current?.restartScanningHandler();
+        }}
         onOCRScan={(e: any) => {
-          let scanRes = Platform.OS === 'ios' ? e.nativeEvent : e;
+          let scanRes = Platform.OS === 'ios' ? e.nativeEvent.data.data : e;
           if (Platform.OS === 'android') {
             const parsedOuterJson = JSON.parse(scanRes.data);
             scanRes = parsedOuterJson.data;
           }
-          setResult(
-            Platform.OS === 'android'
-              ? scanRes
-                : scanRes.data.data
-          );
+          setResult(scanRes);
           setLoading(false);
           Vibration.vibrate(100);
           // setTimeout(() => {
