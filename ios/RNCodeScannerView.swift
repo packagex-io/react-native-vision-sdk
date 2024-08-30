@@ -25,17 +25,18 @@ class RNCodeScannerView: UIView {
     //MARK: - Props Received from React-Native
     var token: String?  // Dynamic Prop | Optional:
     var delayTime: Double? // Dynamic Prop | Optional:
+    var height: Double? // Dynamic Prop | Optional:
+    
     var locationId: String? // Dynamic Prop | Optional:
     var options: [String: Any]? // Dynamic Prop | Optional:
     var metaData: [String: Any]? // Dynamic Prop | Optional:
-    var height: Double? // Dynamic Prop | Optional:
     var recipient: [String: Any]? // Dynamic Prop | Optional:
     var sender: [String: Any]? // Dynamic Prop | Optional:
-    var showScanFrame: Bool = true // Dynamic Prop | Optional:
-    var captureWithScanFrame:Bool = true // Dynamic Prop | Optional:
-    var codeScannerMode: CodeScannerMode = .barCode // Dynamic Prop | Optional:
+    
+    var shouldDisplayFocusImage: Bool = true // Dynamic Prop | Optional:
+    var shouldScanInFocusImageRect: Bool = true // Dynamic Prop | Optional:
+    var scanMode: CodeScannerMode = .barCode // Dynamic Prop | Optional:
     var captureMode: CaptureMode = .manual // Dynamic Prop | Optional:
-    var currentMode: String = "barcode" // Dynamic Prop | Optional:
     
     var captureType: CaptureType = .single // Static Prop | Optional:
     var showDocumentBoundries: Bool = true // Static Prop | Optional:
@@ -56,9 +57,22 @@ class RNCodeScannerView: UIView {
     var onDeviceModelSize: VSDKModelSize = VSDKModelSize.large // Dynamic Prop | Optional:
     
     
+    private var previousSize: CGSize = .zero
+    
     override func layoutSubviews() {
         // If user initially set isOnDeviceOCR = true then configureOnDeviceModel method will be called from here
         configureOnDeviceModel()
+        
+//        super.layoutSubviews()
+//        
+//        // View's size changed
+//        let newSize = bounds.size
+//        
+//        if previousSize != newSize {
+//            previousSize = newSize
+////            print("View size changed to \(newSize)")
+//            codeScannerView?.frame = self.bounds
+//        }
     }
     
     //MARK: - Initializer
@@ -68,16 +82,7 @@ class RNCodeScannerView: UIView {
         codeScannerView?.stopRunning()
         codeScannerView = CodeScannerView(frame: CGRect(x: 0, y: 0, width: UIScreen.main.bounds.width, height: UIScreen.main.bounds.height))
                 
-        self.backgroundColor = UIColor.black
-//        codeScannerView!.startRunning()
         self.addSubview(codeScannerView!)
-        
-        
-//        let focusSettings = VisionSDK.CodeScannerView.FocusSettings(focusImage: nil, focusImageRect: .zero, shouldDisplayFocusImage: self.showScanFrame, shouldScanInFocusImageRect: self.captureWithScanFrame, showDocumentBoundries: showDocumentBoundries, documentBoundryBorderColor: documentBoundryBorderColor, documentBoundryFillColor: documentBoundryFillColor.withAlphaComponent(0.4), focusImageTintColor: focusImageTintColor, focusImageHighlightedColor: focusImageHighlightedColor)
-        
-//        let objectDetectionConfiguration = VisionSDK.CodeScannerView.ObjectDetectionConfiguration(isTextIndicationOn: isTextIndicationOn, isBarCodeOrQRCodeIndicationOn: isBarCodeOrQRCodeIndicationOn, isDocumentIndicationOn: isDocumentIndicationOn, codeDetectionConfidence: codeDetectionConfidence, documentDetectionConfidence: documentDetectionConfidence)
-                
-//        let cameraSettings = VisionSDK.CodeScannerView.CameraSettings(sessionPreset: sessionPreset, nthFrameToProcess: nthFrameToProcess, shouldAutoSaveCapturedImage: shouldAutoSaveCapturedImage)
         
         var sessionPreset: AVCaptureSession.Preset = .high
         if UIDevice.current.userInterfaceIdiom == .pad {
@@ -88,8 +93,8 @@ class RNCodeScannerView: UIView {
         let focusSettings = VisionSDK.CodeScannerView.FocusSettings()
         focusSettings.focusImage = nil
         focusSettings.focusImageRect = .zero
-        focusSettings.shouldDisplayFocusImage = self.showScanFrame
-        focusSettings.shouldScanInFocusImageRect = self.captureWithScanFrame
+        focusSettings.shouldDisplayFocusImage = self.shouldDisplayFocusImage
+        focusSettings.shouldScanInFocusImageRect = self.shouldScanInFocusImageRect
         focusSettings.showDocumentBoundries = self.showDocumentBoundries
         focusSettings.documentBoundryBorderColor = self.documentBoundryBorderColor
         focusSettings.documentBoundryFillColor = self.documentBoundryFillColor.withAlphaComponent(0.4)
@@ -111,7 +116,7 @@ class RNCodeScannerView: UIView {
         cameraSettings.shouldAutoSaveCapturedImage = self.shouldAutoSaveCapturedImage
         
         
-        codeScannerView!.configure(delegate: self, focusSettings: focusSettings, objectDetectionConfiguration: objectDetectionConfiguration, cameraSettings: cameraSettings, captureMode: captureMode, captureType: captureType, scanMode: self.codeScannerMode)
+        codeScannerView!.configure(delegate: self, focusSettings: focusSettings, objectDetectionConfiguration: objectDetectionConfiguration, cameraSettings: cameraSettings, captureMode: captureMode, captureType: captureType, scanMode: self.scanMode)
         
         codeScannerView!.startRunning()
     }
@@ -124,28 +129,23 @@ class RNCodeScannerView: UIView {
 // MARK: - VisionSDK CodeScannerViewDelegate functions
 //MARK: -
 extension RNCodeScannerView: CodeScannerViewDelegate {
+    func codeScannerView(_ scannerView: VisionSDK.CodeScannerView, didFailure error: NSError) {
+        if onError != nil {
+            onError!(["data": error.localizedDescription, "code": error.code])
+        }
+        
+        // client side will call this ..
+//        restartScanning(scannerView: scannerView)
+    }
+    
    
     func codeScannerView(_ scannerView: VisionSDK.CodeScannerView, didSuccess code: [String]) {
         if onBarcodeScan != nil {
             onBarcodeScan!(["code": code])
-            if currentMode == "barcodeSingleCapture" {
-                
-            }
-            else {
-                DispatchQueue.main.asyncAfter(deadline: .now() + ((delayTime ?? 100)/1000)) {
-                    scannerView.rescan()
-                }
-            }
         }
-    }
-    
-    func codeScannerView(
-        _ scannerView: VisionSDK.CodeScannerView, didFailure error: VisionSDK.CodeScannerError
-    ) {
-        if onError != nil {
-            onError!(["data": error.rawValue])
-        } else {
-        }
+        
+        // client side will call this ..
+//        restartScanning(scannerView: scannerView)
     }
     
     func codeScannerViewDidDetect(_ text: Bool, barCode: Bool, qrCode: Bool, document: Bool) {
@@ -158,26 +158,20 @@ extension RNCodeScannerView: CodeScannerViewDelegate {
     func codeScannerView(_ scannerView: CodeScannerView, didCaptureOCRImage image: UIImage, withCroppedImge croppedImage: UIImage?, withbarCodes barcodes: [String], savedImageURL: URL?) {
         
         if ((codeScannerView?.scanMode == .photo) ) {
-//           self.callForImageCaptured(image:image)
-            if savedImageURL == nil {
-                onImageCaptured!(["image": "Nil: URL not found"])
-            }
-            else {
-                onImageCaptured!(["image": "\(savedImageURL!)"])
-            }
+            handleCapturedImage(withImage: savedImageURL)
         }
         else {
             if let _ = isOnDeviceOCR, isOnDeviceOCR == true {
                 self.callOCROnDeviceAPI(image.ciImage!, withbarCodes: barcodes)
             }
             else {
+                handleCapturedImage(withImage: savedImageURL)
                 self.callOCRAPIWithImage(image, andBarcodes: barcodes, savedImageURL: savedImageURL)
             }
         }
         
-        DispatchQueue.main.async {
-            scannerView.rescan()
-        }
+        // client side will call this ..
+//        restartScanning(scannerView: scannerView)
     }
 }
 
@@ -185,68 +179,34 @@ extension RNCodeScannerView: CodeScannerViewDelegate {
 //MARK: -
 extension RNCodeScannerView {
     
-    /// This method initialises and setup On-Device OCR model to detect labels, can be called from client side, will download and prepare model only if codeScannerMode == ocr
+    /// This method initialises and setup On-Device OCR model to detect labels, can be called from client side, will download and prepare model only if scanMode == ocr
     func configureOnDeviceModel() {
-        if (isOnDeviceOCR ?? false) && self.codeScannerMode == .ocr {
-//            if self.codeScannerMode == .ocr { // as we will download on-device model only when mode == ocr
-                setupDownloadOnDeviceOCR { }
-//            }
-        }
-        else {
-            debugPrint("Something went wrong! -------- >")
+        if (isOnDeviceOCR ?? false) && self.scanMode == .ocr { // as we will download on-device model only when scanMode == ocr
+            setupDownloadOnDeviceOCR { }
         }
     }
     
     /// This Method downloads and prepare offline / On Device OCR for use in the App.
     /// - Parameter completion: completionHandler
     func setupDownloadOnDeviceOCR(completion: @escaping () -> Void) {
-        
-        
-        
         var tokenValue: String? = nil
         if let token = token, !token.isEmpty {
             tokenValue = token
         }
         
-//        VisionAPIManager.shared.callScanAPIWith(image, andBarcodes: barcodes, andApiKey: !VSDKConstants.apiKey.isEmpty ? VSDKConstants.apiKey : nil, andToken: tokenValue, andLocationId: locationId ?? "", andOptions: options ?? [:], andMetaData: metaData ?? [:], andRecipient: recipient ?? [:], andSender: sender ?? [:]
-//        ) {
+        OnDeviceOCRManager.shared.prepareOfflineOCR(withApiKey: !VSDKConstants.apiKey.isEmpty ? VSDKConstants.apiKey : nil, andToken: tokenValue, forModelClass: onDeviceModelType, withModelSize: onDeviceModelSize) { currentProgress, totalSize in
+            debugPrint(((currentProgress / totalSize) * 100))
+            self.onModelDownloadProgress!(["progress": ((currentProgress / totalSize)), "downloadStatus": false]) // rename this downloadStatus to onSuccessfull completion
+        } withCompletion: { error in
             
-            
-        
-//        if !VSDKConstants.apiKey.isEmpty {
-            OnDeviceOCRManager.shared.prepareOfflineOCR(withApiKey: !VSDKConstants.apiKey.isEmpty ? VSDKConstants.apiKey : nil, andToken: tokenValue, forModelClass: onDeviceModelType, withModelSize: onDeviceModelSize) { currentProgress, totalSize in
-                debugPrint(((currentProgress / totalSize) * 100))
-                self.onModelDownloadProgress!(["progress": ((currentProgress / totalSize)), "downloadStatus": false])
-            } withCompletion: { error in
-                
-                if error == nil {
-                    self.onModelDownloadProgress!(["progress": (1), "downloadStatus": true])
-                    completion()
-                }
-                else {
-                    self.callForOCRWithImageFailedWithMessage(message: error?.localizedDescription ?? "We got On-Device OCR error!")
-                }
+            if error == nil {
+                self.onModelDownloadProgress!(["progress": (1), "downloadStatus": true])
+                completion()
             }
-//        }
-//        
-//        else if let tkn = self.token, !tkn.isEmpty {
-//            OnDeviceOCRManager.shared.prepareOfflineOCR(andToken: tkn, forModelClass: onDeviceModelType, withModelSize: onDeviceModelSize) { currentProgress, totalSize in
-//                debugPrint(((currentProgress / totalSize) * 100))
-//                self.onModelDownloadProgress!(["progress": ((currentProgress / totalSize)), "downloadStatus": false])
-//            } withCompletion: { error in
-//                
-//                if error == nil {
-//                    self.onModelDownloadProgress!(["progress": (1), "downloadStatus": true])
-//                    completion()
-//                }
-//                else {
-//                    self.callForOCRWithImageFailedWithMessage(message: error?.localizedDescription ?? "We got On-Device OCR error!")
-//                }
-//            }
-//        }
-//        else {
-//            debugPrint("Empty Token")
-//        }
+            else {
+                self.callForOCRWithImageFailedWithMessage(message: error?.localizedDescription ?? "We got On-Device OCR error!")
+            }
+        }
     }
     
     /// This method pass ciImage of label to downloaded on-device OCR model that extracts informations from label and returns the response
@@ -295,14 +255,6 @@ extension RNCodeScannerView {
     ///   - barcodes: Detected barcodes from VisionSDK to pass into API
     ///   - savedImageURL: Captured Image URL that Vision SDK returns to instantly view as thumbnail
     private func callOCRAPIWithImage(_ image: UIImage, andBarcodes barcodes: [String], savedImageURL: URL?) {
-        
-        if savedImageURL == nil {
-            onImageCaptured!(["image": "Nil: URL not found"])
-        }
-        else {
-            onImageCaptured!(["image": "\(savedImageURL!)"])
-        }
-        
      
         var tokenValue: String? = nil
         if let token = token, !token.isEmpty {
@@ -314,9 +266,9 @@ extension RNCodeScannerView {
             
             [weak self] data, error in
             
-            if let data = data {
-                let json = String(data: data, encoding: String.Encoding.utf8)
-            }
+//            if let data = data {
+//                let json = String(data: data, encoding: String.Encoding.utf8)
+//            }
             
             guard let self = self else { return }
             
@@ -327,13 +279,6 @@ extension RNCodeScannerView {
                 }
                 return
             }
-            
-//            guard let response = response else {
-//                DispatchQueue.main.async {
-//                    self.callForOCRWithImageFailedWithMessage(message: "Response of request was found nil")
-//                }
-//                return
-//            }
             
             guard let data = data else {
                 DispatchQueue.main.async {
@@ -408,19 +353,6 @@ extension RNCodeScannerView {
 //MARK: - Props from JS to Swift functions
 //MARK: -
 extension RNCodeScannerView {
-    /// Handles the Device Torch to set it to On/Off
-    /// - Parameter setOn: setOn true means device torch is on and vice versa.
-    func setTorchActive(isOn: Bool) {
-        let videoDevice: AVCaptureDevice = CodeScannerView.videoDevice
-        
-        DispatchQueue.main.async {
-            if videoDevice.isTorchAvailable {
-                try? videoDevice.lockForConfiguration()
-                videoDevice.torchMode = isOn ? .on : .off
-                videoDevice.unlockForConfiguration()
-            }
-        }
-    }
     
     /// Handles the Zoom Level of the Camera Device
     /// - Parameter zoomLevel: zoomLevel can be any Integar Number
@@ -464,21 +396,24 @@ extension RNCodeScannerView {
     }
     
     @objc func setShowScanFrame(_ showScanFrame: Bool) {
-        self.showScanFrame = showScanFrame
+        self.shouldDisplayFocusImage = showScanFrame
         codeScannerView!.focusSettings.shouldDisplayFocusImage = showScanFrame
-//        let focusSetting = VisionSDK.CodeScannerView.FocusSettings(focusImage: nil, focusImageRect: .zero, shouldDisplayFocusImage: self.showScanFrame, shouldScanInFocusImageRect: self.captureWithScanFrame, showDocumentBoundries: true, documentBoundryBorderColor: .orange, documentBoundryFillColor: UIColor.orange.withAlphaComponent(0.3), focusImageTintColor: .white, focusImageHighlightedColor: .white)
-//        codeScannerView!.focusSettings = focusSetting
     }
     
     @objc func setFlash(_ flash: Bool) {
-        setTorchActive(isOn: flash)
+        let videoDevice: AVCaptureDevice = CodeScannerView.videoDevice
+        DispatchQueue.main.async {
+            if videoDevice.isTorchAvailable {
+                try? videoDevice.lockForConfiguration()
+                videoDevice.torchMode = flash ? .on : .off
+                videoDevice.unlockForConfiguration()
+            }
+        }
     }
     
     @objc func setCaptureWithScanFrame(_ captureWithScanFrame: Bool) {
-        self.captureWithScanFrame = captureWithScanFrame
+        self.shouldScanInFocusImageRect = captureWithScanFrame
         codeScannerView!.focusSettings.shouldScanInFocusImageRect = captureWithScanFrame
-//        let focusSetting = VisionSDK.CodeScannerView.FocusSettings(focusImage: nil, focusImageRect: .zero, shouldDisplayFocusImage: self.showScanFrame, shouldScanInFocusImageRect: self.captureWithScanFrame, showDocumentBoundries: true, documentBoundryBorderColor: .orange, documentBoundryFillColor: UIColor.orange.withAlphaComponent(0.3), focusImageTintColor: .white, focusImageHighlightedColor: .white)
-//        codeScannerView!.focusSettings = focusSetting
     }
     
     /// Sets the location Id for desired location to scan on specific location
@@ -500,23 +435,22 @@ extension RNCodeScannerView {
         
         if mode == "ocr" {
             codeScannerView!.setScanModeTo(.ocr)
-            codeScannerMode = .ocr
+            scanMode = .ocr
             codeScannerView!.objectDetectionConfiguration.isBarCodeOrQRCodeIndicationOn = true
         }
         else if mode == "barcode" || mode == "barcodeSingleCapture" {
-            currentMode = String(mode)
             codeScannerView!.setScanModeTo(.barCode)
-            codeScannerMode = .barCode
+            scanMode = .barCode
             codeScannerView!.objectDetectionConfiguration.isBarCodeOrQRCodeIndicationOn = true
         }
         else if mode == "photo" {
             codeScannerView!.setScanModeTo(.photo)
-            codeScannerMode = .photo
+            scanMode = .photo
             codeScannerView!.objectDetectionConfiguration.isBarCodeOrQRCodeIndicationOn = false
         }
         else {
             codeScannerView!.setScanModeTo(.qrCode)
-            codeScannerMode = .qrCode
+            scanMode = .qrCode
             codeScannerView!.objectDetectionConfiguration.isBarCodeOrQRCodeIndicationOn = true
         }
     }
@@ -688,24 +622,6 @@ extension RNCodeScannerView {
 //MARK: -
 extension RNCodeScannerView {
     
-    /// This function reconfigure the changes requested by ReInitializeSDK method, or if its called from Init() then first time properties are set.
-//    func ConfigureCodeScannerView() {
-//        let focusSettings = VisionSDK.CodeScannerView.FocusSettings(focusImage: nil, focusImageRect: .zero, shouldDisplayFocusImage: self.showScanFrame, shouldScanInFocusImageRect: self.captureWithScanFrame, showDocumentBoundries: true, documentBoundryBorderColor: .orange, documentBoundryFillColor: UIColor.orange.withAlphaComponent(0.3), focusImageTintColor: .white, focusImageHighlightedColor: .white)
-//        
-//        let objectDetectionConfiguration = VisionSDK.CodeScannerView.ObjectDetectionConfiguration(isTextIndicationOn: true, isBarCodeOrQRCodeIndicationOn: true, isDocumentIndicationOn: false, codeDetectionConfidence: 0.5, documentDetectionConfidence: 0.6)
-//        
-//        var sessionPreset: AVCaptureSession.Preset = .high
-//        
-//        if UIDevice.current.userInterfaceIdiom == .pad {
-//            sessionPreset = .hd1920x1080
-//        }
-//        
-//        let cameraSettings = VisionSDK.CodeScannerView.CameraSettings(sessionPreset: sessionPreset, nthFrameToProcess: 10, shouldAutoSaveCapturedImage: true)
-//        
-//        codeScannerView!.configure(delegate: self, focusSettings: focusSettings, objectDetectionConfiguration: objectDetectionConfiguration, cameraSettings: cameraSettings, captureMode: captureMode, captureType: .single, scanMode: self.codeScannerMode ?? .barCode)
-//        
-//    }
-    
     /// Converts the string input to swift supported dictionary
     /// - Parameter text: Inputs JSON formatted string
     /// - Returns: Returns Swift supported dictionary
@@ -718,6 +634,21 @@ extension RNCodeScannerView {
             }
         }
         return nil
+    }
+    
+    func restartScanning() {
+        DispatchQueue.main.async {
+            self.codeScannerView!.rescan()
+        }
+    }
+    
+    func handleCapturedImage(withImage savedImageURL: URL?) {
+        if savedImageURL == nil {
+            onImageCaptured!(["image": "Nil: URL not found"])
+        }
+        else {
+            onImageCaptured!(["image": savedImageURL!.path])
+        }
     }
 }
 

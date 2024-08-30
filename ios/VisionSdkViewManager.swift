@@ -124,15 +124,15 @@ class VisionSdkViewManager: RCTViewManager {
         }
     }
     
-    //    @objc func setModelType(_ node: NSNumber, modelType: NSString) {
-    //        DispatchQueue.main.async {
-    //            let component =
-    //            self.bridge.uiManager.view(
-    //                forReactTag: node
-    //            ) as! RNCodeScannerView
-    //            component.setModelType(modelType as NSString)
-    //        }
-    //    }
+        @objc func restartScanning(_ node: NSNumber) {
+            DispatchQueue.main.async {
+                let component =
+                self.bridge.uiManager.view(
+                    forReactTag: node
+                ) as! RNCodeScannerView
+                component.restartScanning()
+            }
+        }
     //
     //    @objc func setModelSize(_ node: NSNumber, modelSize: NSString) {
     //        DispatchQueue.main.async {

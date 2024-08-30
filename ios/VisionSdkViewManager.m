@@ -28,6 +28,7 @@ RCT_EXTERN_METHOD(setMetaData:(nonnull NSNumber *)node  metaData:(nonnull NSStri
 RCT_EXTERN_METHOD(setRecipient:(nonnull NSNumber *)node  recipient:(nonnull NSString *)recipient)
 RCT_EXTERN_METHOD(setSender:(nonnull NSNumber *)node  sender:(nonnull NSString *)sender)
 RCT_EXTERN_METHOD(configureOnDeviceModel:(nonnull NSNumber *)node onDeviceConfigs:(nonnull NSDictionary *)type)
+RCT_EXTERN_METHOD(restartScanning:(nonnull NSNumber *)node)
 //RCT_EXTERN_METHOD(setModelType:(nonnull NSNumber *)node  modelType:(nonnull NSString *)modelType)
 //RCT_EXTERN_METHOD(setModelSize:(nonnull NSNumber *)node  modelSize:(nonnull NSString *)modelSize)
 @end

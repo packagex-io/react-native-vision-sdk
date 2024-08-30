@@ -137,8 +137,6 @@ export default function App() {
           setResult(
             Platform.OS === 'android'
               ? scanRes
-              : isOnDeviceOCR
-                ? scanRes.data
                 : scanRes.data.data
           );
           setLoading(false);
