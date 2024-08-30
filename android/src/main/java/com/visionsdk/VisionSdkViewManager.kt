@@ -206,7 +206,6 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
 
   override fun onBarcodesDetected(barcodeList: List<String>) {
     Log.d(TAG, "onBarcodeDetected: ")
-    visionCameraView?.rescan()
     val event = Arguments.createMap().apply {
       putArray(
         "code",
