@@ -62,7 +62,6 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
   private var environment: Environment = Environment.PRODUCTION
   private var visionCameraView: VisionCameraView? = null
   private var visionViewState: VisionViewState? = null
-
   private var detectionMode: DetectionMode = DetectionMode.Barcode
   private var scanningMode: ScanningMode = ScanningMode.Manual
   private var flash: Boolean = false
@@ -78,26 +77,26 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
   //focus default settings
   private var focusSettings: FocusSettings? = null
   @DrawableRes
-  private val focusImage: Int = R.drawable.default_focus_frame
-  private val focusImageRect: RectF = RectF(0.0F, 0.0F, 0.0F, 0.0F)
+  private var focusImage: Int = R.drawable.default_focus_frame
+  private var focusImageRect: RectF = RectF(0.0F, 0.0F, 0.0F, 0.0F)
   private var shouldDisplayFocusImage: Boolean = false
   private var shouldScanInFocusImageRect: Boolean = true
   @ColorInt
-  private val focusImageTintColor: Int = Color.WHITE
+  private var focusImageTintColor: Int = Color.WHITE
   @ColorInt
-  private val focusImageHighlightedColor: Int = Color.WHITE
-  private val showCodeBoundariesInMultipleScan: Boolean = true
-  private val validCodeBoundaryBorderColor: Int = Color.GREEN
-  private val validCodeBoundaryBorderWidth: Int = 1
-  private val validCodeBoundaryFillColor: Int = Color.argb(76, 0, 255, 0) // Green color with 30% alpha value
-  private val invalidCodeBoundaryBorderColor: Int = Color.RED
-  private val invalidCodeBoundaryBorderWidth: Int = 1
-  private val invalidCodeBoundaryFillColor: Int = Color.argb(76, 255, 0, 0) // Red color with 30% alpha value
+  private var focusImageHighlightedColor: Int = Color.WHITE
+  private var showCodeBoundariesInMultipleScan: Boolean = true
+  private var validCodeBoundaryBorderColor: Int = Color.GREEN
+  private var validCodeBoundaryBorderWidth: Int = 1
+  private var validCodeBoundaryFillColor: Int = Color.argb(76, 0, 255, 0) // Green color with 30% alpha value
+  private var invalidCodeBoundaryBorderColor: Int = Color.RED
+  private var invalidCodeBoundaryBorderWidth: Int = 1
+  private var invalidCodeBoundaryFillColor: Int = Color.argb(76, 255, 0, 0) // Red color with 30% alpha value
   private var showDocumentBoundaries: Boolean = true
   @ColorInt
-  private val documentBoundaryBorderColor: Int = Color.YELLOW
+  private var documentBoundaryBorderColor: Int = Color.YELLOW
   @ColorInt
-  private val documentBoundaryFillColor: Int = Color.argb(76, 255, 255, 0)
+  private var documentBoundaryFillColor: Int = Color.argb(76, 255, 255, 0)
 
 
   companion object {
@@ -129,8 +128,8 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
     super.onAfterUpdateTransaction(view)
     visionCameraView = view
     Log.d(TAG, "onAfterUpdateTransaction: ")
-    configureViewState()
     configureFocusSettings()
+    configureViewState()
     initializeSdk()
   }
 
@@ -168,11 +167,51 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
     setVisionViewState()
   }
 
-  private fun configureFocusSettings() {
+  private fun configureFocusSettings(focus: String? = null) {
+    Log.d(TAG, "configureFocusSettings: " + focus)
+    val whiteColor =  intColorToHex(Color.WHITE)
+    val yellowColor =  intColorToHex(Color.WHITE)
+    val redColor =  intColorToHex(Color.WHITE)
+    val greenColor =  intColorToHex(Color.WHITE)
+
+    if (focus != null) {
+      JSONObject(focus).apply {
+        shouldDisplayFocusImage = optBoolean("shouldDisplayFocusImage",false)
+        shouldScanInFocusImageRect = optBoolean("shouldScanInFocusImageRect",true)
+        showDocumentBoundaries = optBoolean("showDocumentBoundaries",true)
+        documentBoundaryBorderColor = hexColorToInt(optString("documentBoundaryBorderColor",yellowColor))
+        documentBoundaryFillColor = hexColorToInt(optString("documentBoundaryFillColor",intColorToHex(Color.argb(76, 255, 255, 0))))
+        focusImage = optInt("focusImage",R.drawable.default_focus_frame)
+        focusImageRect = optJSONObject("focusImageRect").run { RectF(optDouble("x",0.0).toFloat(), optDouble("y",0.0).toFloat(), optDouble("width",0.0).toFloat(), optDouble("height",0.0).toFloat()) }
+        focusImageTintColor = hexColorToInt(optString("focusImageTintColor",))
+        focusImageHighlightedColor = hexColorToInt(optString("focusImageHighlightedColor",whiteColor))
+        showCodeBoundariesInMultipleScan = optBoolean("showCodeBoundariesInMultipleScan",true)
+        validCodeBoundaryBorderColor = hexColorToInt(optString("validCodeBoundaryBorderColor",greenColor))
+        validCodeBoundaryBorderWidth = optInt("validCodeBoundaryBorderWidth",1)
+        validCodeBoundaryFillColor = hexColorToInt(optString("validCodeBoundaryFillColor",intColorToHex(Color.argb(76, 0, 255, 0))))
+        invalidCodeBoundaryBorderColor = hexColorToInt(optString("invalidCodeBoundaryBorderColor",redColor))
+        invalidCodeBoundaryBorderWidth = optInt("invalidCodeBoundaryBorderWidth",1)
+        invalidCodeBoundaryFillColor = hexColorToInt(optString("invalidCodeBoundaryFillColor",intColorToHex(Color.argb(76, 255, 0, 0))))
+
+      }
+    }
     focusSettings = FocusSettings(
       shouldDisplayFocusImage = shouldDisplayFocusImage,
       shouldScanInFocusImageRect = shouldScanInFocusImageRect,
-      showDocumentBoundaries = showDocumentBoundaries
+      showDocumentBoundaries = showDocumentBoundaries,
+      documentBoundaryBorderColor = documentBoundaryBorderColor,
+      documentBoundaryFillColor = documentBoundaryFillColor,
+//      focusImage = focusImage,
+//      focusImageRect = focusImageRect,
+      focusImageTintColor = focusImageTintColor,
+      focusImageHighlightedColor = focusImageHighlightedColor,
+      showCodeBoundariesInMultipleScan = showCodeBoundariesInMultipleScan,
+      validCodeBoundaryBorderColor = validCodeBoundaryBorderColor,
+      validCodeBoundaryBorderWidth = validCodeBoundaryBorderWidth,
+      validCodeBoundaryFillColor = validCodeBoundaryFillColor,
+      invalidCodeBoundaryBorderColor = invalidCodeBoundaryBorderColor,
+      invalidCodeBoundaryBorderWidth = invalidCodeBoundaryBorderWidth,
+      invalidCodeBoundaryFillColor = invalidCodeBoundaryFillColor,
     )
     setFocusSettings()
   }
@@ -182,6 +221,7 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
   }
 
   private fun setFocusSettings() {
+    Log.d(TAG, "setFocusSettings: ")
     if (visionCameraView?.isCameraStarted()?.not() == true) return
     visionCameraView?.getFocusRegionManager()?.setFocusSettings(focusSettings)
   }
@@ -303,6 +343,8 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
       "configureOnDeviceModel" to
         8,
       "restartScanning" to
+        9,
+      "setFocusSettings" to
         8,
     )
   }
@@ -362,6 +404,11 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
 
       9 -> {
         restartScanning()
+        return
+      }
+
+      10 -> {
+        configureFocusSettings(args?.getMap(0).toString())
         return
       }
 
@@ -465,10 +512,8 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
   private fun configureOnDeviceModel(onDeviceConfigs: String?) {
     Log.d(TAG, "configureOnDeviceModel: $onDeviceConfigs")
 
-    if (JSONObject(onDeviceConfigs).has("size"))
-      setModelSize(JSONObject(onDeviceConfigs).getString("size"))
-    if (JSONObject(onDeviceConfigs).has("type"))
-      setModelType(JSONObject(onDeviceConfigs).getString("type"))
+      setModelSize(JSONObject(onDeviceConfigs).optString("size","large"))
+      setModelType(JSONObject(onDeviceConfigs).optString("type","shipping_label"))
 
     onDeviceOCRManager?.destroy()
     onDeviceOCRManager = OnDeviceOCRManager(
@@ -619,7 +664,6 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
 
   override fun onCameraStarted() {
     Log.d(TAG, "onCameraStarted: ")
-
     setFocusSettings()
   }
 
@@ -664,6 +708,14 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
       .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
       .emit("onError", event)
 
+  }
+
+  private fun hexColorToInt(color: String): Int {
+    return Color.parseColor(color)
+  }
+
+  private fun intColorToHex(color: Int): String {
+    return String.format("#%06X", 0xFFFFFF and color)
   }
 }
 
