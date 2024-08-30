@@ -64,6 +64,9 @@ const Camera: React.FC<Props> = ({
     stopRunningHandler: () => {
       onPressStopRunning();
     },
+    restartScanningHandler: () => {
+      onPressRestartScanning();
+    },
     startRunningHandler: () => {
       onPressStartRunning();
     },
@@ -174,6 +177,16 @@ const Camera: React.FC<Props> = ({
           .configureOnDeviceModel) ||
         8,
       [val]
+    );
+  };
+  const onPressRestartScanning = () => {
+    UIManager.dispatchViewManagerCommand(
+      findNodeHandle(VisionSDKViewRef.current),
+      (UIManager.hasViewManagerConfig('VisionSDKView') &&
+        UIManager.getViewManagerConfig('VisionSDKView').Commands
+          .restartScanning) ||
+        9,
+      []
     );
   };
 

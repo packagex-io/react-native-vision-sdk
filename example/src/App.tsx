@@ -141,6 +141,9 @@ export default function App() {
           );
           setLoading(false);
           Vibration.vibrate(100);
+          // setTimeout(() => {
+          visionSdk?.current?.restartScanningHandler();
+          // }, 200);
         }}
         onImageCaptured={(e: any) => {
           console.log('onImageCaptured==------>>', e);
