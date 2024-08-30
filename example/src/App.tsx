@@ -76,12 +76,13 @@ export default function App() {
   React.useEffect(() => {
     visionSdk?.current?.setHeight(1);
     visionSdk?.current?.startRunningHandler();
+    visionSdk?.current?.setFocusSettings({});
     setLoading(false);
   }, [captureMode]);
 
   const onPressCapture = () => {
     // if (Platform.OS === 'android') {
-      setLoading(true);
+    setLoading(true);
     // }
     visionSdk?.current?.cameraCaptureHandler();
   };
@@ -128,7 +129,7 @@ export default function App() {
           setDetectedData(Platform.OS === 'android' ? e : e.nativeEvent);
         }}
         onBarcodeScan={(e: any) => {
-          console.log('BarCodeScanHandler', e)
+          console.log('BarCodeScanHandler', e);
           setLoading(false);
           visionSdk?.current?.restartScanningHandler();
         }}

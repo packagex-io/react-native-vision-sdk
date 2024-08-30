@@ -88,6 +88,9 @@ const Camera: React.FC<Props> = ({
     configureOnDeviceModel: (val: any) => {
       configureOnDeviceModel(val);
     },
+    setFocusSettings: (val: any) => {
+      setFocusSettings(val);
+    },
   }));
 
   const onPressCaptures = () => {
@@ -187,6 +190,16 @@ const Camera: React.FC<Props> = ({
           .restartScanning) ||
         9,
       []
+    );
+  };
+  const setFocusSettings = (val: any) => {
+    UIManager.dispatchViewManagerCommand(
+      findNodeHandle(VisionSDKViewRef.current),
+      (UIManager.hasViewManagerConfig('VisionSDKView') &&
+        UIManager.getViewManagerConfig('VisionSDKView').Commands
+          .setFocusSettings) ||
+        10,
+      [val]
     );
   };
 
