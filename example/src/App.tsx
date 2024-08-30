@@ -76,7 +76,24 @@ export default function App() {
   React.useEffect(() => {
     visionSdk?.current?.setHeight(1);
     visionSdk?.current?.startRunningHandler();
-    visionSdk?.current?.setFocusSettings({});
+    visionSdk?.current?.setFocusSettings({
+      focusImage: 'base 64 string',
+      focusImageRect: { x: 50.0, y: 50.0, width: 250.0, height: 100.0},
+      shouldDisplayFocusImage: true, 
+      shouldScanInFocusImageRect: true, 
+      showCodeBoundariesInMultipleScan: true,
+      validCodeBoundaryBorderColor: '#000000',
+      validCodeBoundaryBorderWidth: 2,
+      validCodeBoundaryFillColor: '#000000',
+      inValidCodeBoundaryBorderColor: '#000000',
+      inValidCodeBoundaryBorderWidth: 2,
+      inValidCodeBoundaryFillColor: '#000000',
+      showDocumentBoundaries: true,
+      documentBoundaryBorderColor: '#000000',
+      documentBoundaryFillColor: '#000000',
+      focusImageTintColor: '#000000',
+      focusImageHighlightedColor: '#000000',
+    });
     setLoading(false);
   }, [captureMode]);
 
