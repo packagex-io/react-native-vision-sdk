@@ -12,9 +12,7 @@ class VisionSdkViewManager: RCTViewManager {
             ) as! RNCodeScannerView
             
             component.codeScannerView!.capturePhoto()
-            
         }
-        
     }
     
     @objc func stopRunning(_ node: NSNumber) {
@@ -27,7 +25,6 @@ class VisionSdkViewManager: RCTViewManager {
             
             component.codeScannerView?.stopRunning()
         }
-        
     }
     
     
@@ -42,7 +39,6 @@ class VisionSdkViewManager: RCTViewManager {
             
             component.codeScannerView?.startRunning()
         }
-        
     }
     
     @objc func setZoomTo(_ node: NSNumber,zoomValue: NSNumber) {
@@ -55,7 +51,6 @@ class VisionSdkViewManager: RCTViewManager {
             
             component.setZoomTo(zoomFloatValue as NSNumber)
         }
-        
     }
     
     @objc func setHeight(_ node: NSNumber, height: NSNumber) {
@@ -66,7 +61,6 @@ class VisionSdkViewManager: RCTViewManager {
             ) as! RNCodeScannerView
             component.setHeight(height as NSNumber)
         }
-        
     }
     
     @objc func setMetaData(_ node: NSNumber, metaData: NSString) {
@@ -77,9 +71,7 @@ class VisionSdkViewManager: RCTViewManager {
             ) as! RNCodeScannerView
             component.setMetaData(metaData as NSString)
         }
-        
     }
-    
     
     
     @objc func setRecipient(_ node: NSNumber, recipient: NSString) {
@@ -90,7 +82,6 @@ class VisionSdkViewManager: RCTViewManager {
             ) as! RNCodeScannerView
             component.setRecipient(recipient as NSString)
         }
-        
     }
     
     @objc func setSender(_ node: NSNumber, sender: NSString) {
@@ -101,7 +92,6 @@ class VisionSdkViewManager: RCTViewManager {
             ) as! RNCodeScannerView
             component.setSender(sender as NSString)
         }
-        
     }
     
     @objc func configureOnDeviceModel(_ node: NSNumber, onDeviceConfigs: NSDictionary) {
@@ -124,29 +114,29 @@ class VisionSdkViewManager: RCTViewManager {
         }
     }
     
-        @objc func restartScanning(_ node: NSNumber) {
-            DispatchQueue.main.async {
-                let component =
-                self.bridge.uiManager.view(
-                    forReactTag: node
-                ) as! RNCodeScannerView
-                component.restartScanning()
-            }
+    @objc func restartScanning(_ node: NSNumber) {
+        DispatchQueue.main.async {
+            let component =
+            self.bridge.uiManager.view(
+                forReactTag: node
+            ) as! RNCodeScannerView
+            component.restartScanning()
         }
+    }
     
     @objc func setFocusSettings(_ node: NSNumber, focusSettings: NSDictionary) {
+        
         DispatchQueue.main.async {
-            guard let component = self.bridge.uiManager.view(forReactTag: node) as? RNCodeScannerView else { return }
-            
-            print("focusSettings --------------- >", focusSettings)
-            
-            let fs = VisionSDK.CodeScannerView.FocusSettings()
+            guard let component = self.bridge.uiManager.view(forReactTag: node) as? RNCodeScannerView else {
+                return
+            }
+            let updatedFocusSettings = VisionSDK.CodeScannerView.FocusSettings()
             
             // Extract and assign each value to the corresponding property
             if let focusImageString = focusSettings["focusImage"] as? String,
                let imageData = Data(base64Encoded: focusImageString),
                let image = UIImage(data: imageData) {
-                fs.focusImage = image
+                updatedFocusSettings.focusImage = image
             }
 
             if let focusImageRectDict = focusSettings["focusImageRect"] as? NSDictionary,
@@ -154,87 +144,147 @@ class VisionSdkViewManager: RCTViewManager {
                let y = focusImageRectDict["y"] as? CGFloat,
                let width = focusImageRectDict["width"] as? CGFloat,
                let height = focusImageRectDict["height"] as? CGFloat {
-                fs.focusImageRect = CGRect(x: x, y: y, width: width, height: height)
+                updatedFocusSettings.focusImageRect = CGRect(x: x, y: y, width: width, height: height)
             }
 
-            if let shouldDisplayFocusImage = focusSettings["shouldDisplayFocusImage"] as? NSNumber {
-                fs.shouldDisplayFocusImage = shouldDisplayFocusImage.boolValue
+            if let shouldDisplayFocusImage = focusSettings["shouldDisplayFocusImage"] as? Bool {
+                updatedFocusSettings.shouldDisplayFocusImage = shouldDisplayFocusImage
             }
 
-            if let shouldScanInFocusImageRect = focusSettings["shouldScanInFocusImageRect"] as? NSNumber {
-                fs.shouldScanInFocusImageRect = shouldScanInFocusImageRect.boolValue
+            if let shouldScanInFocusImageRect = focusSettings["shouldScanInFocusImageRect"] as? Bool {
+                updatedFocusSettings.shouldScanInFocusImageRect = shouldScanInFocusImageRect
             }
 
-            if let showCodeBoundariesInMultipleScan = focusSettings["showCodeBoundariesInMultipleScan"] as? NSNumber {
-                fs.showCodeBoundariesInMultipleScan = showCodeBoundariesInMultipleScan.boolValue
+            if let showCodeBoundariesInMultipleScan = focusSettings["showCodeBoundariesInMultipleScan"] as? Bool {
+                updatedFocusSettings.showCodeBoundariesInMultipleScan = showCodeBoundariesInMultipleScan
             }
 
-            if let showDocumentBoundaries = focusSettings["showDocumentBoundaries"] as? NSNumber {
-                fs.showDocumentBoundries = showDocumentBoundaries.boolValue
+            if let showDocumentBoundaries = focusSettings["showDocumentBoundaries"] as? Bool {
+                updatedFocusSettings.showDocumentBoundries = showDocumentBoundaries
             }
 
-            if let validCodeBoundaryBorderColorHex = focusSettings["validCodeBoundaryBorderColor"] as? String {
-                fs.validCodeBoundryBorderColor = UIColor(hex: validCodeBoundaryBorderColorHex)!
+            if let _ = focusSettings["validCodeBoundaryBorderColor"] as? String {
+                if let color = UIColor(hex: focusSettings["validCodeBoundaryBorderColor"] as! String) {
+                    updatedFocusSettings.validCodeBoundryBorderColor = color
+                }
             }
 
             if let validCodeBoundaryBorderWidth = focusSettings["validCodeBoundaryBorderWidth"] as? NSNumber {
-                fs.validCodeBoundryBorderWidth = CGFloat(validCodeBoundaryBorderWidth.floatValue)
+                updatedFocusSettings.validCodeBoundryBorderWidth = CGFloat(validCodeBoundaryBorderWidth.floatValue)
             }
 
-            if let validCodeBoundaryFillColorHex = focusSettings["validCodeBoundaryFillColor"] as? String {
-                fs.validCodeBoundryFillColor = UIColor(hex: validCodeBoundaryFillColorHex)!
+            if let _ = focusSettings["validCodeBoundaryFillColor"] as? String {
+                if let color = UIColor(hex: focusSettings["validCodeBoundaryFillColor"] as! String) {
+                    updatedFocusSettings.validCodeBoundryFillColor = color
+                }
             }
 
-            if let inValidCodeBoundaryBorderColorHex = focusSettings["inValidCodeBoundaryBorderColor"] as? String {
-                fs.inValidCodeBoundryBorderColor = UIColor(hex: inValidCodeBoundaryBorderColorHex)!
+            if let _ = focusSettings["inValidCodeBoundaryBorderColor"] as? String {
+                if let color = UIColor(hex: focusSettings["inValidCodeBoundaryBorderColor"] as! String) {
+                    updatedFocusSettings.inValidCodeBoundryBorderColor = color
+                }
             }
 
             if let inValidCodeBoundaryBorderWidth = focusSettings["inValidCodeBoundaryBorderWidth"] as? NSNumber {
-                fs.inValidCodeBoundryBorderWidth = CGFloat(inValidCodeBoundaryBorderWidth.floatValue)
+                updatedFocusSettings.inValidCodeBoundryBorderWidth = CGFloat(inValidCodeBoundaryBorderWidth.floatValue)
             }
 
-            if let inValidCodeBoundaryFillColorHex = focusSettings["inValidCodeBoundaryFillColor"] as? String {
-                fs.inValidCodeBoundryFillColor = UIColor(hex: inValidCodeBoundaryFillColorHex)!
+            if let _ = focusSettings["inValidCodeBoundaryFillColor"] as? String {
+                if let color = UIColor(hex: focusSettings["inValidCodeBoundaryFillColor"] as! String) {
+                    updatedFocusSettings.inValidCodeBoundryFillColor = color
+                }
             }
 
-            if let documentBoundaryBorderColorHex = focusSettings["documentBoundaryBorderColor"] as? String {
-                fs.documentBoundryBorderColor = UIColor(hex: documentBoundaryBorderColorHex)!
+            if let _ = focusSettings["documentBoundaryBorderColor"] as? String {
+                if let color = UIColor(hex: focusSettings["documentBoundaryBorderColor"] as! String) {
+                    updatedFocusSettings.documentBoundryBorderColor = color
+                }
             }
 
-            if let documentBoundaryFillColorHex = focusSettings["documentBoundaryFillColor"] as? String {
-                fs.documentBoundryFillColor = UIColor(hex: documentBoundaryFillColorHex)!
+            if let _ = focusSettings["documentBoundaryFillColor"] as? String {
+                let color = UIColor(hex: focusSettings["documentBoundaryFillColor"] as! String, alpha: 0.4)
+                updatedFocusSettings.documentBoundryFillColor = color
             }
 
-            if let focusImageTintColorHex = focusSettings["focusImageTintColor"] as? String {
-                fs.focusImageTintColor = UIColor(hex: focusImageTintColorHex)!
+            if let _ = focusSettings["focusImageTintColor"] as? String {
+                if let color = UIColor(hex: focusSettings["focusImageTintColor"] as! String) {
+                    updatedFocusSettings.focusImageTintColor = color
+                }
             }
 
-            if let focusImageHighlightedColorHex = focusSettings["focusImageHighlightedColor"] as? String {
-                fs.focusImageHighlightedColor = UIColor(hex: focusImageHighlightedColorHex)!
+            if let _ = focusSettings["focusImageHighlightedColor"] as? String {
+                if let color = UIColor(hex: focusSettings["focusImageHighlightedColor"] as! String) {
+                    updatedFocusSettings.focusImageHighlightedColor = color
+                }
             }
             
-            // Update the component's settings with the new focus settings
-//            component.focusSettings = fs
+            component.codeScannerView?.focusSettings = updatedFocusSettings
+        }
+    }
+    
+    @objc func setObjectDetectionSettings(_ node: NSNumber, objectDetectionSettings: NSDictionary) {
+        
+        DispatchQueue.main.async {
+            guard let component = self.bridge.uiManager.view(forReactTag: node) as? RNCodeScannerView else {
+                return
+            }
             
-            print("-------------------------> Updated focus settings:")
-            print("focusImage: \(fs.focusImage?.description ?? "nil")")
-            print("focusImageRect: \(fs.focusImageRect)")
-            print("shouldDisplayFocusImage: \(fs.shouldDisplayFocusImage)")
-            print("shouldScanInFocusImageRect: \(fs.shouldScanInFocusImageRect)")
-            print("showCodeBoundariesInMultipleScan: \(fs.showCodeBoundariesInMultipleScan)")
-            print("validCodeBoundryBorderColor: \(fs.validCodeBoundryBorderColor)")
-            print("validCodeBoundryBorderWidth: \(fs.validCodeBoundryBorderWidth)")
-            print("validCodeBoundryFillColor: \(fs.validCodeBoundryFillColor)")
-            print("inValidCodeBoundryBorderColor: \(fs.inValidCodeBoundryBorderColor)")
-            print("inValidCodeBoundryBorderWidth: \(fs.inValidCodeBoundryBorderWidth)")
-            print("inValidCodeBoundryFillColor: \(fs.inValidCodeBoundryFillColor)")
-            print("showDocumentBoundries: \(fs.showDocumentBoundries)")
-            print("documentBoundryBorderColor: \(fs.documentBoundryBorderColor)")
-            print("documentBoundryBorderWidth: \(fs.documentBoundryBorderWidth)")
-            print("documentBoundryFillColor: \(fs.documentBoundryFillColor)")
-            print("focusImageTintColor: \(fs.focusImageTintColor)")
-            print("focusImageHighlightedColor: \(fs.focusImageHighlightedColor)")
+            let detectionSettings = VisionSDK.CodeScannerView.ObjectDetectionConfiguration()
+            
+            // Update the camera settings in the component
+            if let isTextIndicationOn = objectDetectionSettings["isTextIndicationOn"] as? Bool {
+                detectionSettings.isTextIndicationOn = isTextIndicationOn
+            }
 
+            if let isBarCodeOrQRCodeIndicationOn = objectDetectionSettings["isBarCodeOrQRCodeIndicationOn"] as? Bool {
+                detectionSettings.isBarCodeOrQRCodeIndicationOn = isBarCodeOrQRCodeIndicationOn
+            }
+
+            if let isDocumentIndicationOn = objectDetectionSettings["isDocumentIndicationOn"] as? Bool {
+                detectionSettings.isDocumentIndicationOn = isDocumentIndicationOn
+            }
+
+            if let codeDetectionConfidence = objectDetectionSettings["codeDetectionConfidence"] as? Float {
+                detectionSettings.codeDetectionConfidence = codeDetectionConfidence
+            }
+
+            if let documentDetectionConfidence = objectDetectionSettings["documentDetectionConfidence"] as? Float {
+                detectionSettings.documentDetectionConfidence = documentDetectionConfidence
+            }
+
+            if let secondsToWaitBeforeDocumentCapture = objectDetectionSettings["secondsToWaitBeforeDocumentCapture"] as? Double {
+                detectionSettings.secondsToWaitBeforeDocumentCapture = secondsToWaitBeforeDocumentCapture
+            }
+
+            if let selectedTemplateId = objectDetectionSettings["selectedTemplateId"] as? String {
+                detectionSettings.selectedTemplateId = selectedTemplateId
+            }
+
+            component.codeScannerView?.objectDetectionConfiguration = detectionSettings
+        }
+    }
+    
+    @objc func setCameraSettings(_ node: NSNumber, cameraSettings: NSDictionary) {
+       
+        DispatchQueue.main.async {
+            guard let component = self.bridge.uiManager.view(forReactTag: node) as? RNCodeScannerView else {
+                return
+            }
+            
+            let updatedCameraSettings = VisionSDK.CodeScannerView.CameraSettings()
+
+            // Update and print each setting
+            if let nthFrameToProcess = cameraSettings["nthFrameToProcess"] as? Int {
+                updatedCameraSettings.nthFrameToProcess = Int64(nthFrameToProcess)
+            }
+
+            if let shouldAutoSaveCapturedImage = cameraSettings["shouldAutoSaveCapturedImage"] as? Bool {
+                updatedCameraSettings.shouldAutoSaveCapturedImage = shouldAutoSaveCapturedImage
+            }
+
+            updatedCameraSettings.sessionPreset = .high
+            
+            component.codeScannerView?.cameraSettings = updatedCameraSettings
         }
     }
 
@@ -250,3 +300,80 @@ class VisionSdkViewManager: RCTViewManager {
         return true
     }
 }
+
+
+// UIColors Extension for converting hex color to iOS format color.
+extension UIColor {
+    
+    convenience init?(hex: String) {
+        var hexSanitized = hex.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+
+        if hexSanitized.hasPrefix("#") {
+            hexSanitized.remove(at: hexSanitized.startIndex)
+        }
+
+        guard hexSanitized.count == 6 else { return nil }
+        
+        if hexSanitized.count != 6 {
+            self.init(red: 255, green: 255, blue: 255, alpha: 1.0)
+        }
+        else {
+            var rgb: UInt64 = 0
+            Scanner(string: hexSanitized).scanHexInt64(&rgb)
+            
+            let red = CGFloat((rgb & 0xFF0000) >> 16) / 255.0
+            let green = CGFloat((rgb & 0x00FF00) >> 8) / 255.0
+            let blue = CGFloat(rgb & 0x0000FF) / 255.0
+            
+            self.init(red: red, green: green, blue: blue, alpha: 1.0)
+        }
+    }
+    
+    convenience init(hex: String, alpha: CGFloat = 1.0) {
+           var hexFormatted: String = hex.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+           
+           if hexFormatted.hasPrefix("#") {
+               hexFormatted.remove(at: hexFormatted.startIndex)
+           }
+           
+           var rgbValue: UInt64 = 0
+           Scanner(string: hexFormatted).scanHexInt64(&rgbValue)
+           
+           let red = CGFloat((rgbValue & 0xFF0000) >> 16) / 255.0
+           let green = CGFloat((rgbValue & 0x00FF00) >> 8) / 255.0
+           let blue = CGFloat(rgbValue & 0x0000FF) / 255.0
+           
+           self.init(red: red, green: green, blue: blue, alpha: alpha)
+       }
+}
+
+
+//extension UIColor {
+//    convenience init(hex: String) {
+//        var hexFormatted: String = hex.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+//
+//        if hexFormatted.hasPrefix("#") {
+//            hexFormatted.remove(at: hexFormatted.startIndex)
+//        }
+//
+//        var alpha: CGFloat = 1.0
+//        var rgbValue: UInt64 = 0
+//        Scanner(string: hexFormatted).scanHexInt64(&rgbValue)
+//
+//        if hexFormatted.count == 8 {
+//            alpha = CGFloat((rgbValue & 0xFF000000) >> 24) / 255.0
+//            let red = CGFloat((rgbValue & 0x00FF0000) >> 16) / 255.0
+//            let green = CGFloat((rgbValue & 0x0000FF00) >> 8) / 255.0
+//            let blue = CGFloat(rgbValue & 0x000000FF) / 255.0
+//            self.init(red: red, green: green, blue: blue, alpha: alpha)
+//        } else if hexFormatted.count == 6 {
+//            let red = CGFloat((rgbValue & 0xFF0000) >> 16) / 255.0
+//            let green = CGFloat((rgbValue & 0x00FF00) >> 8) / 255.0
+//            let blue = CGFloat(rgbValue & 0x0000FF) / 255.0
+//            self.init(red: red, green: green, blue: blue, alpha: alpha)
+//        } else {
+//            // Invalid hex string length
+//            self.init(red: 0, green: 0, blue: 0, alpha: 1)
+//        }
+//    }
+//}

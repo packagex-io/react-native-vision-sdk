@@ -30,6 +30,8 @@ RCT_EXTERN_METHOD(setSender:(nonnull NSNumber *)node  sender:(nonnull NSString *
 RCT_EXTERN_METHOD(configureOnDeviceModel:(nonnull NSNumber *)node onDeviceConfigs:(nonnull NSDictionary *)type)
 RCT_EXTERN_METHOD(restartScanning:(nonnull NSNumber *)node)
 RCT_EXTERN_METHOD(setFocusSettings:(nonnull NSNumber *)node focusSettings:(nonnull NSDictionary *)type)
+RCT_EXTERN_METHOD(setObjectDetectionSettings:(nonnull NSNumber *)node objectDetectionSettings:(nonnull NSDictionary *)type)
+RCT_EXTERN_METHOD(setCameraSettings:(nonnull NSNumber *)node cameraSettings:(nonnull NSDictionary *)type)
 //RCT_EXTERN_METHOD(setModelType:(nonnull NSNumber *)node  modelType:(nonnull NSString *)modelType)
 //RCT_EXTERN_METHOD(setModelSize:(nonnull NSNumber *)node  modelSize:(nonnull NSString *)modelSize)
 @end

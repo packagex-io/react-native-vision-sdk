@@ -24,7 +24,7 @@ class RNCodeScannerView: UIView {
     
     //MARK: - Props Received from React-Native
     var token: String?  // Dynamic Prop | Optional:
-    var delayTime: Double? // Dynamic Prop | Optional:
+//    var delayTime: Double? // Dynamic Prop | Optional:
     var height: Double? // Dynamic Prop | Optional:
     
     var locationId: String? // Dynamic Prop | Optional:
@@ -33,30 +33,36 @@ class RNCodeScannerView: UIView {
     var recipient: [String: Any]? // Dynamic Prop | Optional:
     var sender: [String: Any]? // Dynamic Prop | Optional:
     
-    var focusImageRect: CGRect = .zero
+//    var focusImageRect: CGRect = .zero
     var shouldDisplayFocusImage: Bool = true // Dynamic Prop | Optional:
     var shouldScanInFocusImageRect: Bool = true // Dynamic Prop | Optional:
     var scanMode: CodeScannerMode = .barCode // Dynamic Prop | Optional:
     var captureMode: CaptureMode = .manual // Dynamic Prop | Optional:
-    
     var captureType: CaptureType = .single // Static Prop | Optional:
-    var showDocumentBoundries: Bool = true // Static Prop | Optional:
-    var documentBoundryBorderColor: UIColor = .orange // Static Prop | Optional:
-    var documentBoundryFillColor: UIColor = .orange // Static Prop | Optional:
-    var focusImageTintColor: UIColor = .white // Static Prop | Optional:
-    var focusImageHighlightedColor: UIColor = .white // Static Prop | Optional:
-    var isTextIndicationOn: Bool = true // Static Prop | Optional:
-    var isBarCodeOrQRCodeIndicationOn: Bool = true // Static Prop | Optional:
-    var isDocumentIndicationOn: Bool = true // Static Prop | Optional:
-    var codeDetectionConfidence: Float = 0.5 // Static Prop | Optional:
-    var documentDetectionConfidence: Float = 0.6 // Static Prop | Optional:
-    var nthFrameToProcess: Int64 = 10 // Static Prop | Optional:
-    var shouldAutoSaveCapturedImage: Bool = true // Static Prop | Optional:
+//    var showDocumentBoundries: Bool = true // Static Prop | Optional:
+//    var documentBoundryBorderColor: UIColor = .purple // Static Prop | Optional:
+//    var documentBoundryFillColor: UIColor = .purple // Static Prop | Optional:
+//    var focusImageTintColor: UIColor = .white // Static Prop | Optional:
+//    var focusImageHighlightedColor: UIColor = .white // Static Prop | Optional:
+//    var isTextIndicationOn: Bool = true // Static Prop | Optional:
+//    var isBarCodeOrQRCodeIndicationOn: Bool = true // Static Prop | Optional:
+//    var isDocumentIndicationOn: Bool = true // Static Prop | Optional:
+//    var codeDetectionConfidence: Float = 0.5 // Static Prop | Optional:
+//    var documentDetectionConfidence: Float = 0.6 // Static Prop | Optional:
+//    var secondsToWaitBeforeDocumentCapture: Double = 0.6 // Static Prop | Optional:
+//    var selectedTemplateId: String = "" // Static Prop | Optional:
+//    var nthFrameToProcess: Int64 = 10 // Static Prop | Optional:
+//    var shouldAutoSaveCapturedImage: Bool = true // Static Prop | Optional:
+    
     //MARK: - On-Device OCR Specific Variables
     var isOnDeviceOCR: Bool? // Dynamic Prop | Optional:
     var onDeviceModelType: VSDKModelClass = VSDKModelClass.shippingLabel // Dynamic Prop | Optional:
     var onDeviceModelSize: VSDKModelSize = VSDKModelSize.large // Dynamic Prop | Optional:
     
+    
+    var focusSettings: VisionSDK.CodeScannerView.FocusSettings = VisionSDK.CodeScannerView.FocusSettings()
+    var objectDetectionConfiguration: VisionSDK.CodeScannerView.ObjectDetectionConfiguration = VisionSDK.CodeScannerView.ObjectDetectionConfiguration()
+    var cameraSettings: VisionSDK.CodeScannerView.CameraSettings = VisionSDK.CodeScannerView.CameraSettings()
     
     private var previousSize: CGSize = .zero
     
@@ -85,36 +91,39 @@ class RNCodeScannerView: UIView {
                 
         self.addSubview(codeScannerView!)
         
-        var sessionPreset: AVCaptureSession.Preset = .high
-        if UIDevice.current.userInterfaceIdiom == .pad {
-            sessionPreset = .hd1920x1080
-        }
-        
-        
-        let focusSettings = VisionSDK.CodeScannerView.FocusSettings()
-        focusSettings.focusImage = nil
-        focusSettings.focusImageRect = focusImageRect
-        focusSettings.shouldDisplayFocusImage = self.shouldDisplayFocusImage
-        focusSettings.shouldScanInFocusImageRect = self.shouldScanInFocusImageRect
-        focusSettings.showDocumentBoundries = self.showDocumentBoundries
-        focusSettings.documentBoundryBorderColor = self.documentBoundryBorderColor
-        focusSettings.documentBoundryFillColor = self.documentBoundryFillColor.withAlphaComponent(0.4)
-        focusSettings.focusImageTintColor = self.focusImageTintColor
-        focusSettings.focusImageHighlightedColor = self.focusImageHighlightedColor
-        
-        
-        let objectDetectionConfiguration = VisionSDK.CodeScannerView.ObjectDetectionConfiguration()
-        objectDetectionConfiguration.isTextIndicationOn = self.isTextIndicationOn
-        objectDetectionConfiguration.isBarCodeOrQRCodeIndicationOn = self.isBarCodeOrQRCodeIndicationOn
-        objectDetectionConfiguration.isDocumentIndicationOn = self.isDocumentIndicationOn
-        objectDetectionConfiguration.codeDetectionConfidence = self.codeDetectionConfidence
-        objectDetectionConfiguration.documentDetectionConfidence = self.documentDetectionConfidence
-        
-        
-        let cameraSettings = VisionSDK.CodeScannerView.CameraSettings()
-        cameraSettings.sessionPreset = sessionPreset
-        cameraSettings.nthFrameToProcess = self.nthFrameToProcess
-        cameraSettings.shouldAutoSaveCapturedImage = self.shouldAutoSaveCapturedImage
+//        var sessionPreset: AVCaptureSession.Preset = .high
+//        if UIDevice.current.userInterfaceIdiom == .pad {
+//            sessionPreset = .hd1920x1080
+//        }
+//        
+//        
+//        let focusSettings = VisionSDK.CodeScannerView.FocusSettings()
+//        focusSettings.focusImage = nil
+//        focusSettings.focusImageRect = focusImageRect
+//        focusSettings.shouldDisplayFocusImage = self.shouldDisplayFocusImage
+//        focusSettings.shouldScanInFocusImageRect = self.shouldScanInFocusImageRect
+//        focusSettings.showDocumentBoundries = self.showDocumentBoundries
+//        focusSettings.documentBoundryBorderColor = self.documentBoundryBorderColor
+//        focusSettings.documentBoundryFillColor = self.documentBoundryFillColor.withAlphaComponent(0.4)
+//        focusSettings.focusImageTintColor = self.focusImageTintColor
+//        focusSettings.focusImageHighlightedColor = self.focusImageHighlightedColor
+//        
+//        
+//        let objectDetectionConfiguration = VisionSDK.CodeScannerView.ObjectDetectionConfiguration()
+//        objectDetectionConfiguration.isTextIndicationOn = self.isTextIndicationOn
+//        objectDetectionConfiguration.isBarCodeOrQRCodeIndicationOn = self.isBarCodeOrQRCodeIndicationOn
+//        objectDetectionConfiguration.isDocumentIndicationOn = self.isDocumentIndicationOn
+//        objectDetectionConfiguration.codeDetectionConfidence = self.codeDetectionConfidence
+//        objectDetectionConfiguration.documentDetectionConfidence = self.documentDetectionConfidence
+//        // need to discuss
+//        objectDetectionConfiguration.secondsToWaitBeforeDocumentCapture = self.secondsToWaitBeforeDocumentCapture
+//        objectDetectionConfiguration.selectedTemplateId = self.selectedTemplateId
+//        
+//        
+//        let cameraSettings = VisionSDK.CodeScannerView.CameraSettings()
+//        cameraSettings.sessionPreset = sessionPreset
+//        cameraSettings.nthFrameToProcess = self.nthFrameToProcess
+//        cameraSettings.shouldAutoSaveCapturedImage = self.shouldAutoSaveCapturedImage
         
         
         codeScannerView!.configure(delegate: self, focusSettings: focusSettings, objectDetectionConfiguration: objectDetectionConfiguration, cameraSettings: cameraSettings, captureMode: captureMode, captureType: captureType, scanMode: self.scanMode)
@@ -501,11 +510,11 @@ extension RNCodeScannerView {
         self.token = token as String
     }
     
-    /// Sets the delay time, i.e. how much delay should be there after one scan is scanned, or camera button is tapped.
-    /// - Parameter delayTime: delayTime as seconds, 1000 = 1 second
-    @objc func setDelayTime(_ delayTime: NSNumber) {
-        self.delayTime = delayTime as? Double
-    }
+//    /// Sets the delay time, i.e. how much delay should be there after one scan is scanned, or camera button is tapped.
+//    /// - Parameter delayTime: delayTime as seconds, 1000 = 1 second
+//    @objc func setDelayTime(_ delayTime: NSNumber) {
+//        self.delayTime = delayTime as? Double
+//    }
     
     /// Sets the custom options from client/React Native side to control scanning inputs/outputs
     /// - Parameter options: options description
@@ -571,43 +580,6 @@ extension RNCodeScannerView {
             break
         }
     }
-    
-    @objc func setShowDocumentBoundries(_ showDocumentBoundries: Bool) {
-//        self.showDocumentBoundries = showDocumentBoundries
-    }
-    
-    @objc func setDocumentBoundryBorderColor(_ documentBoundryBorderColor: NSString) {
-//        if let color = UIColor(hex: documentBoundryBorderColor as String) {
-//            self.documentBoundryBorderColor = color
-//        }
-    }
-    
-    @objc func setDocumentBoundryFillColor(_ documentBoundryFillColor: NSString) {
-//        if let color = UIColor(hex: documentBoundryFillColor as String) {
-//            self.documentBoundryFillColor = color
-//        }
-    }
-    
-    @objc func setFocusImageTintColor(_ focusImageTintColor: NSString) {
-//        if let color = UIColor(hex: focusImageTintColor as String) {
-//            self.focusImageTintColor = color
-//        }
-    }
-    
-    @objc func setFocusImageHighlightedColor(_ focusImageHighlightedColor: NSString) {
-//        if let color = UIColor(hex: focusImageHighlightedColor as String) {
-//            self.focusImageHighlightedColor = color
-//        }
-    }
-    
-//    @objc func setCodeDetectionConfidence(_ codeDetectionConfidence: Float) {
-//        self.codeDetectionConfidence = codeDetectionConfidence
-//    }
-    
-    @objc func setNthFrameToProcess(_ nthFrameToProcess: NSNumber) {
-//        self.nthFrameToProcess = nthFrameToProcess.int64Value
-    }
-    
 }
 
 //MARK: - Other Helper functions
@@ -644,25 +616,3 @@ extension RNCodeScannerView {
     }
 }
 
-
-extension UIColor {
-    
-    convenience init?(hex: String) {
-        var hexSanitized = hex.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
-
-        if hexSanitized.hasPrefix("#") {
-            hexSanitized.remove(at: hexSanitized.startIndex)
-        }
-
-        guard hexSanitized.count == 6 else { return nil }
-
-        var rgb: UInt64 = 0
-        Scanner(string: hexSanitized).scanHexInt64(&rgb)
-
-        let red = CGFloat((rgb & 0xFF0000) >> 16) / 255.0
-        let green = CGFloat((rgb & 0x00FF00) >> 8) / 255.0
-        let blue = CGFloat(rgb & 0x0000FF) / 255.0
-
-        self.init(red: red, green: green, blue: blue, alpha: 1.0)
-    }
-}
