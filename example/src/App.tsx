@@ -93,6 +93,20 @@ export default function App() {
       focusImageTintColor: '#000000',
       focusImageHighlightedColor: '#000000',
     });
+    visionSdk?.current?.setObjectDetectionSettings({
+      isTextIndicationOn: true,
+      isBarCodeOrQRCodeIndicationOn: true,
+      isDocumentIndicationOn: true,
+      codeDetectionConfidence: 0.5,
+      documentDetectionConfidence: 0.5,
+      secondsToWaitBeforeDocumentCapture: 2.0,
+      selectedTemplateId: '1',
+    });
+    visionSdk?.current?.setCameraSettings({
+      nthFrameToProcess: 10,
+      shouldAutoSaveCapturedImage: true,
+    });
+
     visionSdk?.current?.startRunningHandler();
     setLoading(false);
   }, [captureMode]);

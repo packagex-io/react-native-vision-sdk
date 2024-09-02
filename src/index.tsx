@@ -91,6 +91,12 @@ const Camera: React.FC<Props> = ({
     setFocusSettings: (val: any) => {
       setFocusSettings(val);
     },
+    setObjectDetectionSettings: (val: any) => {
+      setObjectDetectionSettings(val);
+    },
+    setCameraSettings: (val: any) => {
+      setCameraSettings(val);
+    }
   }));
 
   const onPressCaptures = () => {
@@ -199,6 +205,26 @@ const Camera: React.FC<Props> = ({
         UIManager.getViewManagerConfig('VisionSDKView').Commands
           .setFocusSettings) ||
         10,
+      [val]
+    );
+  };
+  const setObjectDetectionSettings = (val: any) => {
+    UIManager.dispatchViewManagerCommand(
+      findNodeHandle(VisionSDKViewRef.current),
+      (UIManager.hasViewManagerConfig('VisionSDKView') &&
+        UIManager.getViewManagerConfig('VisionSDKView').Commands
+          .setObjectDetectionSettings) ||
+        11,
+      [val]
+    );
+  };
+  const setCameraSettings = (val: any) => {
+    UIManager.dispatchViewManagerCommand(
+      findNodeHandle(VisionSDKViewRef.current),
+      (UIManager.hasViewManagerConfig('VisionSDKView') &&
+        UIManager.getViewManagerConfig('VisionSDKView').Commands
+          .setCameraSettings) ||
+        12,
       [val]
     );
   };
