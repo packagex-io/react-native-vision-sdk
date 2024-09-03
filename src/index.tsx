@@ -14,7 +14,7 @@ type Props = {
   reRender?: string;
   delayTime?: number;
   captureMode?: 'manual' | 'auto';
-  mode?: 'barcode' | 'qrcode' | 'ocr' | 'photo';
+  mode?: 'barcode' | 'qrcode' | 'ocr' | 'photo' |'autoBarCodeOrQRCode';
   token?: string;
   locationId?: string;
   options?: any;

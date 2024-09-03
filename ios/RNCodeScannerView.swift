@@ -24,7 +24,7 @@ class RNCodeScannerView: UIView {
     
     //MARK: - Props Received from React-Native
     var token: String?  // Dynamic Prop | Optional:
-//    var delayTime: Double? // Dynamic Prop | Optional:
+    var delayTime: Double? // Dynamic Prop | Optional:
     var height: Double? // Dynamic Prop | Optional:
     
     var locationId: String? // Dynamic Prop | Optional:
@@ -126,7 +126,7 @@ class RNCodeScannerView: UIView {
 //        cameraSettings.shouldAutoSaveCapturedImage = self.shouldAutoSaveCapturedImage
         
         
-        codeScannerView!.configure(delegate: self, focusSettings: focusSettings, objectDetectionConfiguration: objectDetectionConfiguration, cameraSettings: cameraSettings, captureMode: captureMode, captureType: captureType, scanMode: self.scanMode)
+        codeScannerView!.configure(delegate: self, captureMode: captureMode, captureType: captureType, scanMode: self.scanMode)
         
 //        codeScannerView!.startRunning()
     }
@@ -512,9 +512,9 @@ extension RNCodeScannerView {
     
 //    /// Sets the delay time, i.e. how much delay should be there after one scan is scanned, or camera button is tapped.
 //    /// - Parameter delayTime: delayTime as seconds, 1000 = 1 second
-//    @objc func setDelayTime(_ delayTime: NSNumber) {
-//        self.delayTime = delayTime as? Double
-//    }
+    @objc func setDelayTime(_ delayTime: NSNumber) {
+        self.delayTime = delayTime as? Double
+    }
     
     /// Sets the custom options from client/React Native side to control scanning inputs/outputs
     /// - Parameter options: options description
