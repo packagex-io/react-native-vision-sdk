@@ -1,4 +1,4 @@
-import React, { useEffect, useImperativeHandle, useRef, useState } from 'react';
+import React, { useEffect, useImperativeHandle, useRef } from 'react';
 import {
   UIManager,
   findNodeHandle,
@@ -7,54 +7,56 @@ import {
 } from 'react-native';
 import { VisionSdkView } from './VisionSdkViewManager';
 
-enum ScanMode {
-  OCR = 'ocr',
-  BARCODE = 'barcode',
-  QRCODE = 'qrcode',
-}
-
 type Props = {
   children?: React.ReactNode;
   refProp?: any;
-  key?: string;
+  apiKey?: string;
   reRender?: string;
   delayTime?: number;
+  captureMode?: 'manual' | 'auto';
+  mode?: 'barcode' | 'qrcode' | 'ocr' | 'photo' |'autoBarCodeOrQRCode';
+  token?: string;
+  locationId?: string;
+  options?: any;
+  environment?: 'prod' | 'sandbox';
+  flash?: boolean;
+  showDocumentBoundaries?: boolean;
+  isOnDeviceOCR?: boolean;
   showScanFrame?: boolean;
   captureWithScanFrame?: boolean;
-  BarCodeScanHandler?: (_e: any) => void;
-  ImageCaptured?: (_e: any) => void;
-  OCRScanHandler?: (_e: any) => void;
-  OnDetectedHandler?: (_e: any) => void;
+  onModelDownloadProgress?: (_e: any) => void;
+  onBarcodeScan?: (_e: any) => void;
+  onImageCaptured?: (_e: any) => void;
+  onOCRScan?: (_e: any) => void;
+  onDetected?: (_e: any) => void;
   onError?: (e: any) => void;
 };
 
 const Camera: React.FC<Props> = ({
   children,
   refProp,
+  apiKey = '',
   reRender,
   delayTime = 100,
+  captureMode = 'manual',
+  mode = 'barcode',
+  token = '',
+  locationId = '',
+  options = {},
+  environment = 'prod',
+  flash = false,
+  showDocumentBoundaries = false,
+  isOnDeviceOCR = false,
   showScanFrame = true,
   captureWithScanFrame = true,
-  BarCodeScanHandler = (_e: any) => {},
-  ImageCaptured = (_e: any) => {},
-  OCRScanHandler = (_e: any) => {},
-  OnDetectedHandler = (_e: any) => {},
+  onModelDownloadProgress = (_e: any) => {},
+  onBarcodeScan = (_e: any) => {},
+  onImageCaptured = (_e: any) => {},
+  onOCRScan = (_e: any) => {},
+  onDetected = (_e: any) => {},
   onError = (_e: any) => {},
 }: Props) => {
-  const defaultScanMode = ScanMode.BARCODE;
-  const [mode, setMode] = useState<ScanMode>(defaultScanMode);
-  const [token, setToken] = useState('');
-  const [apiKey, setApiKey] = useState('');
-  const [cameraCaptureMode, setCameraCaptureMode] = useState('auto');
-  const [environment, setEnvironment] = useState('staging');
-  const [locationId, setLocationId] = useState('');
-  const [options, setOptions] = useState({
-    match: { location: true, search: ['recipients'] },
-    postprocess: { require_unique_hash: false },
-    transform: { tracker: 'inbound', use_existing_tracking_number: false },
-  });
   const VisionSDKViewRef = useRef(null);
-
   useImperativeHandle(refProp, () => ({
     cameraCaptureHandler: () => {
       onPressCaptures();
@@ -62,11 +64,11 @@ const Camera: React.FC<Props> = ({
     stopRunningHandler: () => {
       onPressStopRunning();
     },
+    restartScanningHandler: () => {
+      onPressRestartScanning();
+    },
     startRunningHandler: () => {
       onPressStartRunning();
-    },
-    onPressToggleTorchHandler: (val: any) => {
-      onPressToggleTorch(val);
     },
     setToDefaultZoom: (val: any) => {
       onPressZoom(val);
@@ -83,26 +85,21 @@ const Camera: React.FC<Props> = ({
     setSender: (val: any) => {
       setSender(val);
     },
-    changeModeHandler: (
-      c_mode: React.SetStateAction<any>,
-      receivedInput: React.SetStateAction<ScanMode>,
-      receivedToken: React.SetStateAction<string>,
-      receivedLocationId: React.SetStateAction<string>,
-      option: React.SetStateAction<any>,
-      appEnvironment: React.SetStateAction<string>
-    ) => {
-      setEnvironment(appEnvironment ? appEnvironment : environment);
-      setToken(receivedToken);
-      setLocationId(receivedLocationId);
-      setApiKey(apiKey);
-      onChangeCaptureMode(c_mode);
-      onChangeMode(receivedInput);
-      onChangeOptions(option ? option : options);
+    configureOnDeviceModel: (val: any) => {
+      configureOnDeviceModel(val);
     },
+    setFocusSettings: (val: any) => {
+      setFocusSettings(val);
+    },
+    setObjectDetectionSettings: (val: any) => {
+      setObjectDetectionSettings(val);
+    },
+    setCameraSettings: (val: any) => {
+      setCameraSettings(val);
+    }
   }));
 
   const onPressCaptures = () => {
-    console.log('Image Captured');
     UIManager.dispatchViewManagerCommand(
       findNodeHandle(VisionSDKViewRef.current),
       (UIManager.hasViewManagerConfig('VisionSDKView') &&
@@ -114,7 +111,6 @@ const Camera: React.FC<Props> = ({
   };
 
   const onPressStopRunning = () => {
-    console.log('onPressStopRunning');
     UIManager.dispatchViewManagerCommand(
       findNodeHandle(VisionSDKViewRef.current),
       (UIManager.hasViewManagerConfig('VisionSDKView') &&
@@ -125,7 +121,6 @@ const Camera: React.FC<Props> = ({
   };
 
   const onPressStartRunning = () => {
-    console.log('onPressStartRunning');
     UIManager.dispatchViewManagerCommand(
       findNodeHandle(VisionSDKViewRef.current),
       (UIManager.hasViewManagerConfig('VisionSDKView') &&
@@ -136,23 +131,12 @@ const Camera: React.FC<Props> = ({
     );
   };
 
-  const onPressToggleTorch = (value: any) => {
-    console.log('Toggle Torch', value);
-    UIManager.dispatchViewManagerCommand(
-      findNodeHandle(VisionSDKViewRef.current),
-      (UIManager.hasViewManagerConfig('VisionSDKView') &&
-        UIManager.getViewManagerConfig('VisionSDKView').Commands.toggleTorch) ||
-        3,
-      [value]
-    );
-  };
   const onPressZoom = (value: any) => {
-    console.log('Zoom value', value);
     UIManager.dispatchViewManagerCommand(
       findNodeHandle(VisionSDKViewRef.current),
       (UIManager.hasViewManagerConfig('VisionSDKView') &&
         UIManager.getViewManagerConfig('VisionSDKView').Commands.setZoomTo) ||
-        4,
+        3,
       [value]
     );
   };
@@ -161,7 +145,7 @@ const Camera: React.FC<Props> = ({
       findNodeHandle(VisionSDKViewRef.current),
       (UIManager.hasViewManagerConfig('VisionSDKView') &&
         UIManager.getViewManagerConfig('VisionSDKView').Commands.setHeight) ||
-        5,
+        4,
       [value]
     );
   };
@@ -171,7 +155,7 @@ const Camera: React.FC<Props> = ({
       findNodeHandle(VisionSDKViewRef.current),
       (UIManager.hasViewManagerConfig('VisionSDKView') &&
         UIManager.getViewManagerConfig('VisionSDKView').Commands.setMetaData) ||
-        6,
+        5,
       [value]
     );
   };
@@ -181,67 +165,115 @@ const Camera: React.FC<Props> = ({
       (UIManager.hasViewManagerConfig('VisionSDKView') &&
         UIManager.getViewManagerConfig('VisionSDKView').Commands
           .setRecipient) ||
-        7,
+        6,
       [value]
     );
   };
-
   const setSender = (value: any) => {
     UIManager.dispatchViewManagerCommand(
       findNodeHandle(VisionSDKViewRef.current),
       (UIManager.hasViewManagerConfig('VisionSDKView') &&
         UIManager.getViewManagerConfig('VisionSDKView').Commands.setSender) ||
-        8,
+        7,
       [value]
     );
   };
-
-  const onChangeCaptureMode = (c_mode: React.SetStateAction<any>) => {
-    setCameraCaptureMode(c_mode);
+  const configureOnDeviceModel = (val: any) => {
+    UIManager.dispatchViewManagerCommand(
+      findNodeHandle(VisionSDKViewRef.current),
+      (UIManager.hasViewManagerConfig('VisionSDKView') &&
+        UIManager.getViewManagerConfig('VisionSDKView').Commands
+          .configureOnDeviceModel) ||
+        8,
+      [val]
+    );
   };
-  const onChangeMode = (input: React.SetStateAction<ScanMode>) => {
-    setMode(input);
+  const onPressRestartScanning = () => {
+    UIManager.dispatchViewManagerCommand(
+      findNodeHandle(VisionSDKViewRef.current),
+      (UIManager.hasViewManagerConfig('VisionSDKView') &&
+        UIManager.getViewManagerConfig('VisionSDKView').Commands
+          .restartScanning) ||
+        9,
+      []
+    );
   };
-  const onChangeOptions = (input: React.SetStateAction<any>) => {
-    setOptions(input);
+  const setFocusSettings = (val: any) => {
+    UIManager.dispatchViewManagerCommand(
+      findNodeHandle(VisionSDKViewRef.current),
+      (UIManager.hasViewManagerConfig('VisionSDKView') &&
+        UIManager.getViewManagerConfig('VisionSDKView').Commands
+          .setFocusSettings) ||
+        10,
+      [val]
+    );
+  };
+  const setObjectDetectionSettings = (val: any) => {
+    UIManager.dispatchViewManagerCommand(
+      findNodeHandle(VisionSDKViewRef.current),
+      (UIManager.hasViewManagerConfig('VisionSDKView') &&
+        UIManager.getViewManagerConfig('VisionSDKView').Commands
+          .setObjectDetectionSettings) ||
+        11,
+      [val]
+    );
+  };
+  const setCameraSettings = (val: any) => {
+    UIManager.dispatchViewManagerCommand(
+      findNodeHandle(VisionSDKViewRef.current),
+      (UIManager.hasViewManagerConfig('VisionSDKView') &&
+        UIManager.getViewManagerConfig('VisionSDKView').Commands
+          .setCameraSettings) ||
+        12,
+      [val]
+    );
   };
 
   useEffect(() => {
-    DeviceEventEmitter.addListener('onBarcodeScanSuccess', BarCodeScanHandler);
-    DeviceEventEmitter.addListener('onImageCaptured', ImageCaptured);
-    DeviceEventEmitter.addListener('onOCRDataReceived', OCRScanHandler);
-    DeviceEventEmitter.addListener('onDetected', OnDetectedHandler);
+    DeviceEventEmitter.addListener(
+      'onModelDownloadProgress',
+      onModelDownloadProgress
+    );
+    DeviceEventEmitter.addListener('onBarcodeScan', onBarcodeScan);
+    DeviceEventEmitter.addListener('onImageCaptured', onImageCaptured);
+    DeviceEventEmitter.addListener('onOCRScan', onOCRScan);
+    DeviceEventEmitter.addListener('onDetected', onDetected);
     DeviceEventEmitter.addListener('onError', onError);
 
     return () => {
-      DeviceEventEmitter.removeAllListeners('onBarcodeScanSuccess');
-      DeviceEventEmitter.removeAllListeners('onOCRDataReceived');
+      DeviceEventEmitter.removeAllListeners('onModelDownloadProgress');
+      DeviceEventEmitter.removeAllListeners('onBarcodeScan');
+      DeviceEventEmitter.removeAllListeners('onOCRScan');
       DeviceEventEmitter.removeAllListeners('onDetected');
       DeviceEventEmitter.removeAllListeners('onImageCaptured');
       DeviceEventEmitter.removeAllListeners('onError');
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   return (
     <>
       <VisionSdkView
+        ref={VisionSDKViewRef}
         key={reRender}
         style={styles.flex}
+        apiKey={apiKey}
         showScanFrame={showScanFrame}
         captureWithScanFrame={captureWithScanFrame}
-        onBarcodeScanSuccess={BarCodeScanHandler}
-        onImageCaptured={ImageCaptured}
-        onOCRDataReceived={OCRScanHandler}
-        onDetected={OnDetectedHandler}
         mode={mode}
-        captureMode={cameraCaptureMode}
+        captureMode={captureMode}
         delayTime={delayTime ? delayTime : 100}
-        onError={onError}
+        showDocumentBoundaries={showDocumentBoundaries}
+        isOnDeviceOCR={isOnDeviceOCR}
         token={token}
         locationId={locationId}
         options={JSON.stringify(options)} // ideally this should be passed from variable, that is receiving data from ScannerContainer
         environment={environment}
-        ref={VisionSDKViewRef}
+        flash={flash}
+        onBarcodeScan={onBarcodeScan}
+        onModelDownloadProgress={onModelDownloadProgress}
+        onImageCaptured={onImageCaptured}
+        onOCRScan={onOCRScan}
+        onDetected={onDetected}
+        onError={onError}
       >
         {children}
       </VisionSdkView>
