@@ -4,7 +4,7 @@ import com.asadullah.handyutils.removeSpaces
 import io.packagex.visionsdk.ocr.regex.RegexType
 import io.packagex.visionsdk.ocr.regex.VisionRegex
 
-internal class KCECourier : Courier() {
+internal class KCECourier : Courier( listOf("") ) {
 
     val pattern by lazy {
         VisionRegex("(?i)\\b(KCE|Курьер Сервис Экспресс|kypb\\u0435p \\u0441\\u0435p\\u0432\\u0438\\u0441 \\u0437\\u043ac\\u043fp\\u0435c\\u0441)\\b", RegexType.Default)

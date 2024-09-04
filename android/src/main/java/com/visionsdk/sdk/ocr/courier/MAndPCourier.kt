@@ -4,7 +4,7 @@ import com.asadullah.handyutils.removeSpaces
 import io.packagex.visionsdk.ocr.regex.RegexType
 import io.packagex.visionsdk.ocr.regex.VisionRegex
 
-internal class MAndPCourier : Courier() {
+internal class MAndPCourier : Courier( listOf("") ) {
 
     val pattern by lazy {
         VisionRegex("[mM]&[pP]", RegexType.Default)

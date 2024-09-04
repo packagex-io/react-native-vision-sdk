@@ -4,7 +4,7 @@ import io.packagex.visionsdk.ocr.regex.RegexType
 import io.packagex.visionsdk.ocr.regex.VisionRegex
 import com.asadullah.handyutils.*
 
-internal class PurolatorCourier : Courier() {
+internal class PurolatorCourier : Courier( listOf("") ) {
 
     val patternPurolator: VisionRegex by lazy { VisionRegex("\\b(?i)(PUROLATOR)\\b", RegexType.Default) }
 

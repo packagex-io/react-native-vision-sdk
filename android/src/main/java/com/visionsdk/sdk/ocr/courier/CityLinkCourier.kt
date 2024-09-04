@@ -4,7 +4,7 @@ import com.asadullah.handyutils.removeSpaces
 import io.packagex.visionsdk.ocr.regex.RegexType
 import io.packagex.visionsdk.ocr.regex.VisionRegex
 
-internal class CityLinkCourier : Courier() {
+internal class CityLinkCourier : Courier( listOf("city-link") ) {
 
     val patternCityLink by lazy {
         VisionRegex("(?i)(\\bcity-link\\b)", RegexType.Default)

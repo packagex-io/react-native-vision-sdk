@@ -16,6 +16,7 @@ import io.packagex.visionsdk.ocr.ml.process.LocationProcessor
 import io.packagex.visionsdk.ocr.ml.process.sl.SLModel
 import io.packagex.visionsdk.utils.TAG
 import com.asadullah.handyutils.toReadableDuration
+import io.packagex.visionsdk.exceptions.VisionSDKException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.currentCoroutineContext
@@ -23,7 +24,7 @@ import java.io.BufferedReader
 import java.io.InputStreamReader
 import kotlin.time.measureTimedValue
 
-internal class SLLargeModel(context: Context) : SLModel(context) {
+internal class SLLargeModel(context: Context, locationProcessor: LocationProcessor) : SLModel(context, locationProcessor) {
 
     private val vocabularyDictionary = mutableMapOf<String, Long>()
     private val mergesList = mutableListOf<MergesData>()
@@ -70,9 +71,9 @@ internal class SLLargeModel(context: Context) : SLModel(context) {
 
     override suspend fun predict(ortEnvironment: OrtEnvironment, ortSession: OrtSession, locationProcessor: LocationProcessor, bitmap: Bitmap, barcodes: List<String>): PredictionResult {
 
-        check(vocabularyDictionary.isNotEmpty()) { "Vocabulary was not loaded." }
+        if (vocabularyDictionary.isEmpty()) throw VisionSDKException.UnknownException(IllegalStateException("Vocabulary was not loaded."))
 
-        check(mergesList.isNotEmpty()) { "Merges was not loaded." }
+        if (mergesList.isEmpty()) throw VisionSDKException.UnknownException(IllegalStateException("Merges was not loaded."))
 
         val (result, localOCRTime) = measureTimedValue { LocalOCR().performLocalOCRWithBoundingBoxes(bitmap) }
         Log.d(TAG, "Local OCR took ${localOCRTime.toReadableDuration()}.")

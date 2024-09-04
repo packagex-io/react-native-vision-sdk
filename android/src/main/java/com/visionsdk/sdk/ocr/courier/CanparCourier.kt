@@ -4,7 +4,7 @@ import io.packagex.visionsdk.ocr.regex.RegexType
 import io.packagex.visionsdk.ocr.regex.VisionRegex
 import com.asadullah.handyutils.*
 
-internal class CanparCourier : Courier() {
+internal class CanparCourier : Courier( listOf("canpar") ) {
 
     val patternCanpar: VisionRegex by lazy { VisionRegex("(?i)([Cc]anpar|TransForce)", RegexType.Default) }
     val patternCanparTracking1: VisionRegex by lazy { VisionRegex("D[ 0-9]{17,25}01", RegexType.TrackingNo) }

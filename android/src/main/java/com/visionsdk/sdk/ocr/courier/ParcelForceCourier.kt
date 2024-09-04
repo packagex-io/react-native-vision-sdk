@@ -4,7 +4,7 @@ import com.asadullah.handyutils.removeSpaces
 import io.packagex.visionsdk.ocr.regex.RegexType
 import io.packagex.visionsdk.ocr.regex.VisionRegex
 
-internal class ParcelForceCourier : Courier() {
+internal class ParcelForceCourier : Courier( listOf("") ) {
 
     val patternParcelForce by lazy {
         VisionRegex("(?i)\\b(parcel)?((force)|(foce))\\b", RegexType.Default)

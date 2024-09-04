@@ -4,7 +4,7 @@ import com.asadullah.handyutils.removeSpaces
 import io.packagex.visionsdk.ocr.regex.RegexType
 import io.packagex.visionsdk.ocr.regex.VisionRegex
 
-internal class HermesCourier : Courier() {
+internal class HermesCourier : Courier( listOf("") ) {
 
     val patternHermes by lazy {
         VisionRegex("(?i)\\b(HERMES?)\\b", RegexType.Default)

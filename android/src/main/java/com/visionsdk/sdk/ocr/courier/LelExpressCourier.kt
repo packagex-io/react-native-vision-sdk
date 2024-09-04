@@ -4,7 +4,7 @@ import com.asadullah.handyutils.removeSpaces
 import io.packagex.visionsdk.ocr.regex.RegexType
 import io.packagex.visionsdk.ocr.regex.VisionRegex
 
-internal class LelExpressCourier : Courier() {
+internal class LelExpressCourier : Courier( listOf("") ) {
 
     val patternLelExpress by lazy {
         VisionRegex("(?i)(\\blelexpress\\b)", RegexType.Default)

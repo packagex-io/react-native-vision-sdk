@@ -3,7 +3,7 @@ package io.packagex.visionsdk.ocr.courier
 import io.packagex.visionsdk.ocr.regex.RegexType
 import io.packagex.visionsdk.ocr.regex.VisionRegex
 
-internal class DawnWingCourier : Courier() {
+internal class DawnWingCourier : Courier( listOf("dawn-wing") ) {
 
     val patternDawnWing by lazy {
         VisionRegex("(?i)\\b([\\s\\.\\,]*dawn[\\n\\s\\.\\,]*wing[\\s\\.\\,]*)\\b", RegexType.Default)

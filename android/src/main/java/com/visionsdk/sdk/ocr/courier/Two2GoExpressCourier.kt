@@ -3,7 +3,7 @@ package io.packagex.visionsdk.ocr.courier
 import io.packagex.visionsdk.ocr.regex.RegexType
 import io.packagex.visionsdk.ocr.regex.VisionRegex
 
-internal class Two2GoExpressCourier : Courier() {
+internal class Two2GoExpressCourier : Courier( listOf("") ) {
 
     val pattern by lazy {
         VisionRegex("(?i)(\\b2GO[\\s\\,\\.]*Express[\\s\\,\\.]*|express[\\s\\.\\,]*2go[\\s\\.\\,]*com)\\b", RegexType.Default)

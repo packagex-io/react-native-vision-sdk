@@ -198,12 +198,6 @@ internal object BitmapUtils {
         }
     }
 
-    fun imageToBitmap(image: ImageProxy): Bitmap {
-        val buffer = image.planes[0].buffer
-        val bytes = ByteArray(buffer.capacity()).also { buffer.get(it) }
-        return BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
-    }
-
     fun bitmapCompression(bitmap: Bitmap, compression: Int): Bitmap {
         if (compression >= 100) {
             return bitmap

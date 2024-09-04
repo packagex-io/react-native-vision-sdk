@@ -4,7 +4,7 @@ import com.asadullah.handyutils.removeSpaces
 import io.packagex.visionsdk.ocr.regex.RegexType
 import io.packagex.visionsdk.ocr.regex.VisionRegex
 
-internal class ANPostCourier : Courier() {
+internal class ANPostCourier : Courier( listOf("an-post") ) {
 
     val patternANPost by lazy {
         VisionRegex("(\\ban[\\s\\\\n]post|www.anpost.com\\b)", RegexType.Default)

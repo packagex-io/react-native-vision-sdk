@@ -4,7 +4,7 @@ import com.asadullah.handyutils.removeSpaces
 import io.packagex.visionsdk.ocr.regex.RegexType
 import io.packagex.visionsdk.ocr.regex.VisionRegex
 
-internal class RLCarriersCourier : Courier() {
+internal class RLCarriersCourier : Courier( listOf("") ) {
 
     val pattern by lazy {
         VisionRegex("(?i)\\bK?R[ +]{0,2}L[ .]CARRIERS\\b", RegexType.Default)

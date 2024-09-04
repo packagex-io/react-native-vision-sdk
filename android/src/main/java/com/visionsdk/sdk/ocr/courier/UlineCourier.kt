@@ -4,7 +4,7 @@ import com.asadullah.handyutils.removeSpaces
 import io.packagex.visionsdk.ocr.regex.RegexType
 import io.packagex.visionsdk.ocr.regex.VisionRegex
 
-internal class UlineCourier : Courier() {
+internal class UlineCourier : Courier( listOf("") ) {
 
     val pattern by lazy {
         VisionRegex("(?i)\\buline\\b", RegexType.Default)

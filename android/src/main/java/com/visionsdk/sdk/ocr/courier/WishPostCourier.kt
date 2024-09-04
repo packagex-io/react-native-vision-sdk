@@ -4,7 +4,7 @@ import com.asadullah.handyutils.removeSpaces
 import io.packagex.visionsdk.ocr.regex.RegexType
 import io.packagex.visionsdk.ocr.regex.VisionRegex
 
-internal class WishPostCourier : Courier() {
+internal class WishPostCourier : Courier( listOf("") ) {
 
     val patternOnTrac by lazy {
         VisionRegex("(?i)(\\bwish post\\b)", RegexType.Default)

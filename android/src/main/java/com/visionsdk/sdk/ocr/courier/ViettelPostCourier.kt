@@ -3,7 +3,7 @@ package io.packagex.visionsdk.ocr.courier
 import io.packagex.visionsdk.ocr.regex.RegexType
 import io.packagex.visionsdk.ocr.regex.VisionRegex
 
-internal class ViettelPostCourier : Courier() {
+internal class ViettelPostCourier : Courier( listOf("") ) {
 
     val patternViettelPost by lazy {
         VisionRegex("(?i)([www\\s\\.\\,]viettel[\\n\\s\\.\\,]post[\\s\\.\\,comvn])", RegexType.Default)

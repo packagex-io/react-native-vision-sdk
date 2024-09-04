@@ -5,6 +5,7 @@ import io.packagex.visionsdk.VisionSDK
 import okhttp3.Interceptor
 import okhttp3.Response
 
+/*
 internal class ManifestBearerInterceptor : Interceptor {
     override fun intercept(chain: Interceptor.Chain): Response {
         val result = when (val auth = VisionSDK.getInstance().manifestAuth) {
@@ -16,4 +17,4 @@ internal class ManifestBearerInterceptor : Interceptor {
         }
         return chain.proceed(result)
     }
-}
+}*/

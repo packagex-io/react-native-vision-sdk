@@ -4,7 +4,7 @@ import com.asadullah.handyutils.removeSpaces
 import io.packagex.visionsdk.ocr.regex.RegexType
 import io.packagex.visionsdk.ocr.regex.VisionRegex
 
-internal class PostNLCourier : Courier() {
+internal class PostNLCourier : Courier( listOf("") ) {
 
     val patternPostNL by lazy {
         VisionRegex("(?i)\\b(postnl)\\b", RegexType.Default)

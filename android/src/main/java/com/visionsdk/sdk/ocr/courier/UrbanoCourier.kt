@@ -3,7 +3,7 @@ package io.packagex.visionsdk.ocr.courier
 import io.packagex.visionsdk.ocr.regex.RegexType
 import io.packagex.visionsdk.ocr.regex.VisionRegex
 
-internal class UrbanoCourier : Courier() {
+internal class UrbanoCourier : Courier( listOf("") ) {
 
     val patternUrbano by lazy {
         VisionRegex("(?i)(\\bURBANO\\b)", RegexType.Default)

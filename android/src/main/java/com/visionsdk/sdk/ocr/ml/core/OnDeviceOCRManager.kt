@@ -2,16 +2,15 @@ package io.packagex.visionsdk.ocr.ml.core
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import io.packagex.visionsdk.exceptions.VisionSDKException
 import io.packagex.visionsdk.ocr.ml.core.onnx.VisionOrtSession
 import io.packagex.visionsdk.ocr.ml.enums.ExecutionProvider
+import io.packagex.visionsdk.ocr.ml.process.LocationProcessor
 import io.packagex.visionsdk.ocr.ml.process.sl.large.SLLargeModel
 import io.packagex.visionsdk.ocr.ml.process.sl.micro.SLMicroModel
-import io.packagex.visionsdk.preferences.VisionSdkSettings
-import io.packagex.visionsdk.service.request.ModelInfo
-import io.packagex.visionsdk.service.request.ModelVersion
-import io.packagex.visionsdk.service.request.TelemetryData
-import io.packagex.visionsdk.utils.isoFormat
-import java.util.Date
+import io.packagex.visionsdk.preferences.VisionSDKSettings
+import java.io.File
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.TimedValue
@@ -23,15 +22,17 @@ class OnDeviceOCRManager(
     private val modelSize: ModelSize = ModelSize.Micro,
 ) {
 
+    private val locationProcessor by lazy { LocationProcessor(context) }
+
     private val slModel by lazy {
         when (modelClass) {
             ModelClass.ShippingLabel -> {
                 when (modelSize) {
                     ModelSize.Nano -> TODO()
-                    ModelSize.Micro -> SLMicroModel(context)
+                    ModelSize.Micro -> SLMicroModel(context, locationProcessor)
                     ModelSize.Small -> TODO()
                     ModelSize.Medium -> TODO()
-                    ModelSize.Large -> SLLargeModel(context)
+                    ModelSize.Large -> SLLargeModel(context, locationProcessor)
                     ModelSize.XLarge -> TODO()
                 }
             }
@@ -45,18 +46,21 @@ class OnDeviceOCRManager(
     fun isModelAlreadyDownloaded() = slModel.isModelAlreadyDownloaded()
 
     suspend fun configure(
+        apiKey: String? = null,
+        token: String? = null,
         executionProvider: ExecutionProvider = ExecutionProvider.NNAPI,
         progressListener: ((Float) -> Unit)? = null
     ) {
         try {
-            slModel.configure(context, platformType, executionProvider, progressListener)
+            locationProcessor.init()
+            slModel.configure(context, apiKey, token, platformType, executionProvider, progressListener)
         } catch (e: Exception) {
             addTelemetryData(
                 action = "shipping_label_extraction",
                 extractionDuration = 0L,
                 e = e
             )
-            throw e
+            throw VisionSDKException.UnknownException(e)
         }
     }
 
@@ -65,16 +69,14 @@ class OnDeviceOCRManager(
         barcodes: List<String>
     ): String {
 
-        assert(isConfigured()) { "You need to call function configure first." }
-
-        VisionSdkSettings.onDeviceModelExecutionCountPlusPlus()
+        if (isConfigured().not()) throw VisionSDKException.OnDeviceOCRManagerNotConfigured
 
         return try {
 
             val (result, duration) = measureTimedValueWithException {
-                slModel.getPredictions(context, bitmap, barcodes)
+                slModel.getPredictions(bitmap, barcodes)
             }
-            VisionSdkSettings.addOnDeviceModelExecutionDurationInMillis(duration.inWholeMilliseconds)
+            VisionSDKSettings.onDeviceModelUsageIncrement(modelClass, modelSize, duration.inWholeMilliseconds)
             result
         } catch (e: TimedException) {
             addTelemetryData(
@@ -82,7 +84,7 @@ class OnDeviceOCRManager(
                 extractionDuration = e.exceptionDuration.inWholeMilliseconds,
                 e = e
             )
-            throw e.cause
+            throw VisionSDKException.UnknownException(e.cause)
         }
     }
 
@@ -96,6 +98,7 @@ class OnDeviceOCRManager(
 
     fun destroy() {
         slModel.invalidateModel()
+        locationProcessor.destroy()
     }
 
     private fun addTelemetryData(action: String, extractionDuration: Long, e: Exception) {

@@ -3,7 +3,7 @@ package io.packagex.visionsdk.ocr.courier
 import io.packagex.visionsdk.ocr.regex.RegexType
 import io.packagex.visionsdk.ocr.regex.VisionRegex
 
-internal class InPostCourier : Courier() {
+internal class InPostCourier : Courier( listOf("") ) {
 
     val patternInPost by lazy {
         VisionRegex("(?i)([\\s\\.\\,]inpost[\\s\\.\\,]*)", RegexType.Default)

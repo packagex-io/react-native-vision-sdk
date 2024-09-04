@@ -3,7 +3,7 @@ package io.packagex.visionsdk.ocr.courier
 import io.packagex.visionsdk.ocr.regex.RegexType
 import io.packagex.visionsdk.ocr.regex.VisionRegex
 
-internal class TikiCourier : Courier() {
+internal class TikiCourier : Courier( listOf("") ) {
 
     val patternTiki by lazy {
         VisionRegex("(?i)(\\bO?TIKI\\b)", RegexType.Default)

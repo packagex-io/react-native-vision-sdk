@@ -3,7 +3,7 @@ package io.packagex.visionsdk.ocr.courier
 import io.packagex.visionsdk.ocr.regex.RegexType
 import io.packagex.visionsdk.ocr.regex.VisionRegex
 
-internal class AramexCourier : Courier() {
+internal class AramexCourier : Courier( listOf("aramex") ) {
 
     val patternAramex = VisionRegex("(?i)(\\b[\\s\\.\\,]*aramex[\\s\\.\\,]*\\b)", RegexType.Default)
 

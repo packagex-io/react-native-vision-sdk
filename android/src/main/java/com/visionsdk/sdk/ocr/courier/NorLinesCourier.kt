@@ -3,7 +3,7 @@ package io.packagex.visionsdk.ocr.courier
 import io.packagex.visionsdk.ocr.regex.RegexType
 import io.packagex.visionsdk.ocr.regex.VisionRegex
 
-internal class NorLinesCourier : Courier() {
+internal class NorLinesCourier : Courier( listOf("") ) {
 
     val pattern by lazy {
         VisionRegex("(?i)nor[\\s]*lines", RegexType.Default)

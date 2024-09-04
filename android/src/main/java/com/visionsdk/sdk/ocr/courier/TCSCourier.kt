@@ -4,7 +4,7 @@ import com.asadullah.handyutils.removeSpaces
 import io.packagex.visionsdk.ocr.regex.RegexType
 import io.packagex.visionsdk.ocr.regex.VisionRegex
 
-internal class TCSCourier : Courier() {
+internal class TCSCourier : Courier( listOf("") ) {
 
     val pattern by lazy {
         VisionRegex("[Tt]cs|TCS", RegexType.Default)

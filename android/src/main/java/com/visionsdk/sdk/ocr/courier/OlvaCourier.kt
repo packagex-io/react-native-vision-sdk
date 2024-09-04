@@ -3,7 +3,7 @@ package io.packagex.visionsdk.ocr.courier
 import io.packagex.visionsdk.ocr.regex.RegexType
 import io.packagex.visionsdk.ocr.regex.VisionRegex
 
-internal class OlvaCourier : Courier() {
+internal class OlvaCourier : Courier( listOf("") ) {
 
     val patternOlva by lazy {
         VisionRegex("(?i)([\\s\\.\\,]*olva[\\s\\.\\,]*courier[\\s\\.\\,]*)", RegexType.Default)

@@ -3,7 +3,7 @@ package io.packagex.visionsdk.ocr.courier
 import io.packagex.visionsdk.ocr.regex.RegexType
 import io.packagex.visionsdk.ocr.regex.VisionRegex
 
-internal class AtlasCourier : Courier() {
+internal class AtlasCourier : Courier( listOf("atlas-couriers") ) {
 
     val pattern by lazy {
         VisionRegex("(?i)\\bATLAS[\\n| ]{0,1}COURIERS?([\\n| ]{0,1}EXPRESS)?\\b", RegexType.Default)

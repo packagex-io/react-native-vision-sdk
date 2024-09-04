@@ -4,7 +4,7 @@ import com.asadullah.handyutils.removeSpaces
 import io.packagex.visionsdk.ocr.regex.RegexType
 import io.packagex.visionsdk.ocr.regex.VisionRegex
 
-internal class Mark3Courier : Courier() {
+internal class Mark3Courier : Courier( listOf("") ) {
 
     val patternMark3 by lazy {
         VisionRegex("Mark ?3 International|MARK ?3 INTERNATIONAL", RegexType.Default)

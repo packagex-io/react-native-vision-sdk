@@ -4,7 +4,7 @@ import com.asadullah.handyutils.removeSpaces
 import io.packagex.visionsdk.ocr.regex.RegexType
 import io.packagex.visionsdk.ocr.regex.VisionRegex
 
-internal class GdexCourier : Courier() {
+internal class GdexCourier : Courier( listOf("") ) {
 
     val patternGdex by lazy {
         VisionRegex("(?i)((\\bgdex\\b)|(\\.gdexpress\\.))", RegexType.Default)

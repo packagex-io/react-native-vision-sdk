@@ -5,7 +5,7 @@ import com.asadullah.handyutils.toLettersOrDigits
 import io.packagex.visionsdk.ocr.regex.RegexType
 import io.packagex.visionsdk.ocr.regex.VisionRegex
 
-internal class KeeneyCourier : Courier() {
+internal class KeeneyCourier : Courier( listOf("") ) {
 
     val pattern by lazy {
         VisionRegex("[Kk](eeney|EENEY)", RegexType.Default)

@@ -3,7 +3,7 @@ package io.packagex.visionsdk.ocr.courier
 import io.packagex.visionsdk.ocr.regex.RegexType
 import io.packagex.visionsdk.ocr.regex.VisionRegex
 
-internal class OCSCourier : Courier() {
+internal class OCSCourier : Courier( listOf("") ) {
 
     val patternOCS by lazy {
         VisionRegex("(?i)\\b([\\s\\.\\,]*ocs[\\s\\.\\,thailand]*[\\s\\.\\,]*co[\\s\\.\\,]ltd[\\s\\.\\,]*)\\b", RegexType.Default)

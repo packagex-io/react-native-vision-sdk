@@ -4,7 +4,7 @@ import com.asadullah.handyutils.removeSpaces
 import io.packagex.visionsdk.ocr.regex.RegexType
 import io.packagex.visionsdk.ocr.regex.VisionRegex
 
-internal class RoyalMailCourier : Courier() {
+internal class RoyalMailCourier : Courier( listOf("") ) {
 
     val patternRoyalMail by lazy {
         VisionRegex("(?i)(Royal[ \\-]?Mail)", RegexType.Default)

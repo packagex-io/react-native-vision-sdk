@@ -4,7 +4,7 @@ import com.asadullah.handyutils.removeSpaces
 import io.packagex.visionsdk.ocr.regex.RegexType
 import io.packagex.visionsdk.ocr.regex.VisionRegex
 
-internal class ZTOExpressCourier : Courier() {
+internal class ZTOExpressCourier : Courier( listOf("") ) {
 
     val patternZTOExpressTracking1 by lazy {
         VisionRegex("8520001\\d{5}(?!\\d)", RegexType.TrackingNo)

@@ -1,35 +1,22 @@
 package io.packagex.visionsdk
 
 import android.content.Context
-import io.packagex.visionsdk.preferences.VisionSdkSettings
+import io.packagex.visionsdk.exceptions.VisionSDKException
+import io.packagex.visionsdk.preferences.VisionSDKSettings
 
 class VisionSDK private constructor() {
 
     private var _environment: Environment? = null
 
-    private var _auth: Authentication? = null
-
-    private var _manifestAuth: Authentication? = null
-
     val environment: Environment
-        get() = _environment ?: throw Exception("Environment not set")
-
-    val auth: Authentication
-        get() = _auth ?: throw Exception("Authorization mechanism not set")
-
-    val manifestAuth: Authentication
-        get() = _manifestAuth ?: throw Exception("Manifest Authorization mechanism not set")
+        get() = _environment ?: throw VisionSDKException.EnvironmentNotSet
 
     fun initialize(
         context: Context,
         environment: Environment,
-        auth: Authentication,
-        manifestAuth: Authentication
     ) {
         this._environment = environment
-        this._auth = auth
-        this._manifestAuth = manifestAuth
-        VisionSdkSettings.initialize(context)
+        VisionSDKSettings.initialize(context)
     }
 
     companion object {

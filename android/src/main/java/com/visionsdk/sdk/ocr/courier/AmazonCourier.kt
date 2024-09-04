@@ -4,7 +4,7 @@ import io.packagex.visionsdk.ocr.regex.RegexType
 import io.packagex.visionsdk.ocr.regex.VisionRegex
 import com.asadullah.handyutils.*
 
-internal class AmazonCourier : Courier() {
+internal class AmazonCourier : Courier( listOf("amazon") ) {
 
     val patternAmazon: VisionRegex by lazy { VisionRegex("(?is)((\\bAmazon Parcel\\b)|(\\bamazon\\.co)|(\\b[A-Za-z]{3}\\d\\b\\s(.*?)Amazon)|(\\bcycle.1\\b)|(Amazon Seller Services)|(.ww\\.amazon\\.in))", RegexType.Default) }
     val patternAmazonTracking1: VisionRegex by lazy { VisionRegex("(TB|TE)(?:[A-Z])[\\d]{12}", RegexType.TrackingNo) }

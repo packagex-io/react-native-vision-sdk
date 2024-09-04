@@ -4,7 +4,7 @@ import io.packagex.visionsdk.ocr.regex.RegexType
 import io.packagex.visionsdk.ocr.regex.VisionRegex
 import com.asadullah.handyutils.*
 
-internal class FedExCourier : Courier() {
+internal class FedExCourier : Courier( listOf("") ) {
 
     val patternFedEx: VisionRegex by lazy { VisionRegex("(?i)\\b(FEDEX)\\b|[Ff]edex", RegexType.Default) }
 

@@ -38,8 +38,6 @@ data class ConnectResponse(
         val rq: Rq?,
         @SerializedName("_s")
         val s: S?,
-        @SerializedName("_t")
-        val t: Int?,
         @SerializedName("_u")
         val u: String?
     ) {

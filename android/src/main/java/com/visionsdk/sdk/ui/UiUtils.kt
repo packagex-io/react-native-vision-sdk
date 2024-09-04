@@ -6,7 +6,7 @@ import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
-import io.packagex.visionsdk.preferences.dto.BarcodeTemplate
+import io.packagex.visionsdk.exceptions.VisionSDKException
 import io.packagex.visionsdk.ui.activities.CreateTemplateActivity
 import io.packagex.visionsdk.utils.TAG
 
@@ -29,7 +29,7 @@ fun ComponentActivity.setTemplateCreatedCallback(onTemplateCreated: (newlyCreate
 }
 
 fun ComponentActivity.startCreateTemplateScreen() {
-    check(createTemplateActivityLauncher != null) { "You must call 'setTemplateCreatedCallback()' function in onCreate(), before calling 'startCreateTemplateScreen()'" }
+    if (createTemplateActivityLauncher == null) throw VisionSDKException.UnknownException(IllegalStateException("You must call 'setTemplateCreatedCallback()' function in onCreate(), before calling 'startCreateTemplateScreen()'"))
 
     createTemplateActivityLauncher!!.launch(
         Intent(this, CreateTemplateActivity::class.java)

@@ -3,7 +3,7 @@ package io.packagex.visionsdk.ocr.courier
 import io.packagex.visionsdk.ocr.regex.RegexType
 import io.packagex.visionsdk.ocr.regex.VisionRegex
 
-internal class CorporateCouriersLogisticsCourier : Courier() {
+internal class CorporateCouriersLogisticsCourier : Courier( listOf("corporate-couriers-logistics") ) {
 
     val pattern by lazy {
         VisionRegex("(?i)\\bCORPORATE[\\n| ]{0,1}COURIERS[\\n| ]{0,1}LOGISTICS\\b", RegexType.Default)

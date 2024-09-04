@@ -4,7 +4,7 @@ import com.asadullah.handyutils.removeSpaces
 import io.packagex.visionsdk.ocr.regex.RegexType
 import io.packagex.visionsdk.ocr.regex.VisionRegex
 
-internal class IDEExpressCourier : Courier() {
+internal class IDEExpressCourier : Courier( listOf("") ) {
 
     val patternIDEExpress by lazy {
         VisionRegex("(?i)(\\bide express\\b)", RegexType.Default)

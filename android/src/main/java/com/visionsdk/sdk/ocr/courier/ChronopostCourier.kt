@@ -4,7 +4,7 @@ import com.asadullah.handyutils.removeSpaces
 import io.packagex.visionsdk.ocr.regex.RegexType
 import io.packagex.visionsdk.ocr.regex.VisionRegex
 
-internal class ChronopostCourier : Courier() {
+internal class ChronopostCourier : Courier( listOf("chronopost") ) {
 
     val patternChronopost by lazy {
         VisionRegex("(?i)(\\bchronopost\\b)|(www\\.chronopost\\.fr)", RegexType.Default)

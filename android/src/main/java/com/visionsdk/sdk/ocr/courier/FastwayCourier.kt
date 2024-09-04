@@ -4,7 +4,7 @@ import io.packagex.visionsdk.ocr.regex.RegexType
 import io.packagex.visionsdk.ocr.regex.VisionRegex
 import com.asadullah.handyutils.*
 
-internal class FastwayCourier : Courier() {
+internal class FastwayCourier : Courier( listOf("") ) {
 
     val patternFastway: VisionRegex by lazy { VisionRegex("(fast( )?way)|FASTWAY", RegexType.Default) }
     val patternFastwayTracking1: VisionRegex by lazy { VisionRegex("(QH|AM|NR|FR|VR)(?<!\\d)\\d{10}(?!\\d)", RegexType.TrackingNo) }

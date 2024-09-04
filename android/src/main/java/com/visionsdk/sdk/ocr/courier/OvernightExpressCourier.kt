@@ -3,7 +3,7 @@ package io.packagex.visionsdk.ocr.courier
 import io.packagex.visionsdk.ocr.regex.RegexType
 import io.packagex.visionsdk.ocr.regex.VisionRegex
 
-internal class OvernightExpressCourier : Courier() {
+internal class OvernightExpressCourier : Courier( listOf("") ) {
 
     val patternOvernightExpress by lazy {
         VisionRegex("(?i)(\\bOvernight Express\\b)", RegexType.Default)

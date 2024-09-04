@@ -3,7 +3,7 @@ package io.packagex.visionsdk.ocr.courier
 import io.packagex.visionsdk.ocr.regex.RegexType
 import io.packagex.visionsdk.ocr.regex.VisionRegex
 
-internal class WPSExpressCourier : Courier() {
+internal class WPSExpressCourier : Courier( listOf("") ) {
 
     val patternWPSExpress by lazy {
         VisionRegex("(?i)([\\s\\.\\,]wsp[\\s\\.\\,]Express[\\s\\.\\,])", RegexType.Default)

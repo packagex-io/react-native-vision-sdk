@@ -4,7 +4,7 @@ import com.asadullah.handyutils.removeSpaces
 import io.packagex.visionsdk.ocr.regex.RegexType
 import io.packagex.visionsdk.ocr.regex.VisionRegex
 
-internal class CTTCourier : Courier() {
+internal class CTTCourier : Courier( listOf("ctt") ) {
 
     val pattern by lazy {
         VisionRegex("(?i)(\\bctt\\b)", RegexType.Default)

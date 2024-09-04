@@ -3,7 +3,7 @@ package io.packagex.visionsdk.ocr.courier
 import io.packagex.visionsdk.ocr.regex.RegexType
 import io.packagex.visionsdk.ocr.regex.VisionRegex
 
-internal class NZCouriersCourier : Courier() {
+internal class NZCouriersCourier : Courier( listOf("") ) {
 
     val pattern by lazy {
         VisionRegex("(?i)\\b(NZ COURIERS|NEW ?ZEALAND[]n| ]{0,1}COURIERS)\\b", RegexType.Default)

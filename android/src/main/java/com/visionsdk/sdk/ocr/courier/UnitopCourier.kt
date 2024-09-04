@@ -3,7 +3,7 @@ package io.packagex.visionsdk.ocr.courier
 import io.packagex.visionsdk.ocr.regex.RegexType
 import io.packagex.visionsdk.ocr.regex.VisionRegex
 
-internal class UnitopCourier : Courier() {
+internal class UnitopCourier : Courier( listOf("") ) {
 
     val patternUnitop by lazy {
         VisionRegex("(?i)(全一快递)", RegexType.Default)

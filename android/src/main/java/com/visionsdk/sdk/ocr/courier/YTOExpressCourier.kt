@@ -4,7 +4,7 @@ import com.asadullah.handyutils.removeSpaces
 import io.packagex.visionsdk.ocr.regex.RegexType
 import io.packagex.visionsdk.ocr.regex.VisionRegex
 
-internal class YTOExpressCourier : Courier() {
+internal class YTOExpressCourier : Courier( listOf("") ) {
 
     val patternYTOExpress by lazy {
         VisionRegex("(?i)(yto[\\s]*express|ytoexpress\\.com|圆通速递)", RegexType.Default)

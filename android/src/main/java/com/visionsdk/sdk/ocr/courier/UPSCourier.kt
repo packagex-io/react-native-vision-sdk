@@ -4,7 +4,7 @@ import io.packagex.visionsdk.ocr.regex.RegexType
 import io.packagex.visionsdk.ocr.regex.VisionRegex
 import com.asadullah.handyutils.*
 
-internal class UPSCourier : Courier() {
+internal class UPSCourier : Courier( listOf("") ) {
 
     val patternUPS: VisionRegex by lazy { VisionRegex("\\b(UPS)|(ups)\\b", RegexType.Default) }
 

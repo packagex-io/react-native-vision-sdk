@@ -4,7 +4,7 @@ import io.packagex.visionsdk.ocr.regex.RegexType
 import io.packagex.visionsdk.ocr.regex.VisionRegex
 import com.asadullah.handyutils.*
 
-internal class EQuickCNCourier : Courier() {
+internal class EQuickCNCourier : Courier( listOf("") ) {
 
     val patternEQuickCNTracking1: VisionRegex by lazy { VisionRegex("EQ[A-Z0-9]{8,13}YQ", RegexType.TrackingNo) }
 

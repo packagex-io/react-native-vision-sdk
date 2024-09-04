@@ -4,7 +4,7 @@ import com.asadullah.handyutils.removeSpaces
 import io.packagex.visionsdk.ocr.regex.RegexType
 import io.packagex.visionsdk.ocr.regex.VisionRegex
 
-internal class StatOvernightCourier : Courier() {
+internal class StatOvernightCourier : Courier( listOf("") ) {
 
     val pattern by lazy {
         VisionRegex("(?i)\\b([\\s\\.\\,]*statovernight[\\s\\.\\,]*|stat[\\s\\.\\,]overnight|statover[\\s\\.\\,]night|stat[\\s\\.\\,]over[\\s\\.\\,]night)\\b", RegexType.Default)

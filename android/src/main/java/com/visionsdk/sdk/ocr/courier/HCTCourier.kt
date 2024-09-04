@@ -3,7 +3,7 @@ package io.packagex.visionsdk.ocr.courier
 import io.packagex.visionsdk.ocr.regex.RegexType
 import io.packagex.visionsdk.ocr.regex.VisionRegex
 
-internal class HCTCourier : Courier() {
+internal class HCTCourier : Courier( listOf("") ) {
 
     val pattern by lazy {
         VisionRegex("(?i)\\b(新竹貨運|HCT( LOGISTICS)?)\\b", RegexType.Default)

@@ -4,7 +4,7 @@ import com.asadullah.handyutils.removeSpaces
 import io.packagex.visionsdk.ocr.regex.RegexType
 import io.packagex.visionsdk.ocr.regex.VisionRegex
 
-internal class FukuyamaTransportationCourier : Courier() {
+internal class FukuyamaTransportationCourier : Courier( listOf("") ) {
 
     val patternFukuyamaTransportation by lazy {
         VisionRegex("(?i)(福山通運)|(www.fukutsu.co.jp)", RegexType.Default)

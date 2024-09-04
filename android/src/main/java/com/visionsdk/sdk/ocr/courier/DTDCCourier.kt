@@ -5,7 +5,7 @@ import com.asadullah.handyutils.removeSpaces
 import io.packagex.visionsdk.ocr.regex.RegexType
 import io.packagex.visionsdk.ocr.regex.VisionRegex
 
-internal class DTDCCourier : Courier() {
+internal class DTDCCourier : Courier( listOf("dtdc") ) {
 
     val pattern by lazy {
         VisionRegex("(?i)DTDC", RegexType.Default)

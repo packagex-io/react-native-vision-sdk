@@ -1,6 +1,6 @@
 package io.packagex.visionsdk.ocr.courier
 
-internal abstract class Courier {
+internal abstract class Courier(val possibleNames: List<String>) {
 
     abstract fun readFromBarcode(barcode: String, ocrExtractedText: String?): RegexResult
     abstract fun readFromOCR(ocrExtractedText: String?): RegexResult

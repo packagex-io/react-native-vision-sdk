@@ -15,11 +15,12 @@ import io.packagex.visionsdk.ocr.ml.process.LocationProcessor
 import io.packagex.visionsdk.ocr.ml.process.sl.SLModel
 import io.packagex.visionsdk.utils.TAG
 import com.asadullah.handyutils.toReadableDuration
+import io.packagex.visionsdk.exceptions.VisionSDKException
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import kotlin.time.measureTimedValue
 
-internal class SLMicroModel(context: Context) : SLModel(context) {
+internal class SLMicroModel(context: Context, locationProcessor: LocationProcessor) : SLModel(context, locationProcessor) {
 
     private val vocabularyDictionary = mutableMapOf<String, Long>()
 
@@ -44,7 +45,7 @@ internal class SLMicroModel(context: Context) : SLModel(context) {
 
     override suspend fun predict(ortEnvironment: OrtEnvironment, ortSession: OrtSession, locationProcessor: LocationProcessor, bitmap: Bitmap, barcodes: List<String>): PredictionResult {
 
-        check(vocabularyDictionary.isNotEmpty()) { "Vocabulary was not loaded." }
+        if (vocabularyDictionary.isEmpty()) throw VisionSDKException.UnknownException(IllegalStateException("Vocabulary was not loaded."))
 
         val (result, localOCRTime) = measureTimedValue { LocalOCR().performLocalOCR(bitmap) }
         Log.d(TAG, "Local OCR took ${localOCRTime.toReadableDuration()}.")

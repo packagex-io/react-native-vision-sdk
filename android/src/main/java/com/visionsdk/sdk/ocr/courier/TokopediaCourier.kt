@@ -4,7 +4,7 @@ import com.asadullah.handyutils.removeSpaces
 import io.packagex.visionsdk.ocr.regex.RegexType
 import io.packagex.visionsdk.ocr.regex.VisionRegex
 
-internal class TokopediaCourier : Courier() {
+internal class TokopediaCourier : Courier( listOf("") ) {
 
     val patternTokopedia by lazy {
         VisionRegex("(?i)(\\btokopedia\\b)", RegexType.Default)

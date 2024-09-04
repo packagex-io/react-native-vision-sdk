@@ -3,7 +3,7 @@ package io.packagex.visionsdk.ocr.courier
 import io.packagex.visionsdk.ocr.regex.RegexType
 import io.packagex.visionsdk.ocr.regex.VisionRegex
 
-internal class BlueExpressCourier : Courier() {
+internal class BlueExpressCourier : Courier( listOf("blue-express") ) {
 
     val patternBlueExpress by lazy {
         VisionRegex("(?i)\\b([\\s\\.\\,]*blue[\\n\\s\\.\\,]*express[\\s\\.\\,]*)\\b", RegexType.Default)

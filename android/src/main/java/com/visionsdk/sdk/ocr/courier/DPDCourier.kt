@@ -4,7 +4,7 @@ import com.asadullah.handyutils.removeSpaces
 import io.packagex.visionsdk.ocr.regex.RegexType
 import io.packagex.visionsdk.ocr.regex.VisionRegex
 
-internal class DPDCourier : Courier() {
+internal class DPDCourier : Courier( listOf("dpd") ) {
 
     val patternDPD by lazy {
         VisionRegex("(?i)(www\\.?dpd\\.?co\\.?uk)|(www\\.?dpd\\.?com)|(\\bdpd\\b)", RegexType.Default)

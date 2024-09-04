@@ -4,7 +4,7 @@ import com.asadullah.handyutils.removeSpaces
 import io.packagex.visionsdk.ocr.regex.RegexType
 import io.packagex.visionsdk.ocr.regex.VisionRegex
 
-internal class OnTracCourier : Courier() {
+internal class OnTracCourier : Courier( listOf("") ) {
 
     val patternOnTrac by lazy {
         VisionRegex("\\b(?i)(OnTrac)\\b", RegexType.Default)

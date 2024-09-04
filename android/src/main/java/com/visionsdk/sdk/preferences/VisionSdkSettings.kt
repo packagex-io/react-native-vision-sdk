@@ -3,21 +3,19 @@ package io.packagex.visionsdk.preferences
 import android.content.Context
 import android.content.SharedPreferences
 import com.asadullah.handyutils.ifNeitherNullNorEmptyNorBlank
-import com.asadullah.handyutils.toMap
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import io.packagex.visionsdk.ocr.ml.core.ModelClass
 import io.packagex.visionsdk.ocr.ml.core.ModelSize
 import io.packagex.visionsdk.preferences.dto.BarcodeTemplate
-import io.packagex.visionsdk.preferences.dto.BarcodeTemplateData
+import io.packagex.visionsdk.preferences.dto.ModelUsage
 import io.packagex.visionsdk.service.request.TelemetryData
 import io.packagex.visionsdk.utils.toSafeString
-import org.json.JSONArray
 import org.json.JSONObject
 import java.time.LocalDateTime
 import java.time.ZoneOffset
 
-internal object VisionSdkSettings {
+internal object VisionSDKSettings {
 
     private var prefs: SharedPreferences? = null
 
@@ -112,39 +110,54 @@ internal object VisionSdkSettings {
             ?.getString("model_version_id")
     }
 
-    fun onDeviceModelExecutionCountPlusPlus() {
+    fun onDeviceModelUsageIncrement(modelClass: ModelClass, modelSize: ModelSize, duration: Long) {
+
+        val modelUsages = getOnDeviceModelUsages()
+
+        var modelUsage: ModelUsage? = null
+        var indexOfModelUsage: Int? = null
+
+        for ((index, item) in modelUsages.withIndex()) {
+            if (item.modelClass == modelClass && item.modelSize == modelSize) {
+                modelUsage = item
+                indexOfModelUsage = index
+                break
+            }
+        }
+
+        modelUsage = modelUsage?.copy(
+            usageCount = modelUsage.usageCount + 1,
+            usageDuration = modelUsage.usageDuration + duration
+        ) ?: ModelUsage(modelClass, modelSize, 1, duration)
+
+        val updatedList = modelUsages.toMutableList()
+
+        if (indexOfModelUsage == null) {
+            updatedList.add(modelUsage)
+        } else {
+            updatedList[indexOfModelUsage] = modelUsage
+        }
+
+        saveOnDeviceModelUsages(updatedList)
+    }
+
+    private fun saveOnDeviceModelUsages(modelUsages: List<ModelUsage>) {
         prefs!!
             .edit()
-            .putInt("OnDeviceModelExecutionCount", getOnDeviceModelExecutionCount() + 1)
+            .putString("ModelUsages", Gson().toJson(modelUsages))
             .apply()
     }
 
-    fun getOnDeviceModelExecutionCount(): Int {
-        return prefs!!.getInt("OnDeviceModelExecutionCount", 0)
+    fun getOnDeviceModelUsages(): List<ModelUsage> {
+        return (prefs!!.getString("ModelUsages", null) ?: return emptyList()).let {
+            Gson().fromJson(it, object : TypeToken<List<ModelUsage>>() {}.type)
+        }
     }
 
-    fun resetOnDeviceModelExecutionCount() {
+    fun clearOnDeviceModelUsages() {
         prefs!!
             .edit()
-            .putInt("OnDeviceModelExecutionCount", 0)
-            .apply()
-    }
-
-    fun addOnDeviceModelExecutionDurationInMillis(duration: Long) {
-        prefs!!
-            .edit()
-            .putLong("OnDeviceModelExecutionDurationInMillis", getOnDeviceModelExecutionDurationInMillis() + duration)
-            .apply()
-    }
-
-    fun getOnDeviceModelExecutionDurationInMillis(): Long {
-        return prefs!!.getLong("OnDeviceModelExecutionDurationInMillis", 0L)
-    }
-
-    fun resetOnDeviceModelExecutionDuration() {
-        prefs!!
-            .edit()
-            .putLong("OnDeviceModelExecutionDurationInMillis", 0)
+            .remove("ModelUsages")
             .apply()
     }
 
@@ -172,7 +185,7 @@ internal object VisionSdkSettings {
 
     fun getAllBarcodeTemplates(): List<BarcodeTemplate> {
         return prefs!!.getString("AllBarcodeTemplates", null).ifNeitherNullNorEmptyNorBlank {
-            Gson().fromJson(it, object : TypeToken<List<BarcodeTemplate>>(){}.type)
+            Gson().fromJson(it, object : TypeToken<List<BarcodeTemplate>>() {}.type)
         } ?: emptyList()
     }
 
@@ -200,7 +213,7 @@ internal object VisionSdkSettings {
 
     fun getTelemetryData(): List<TelemetryData> {
         return prefs!!.getString("TelemetryDataList", null).ifNeitherNullNorEmptyNorBlank {
-            Gson().fromJson(it, object : TypeToken<List<TelemetryData>>(){}.type)
+            Gson().fromJson(it, object : TypeToken<List<TelemetryData>>() {}.type)
         } ?: emptyList()
     }
 

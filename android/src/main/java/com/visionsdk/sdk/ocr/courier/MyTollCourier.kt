@@ -4,7 +4,7 @@ import com.asadullah.handyutils.removeSpaces
 import io.packagex.visionsdk.ocr.regex.RegexType
 import io.packagex.visionsdk.ocr.regex.VisionRegex
 
-internal class MyTollCourier : Courier() {
+internal class MyTollCourier : Courier( listOf("") ) {
 
     val pattern by lazy {
         VisionRegex("(?i)TOLL", RegexType.Default)

@@ -4,7 +4,7 @@ import com.asadullah.handyutils.removeSpaces
 import io.packagex.visionsdk.ocr.regex.RegexType
 import io.packagex.visionsdk.ocr.regex.VisionRegex
 
-internal class MercadoCourier : Courier() {
+internal class MercadoCourier : Courier( listOf("") ) {
 
     val patternMercado by lazy {
         VisionRegex("(?i)(\\bmercado\\b)", RegexType.Default)

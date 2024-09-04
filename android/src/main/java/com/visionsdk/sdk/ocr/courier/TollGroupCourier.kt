@@ -3,7 +3,7 @@ package io.packagex.visionsdk.ocr.courier
 import io.packagex.visionsdk.ocr.regex.RegexType
 import io.packagex.visionsdk.ocr.regex.VisionRegex
 
-internal class TollGroupCourier : Courier() {
+internal class TollGroupCourier : Courier( listOf("") ) {
 
     val patternTollGroup: VisionRegex by lazy { VisionRegex("(?i)(www\\.tollgroup\\.com)", RegexType.TrackingNo) }
     val patternTollGroupTracking1: VisionRegex by lazy { VisionRegex("T\\d{6}[A-Z]{4}\\d{10}", RegexType.TrackingNo) }

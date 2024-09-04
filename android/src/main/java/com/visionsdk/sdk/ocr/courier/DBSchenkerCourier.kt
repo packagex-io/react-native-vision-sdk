@@ -4,7 +4,7 @@ import com.asadullah.handyutils.removeSpaces
 import io.packagex.visionsdk.ocr.regex.RegexType
 import io.packagex.visionsdk.ocr.regex.VisionRegex
 
-internal class DBSchenkerCourier : Courier() {
+internal class DBSchenkerCourier : Courier( listOf("db-schenker") ) {
 
     val pattern by lazy {
         VisionRegex("(?i)(?<!C\\/O\\s)DB ?SCHENKER", RegexType.Default)

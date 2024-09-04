@@ -4,7 +4,7 @@ import io.packagex.visionsdk.ocr.regex.RegexType
 import io.packagex.visionsdk.ocr.regex.VisionRegex
 import com.asadullah.handyutils.*
 
-internal class DynamexCourier : Courier() {
+internal class DynamexCourier : Courier( listOf("dynamex") ) {
 
     val patternDynamex: VisionRegex by lazy { VisionRegex("(dynamex|DYNAMEX)(-NEXT)?", RegexType.Default) }
     val patternDynamexTracking1: VisionRegex by lazy { VisionRegex("(^|\\b)DX[A-Z]{4}\\d{7}(\\b|\$)", RegexType.TrackingNo) }

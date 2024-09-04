@@ -17,10 +17,3 @@ sealed interface DetectionMode {
     data object PriceTag : DetectionMode
     data object Photo : DetectionMode
 }
-
-data class VisionViewState(
-    val isMultipleScanEnabled: Boolean = false,
-    val detectionMode: DetectionMode = DetectionMode.Barcode,
-    val scanningMode: ScanningMode = ScanningMode.Manual,
-    val isFlashTurnedOn: Boolean = false
-)

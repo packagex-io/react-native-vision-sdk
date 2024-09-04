@@ -3,7 +3,7 @@ package io.packagex.visionsdk.ocr.courier
 import io.packagex.visionsdk.ocr.regex.RegexType
 import io.packagex.visionsdk.ocr.regex.VisionRegex
 
-internal class CCDCourier : Courier() {
+internal class CCDCourier : Courier( listOf("ccd-courier") ) {
 
     val pattern by lazy {
         VisionRegex("(?i)\\b([\\s\\.\\,]*ccd[\\n]*couriers[\\s\\.\\,]*)\\b", RegexType.Default)

@@ -1,6 +1,8 @@
 package io.packagex.visionsdk.interfaces
 
+import io.packagex.visionsdk.exceptions.VisionSDKException
+
 interface OCRResult {
     fun onOCRResponse(response: String?)
-    fun onOCRResponseFailed(throwable: Throwable?)
+    fun onOCRResponseFailed(visionException: VisionSDKException)
 }

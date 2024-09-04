@@ -1,10 +1,9 @@
 package io.packagex.visionsdk.service
 
-import com.visionsdk.BuildConfig
+import io.packagex.visionsdk.BuildConfig
 import io.packagex.visionsdk.Environment
 import io.packagex.visionsdk.VisionSDK
-import io.packagex.visionsdk.service.manifest.ManifestApiService
-import io.packagex.visionsdk.service.manifest.ManifestBearerInterceptor
+import io.packagex.visionsdk.service.manifest.ManifestApiServiceKey
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
@@ -13,48 +12,52 @@ import java.time.Duration
 
 internal object ServiceBuilder {
 
-    private val client = OkHttpClient
-        .Builder()
-        .connectTimeout(Duration.ofSeconds(30))
-        .readTimeout(Duration.ofSeconds(30))
-        .writeTimeout(Duration.ofSeconds(30))
-        .apply {
-            if (BuildConfig.DEBUG) {
-                addInterceptor(
-                    HttpLoggingInterceptor().apply { level = HttpLoggingInterceptor.Level.BODY }
-                )
+    private val client by lazy {
+        OkHttpClient
+            .Builder()
+            .connectTimeout(Duration.ofSeconds(30))
+            .readTimeout(Duration.ofSeconds(30))
+            .writeTimeout(Duration.ofSeconds(30))
+            .apply {
+                if (BuildConfig.DEBUG) {
+                    addInterceptor(
+                        HttpLoggingInterceptor().apply { level = HttpLoggingInterceptor.Level.BODY }
+                    )
+                }
             }
-        }
-        .build()
+            .build()
+    }
 
     // AI: Note that we have two Retrofit objects. That is because we have two base urls to cater for.
 
-    private val retrofit = Retrofit
-        .Builder()
-        .baseUrl(getUrl(VisionSDK.getInstance().environment ?: throw RuntimeException("VisionSDK was not initialized")))
-        .addConverterFactory(GsonConverterFactory.create())
-        .client(
-            client
-                .newBuilder()
-                .addInterceptor(BearerInterceptor())
-                .build()
-        )
-        .build()
+    private val retrofit by lazy {
+        Retrofit
+            .Builder()
+            .baseUrl(getUrl(VisionSDK.getInstance().environment))
+            .addConverterFactory(GsonConverterFactory.create())
+            .client(
+                client
+                    .newBuilder()
+                    .build()
+            )
+            .build()
+    }
 
-    private val manifestRetrofit = Retrofit
-        .Builder()
-        .baseUrl(getManifestUrl(VisionSDK.getInstance().environment ?: throw RuntimeException("VisionSDK was not initialized")))
-        .addConverterFactory(GsonConverterFactory.create())
-        .client(
-            client
-                .newBuilder()
-                .addInterceptor(ManifestBearerInterceptor())
-                .build()
-        )
-        .build()
+    private val manifestRetrofit by lazy {
+        Retrofit
+            .Builder()
+            .baseUrl(getManifestUrl(VisionSDK.getInstance().environment))
+            .addConverterFactory(GsonConverterFactory.create())
+            .client(
+                client
+                    .newBuilder()
+                    .build()
+            )
+            .build()
+    }
 
     fun <T> buildService(service: Class<T>): T {
-        return if (service::class == ManifestApiService::class) {
+        return if (service::class == ManifestApiServiceKey::class) {
             manifestRetrofit.create(service)
         } else {
             retrofit.create(service)

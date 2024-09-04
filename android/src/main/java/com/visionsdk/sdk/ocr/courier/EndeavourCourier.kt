@@ -4,7 +4,7 @@ import com.asadullah.handyutils.removeSpaces
 import io.packagex.visionsdk.ocr.regex.RegexType
 import io.packagex.visionsdk.ocr.regex.VisionRegex
 
-internal class EndeavourCourier : Courier() {
+internal class EndeavourCourier : Courier( listOf("") ) {
 
     val patternEndeavour by lazy {
         VisionRegex("Endeavour[ \\\\n]Delivery", RegexType.Default)

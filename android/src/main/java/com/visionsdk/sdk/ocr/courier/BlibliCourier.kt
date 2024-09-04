@@ -3,7 +3,7 @@ package io.packagex.visionsdk.ocr.courier
 import io.packagex.visionsdk.ocr.regex.RegexType
 import io.packagex.visionsdk.ocr.regex.VisionRegex
 
-internal class BlibliCourier : Courier() {
+internal class BlibliCourier : Courier( listOf("blibli") ) {
 
     val patternBlibli by lazy {
         VisionRegex("(?i)(\\bblibli\\.?com\\b)", RegexType.Default)

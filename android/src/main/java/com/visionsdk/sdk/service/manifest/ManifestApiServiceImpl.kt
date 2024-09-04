@@ -1,7 +1,7 @@
 package io.packagex.visionsdk.service.manifest
 
-import io.packagex.visionsdk.Authentication
-import io.packagex.visionsdk.VisionSDK
+import com.asadullah.handyutils.ifNeitherNullNorEmptyNorBlank
+import io.packagex.visionsdk.exceptions.VisionSDKException
 import io.packagex.visionsdk.modelclasses.ocr_request.Barcode
 import io.packagex.visionsdk.modelclasses.ocr_request.Frame
 import io.packagex.visionsdk.modelclasses.ocr_request.ManifestRequest
@@ -9,16 +9,21 @@ import io.packagex.visionsdk.service.ServiceBuilder
 
 internal class ManifestApiServiceImpl {
 
-    private val apiService = ServiceBuilder.buildService(ManifestApiService::class.java)
+    private val apiServiceKey = ServiceBuilder.buildService(ManifestApiServiceKey::class.java)
+    private val apiServiceToken = ServiceBuilder.buildService(ManifestApiServiceToken::class.java)
 
-    suspend fun manifestApiAsync(manifestRequest: ManifestRequest): String {
-        return apiService.manifestApi(
-            data = manifestRequest,
-            apiKey = when (val apiKey = getAuthentication()) {
-                is Authentication.API -> apiKey.apiKey
-                is Authentication.BearerToken -> null
-            },
-        ).string()
+    suspend fun manifestApiAsync(apiKey: String?, token: String?, manifestRequest: ManifestRequest): String {
+        return apiKey.ifNeitherNullNorEmptyNorBlank {
+            apiServiceKey.manifestApi(
+                data = manifestRequest,
+                apiKey = it
+            ).string()
+        } ?: token.ifNeitherNullNorEmptyNorBlank {
+            apiServiceToken.manifestApi(
+                data = manifestRequest,
+                token = "Bearer $it"
+            ).string()
+        } ?: throw VisionSDKException.BillOfLadingAuthorizationNotProvided
     }
 
     fun createManifestRequest(
@@ -33,13 +38,5 @@ internal class ManifestApiServiceImpl {
             ),
             image = baseImage
         )
-    }
-
-    private fun getAuthentication(): Authentication {
-        val visionSDK = VisionSDK.getInstance()
-        if (visionSDK.manifestAuth == null) {
-            throw Exception("Authorization mechanism not set")
-        }
-        return visionSDK.manifestAuth!!
     }
 }

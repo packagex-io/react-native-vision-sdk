@@ -3,7 +3,7 @@ package io.packagex.visionsdk.ocr.courier
 import io.packagex.visionsdk.ocr.regex.RegexType
 import io.packagex.visionsdk.ocr.regex.VisionRegex
 
-internal class FlashExpressCourier : Courier() {
+internal class FlashExpressCourier : Courier( listOf("") ) {
 
     val patternFlashExpress by lazy {
         VisionRegex("(?i)\\b([\\s\\.\\,]*flash[\\n\\s\\.\\,]*express[\\s\\.\\,]*)\\b", RegexType.Default)

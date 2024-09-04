@@ -3,7 +3,7 @@ package io.packagex.visionsdk.ocr.courier
 import io.packagex.visionsdk.ocr.regex.RegexType
 import io.packagex.visionsdk.ocr.regex.VisionRegex
 
-internal class SurpostalCourier : Courier() {
+internal class SurpostalCourier : Courier( listOf("") ) {
 
     val patternSurpostal by lazy {
         VisionRegex("(?i)(\\bSURPOSTAL\\b)", RegexType.Default)

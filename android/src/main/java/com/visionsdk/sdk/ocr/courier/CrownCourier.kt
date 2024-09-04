@@ -3,7 +3,7 @@ package io.packagex.visionsdk.ocr.courier
 import io.packagex.visionsdk.ocr.regex.RegexType
 import io.packagex.visionsdk.ocr.regex.VisionRegex
 
-internal class CrownCourier : Courier() {
+internal class CrownCourier : Courier( listOf("crown") ) {
 
     val pattern by lazy {
         VisionRegex("(?i)\\bCROWN", RegexType.Default)

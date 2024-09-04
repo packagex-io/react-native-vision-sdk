@@ -4,7 +4,7 @@ import com.asadullah.handyutils.removeSpaces
 import io.packagex.visionsdk.ocr.regex.RegexType
 import io.packagex.visionsdk.ocr.regex.VisionRegex
 
-internal class LeopardsCourier : Courier() {
+internal class LeopardsCourier : Courier( listOf("") ) {
 
     val pattern by lazy {
         VisionRegex("[Ll]eopards?", RegexType.Default)

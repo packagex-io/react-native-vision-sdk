@@ -4,7 +4,7 @@ import io.packagex.visionsdk.ocr.regex.RegexType
 import io.packagex.visionsdk.ocr.regex.VisionRegex
 import com.asadullah.handyutils.*
 
-internal class AustraliaPostCourier : Courier() {
+internal class AustraliaPostCourier : Courier( listOf("australia-post") ) {
 
     val patternAustraliaPost: VisionRegex by lazy { VisionRegex("(?i)(eparcel|parcel ?post|express ?post|australia ?post)", RegexType.Default) }
     val patternAustraliaPostTracking1: VisionRegex by lazy { VisionRegex("(?i)ap article id[: ]*([A-Za-z0-9]*)", RegexType.TrackingNo) }

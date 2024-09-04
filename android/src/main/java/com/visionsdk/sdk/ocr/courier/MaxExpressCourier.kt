@@ -3,7 +3,7 @@ package io.packagex.visionsdk.ocr.courier
 import io.packagex.visionsdk.ocr.regex.RegexType
 import io.packagex.visionsdk.ocr.regex.VisionRegex
 
-internal class MaxExpressCourier : Courier() {
+internal class MaxExpressCourier : Courier( listOf("") ) {
 
     val patternMaxExpress by lazy {
         VisionRegex("max express| MAX EXPRESS", RegexType.Default)

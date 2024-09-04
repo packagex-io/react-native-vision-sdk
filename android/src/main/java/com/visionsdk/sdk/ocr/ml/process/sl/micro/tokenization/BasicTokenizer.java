@@ -53,7 +53,7 @@ public final class BasicTokenizer {
       throw new NullPointerException("The input String is null.");
     }
 
-    StringBuilder stringBuilder = new StringBuilder("");
+    StringBuilder stringBuilder = new StringBuilder();
     for (int index = 0; index < text.length(); index++) {
       char ch = text.charAt(index);
 

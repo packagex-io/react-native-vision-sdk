@@ -3,7 +3,7 @@ package io.packagex.visionsdk.ocr.courier
 import io.packagex.visionsdk.ocr.regex.RegexType
 import io.packagex.visionsdk.ocr.regex.VisionRegex
 
-internal class TransOFlexCourier : Courier() {
+internal class TransOFlexCourier : Courier( listOf("") ) {
 
     val pattern by lazy {
         VisionRegex("(?i)trans-o-flex", RegexType.Default)

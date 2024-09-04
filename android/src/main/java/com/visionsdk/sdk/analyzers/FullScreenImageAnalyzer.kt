@@ -8,6 +8,7 @@ import androidx.camera.core.ExperimentalGetImage
 import androidx.camera.core.ImageProxy
 import com.asadullah.handyutils.toReadableDuration
 import com.google.mlkit.vision.common.InputImage
+import io.packagex.visionsdk.exceptions.VisionSDKException
 import io.packagex.visionsdk.utils.TAG
 import kotlin.time.measureTime
 import kotlin.time.measureTimedValue
@@ -63,7 +64,7 @@ internal class FullScreenImageAnalyzer(
                 ImageFormat.YUV_422_888 -> "YUV_422_888"
                 ImageFormat.YUV_420_888 -> "YUV_420_888"
                 ImageFormat.YCBCR_P010 -> "YCBCR_P010"
-                else -> throw IllegalStateException("No format was detected")
+                else -> throw VisionSDKException.UnknownException(IllegalStateException("No format was detected"))
             }
 
             Log.d(TAG, "Frame format: $formatInString: ${mediaImage.format}")*/
@@ -97,7 +98,7 @@ internal class FullScreenImageAnalyzer(
     private fun cropYUV420Image(image: Image, cropRect: Rect): ByteArray {
         val format = image.format
         if (format != ImageFormat.YUV_420_888) {
-            throw IllegalArgumentException("Unsupported image format: $format")
+            throw VisionSDKException.UnknownException(IllegalArgumentException("Unsupported image format: $format"))
         }
 
         val yPlane = image.planes[0]

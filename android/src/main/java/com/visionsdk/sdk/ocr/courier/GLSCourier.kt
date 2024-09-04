@@ -4,7 +4,7 @@ import com.asadullah.handyutils.removeSpaces
 import io.packagex.visionsdk.ocr.regex.RegexType
 import io.packagex.visionsdk.ocr.regex.VisionRegex
 
-internal class GLSCourier : Courier() {
+internal class GLSCourier : Courier( listOf("") ) {
 
     val patternGLS by lazy {
         VisionRegex("((I|\\b)GLS)\\b", RegexType.Default) // TODO: Adding |gls works

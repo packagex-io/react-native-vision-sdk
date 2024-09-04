@@ -4,7 +4,7 @@ import com.asadullah.handyutils.removeSpaces
 import io.packagex.visionsdk.ocr.regex.RegexType
 import io.packagex.visionsdk.ocr.regex.VisionRegex
 
-internal class SagawaExpressCourier : Courier() {
+internal class SagawaExpressCourier : Courier( listOf("") ) {
 
     val patternSagawaExpress by lazy {
         VisionRegex("(?i)(佐川|佐川急便|sagawa)", RegexType.Default)

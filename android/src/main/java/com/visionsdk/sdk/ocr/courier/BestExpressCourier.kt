@@ -3,7 +3,7 @@ package io.packagex.visionsdk.ocr.courier
 import io.packagex.visionsdk.ocr.regex.RegexType
 import io.packagex.visionsdk.ocr.regex.VisionRegex
 
-internal class BestExpressCourier : Courier() {
+internal class BestExpressCourier : Courier( listOf("best-express") ) {
 
     val patternBestExpress by lazy {
         VisionRegex("(?i)(百世快运)", RegexType.Default)

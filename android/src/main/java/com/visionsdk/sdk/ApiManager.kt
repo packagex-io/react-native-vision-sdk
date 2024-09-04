@@ -2,22 +2,22 @@ package io.packagex.visionsdk
 
 import android.content.Context
 import android.graphics.Bitmap
-import com.asadullah.handyutils.isNeitherNullNorEmptyNorBlank
+import com.asadullah.handyutils.isNullOrEmptyOrBlank
 import com.asadullah.handyutils.withContextMain
 import io.packagex.visionsdk.exceptions.APIErrorResponse
+import io.packagex.visionsdk.exceptions.VisionSDKException
 import io.packagex.visionsdk.interfaces.OCRResult
 import io.packagex.visionsdk.ocr.ml.core.ModelClass
 import io.packagex.visionsdk.ocr.ml.core.ModelSize
 import io.packagex.visionsdk.ocr.ml.core.PlatformType
-import io.packagex.visionsdk.preferences.VisionSdkSettings
-import io.packagex.visionsdk.service.ApiServiceImpl
+import io.packagex.visionsdk.preferences.VisionSDKSettings
+import io.packagex.visionsdk.service.all.ApiServiceImpl
 import io.packagex.visionsdk.service.manifest.ManifestApiServiceImpl
 import io.packagex.visionsdk.service.request.ConnectModelRequest
 import io.packagex.visionsdk.service.request.ConnectRequest
 import io.packagex.visionsdk.service.request.ModelInfo
 import io.packagex.visionsdk.service.request.ModelVersion
 import io.packagex.visionsdk.service.request.TelemetryData
-import io.packagex.visionsdk.service.request.TelemetryRequest
 import io.packagex.visionsdk.service.response.ConnectResponse
 import io.packagex.visionsdk.utils.BitmapUtils
 import io.packagex.visionsdk.utils.getAndroidDeviceId
@@ -35,6 +35,8 @@ class ApiManager {
     private val manifestApiServiceImpl = ManifestApiServiceImpl()
 
     fun shippingLabelApiCallAsync(
+        apiKey: String? = null,
+        token: String? = null,
         bitmap: Bitmap,
         barcodeList: List<String>,
         locationId: String? = null,
@@ -48,6 +50,8 @@ class ApiManager {
 
             try {
                 val response = shippingLabelApiCallSync(
+                    apiKey,
+                    token,
                     bitmap = bitmap,
                     barcodeList = barcodeList,
                     locationId = locationId,
@@ -62,18 +66,20 @@ class ApiManager {
             } catch (e: HttpException) {
                 e.printStackTrace()
                 withContext(Dispatchers.Main) {
-                    onScanResult.onOCRResponseFailed(APIErrorResponse(e))
+                    onScanResult.onOCRResponseFailed(VisionSDKException.UnknownException(APIErrorResponse(e)))
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
                 withContext(Dispatchers.Main) {
-                    onScanResult.onOCRResponseFailed(e)
+                    onScanResult.onOCRResponseFailed(VisionSDKException.UnknownException(e))
                 }
             }
         }
     }
 
     suspend fun shippingLabelApiCallSync(
+        apiKey: String? = null,
+        token: String? = null,
         bitmap: Bitmap,
         barcodeList: List<String>,
         locationId: String?,
@@ -90,6 +96,8 @@ class ApiManager {
         val string64 = BitmapUtils.convertBitmapToBase64(resizedBitmap).toString()
 
         return apiServiceImpl.shippingLabelApi(
+            apiKey,
+            token,
             apiServiceImpl.createOCRRequestObject(
                 barcodesList = barcodeList,
                 baseImage = string64,
@@ -103,26 +111,30 @@ class ApiManager {
     }
 
     fun manifestApiCallAsync(
+        apiKey: String? = null,
+        token: String? = null,
         bitmap: Bitmap,
         barcodeList: List<String>,
         onScanResult: OCRResult
     ) {
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                val response = manifestApiCallSync(bitmap, barcodeList)
+                val response = manifestApiCallSync(apiKey, token, bitmap, barcodeList)
                 withContext(Dispatchers.Main) {
                     onScanResult.onOCRResponse(response)
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
                 withContext(Dispatchers.Main) {
-                    onScanResult.onOCRResponseFailed(e)
+                    onScanResult.onOCRResponseFailed(VisionSDKException.UnknownException(e))
                 }
             }
         }
     }
 
     suspend fun manifestApiCallSync(
+        apiKey: String? = null,
+        token: String? = null,
         bitmap: Bitmap,
         barcodeList: List<String>,
     ): String {
@@ -134,6 +146,8 @@ class ApiManager {
         val string64 = BitmapUtils.convertBitmapToBase64(resizedBitmap).toString()
 
         return manifestApiServiceImpl.manifestApiAsync(
+            apiKey,
+            token,
             manifestApiServiceImpl.createManifestRequest(
                 extractTime = Date().isoFormat(),
                 barcodesList = barcodeList,
@@ -144,6 +158,8 @@ class ApiManager {
 
     suspend fun reportAnIssueSync(
         context: Context,
+        apiKey: String? = null,
+        token: String? = null,
         platformType: PlatformType = PlatformType.Native,
         modelClass: ModelClass,
         modelSize: ModelSize,
@@ -152,16 +168,17 @@ class ApiManager {
         base64ImageToReportOn: String? = null
     ) {
 
-        assert(report.length <= 1000) { "Report is exceeding the character limit. (Max characters 1000)" }
+        if (report.length > 1000) throw VisionSDKException.ReportTextLengthExceeded
 
-        val modelId = VisionSdkSettings.getModelId(modelClass, modelSize)
-        val modelVersionId = VisionSdkSettings.getModelVersionId(modelClass, modelSize)
+        val modelId = VisionSDKSettings.getModelId(modelClass, modelSize)
+        val modelVersionId = VisionSDKSettings.getModelVersionId(modelClass, modelSize)
 
-        assert(modelId.isNeitherNullNorEmptyNorBlank()) { "Model Id was not found. You should call connect API before calling report info." }
-        assert(modelVersionId.isNeitherNullNorEmptyNorBlank()) { "Model Version Id was not found. You should call connect API before calling report info." }
+        if (modelId.isNullOrEmptyOrBlank()) throw VisionSDKException.OnDeviceOCRManagerNotConfigured
+        if (modelVersionId.isNullOrEmptyOrBlank()) throw VisionSDKException.OnDeviceOCRManagerNotConfigured
 
-        val apiManager = ApiManager()
-        apiManager.internalTelemetryCallSync(
+        internalTelemetryCallSync(
+            apiKey = apiKey,
+            token = token,
             sdkId = VisionSDK.getInstance().environment.sdkId,
             deviceId = context.getAndroidDeviceId(),
             platformType = platformType,
@@ -186,6 +203,8 @@ class ApiManager {
 
     fun reportAnIssueAsync(
         context: Context,
+        apiKey: String? = null,
+        token: String? = null,
         platformType: PlatformType = PlatformType.Native,
         modelClass: ModelClass,
         modelSize: ModelSize,
@@ -197,6 +216,8 @@ class ApiManager {
         CoroutineScope(Dispatchers.IO).launch {
             reportAnIssueSync(
                 context = context,
+                apiKey = apiKey,
+                token = token,
                 platformType = platformType,
                 report = report,
                 modelClass = modelClass,
@@ -211,32 +232,36 @@ class ApiManager {
     }
 
     internal suspend fun connectCallSync(
+        apiKey: String? = null,
+        token: String? = null,
         sdkId: String,
         deviceId: String,
         platformType: PlatformType = PlatformType.Native,
         modelToRequest: ModelToRequest? = null,
-        usageCounter: Int? = null,
-        timeCounter: Long? = null
     ): ConnectResponse? {
         return apiServiceImpl.connect(
+            apiKey,
+            token,
             ConnectRequest(
                 _i = sdkId,
                 _d = deviceId,
                 _f = platformType.value,
                 _m = modelToRequest?.toConnectModelRequest(),
-                _uc = usageCounter,
-                _tc = timeCounter
             )
         )
     }
 
     internal suspend fun internalTelemetryCallSync(
+        apiKey: String? = null,
+        token: String? = null,
         sdkId: String,
         deviceId: String,
         platformType: PlatformType = PlatformType.Native,
         telemetryDataList: List<TelemetryData>
     ) {
         /*apiServiceImpl.postTelemetryData(
+            apiKey,
+            token,
             TelemetryRequest(
                 deviceId = deviceId,
                 sdkId = sdkId,
@@ -249,13 +274,17 @@ class ApiManager {
     internal data class ModelToRequest(
         val modelClass: ModelClass,
         val modelSize: ModelSize? = null,
-        val getDownloadLink: Boolean?
+        val getDownloadLink: Boolean?,
+        val usageCounter: Int,
+        val usageDuration: Long
     ) {
         fun toConnectModelRequest(): ConnectModelRequest {
             return ConnectModelRequest(
                 _t = modelClass.value,
                 _s = modelSize?.value,
-                _d = getDownloadLink
+                _d = getDownloadLink,
+                _uc = usageCounter,
+                _tc = usageDuration
             )
         }
     }

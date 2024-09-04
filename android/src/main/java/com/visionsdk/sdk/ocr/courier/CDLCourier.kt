@@ -4,7 +4,7 @@ import io.packagex.visionsdk.ocr.regex.RegexType
 import io.packagex.visionsdk.ocr.regex.VisionRegex
 import com.asadullah.handyutils.*
 
-internal class CDLCourier : Courier() {
+internal class CDLCourier : Courier( listOf("cdl") ) {
 
     val patternCDL: VisionRegex by lazy { VisionRegex("\\\\nCDL\\\\n[Ll]ast [Mm]ile", RegexType.Default) }
     val patternCDL1: VisionRegex by lazy { VisionRegex("(?i)\\b(CDL)(\\b|\$)", RegexType.Default) }

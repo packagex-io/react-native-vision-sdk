@@ -4,7 +4,7 @@ import com.asadullah.handyutils.removeSpaces
 import io.packagex.visionsdk.ocr.regex.RegexType
 import io.packagex.visionsdk.ocr.regex.VisionRegex
 
-internal class WebpackCourier : Courier() {
+internal class WebpackCourier : Courier( listOf("") ) {
 
     val patternWebpack by lazy {
         VisionRegex("(?i)(\\bwebpack\\b)", RegexType.Default)

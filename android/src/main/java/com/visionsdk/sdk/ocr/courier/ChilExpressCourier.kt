@@ -3,7 +3,7 @@ package io.packagex.visionsdk.ocr.courier
 import io.packagex.visionsdk.ocr.regex.RegexType
 import io.packagex.visionsdk.ocr.regex.VisionRegex
 
-internal class ChilExpressCourier : Courier() {
+internal class ChilExpressCourier : Courier( listOf("chilexpress") ) {
 
     val patternChilExpress by lazy {
         VisionRegex("(?i)\\b([\\s\\.\\,]*chilexpress[\\s\\.\\,]*)\\b", RegexType.Default)

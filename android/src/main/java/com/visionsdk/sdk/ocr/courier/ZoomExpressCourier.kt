@@ -3,7 +3,7 @@ package io.packagex.visionsdk.ocr.courier
 import io.packagex.visionsdk.ocr.regex.RegexType
 import io.packagex.visionsdk.ocr.regex.VisionRegex
 
-internal class ZoomExpressCourier : Courier() {
+internal class ZoomExpressCourier : Courier( listOf("") ) {
 
     val patternZoomExpress by lazy {
         VisionRegex("(?i)([\\s\\.\\,]Zoom[\\s\\.\\,]Express[\\s\\.\\,])", RegexType.Default)

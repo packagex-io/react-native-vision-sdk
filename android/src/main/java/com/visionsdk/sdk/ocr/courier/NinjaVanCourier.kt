@@ -3,7 +3,7 @@ package io.packagex.visionsdk.ocr.courier
 import io.packagex.visionsdk.ocr.regex.RegexType
 import io.packagex.visionsdk.ocr.regex.VisionRegex
 
-internal class NinjaVanCourier : Courier() {
+internal class NinjaVanCourier : Courier( listOf("") ) {
 
     val patternNinjaVan by lazy {
         VisionRegex("(?i)(\\bninja van\\b)", RegexType.Default)

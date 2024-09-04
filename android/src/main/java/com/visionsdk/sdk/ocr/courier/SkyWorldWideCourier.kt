@@ -4,7 +4,7 @@ import com.asadullah.handyutils.removeSpaces
 import io.packagex.visionsdk.ocr.regex.RegexType
 import io.packagex.visionsdk.ocr.regex.VisionRegex
 
-internal class SkyWorldWideCourier : Courier() {
+internal class SkyWorldWideCourier : Courier( listOf("") ) {
 
     val patternSkyWorldWide by lazy {
         VisionRegex("(?i)(www\\.skynetworldwide\\.com)", RegexType.Default)

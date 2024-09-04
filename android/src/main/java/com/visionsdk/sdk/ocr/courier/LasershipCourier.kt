@@ -4,7 +4,7 @@ import com.asadullah.handyutils.removeSpaces
 import io.packagex.visionsdk.ocr.regex.RegexType
 import io.packagex.visionsdk.ocr.regex.VisionRegex
 
-internal class LasershipCourier : Courier() {
+internal class LasershipCourier : Courier( listOf("") ) {
 
     val patternLasership by lazy {
         VisionRegex("(?i)(lasership)", RegexType.Default)

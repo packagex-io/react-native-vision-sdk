@@ -4,7 +4,7 @@ import io.packagex.visionsdk.ocr.regex.RegexType
 import io.packagex.visionsdk.ocr.regex.VisionRegex
 import com.asadullah.handyutils.*
 
-internal class USPSCourier : Courier() {
+internal class USPSCourier : Courier( listOf("") ) {
 
     val patternUSPS: VisionRegex by lazy { VisionRegex("\\b(USPS)|((?i)United[\\s]+States[\\s]+Postal[\\s]+Service)\\b", RegexType.Default) }
 

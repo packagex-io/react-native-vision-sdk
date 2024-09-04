@@ -4,7 +4,7 @@ import com.asadullah.handyutils.removeSpaces
 import io.packagex.visionsdk.ocr.regex.RegexType
 import io.packagex.visionsdk.ocr.regex.VisionRegex
 
-internal class LSOCourier : Courier() {
+internal class LSOCourier : Courier( listOf("") ) {
 
     val pattern by lazy {
         VisionRegex("(?i)\\b(LoneStar|Lone[\\s\\.\\,]Star|LSO)\\b", RegexType.Default)

@@ -3,7 +3,7 @@ package io.packagex.visionsdk.ocr.courier
 import io.packagex.visionsdk.ocr.regex.RegexType
 import io.packagex.visionsdk.ocr.regex.VisionRegex
 
-internal class ShopeeXpressCourier : Courier() {
+internal class ShopeeXpressCourier : Courier( listOf("") ) {
 
     val patternShopeeXpress by lazy {
         VisionRegex("(?i)([\\s\\.\\,]shopee[\\s\\.\\,]express[\\s\\.\\,])", RegexType.Default)

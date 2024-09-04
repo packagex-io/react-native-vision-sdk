@@ -3,7 +3,7 @@ package io.packagex.visionsdk.ocr.courier
 import io.packagex.visionsdk.ocr.regex.RegexType
 import io.packagex.visionsdk.ocr.regex.VisionRegex
 
-internal class KuehneNagelCourier : Courier() {
+internal class KuehneNagelCourier : Courier( listOf("") ) {
 
     val pattern by lazy {
         VisionRegex("(?i)kuehne[\\s\\+]*nagel", RegexType.Default)

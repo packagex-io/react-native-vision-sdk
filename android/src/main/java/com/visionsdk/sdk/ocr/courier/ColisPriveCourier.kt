@@ -4,7 +4,7 @@ import com.asadullah.handyutils.removeSpaces
 import io.packagex.visionsdk.ocr.regex.RegexType
 import io.packagex.visionsdk.ocr.regex.VisionRegex
 
-internal class ColisPriveCourier : Courier() {
+internal class ColisPriveCourier : Courier( listOf("colis_prive") ) {
 
     val pattern by lazy {
         VisionRegex("(?i)(colis\\s?prive)", RegexType.Default)

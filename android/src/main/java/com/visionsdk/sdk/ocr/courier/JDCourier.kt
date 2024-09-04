@@ -4,7 +4,7 @@ import com.asadullah.handyutils.removeSpaces
 import io.packagex.visionsdk.ocr.regex.RegexType
 import io.packagex.visionsdk.ocr.regex.VisionRegex
 
-internal class JDCourier : Courier() {
+internal class JDCourier : Courier( listOf("") ) {
 
     val patternJDTracking1 by lazy {
         VisionRegex("^(\\d{11})\\-\\d{,2}\\-\\d{,2}\\-\\d{,2}\$", RegexType.TrackingNo)

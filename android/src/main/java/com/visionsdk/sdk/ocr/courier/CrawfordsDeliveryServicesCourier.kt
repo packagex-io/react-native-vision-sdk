@@ -4,7 +4,7 @@ import com.asadullah.handyutils.removeSpaces
 import io.packagex.visionsdk.ocr.regex.RegexType
 import io.packagex.visionsdk.ocr.regex.VisionRegex
 
-internal class CrawfordsDeliveryServicesCourier : Courier() {
+internal class CrawfordsDeliveryServicesCourier : Courier( listOf("crawfords-delivery-services") ) {
 
     val patternCDS by lazy {
         VisionRegex("(?i)(\\bcds\\b)|(Crawfords Delivery Services)", RegexType.Default)

@@ -4,7 +4,7 @@ import com.asadullah.handyutils.removeSpaces
 import io.packagex.visionsdk.ocr.regex.RegexType
 import io.packagex.visionsdk.ocr.regex.VisionRegex
 
-internal class CdekCourier : Courier() {
+internal class CdekCourier : Courier( listOf("cdek") ) {
 
     val pattern by lazy {
         VisionRegex("(?i)\\bO?(CDEK)\\b", RegexType.Default)

@@ -4,10 +4,10 @@ import com.asadullah.handyutils.removeSpaces
 import io.packagex.visionsdk.ocr.regex.RegexType
 import io.packagex.visionsdk.ocr.regex.VisionRegex
 
-internal class TNTCourier : Courier() {
+internal class TNTCourier : Courier( listOf("") ) {
 
     val patternTNT by lazy {
-        VisionRegex("TNT|tnt", RegexType.Default)
+        VisionRegex("(?i)\\bTNT\\b", RegexType.Default)
     }
 
     val patternTNTTracking1 by lazy {

@@ -4,7 +4,7 @@ import com.asadullah.handyutils.removeSpaces
 import io.packagex.visionsdk.ocr.regex.RegexType
 import io.packagex.visionsdk.ocr.regex.VisionRegex
 
-internal class CorreosExpressCourier : Courier() {
+internal class CorreosExpressCourier : Courier( listOf("correos-express") ) {
 
     val patternCorreosExpress by lazy {
         VisionRegex("(?i)(\\bCorreos\\b)(?i)(Express)", RegexType.Default)

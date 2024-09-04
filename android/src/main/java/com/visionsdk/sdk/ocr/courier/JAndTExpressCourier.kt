@@ -3,7 +3,7 @@ package io.packagex.visionsdk.ocr.courier
 import io.packagex.visionsdk.ocr.regex.RegexType
 import io.packagex.visionsdk.ocr.regex.VisionRegex
 
-internal class JAndTExpressCourier : Courier() {
+internal class JAndTExpressCourier : Courier( listOf("") ) {
 
     val patternJAndTExpress by lazy {
         VisionRegex("(?i)((\\bJ&T EXPRESS\\b)|(\\.jet\\.co\\.))", RegexType.Default)

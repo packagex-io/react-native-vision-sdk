@@ -3,7 +3,7 @@ package io.packagex.visionsdk.ocr.courier
 import io.packagex.visionsdk.ocr.regex.RegexType
 import io.packagex.visionsdk.ocr.regex.VisionRegex
 
-internal class ABCCourier : Courier() {
+internal class ABCCourier : Courier( listOf("abc") ) {
 
     val pattern by lazy {
         VisionRegex("(?i)\\bABC\\b", RegexType.Default)

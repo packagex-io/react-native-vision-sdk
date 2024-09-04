@@ -26,14 +26,7 @@ import com.asadullah.handyutils.toReadableDuration
 import com.scottyab.rootbeer.RootBeer
 import io.packagex.visionsdk.ApiManager
 import io.packagex.visionsdk.VisionSDK
-import io.packagex.visionsdk.exceptions.ondevice.SdkCloudDisabledException
-import io.packagex.visionsdk.exceptions.ondevice.SdkDisabledException
-import io.packagex.visionsdk.exceptions.ondevice.SdkInvalidModelException
-import io.packagex.visionsdk.exceptions.ondevice.SdkInvalidModelVersionException
-import io.packagex.visionsdk.exceptions.ondevice.SdkInvalidPlatformException
-import io.packagex.visionsdk.exceptions.ondevice.SdkOnDeviceDisabledException
-import io.packagex.visionsdk.exceptions.ondevice.SdkProcessingDisabledException
-import io.packagex.visionsdk.exceptions.ondevice.UserRestrictedException
+import io.packagex.visionsdk.exceptions.VisionSDKException
 import io.packagex.visionsdk.ocr.courier.Courier
 import io.packagex.visionsdk.ocr.courier.LabelsExtraction
 import io.packagex.visionsdk.ocr.courier.RegexResult
@@ -46,10 +39,9 @@ import io.packagex.visionsdk.ocr.ml.dto.ExchangeInfo
 import io.packagex.visionsdk.ocr.ml.dto.MLResults
 import io.packagex.visionsdk.ocr.ml.dto.PredictionResult
 import io.packagex.visionsdk.ocr.ml.enums.ExecutionProvider
-import io.packagex.visionsdk.ocr.ml.exceptions.MLModelException
 import io.packagex.visionsdk.ocr.ml.process.LocationProcessor
 import io.packagex.visionsdk.ocr.security.SecurityWorker
-import io.packagex.visionsdk.preferences.VisionSdkSettings
+import io.packagex.visionsdk.preferences.VisionSDKSettings
 import io.packagex.visionsdk.service.response.ConnectResponse
 import io.packagex.visionsdk.utils.DownloadUtils
 import io.packagex.visionsdk.utils.TAG
@@ -74,7 +66,7 @@ import javax.crypto.SecretKey
 import kotlin.concurrent.timerTask
 import kotlin.time.measureTime
 
-internal abstract class SLModel(context: Context) {
+internal abstract class SLModel(context: Context, private val locationProcessor: LocationProcessor) {
 
     private val mas = "ThjgMuEL3D4yURfF9Q8a2debs5P6KzcS"
 
@@ -120,29 +112,38 @@ internal abstract class SLModel(context: Context) {
     private fun checkForRootedDevice(context: Context) {
         if (RootBeer(context).isRooted) {
             permanentlyDeleteAllModels()
-            throw MLModelException.RootDeviceDetected
+            throw VisionSDKException.RootDeviceDetected
         }
     }
 
     @SuppressLint("HardwareIds")
     private suspend fun makeConnectCall(
         context: Context,
+        apiKey: String?,
+        token: String?,
         platformType: PlatformType,
-        modelToRequest: ApiManager.ModelToRequest? = null
     ): ConnectResponse {
 
         checkForRootedDevice(context)
 
         makeTelemetryCall(context, platformType)
 
+        val modelUsage = VisionSDKSettings.getOnDeviceModelUsages().firstOrNull { it.modelClass == getModelClass() && it.modelSize == getModelSize() }
+
         val connectResponse = apiManager.connectCallSync(
+            apiKey = apiKey,
+            token = token,
             sdkId = VisionSDK.getInstance().environment.sdkId,
             deviceId = context.getAndroidDeviceId(),
             platformType = platformType,
-            modelToRequest = modelToRequest,
-            usageCounter = VisionSdkSettings.getOnDeviceModelExecutionCount(),
-            timeCounter = VisionSdkSettings.getOnDeviceModelExecutionDurationInMillis()
-        ) ?: throw RuntimeException("Something went terribly wrong. Sorry!")
+            modelToRequest = ApiManager.ModelToRequest(
+                modelClass = getModelClass(),
+                modelSize = getModelSize(),
+                getDownloadLink = isModelAlreadyDownloaded().not(),
+                usageCounter = modelUsage?.usageCount ?: 0,
+                usageDuration = modelUsage?.usageDuration ?: 0L
+            ),
+        ) ?: throw VisionSDKException.UnknownException(RuntimeException("Something went terribly wrong. Sorry!"))
 
         if (connectResponse.status != 200) {
             val errorMessageBuilder = StringBuilder()
@@ -155,14 +156,14 @@ internal abstract class SLModel(context: Context) {
                 .append("Message: ${connectResponse.message}")
 
             val errorToThrow = when (connectResponse.code) {
-                "sdk.platform.invalid" -> SdkInvalidPlatformException(errorMessageBuilder.toString())
-                "sdk.disabled" -> SdkDisabledException(errorMessageBuilder.toString())
-                "sdk.model.invalid" -> SdkInvalidModelException(errorMessageBuilder.toString())
-                "sdk.model.version.invalid" -> SdkInvalidModelVersionException(errorMessageBuilder.toString())
-                "sdk.in_cloud.disabled" -> SdkCloudDisabledException(errorMessageBuilder.toString())
-                "sdk.on_device.disabled" -> SdkOnDeviceDisabledException(errorMessageBuilder.toString())
-                "sdk.processing.disabled" -> SdkProcessingDisabledException(errorMessageBuilder.toString())
-                else -> RuntimeException(errorMessageBuilder.toString())
+                "sdk.platform.invalid" -> VisionSDKException.SdkInvalidPlatformException(errorMessageBuilder.toString())
+                "sdk.disabled" -> VisionSDKException.SdkDisabledException(errorMessageBuilder.toString())
+                "sdk.model.invalid" -> VisionSDKException.SdkInvalidModelException(errorMessageBuilder.toString())
+                "sdk.model.version.invalid" -> VisionSDKException.SdkInvalidModelVersionException(errorMessageBuilder.toString())
+                "sdk.in_cloud.disabled" -> VisionSDKException.SdkCloudDisabledException(errorMessageBuilder.toString())
+                "sdk.on_device.disabled" -> VisionSDKException.SdkOnDeviceDisabledException(errorMessageBuilder.toString())
+                "sdk.processing.disabled" -> VisionSDKException.SdkProcessingDisabledException(errorMessageBuilder.toString())
+                else -> VisionSDKException.UnknownException(RuntimeException(errorMessageBuilder.toString()))
             }
 
             errorToThrow.printStackTrace()
@@ -171,32 +172,33 @@ internal abstract class SLModel(context: Context) {
             throw errorToThrow
         }
 
-        VisionSdkSettings.resetOnDeviceModelExecutionCount()
-        VisionSdkSettings.resetOnDeviceModelExecutionDuration()
+        VisionSDKSettings.clearOnDeviceModelUsages()
 
         if (isUserAllowedToConfigure(connectResponse).not()) {
-            throw UserRestrictedException("You are currently being restricted from using OnDeviceOCRManager. Please contact our admins at support@packagex.io.")
+            Log.d(TAG, "User not allowed to configure model. Deleting the model.")
+            permanentlyDeleteGivenModel()
+            throw VisionSDKException.UserRestrictedException
         }
 
         connectResponse.data?.u.ifNeitherNullNorEmptyNorBlank {
-            VisionSdkSettings.setLicenseCheckDateTime(
+            VisionSDKSettings.setLicenseCheckDateTime(
                 LocalDateTime.parse(
                     it.substringBefore("."),
-                    DateTimeFormatter.ISO_LOCAL_DATE_TIME
+                    DateTimeFormatter.ISO_DATE_TIME
                 )
             )
-        } ?: throw RuntimeException("API did not provide vital information to proceed.")
+        } ?: throw VisionSDKException.VitalInformationMissingException
 
         connectResponse.data?.rq?.i.ifNeitherNullNorEmptyNorBlank { modelId ->
             connectResponse.data?.rq?.mv?.i.ifNeitherNullNorEmptyNorBlank { modelVersionId ->
-                VisionSdkSettings.setModelIdAndModelVersionId(
+                VisionSDKSettings.setModelIdAndModelVersionId(
                     modelClass = getModelClass(),
                     modelSize = getModelSize(),
                     modelId = modelId,
                     modelVersionId = modelVersionId
                 )
-            } ?: throw RuntimeException("API did not provide vital information to proceed.")
-        } ?: throw RuntimeException("API did not provide vital information to proceed.")
+            } ?: VisionSDKException.VitalInformationMissingException
+        } ?: VisionSDKException.VitalInformationMissingException
 
         connectResponse.data?.c?.let { pingTimeInMinutes ->
             pingTimeInMillis = pingTimeInMinutes * 3600L // converting minutes into millis
@@ -214,7 +216,7 @@ internal abstract class SLModel(context: Context) {
     }
 
     private suspend fun makeTelemetryCall(context: Context, platformType: PlatformType) {
-        val telemetryDataToPost = VisionSdkSettings.getTelemetryData()
+        val telemetryDataToPost = VisionSDKSettings.getTelemetryData()
         telemetryDataToPost.chunked(20).forEach {
             try {
                 apiManager.internalTelemetryCallSync(
@@ -223,40 +225,29 @@ internal abstract class SLModel(context: Context) {
                     platformType = platformType,
                     telemetryDataList = it,
                 )
-                VisionSdkSettings.removeTelemetryData(it)
+                VisionSDKSettings.removeTelemetryData(it)
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
             }
         }
-
-        /*  RESPONSE TYPE
-            {
-                "message": "Telemetry updated count: 3. Telemetry invalid count: 0",
-                "data": {
-                    "valid_telemetry_ids": [
-                        "162133dc-8cbb-4ff8-badb-e7665be4409b",
-                        "fcef74bf-797f-46a4-989c-f116e0c76df1",
-                        "08fc10a1-0614-4110-a6b9-366eb3756715"
-                    ],
-                    "invalid_telemetry_ids": []
-                },
-                "status": 200,
-                "errors": [],
-                "code": null,
-                "pagination": null,
-                "endpoint": null
-            }
-        */
     }
 
     private fun isUserAllowedToConfigure(connectResponse: ConnectResponse): Boolean {
-        return connectResponse.data?.b?.e == true && connectResponse.data.b.d == true && (connectResponse.data.b.le == null || connectResponse.data.b.le.contains("2024"))
+        return connectResponse.data?.b?.e == true && connectResponse.data.b.d == true && (
+                with(connectResponse.data.b.le) {
+                    if (this == null) return@with true
+                    val expiryDate = LocalDateTime.parse(this, DateTimeFormatter.ISO_DATE_TIME)
+                    return LocalDateTime.now().isBefore(expiryDate)
+                }
+                )
     }
 
     private fun isConfigured() = VisionOrtSession.isConfigured()
 
     suspend fun configure(
         context: Context,
+        apiKey: String? = null,
+        token: String? = null,
         platformType: PlatformType = PlatformType.Native,
         executionProvider: ExecutionProvider = ExecutionProvider.NNAPI,
         progressListener: ((Float) -> Unit)? = null
@@ -269,6 +260,8 @@ internal abstract class SLModel(context: Context) {
         if (context.isNetworkAvailable().not()) {
             proceedWithNoInternet(
                 context = context,
+                apiKey = apiKey,
+                token = token,
                 platformType = platformType,
                 executionProvider = executionProvider
             ) { loadingProgress ->
@@ -277,27 +270,26 @@ internal abstract class SLModel(context: Context) {
             return
         }
 
-        val isModelAlreadyDownloaded = isModelAlreadyDownloaded()
-
         val connectResponse = makeConnectCall(
             context = context,
-            platformType = platformType,
-            modelToRequest = ApiManager.ModelToRequest(
-                modelClass = getModelClass(),
-                modelSize = getModelSize(),
-                getDownloadLink = isModelAlreadyDownloaded.not()
-            )
+            apiKey = apiKey,
+            token = token,
+            platformType = platformType
         )
 
         val modelVersion = connectResponse.data?.rq?.mv?.v
 
         val isModelDownloadedWithCorrectVersionFromAPI = isModelWithVersionAlreadyDownloaded(
-            versionDirName = modelVersion ?: throw RuntimeException("API did not provide vital information to proceed.")
+            versionDirName = modelVersion ?: throw VisionSDKException.VitalInformationMissingException
         )
+
+        val isModelAlreadyDownloaded = isModelAlreadyDownloaded()
 
         if (isModelAlreadyDownloaded && isModelDownloadedWithCorrectVersionFromAPI) {
             loadModel(
                 context = context,
+                apiKey = apiKey,
+                token = token,
                 platformType = platformType,
                 versionDirName = modelVersion,
                 executionProvider = executionProvider
@@ -310,6 +302,8 @@ internal abstract class SLModel(context: Context) {
         val previousModelVersion = if (isModelAlreadyDownloaded) {
             loadModel(
                 context = context,
+                apiKey = apiKey,
+                token = token,
                 platformType = platformType,
                 executionProvider = executionProvider
             ) { loadingProgress ->
@@ -334,26 +328,26 @@ internal abstract class SLModel(context: Context) {
 //            )
 //        }
 
-        val aes = AES(efficiency = Efficiency.HighPerformance)
+        val aes = AES(efficiency = Efficiency.CustomPerformance(204800))
 
         val scrambledString = scrambleString(mas, 5)
 
         val retrievalInfo1 = aes.decryptString(scrambledString, VisionSDK.getInstance().environment.pub)
         val retrievalInfo2 = aes.decryptString(scrambledString, VisionSDK.getInstance().environment.pri)
 
-        val vitalInfo1 = connectResponse.data?.rq?.d?.k
-        val vitalUrl1 = connectResponse.data?.rq?.d?.u
+        val vitalInfo1 = connectResponse.data.rq.d?.k
+        val vitalUrl1 = connectResponse.data.rq.d?.u
 
         val rsa = RSA(retrievalInfo1, retrievalInfo2, padding = KeyProperties.ENCRYPTION_PADDING_RSA_PKCS1)
 
-        val vitalInfo2 = rsa.decryptData(vitalInfo1?.decodeHex() ?: throw RuntimeException("API did not provide vital information to proceed."))
+        val vitalInfo2 = rsa.decryptData(vitalInfo1?.decodeHex() ?: throw VisionSDKException.VitalInformationMissingException)
 
         val (vitalInfo3, vitalInfo4) = vitalUrl1?.substringBefore("--") to vitalUrl1?.substringAfter("--")
 
         val vitalUrl2 = aes.decryptData(
             vitalInfo2,
-            vitalInfo4?.decodeHex() ?: throw RuntimeException("API did not provide vital information to proceed."),
-            vitalInfo3?.decodeHex() ?: throw RuntimeException("API did not provide vital information to proceed.")
+            vitalInfo4?.decodeHex() ?: throw VisionSDKException.VitalInformationMissingException,
+            vitalInfo3?.decodeHex() ?: throw VisionSDKException.VitalInformationMissingException
         )
 
         val modelFile = getModelFileWithVersion(getModelClass(), getModelSize(), modelVersion)
@@ -426,6 +420,8 @@ internal abstract class SLModel(context: Context) {
 
         loadModel(
             context = context,
+            apiKey = apiKey,
+            token = token,
             platformType = platformType,
             versionDirName = modelVersion,
             executionProvider = executionProvider
@@ -437,16 +433,18 @@ internal abstract class SLModel(context: Context) {
 
     private fun proceedWithNoInternet(
         context: Context,
+        apiKey: String?,
+        token: String?,
         platformType: PlatformType,
         executionProvider: ExecutionProvider,
         progressListener: ((Float) -> Unit)? = null
     ) {
         if (isModelAlreadyDownloaded().not()) {
-            throw RuntimeException("Internet is required to configure OnDeviceOCRManager.")
+            throw VisionSDKException.InternetRequiredForOnDeviceOCRManager
         }
 
         // Check if last time the license was checked was less than 15 days ago.
-        val lastLicenseCheckDateTime = VisionSdkSettings.getLicenseCheckDateTime()
+        val lastLicenseCheckDateTime = VisionSDKSettings.getLicenseCheckDateTime()
         val now = LocalDateTime.now()
         val lastLicenseCheckWas15DaysAgoOrMore = if (SDKHelper.hasAndroid31()) {
             val duration = Duration.between(lastLicenseCheckDateTime, now)
@@ -457,11 +455,13 @@ internal abstract class SLModel(context: Context) {
         }
 
         if (lastLicenseCheckWas15DaysAgoOrMore) {
-            throw RuntimeException("Internet is required to configure OnDeviceOCRManager.")
+            throw VisionSDKException.InternetRequiredForOnDeviceOCRManager
         }
 
         loadModel(
             context = context,
+            apiKey = apiKey,
+            token = token,
             platformType = platformType,
             executionProvider = executionProvider,
             progressListener = progressListener
@@ -484,6 +484,8 @@ internal abstract class SLModel(context: Context) {
 
     private fun loadModel(
         context: Context,
+        apiKey: String?,
+        token: String?,
         platformType: PlatformType,
         versionDirName: String? = null,
         executionProvider: ExecutionProvider,
@@ -503,12 +505,12 @@ internal abstract class SLModel(context: Context) {
             getModelFile(getModelClass(), getModelSize())
         }
 
-        modelFile ?: throw RuntimeException("Model file was not found. Please connect to internet and call configure function.")
+        modelFile ?: throw VisionSDKException.ImportantFilesNotFound
 
         Log.d(TAG, "Retrieving important files successful.")
 
         Log.d(TAG, "Decompressing important files...")
-        val aes = AES(efficiency = Efficiency.HighPerformance)
+        val aes = AES(efficiency = Efficiency.CustomPerformance(204800))
         val extracted = File(modelFile.parentFile, "extracted")
         val decompressDuration = measureTime {
             aes.decryptFile(longLivePalestine, modelFile, extracted, progressListener)
@@ -527,6 +529,8 @@ internal abstract class SLModel(context: Context) {
 
         initiatePingTimer(
             context = context,
+            apiKey = apiKey,
+            token = token,
             platformType = platformType,
             executionProvider = executionProvider
         )
@@ -544,6 +548,8 @@ internal abstract class SLModel(context: Context) {
 
     private fun initiatePingTimer(
         context: Context,
+        apiKey: String?,
+        token: String?,
         platformType: PlatformType,
         executionProvider: ExecutionProvider
     ) {
@@ -555,28 +561,31 @@ internal abstract class SLModel(context: Context) {
                 try {
                     proceedWithNoInternet(
                         context = context,
+                        apiKey = apiKey,
+                        token = token,
                         platformType = platformType,
                         executionProvider = executionProvider
                     )
                 } catch (e: Exception) {
                     invalidateModel()
-                    throw e
+                    throw VisionSDKException.UnknownException(e)
                 }
                 return@timerTask
             }
 
             CoroutineScope(Dispatchers.IO).launch {
-                makeConnectCall(
-                    context = context,
-                    platformType = platformType,
-                    modelToRequest = ApiManager.ModelToRequest(
-                        modelClass = getModelClass(),
-                        getDownloadLink = false
+                try {
+                    makeConnectCall(
+                        context = context,
+                        apiKey = apiKey,
+                        token = token,
+                        platformType = platformType,
                     )
-                )
+                } catch (ignored: Exception) {
+
+                }
             }
         }, pingTimeInMillis, pingTimeInMillis)
-
     }
 
     private fun initiateUnloadFromMemoryTimer() {
@@ -651,9 +660,9 @@ internal abstract class SLModel(context: Context) {
     fun permanentlyDeleteGivenModel() {
         Log.d(TAG, "Delete model ${getModelClass().name} / ${getModelSize().name} initialized...")
         invalidateModel()
-        Log.d(TAG, "Deleting encrypted model ${getModelClass().name} / ${getModelSize().name} file...")
+        Log.d(TAG, "Deleting compressed model ${getModelClass().name} / ${getModelSize().name} file...")
         getModelFile(getModelClass(), getModelSize())?.delete()
-        Log.d(TAG, "Deleting encrypted model ${getModelClass().name} / ${getModelSize().name} file successful.")
+        Log.d(TAG, "Deleting compressed model ${getModelClass().name} / ${getModelSize().name} file successful.")
         Log.d(TAG, "Delete model ${getModelClass().name} / ${getModelSize().name} successful.")
     }
 
@@ -684,15 +693,13 @@ internal abstract class SLModel(context: Context) {
     }
 
     suspend fun getPredictions(
-        context: Context,
         bitmap: Bitmap,
         barcodes: List<String>
     ): String {
 
-        assert(isConfigured()) { "You need to call function configure first." }
+        if (isConfigured().not()) throw VisionSDKException.OnDeviceOCRManagerNotConfigured
+        if (locationProcessor.isInitialized().not()) throw VisionSDKException.OnDeviceOCRManagerNotConfigured
 
-        val locationProcessor = LocationProcessor(context)
-        locationProcessor.init()
         val predictionResult = predict(
             ortEnvironment = VisionOrtSession.ortEnv!!,
             ortSession = VisionOrtSession.ortSession!!,
@@ -827,15 +834,23 @@ internal abstract class SLModel(context: Context) {
                                 ?.replace("ib", "lb")
                                 ?.replace("kge", "kgs")
                                 ?.replace("ka", "kgs")
+                                ?.replace("0z", "oz")
+                                ?.replace("o2", "oz")
                                 ?.replace(":", "")
                                 ?.replace("(", "")
                                 ?.replace(")", "")
 
-                            return@with if (weightUnit.isNullOrEmptyOrBlank() || weightUnit!!.lowercase() == "lb" || weightUnit.lowercase() == "lbs") {
-                                this?.weight
-                            } else {
-                                this?.weight?.let { it * 2.2 }
-                            }
+                            return@with weightUnit?.ifNeitherNullNorEmptyNorBlank { item ->
+                                when (item.lowercase()) {
+                                    "lb", "lbs" -> this?.weight
+                                    "kg", "kgs" -> this?.weight?.let { it * 2.2 }
+                                    "oz" -> this?.weight?.let { it * 0.0625 }
+                                    "mg", "mgs" -> this?.weight?.let { it * 0.000002205 }
+                                    "g", "gms" -> this?.weight?.let { it * 0.002205 }
+                                    "t" -> this?.weight?.let { it * 2204.62 }
+                                    else -> this?.weight
+                                }
+                            } ?: this?.weight
                         },
                         "location_id" to null,
                         "extracted_labels" to Array(0) { "" },

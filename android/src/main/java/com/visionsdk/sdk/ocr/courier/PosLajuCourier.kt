@@ -4,7 +4,7 @@ import com.asadullah.handyutils.removeSpaces
 import io.packagex.visionsdk.ocr.regex.RegexType
 import io.packagex.visionsdk.ocr.regex.VisionRegex
 
-internal class PosLajuCourier : Courier() {
+internal class PosLajuCourier : Courier( listOf("") ) {
 
     val patternPosLaju by lazy {
         VisionRegex("(?i)(\\bP[a-z]S laju\\b)", RegexType.Default)

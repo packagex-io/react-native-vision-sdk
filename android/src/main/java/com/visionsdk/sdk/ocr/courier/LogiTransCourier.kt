@@ -4,7 +4,7 @@ import com.asadullah.handyutils.removeSpaces
 import io.packagex.visionsdk.ocr.regex.RegexType
 import io.packagex.visionsdk.ocr.regex.VisionRegex
 
-internal class LogiTransCourier : Courier() {
+internal class LogiTransCourier : Courier( listOf("") ) {
 
     val pattern by lazy {
         VisionRegex("(?i)[\\s\\.\\,]*LogiTrans[\\s\\.\\,]*|[\\s\\.\\,]*Logi[\\s\\.\\,\\-\\_]*Trans[\\s\\.\\,]*", RegexType.Default)

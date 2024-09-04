@@ -3,7 +3,7 @@ package io.packagex.visionsdk.ocr.courier
 import io.packagex.visionsdk.ocr.regex.RegexType
 import io.packagex.visionsdk.ocr.regex.VisionRegex
 
-internal class TwoFourSeven247ExpressCourier : Courier() {
+internal class TwoFourSeven247ExpressCourier : Courier( listOf("") ) {
 
     val patternTwoFourSeven247Express by lazy {
         VisionRegex("(?i)(\\b247[\\s\\,\\.]*Express[\\s\\,\\.]*\\b)", RegexType.Default)

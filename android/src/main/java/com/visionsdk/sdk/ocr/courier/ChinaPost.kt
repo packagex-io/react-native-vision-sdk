@@ -4,7 +4,7 @@ import io.packagex.visionsdk.ocr.regex.RegexType
 import io.packagex.visionsdk.ocr.regex.VisionRegex
 import com.asadullah.handyutils.*
 
-internal class ChinaPost : Courier() {
+internal class ChinaPost : Courier( listOf("china_post") ) {
 
     val patternChinaPost: VisionRegex by lazy { VisionRegex("(?i)\\b(China[ \\-]?Post|中国邮政)\\b", RegexType.Default) }
     val patternChinaPostOrigin: VisionRegex by lazy { VisionRegex("(?i)(^|\\b)(?<courier_tag>[A-Z]{2}) *( *[\\d]){9} *CN(\$|\\b)", RegexType.Default) }

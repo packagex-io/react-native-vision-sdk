@@ -7,7 +7,7 @@ import retrofit2.http.Header
 import retrofit2.http.Headers
 import retrofit2.http.POST
 
-internal interface ManifestApiService {
+internal interface ManifestApiServiceKey {
 
     @Headers(
         "Content-Type: application/json",

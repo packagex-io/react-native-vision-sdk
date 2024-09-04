@@ -4,7 +4,7 @@ import com.asadullah.handyutils.removeSpaces
 import io.packagex.visionsdk.ocr.regex.RegexType
 import io.packagex.visionsdk.ocr.regex.VisionRegex
 
-internal class GPOCourier : Courier() {
+internal class GPOCourier : Courier( listOf("") ) {
 
     val pattern by lazy {
         VisionRegex("[Pp]akistan [Pp]ost", RegexType.Default)

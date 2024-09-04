@@ -3,7 +3,7 @@ package io.packagex.visionsdk.ocr.courier
 import io.packagex.visionsdk.ocr.regex.RegexType
 import io.packagex.visionsdk.ocr.regex.VisionRegex
 
-internal class MerkesdalCourier : Courier() {
+internal class MerkesdalCourier : Courier( listOf("") ) {
 
     val pattern by lazy {
         VisionRegex("(?i)merkesdal", RegexType.Default)
