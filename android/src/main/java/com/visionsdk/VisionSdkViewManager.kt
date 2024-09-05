@@ -2,17 +2,18 @@ package com.visionsdk
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.graphics.RectF
+import android.util.Base64
 import android.util.Log
 import android.view.View
-import androidx.annotation.ColorInt
-import androidx.annotation.DrawableRes
-import androidx.annotation.Nullable
 import androidx.core.net.toUri
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.coroutineScope
+import com.asadullah.handyutils.ifNeitherNullNorEmptyNorBlank
 import com.asadullah.handyutils.launchOnIO
+import com.asadullah.handyutils.save
 import com.asadullah.handyutils.withContextMain
 import com.facebook.infer.annotation.Assertions
 import com.facebook.react.bridge.Arguments
@@ -27,11 +28,11 @@ import io.packagex.visionsdk.Authentication
 import io.packagex.visionsdk.Environment
 import io.packagex.visionsdk.R
 import io.packagex.visionsdk.VisionSDK
+import io.packagex.visionsdk.config.CameraSettings
 import io.packagex.visionsdk.config.FocusSettings
 import io.packagex.visionsdk.config.ObjectDetectionConfiguration
 import io.packagex.visionsdk.core.DetectionMode
 import io.packagex.visionsdk.core.ScanningMode
-import io.packagex.visionsdk.core.VisionViewState
 import io.packagex.visionsdk.exceptions.VisionSDKException
 import io.packagex.visionsdk.interfaces.CameraLifecycleCallback
 import io.packagex.visionsdk.interfaces.OCRResult
@@ -44,9 +45,12 @@ import io.packagex.visionsdk.ui.views.VisionCameraView
 import kotlinx.coroutines.CancellationException
 import org.json.JSONArray
 import org.json.JSONObject
+import java.io.ByteArrayOutputStream
 import java.io.File
+import java.util.Date
 
-class VisionSdkViewManager(val appContext: ReactApplicationContext) :
+
+class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
   ViewGroupManager<VisionCameraView>(), ScannerCallback, CameraLifecycleCallback, OCRResult {
 
   private var context: Context? = null
@@ -61,7 +65,6 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
   private var sender: Map<String, Any>? = emptyMap()
   private var environment: Environment = Environment.PRODUCTION
   private var visionCameraView: VisionCameraView? = null
-  private var visionViewState: VisionViewState? = null
   private var detectionMode: DetectionMode = DetectionMode.Barcode
   private var scanningMode: ScanningMode = ScanningMode.Manual
   private var flash: Boolean = false
@@ -74,29 +77,15 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
   private var modelSize: ModelSize = ModelSize.Large
   private var modelType: ModelClass = ModelClass.ShippingLabel
 
-  //focus default settings
-  private var focusSettings: FocusSettings? = null
-  @DrawableRes
-  private var focusImage: Int = R.drawable.default_focus_frame
-  private var focusImageRect: RectF = RectF(0.0F, 0.0F, 0.0F, 0.0F)
-  private var shouldDisplayFocusImage: Boolean = false
-  private var shouldScanInFocusImageRect: Boolean = true
-  @ColorInt
-  private var focusImageTintColor: Int = Color.WHITE
-  @ColorInt
-  private var focusImageHighlightedColor: Int = Color.WHITE
-  private var showCodeBoundariesInMultipleScan: Boolean = true
-  private var validCodeBoundaryBorderColor: Int = Color.GREEN
-  private var validCodeBoundaryBorderWidth: Int = 1
-  private var validCodeBoundaryFillColor: Int = Color.argb(76, 0, 255, 0) // Green color with 30% alpha value
-  private var invalidCodeBoundaryBorderColor: Int = Color.RED
-  private var invalidCodeBoundaryBorderWidth: Int = 1
-  private var invalidCodeBoundaryFillColor: Int = Color.argb(76, 255, 0, 0) // Red color with 30% alpha value
-  private var showDocumentBoundaries: Boolean = true
-  @ColorInt
-  private var documentBoundaryBorderColor: Int = Color.YELLOW
-  @ColorInt
-  private var documentBoundaryFillColor: Int = Color.argb(76, 255, 255, 0)
+  //camera configurations
+  private var cameraSettings: CameraSettings = CameraSettings()
+
+  //focus configurations
+  private var focusSettings: FocusSettings = FocusSettings(appContext)
+
+  //object detection configurations
+  private var objectDetectionConfiguration: ObjectDetectionConfiguration = ObjectDetectionConfiguration()
+
 
 
   companion object {
@@ -108,13 +97,7 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
     context = appContext.currentActivity!!
     lifecycleOwner = context as LifecycleOwner
     visionCameraView = VisionCameraView(context!!, null)
-
-    visionCameraView?.setObjectDetectionConfiguration(
-      ObjectDetectionConfiguration(
-//        isDocumentIndicationOn = false,
-      )
-    )
-    visionCameraView?.shouldAutoSaveCapturedImage(save = true)
+    configureCamera()
     visionCameraView?.setCameraLifecycleCallback(this)
     visionCameraView?.setScannerCallback(this)
 //    visionCameraView?.layoutParams = ViewGroup.LayoutParams(100,100)
@@ -128,9 +111,6 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
     super.onAfterUpdateTransaction(view)
     visionCameraView = view
     Log.d(TAG, "onAfterUpdateTransaction: ")
-    configureFocusSettings()
-    configureViewState()
-    initializeSdk()
   }
 
   override fun onDropViewInstance(view: VisionCameraView) {
@@ -143,82 +123,120 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
 
   private fun initializeSdk() {
     Log.d(TAG, "initializeSdk: ")
-
-    if (apiKey?.isNotEmpty() == true)
-      authentication = Authentication.API(apiKey!!)
-    else if (token?.isNotEmpty() == true)
-      authentication = Authentication.BearerToken(token!!)
-
     VisionSDK.getInstance().initialize(
       context ?: return,
       environment,
-      authentication ?: Authentication.API(""),
-      Authentication.API(""),
     )
   }
 
-  private fun configureViewState() {
-    visionViewState =
-      VisionViewState(
-        detectionMode = detectionMode,
-        scanningMode = scanningMode,
-        isFlashTurnedOn = flash
-      )
-    setVisionViewState()
+  private fun configureCamera() {
+    visionCameraView?.configure(
+      isMultipleScanEnabled = true,
+      detectionMode = detectionMode,
+      scanningMode = scanningMode,
+    )
   }
 
   private fun configureFocusSettings(focus: String? = null) {
-    Log.d(TAG, "configureFocusSettings: " + focus)
-    val whiteColor =  intColorToHex(Color.WHITE)
-    val yellowColor =  intColorToHex(Color.WHITE)
-    val redColor =  intColorToHex(Color.WHITE)
-    val greenColor =  intColorToHex(Color.WHITE)
+    Log.d(TAG, "configureFocusSettings: $focus")
 
     if (focus != null) {
       JSONObject(focus).apply {
-        shouldDisplayFocusImage = optBoolean("shouldDisplayFocusImage",false)
-        shouldScanInFocusImageRect = optBoolean("shouldScanInFocusImageRect",true)
-        showDocumentBoundaries = optBoolean("showDocumentBoundaries",true)
-        documentBoundaryBorderColor = hexColorToInt(optString("documentBoundaryBorderColor",yellowColor))
-        documentBoundaryFillColor = hexColorToInt(optString("documentBoundaryFillColor",intColorToHex(Color.argb(76, 255, 255, 0))))
-        focusImage = optInt("focusImage",R.drawable.default_focus_frame)
-        focusImageRect = optJSONObject("focusImageRect").run { RectF(optDouble("x",0.0).toFloat(), optDouble("y",0.0).toFloat(), optDouble("width",0.0).toFloat(), optDouble("height",0.0).toFloat()) }
-        focusImageTintColor = hexColorToInt(optString("focusImageTintColor",))
-        focusImageHighlightedColor = hexColorToInt(optString("focusImageHighlightedColor",whiteColor))
-        showCodeBoundariesInMultipleScan = optBoolean("showCodeBoundariesInMultipleScan",true)
-        validCodeBoundaryBorderColor = hexColorToInt(optString("validCodeBoundaryBorderColor",greenColor))
-        validCodeBoundaryBorderWidth = optInt("validCodeBoundaryBorderWidth",1)
-        validCodeBoundaryFillColor = hexColorToInt(optString("validCodeBoundaryFillColor",intColorToHex(Color.argb(76, 0, 255, 0))))
-        invalidCodeBoundaryBorderColor = hexColorToInt(optString("invalidCodeBoundaryBorderColor",redColor))
-        invalidCodeBoundaryBorderWidth = optInt("invalidCodeBoundaryBorderWidth",1)
-        invalidCodeBoundaryFillColor = hexColorToInt(optString("invalidCodeBoundaryFillColor",intColorToHex(Color.argb(76, 255, 0, 0))))
-
+        focusSettings = FocusSettings(
+          context = context!!,
+          shouldDisplayFocusImage = optBoolean("shouldDisplayFocusImage", false),
+          shouldScanInFocusImageRect = optBoolean("shouldScanInFocusImageRect", true),
+          showDocumentBoundaries = optBoolean("showDocumentBoundaries", true),
+          documentBoundaryBorderColor = optString("documentBoundaryBorderColor").ifNeitherNullNorEmptyNorBlank {
+            hexColorToInt(
+              it
+            )
+          } ?: Color.WHITE,
+          documentBoundaryFillColor = optString("documentBoundaryFillColor").ifNeitherNullNorEmptyNorBlank {
+            hexColorToInt(
+              it
+            )
+          } ?: Color.argb(76, 255, 255, 0),
+          focusImage = optString("focusImage").ifNeitherNullNorEmptyNorBlank {
+            convertBase64ToBitmap(
+              it
+            )
+          } ?: BitmapFactory.decodeResource(context?.resources, R.drawable.default_focus_frame),
+          focusImageRect = optJSONObject("focusImageRect")?.let {
+            RectF(
+              it.optDouble("x", 0.0).toFloat(),
+              it.optDouble("y", 0.0).toFloat(),
+              it.optDouble("x", 0.0).toFloat() + it.optDouble("width", 0.0).toFloat(),
+              it.optDouble("y", 0.0).toFloat() + it.optDouble("height", 0.0).toFloat()
+            )
+          } ?: RectF(0.0F, 0.0F, 0.0F, 0.0F),
+          focusImageTintColor = optString("focusImageTintColor").ifNeitherNullNorEmptyNorBlank {
+            hexColorToInt(
+              it
+            )
+          } ?: Color.WHITE,
+          focusImageHighlightedColor = optString("focusImageHighlightedColor").ifNeitherNullNorEmptyNorBlank {
+            hexColorToInt(
+              it
+            )
+          } ?: Color.WHITE,
+          showCodeBoundariesInMultipleScan = optBoolean("showCodeBoundariesInMultipleScan", true),
+          validCodeBoundaryBorderColor = optString("validCodeBoundaryBorderColor").ifNeitherNullNorEmptyNorBlank {
+            hexColorToInt(
+              it
+            )
+          } ?: Color.GREEN,
+          validCodeBoundaryBorderWidth = optInt("validCodeBoundaryBorderWidth", 1),
+          validCodeBoundaryFillColor = optString("validCodeBoundaryFillColor").ifNeitherNullNorEmptyNorBlank {
+            hexColorToInt(
+              it
+            )
+          } ?: Color.argb(76, 0, 255, 0),
+          invalidCodeBoundaryBorderColor = optString("invalidCodeBoundaryBorderColor").ifNeitherNullNorEmptyNorBlank {
+            hexColorToInt(
+              it
+            )
+          } ?: Color.RED,
+          invalidCodeBoundaryBorderWidth = optInt("invalidCodeBoundaryBorderWidth", 1),
+          invalidCodeBoundaryFillColor = optString("invalidCodeBoundaryFillColor").ifNeitherNullNorEmptyNorBlank {
+            hexColorToInt(
+              it
+            )
+          } ?: Color.argb(76, 255, 0, 0),
+        )
       }
     }
-    focusSettings = FocusSettings(
-      shouldDisplayFocusImage = shouldDisplayFocusImage,
-      shouldScanInFocusImageRect = shouldScanInFocusImageRect,
-      showDocumentBoundaries = showDocumentBoundaries,
-      documentBoundaryBorderColor = documentBoundaryBorderColor,
-      documentBoundaryFillColor = documentBoundaryFillColor,
-//      focusImage = focusImage,
-//      focusImageRect = focusImageRect,
-      focusImageTintColor = focusImageTintColor,
-      focusImageHighlightedColor = focusImageHighlightedColor,
-      showCodeBoundariesInMultipleScan = showCodeBoundariesInMultipleScan,
-      validCodeBoundaryBorderColor = validCodeBoundaryBorderColor,
-      validCodeBoundaryBorderWidth = validCodeBoundaryBorderWidth,
-      validCodeBoundaryFillColor = validCodeBoundaryFillColor,
-      invalidCodeBoundaryBorderColor = invalidCodeBoundaryBorderColor,
-      invalidCodeBoundaryBorderWidth = invalidCodeBoundaryBorderWidth,
-      invalidCodeBoundaryFillColor = invalidCodeBoundaryFillColor,
-    )
-    setFocusSettings()
   }
 
-  private fun setVisionViewState() {
-    visionCameraView?.setVisionViewState(visionViewState)
+  private fun setObjectDetectionSettings(objectDetectionSettings: String? = null) {
+    Log.d(TAG, "configureObjectDetectionSetting: $objectDetectionSettings")
+
+    if (objectDetectionSettings != null) {
+      JSONObject(objectDetectionSettings).apply {
+        objectDetectionConfiguration = ObjectDetectionConfiguration(
+          isDocumentIndicationOn = optBoolean("isDocumentIndicationOn", true),
+          secondsToWaitBeforeDocumentCapture = optInt("secondsToWaitBeforeDocumentCapture", 3),
+          isTextIndicationOn = optBoolean("isTextIndicationOn", true),
+          isBarcodeOrQRCodeIndicationOn = optBoolean("isBarcodeOrQRCodeIndicationOn", true),
+        )
+      }
+    }
+    visionCameraView?.setObjectDetectionConfiguration(objectDetectionConfiguration)
   }
+
+  private fun setCameraSettings(cameraSettingsObject: String? = null) {
+    Log.d(TAG, "configureCameraSettings: $cameraSettingsObject")
+
+    if (cameraSettingsObject != null) {
+      JSONObject(cameraSettingsObject).apply {
+        cameraSettings = CameraSettings(
+          nthFrameToProcess = optInt("nthFrameToProcess", 10),
+        )
+      }
+      visionCameraView?.setCameraSettings(cameraSettings)
+    }
+  }
+
 
   private fun setFocusSettings() {
     Log.d(TAG, "setFocusSettings: ")
@@ -226,7 +244,7 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
     visionCameraView?.getFocusRegionManager()?.setFocusSettings(focusSettings)
   }
 
-  override fun detectionCallbacks(
+  override fun onIndications(
     barcodeDetected: Boolean,
     qrCodeDetected: Boolean,
     textDetected: Boolean,
@@ -244,7 +262,7 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
       .emit("onDetected", event)
   }
 
-  override fun onBarcodesDetected(barcodeList: List<String>) {
+  override fun onCodesScanned(barcodeList: List<String>) {
     Log.d(TAG, "onBarcodeDetected: ")
     val event = Arguments.createMap().apply {
       putArray(
@@ -264,29 +282,39 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
     onOCRResponseFailed(exception)
   }
 
-  override fun onImageCaptured(bitmap: Bitmap, imageFile: File?, value: List<String>) {
-    Log.d(TAG, "onImageCaptured: " + imageFile?.toUri().toString())
+  override fun onImageCaptured(bitmap: Bitmap, documentBitmap: Bitmap?, value: List<String>) {
+    Log.d(TAG, "onImageCaptured: ")
+
+    saveBitmapAndSendEvent(bitmap)
+
+    if (isOnDeviceOCR) {
+      performLocalOCR(bitmap, value)
+    } else {
+      makeOCRApiCall(bitmap, value)
+    }
+  }
+
+  private fun saveBitmapAndSendEvent(bitmap: Bitmap) {
+    val parentDir = File(context?.filesDir, "VisionSdkSavedBitmaps")
+    parentDir.mkdirs()
+
+    val savedBitmapFile = File(parentDir, Date().time.toString() + ".jpg")
+
+    bitmap.save(savedBitmapFile, compressFormat = Bitmap.CompressFormat.JPEG)
 
     val event = Arguments.createMap().apply {
-      putString("image", imageFile?.toUri().toString())
-    }
+      putString("image", savedBitmapFile.toUri().toString())
+      }
     appContext
       .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
       .emit("onImageCaptured", event)
-
-    if (visionViewState?.detectionMode == DetectionMode.OCR) {
-      initializeSdk()
-      if (isOnDeviceOCR) {
-        performLocalOCR(bitmap, value)
-      } else {
-        makeOCRApiCall(bitmap, value)
-      }
-    }
   }
 
   private fun makeOCRApiCall(bitmap: Bitmap, list: List<String>) {
     val apiManager = ApiManager()
     apiManager.shippingLabelApiCallAsync(
+      apiKey = apiKey,
+      token = token,
       bitmap = bitmap,
       barcodeList = list,
       locationId = locationId ?: "",
@@ -321,7 +349,7 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
     }
   }
 
-  override fun getCommandsMap(): Map<String?, Int?>? {
+  override fun getCommandsMap(): Map<String?, Int?> {
     Log.d("React", " View manager getCommandsMap:")
     return mapOf(
       "captureImage" to
@@ -345,14 +373,18 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
       "restartScanning" to
         9,
       "setFocusSettings" to
-        8,
+        10,
+      "setObjectDetectionSettings" to
+        11,
+      "setCameraSettings" to
+        12,
     )
   }
 
   override fun receiveCommand(
     view: VisionCameraView,
     commandType: Int,
-    @Nullable args: ReadableArray?
+    args: ReadableArray?
   ) {
     Assertions.assertNotNull(view)
     Assertions.assertNotNull(args)
@@ -412,13 +444,23 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
         return
       }
 
-      else -> throw IllegalArgumentException(
-        String.format(
-          "Unsupported command %d received by %s.",
-          commandType,
-          javaClass.simpleName
-        )
-      )
+      11 -> {
+        setObjectDetectionSettings(args?.getMap(0).toString())
+        return
+      }
+
+      12 -> {
+        setCameraSettings(args?.getMap(0).toString())
+        return
+      }
+
+//      else -> throw IllegalArgumentException(
+//        String.format(
+//          "Unsupported command %d received by %s.",
+//          commandType,
+//          javaClass.simpleName
+//        )
+//      )
     }
 
   }
@@ -512,8 +554,8 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
   private fun configureOnDeviceModel(onDeviceConfigs: String?) {
     Log.d(TAG, "configureOnDeviceModel: $onDeviceConfigs")
 
-      setModelSize(JSONObject(onDeviceConfigs).optString("size","large"))
-      setModelType(JSONObject(onDeviceConfigs).optString("type","shipping_label"))
+    setModelSize(JSONObject(onDeviceConfigs).optString("size", "large"))
+    setModelType(JSONObject(onDeviceConfigs).optString("type", "shipping_label"))
 
     onDeviceOCRManager?.destroy()
     onDeviceOCRManager = OnDeviceOCRManager(
@@ -525,7 +567,7 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
     lifecycleOwner?.lifecycle?.coroutineScope?.launchOnIO {
       try {
         if (onDeviceOCRManager?.isConfigured()?.not() == true) {
-          onDeviceOCRManager?.configure {
+          onDeviceOCRManager?.configure(apiKey,token) {
 //                Log.d(TAG, "Install Progress: $it")
             if (onDeviceOCRManager?.isModelAlreadyDownloaded() == false) {
               val event = Arguments.createMap().apply {
@@ -588,6 +630,7 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
       "prod" -> Environment.PRODUCTION
       else -> Environment.PRODUCTION
     }
+    initializeSdk()
   }
 
   @ReactProp(name = "captureMode")
@@ -598,6 +641,8 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
       "manual" -> ScanningMode.Manual
       else -> ScanningMode.Auto
     }
+    visionCameraView?.setScanningMode(scanningMode)
+
   }
 
   @ReactProp(name = "mode")
@@ -610,6 +655,7 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
       "photo" -> DetectionMode.Photo
       else -> DetectionMode.OCR
     }
+    visionCameraView?.setDetectionMode(detectionMode)
   }
 
   @ReactProp(name = "isOnDeviceOCR")
@@ -618,23 +664,23 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
     this.isOnDeviceOCR = isOnDeviceOCR
   }
 
-  @ReactProp(name = "showScanFrame")
-  fun showScanFrame(view: View, showScanFrame: Boolean = false) {
-    Log.d(TAG, "showScanFrame: " + showScanFrame)
-    shouldDisplayFocusImage = showScanFrame
-  }
+//  @ReactProp(name = "showScanFrame")
+//  fun showScanFrame(view: View, showScanFrame: Boolean = false) {
+//    Log.d(TAG, "showScanFrame: " + showScanFrame)
+//    shouldDisplayFocusImage = showScanFrame
+//  }
 
-  @ReactProp(name = "captureWithScanFrame")
-  fun captureWithScanFrame(view: View, captureWithScanFrame: Boolean = false) {
-    Log.d(TAG, "captureWithScanFrame: " + captureWithScanFrame)
-    shouldScanInFocusImageRect = captureWithScanFrame
-  }
+//  @ReactProp(name = "captureWithScanFrame")
+//  fun captureWithScanFrame(view: View, captureWithScanFrame: Boolean = false) {
+//    Log.d(TAG, "captureWithScanFrame: " + captureWithScanFrame)
+//    shouldScanInFocusImageRect = captureWithScanFrame
+//  }
 
-  @ReactProp(name = "showDocumentBoundaries")
-  fun showDocumentBoundaries(view: View, showDocumentBoundaries: Boolean = false) {
-    Log.d(TAG, "showDocumentBoundaries: " + showDocumentBoundaries)
-    this.showDocumentBoundaries = showDocumentBoundaries
-  }
+//  @ReactProp(name = "showDocumentBoundaries")
+//  fun showDocumentBoundaries(view: View, showDocumentBoundaries: Boolean = false) {
+//    Log.d(TAG, "showDocumentBoundaries: " + showDocumentBoundaries)
+//    this.showDocumentBoundaries = showDocumentBoundaries
+//  }
 
   @ReactProp(name = "locationId")
   fun setLocationId(view: View, locationId: String = "") {
@@ -711,11 +757,48 @@ class VisionSdkViewManager(val appContext: ReactApplicationContext) :
   }
 
   private fun hexColorToInt(color: String): Int {
-    return Color.parseColor(color)
+    return Color.parseColor(convertRRGGBBAAToAARRGGBB(color))
   }
+
+//  #50ffbf80
 
   private fun intColorToHex(color: Int): String {
     return String.format("#%06X", 0xFFFFFF and color)
+  }
+
+  private fun convertRRGGBBAAToAARRGGBB(color: String): String {
+    // Ensure the input color is in the expected format
+    if (!(color.length == 7 || color.length == 9) || !color.startsWith("#")) {
+      onOCRResponseFailed(VisionSDKException.UnknownException(IllegalArgumentException("Invalid color format. Expected format: #RRGGBBAA or #RRGGBB")))
+    }
+
+    // Extract the color components based on the length of the input
+    val r = color.substring(1, 3)
+    val g = color.substring(3, 5)
+    val b = color.substring(5, 7)
+
+    // Check if there is an alpha component
+    val a = if (color.length == 9) {
+      color.substring(7, 9)
+    } else {
+      "FF" // Default alpha value for full opacity
+    }
+
+    // Return the color in AARRGGBB format
+    return "#$a$r$g$b"
+  }
+
+  private fun convertBase64ToBitmap(b64: String): Bitmap {
+    val imageAsBytes: ByteArray = Base64.decode(b64.toByteArray(), Base64.DEFAULT)
+    return BitmapFactory.decodeByteArray(imageAsBytes, 0, imageAsBytes.size)
+  }
+
+  private fun convertDrawableToBase64(drawable: Int): String {
+    val bitmap = BitmapFactory.decodeResource(context?.getResources(), drawable)
+    val byteStream = ByteArrayOutputStream()
+    bitmap.compress(Bitmap.CompressFormat.JPEG, 100, byteStream)
+    val byteArray = byteStream.toByteArray()
+    return Base64.encodeToString(byteArray, Base64.DEFAULT)
   }
 }
 
