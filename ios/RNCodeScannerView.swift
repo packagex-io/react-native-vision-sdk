@@ -596,25 +596,44 @@ extension RNCodeScannerView {
         return nil
     }
     
-    @objc private func saveImageToVisionSDK(image: UIImage, withName imageName: String) -> URL? {
+    @objc public func saveImageToVisionSDK(image: UIImage, withName imageName: String) -> URL? {
+        let fileManager = FileManager.default
         
         do {
+            // Get the directory where images are stored
+            let ocrImageDirectory = try ocrImageDirectoryURL()
             
+            // Check the number of images in the directory
+            let imageFiles = try fileManager.contentsOfDirectory(at: ocrImageDirectory, includingPropertiesForKeys: nil, options: [])
+            
+            // If there are more than 10 images, delete the oldest one
+            if imageFiles.count >= 10 {
+                // Sort images by creation date
+                let sortedImages = imageFiles.sorted { (url1, url2) -> Bool in
+                    let attributes1 = try? fileManager.attributesOfItem(atPath: url1.path)
+                    let attributes2 = try? fileManager.attributesOfItem(atPath: url2.path)
+                    let date1 = attributes1?[.creationDate] as? Date ?? Date.distantPast
+                    let date2 = attributes2?[.creationDate] as? Date ?? Date.distantPast
+                    return date1 < date2
+                }
+                
+                // Remove the oldest image
+                if let oldestImage = sortedImages.first {
+                    try fileManager.removeItem(at: oldestImage)
+                }
+            }
+            
+            // Save the new image
             if let data = image.pngData() {
-                
-                let ocrImageDirectory = try ocrImageDirectoryURL()
                 let imageURL = ocrImageDirectory.appendingPathComponent(imageName)
-                
                 try data.write(to: imageURL)
                 return imageURL
-            }
-            else {
+            } else {
                 print("Image does not have PNG data, thus not writable")
                 return nil
             }
             
-        }
-        catch let error {
+        } catch let error {
             print("Error saving image: \(error.localizedDescription)")
             return nil
         }
