@@ -120,7 +120,7 @@ class VisionSdkViewManager: RCTViewManager {
             self.bridge.uiManager.view(
                 forReactTag: node
             ) as! RNCodeScannerView
-            component.restartScanning()
+            component.codeScannerView?.rescan()
         }
     }
     
@@ -278,11 +278,11 @@ class VisionSdkViewManager: RCTViewManager {
                 updatedCameraSettings.nthFrameToProcess = Int64(nthFrameToProcess)
             }
 
-            if let shouldAutoSaveCapturedImage = cameraSettings["shouldAutoSaveCapturedImage"] as? Bool {
-                updatedCameraSettings.shouldAutoSaveCapturedImage = shouldAutoSaveCapturedImage
-            }
-
-            updatedCameraSettings.sessionPreset = .high
+//            if let shouldAutoSaveCapturedImage = cameraSettings["shouldAutoSaveCapturedImage"] as? Bool {
+//                updatedCameraSettings.shouldAutoSaveCapturedImage = shouldAutoSaveCapturedImage
+//            }
+//
+//            updatedCameraSettings.sessionPreset = .high
             
             component.codeScannerView?.cameraSettings = updatedCameraSettings
         }

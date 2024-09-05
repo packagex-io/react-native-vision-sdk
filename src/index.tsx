@@ -20,10 +20,10 @@ type Props = {
   options?: any;
   environment?: 'prod' | 'sandbox';
   flash?: boolean;
-  showDocumentBoundaries?: boolean;
+  // showDocumentBoundaries?: boolean;
   isOnDeviceOCR?: boolean;
-  showScanFrame?: boolean;
-  captureWithScanFrame?: boolean;
+  // showScanFrame?: boolean;
+  // captureWithScanFrame?: boolean;
   onModelDownloadProgress?: (_e: any) => void;
   onBarcodeScan?: (_e: any) => void;
   onImageCaptured?: (_e: any) => void;
@@ -45,10 +45,10 @@ const Camera: React.FC<Props> = ({
   options = {},
   environment = 'prod',
   flash = false,
-  showDocumentBoundaries = false,
+  // showDocumentBoundaries = false,
   isOnDeviceOCR = false,
-  showScanFrame = true,
-  captureWithScanFrame = true,
+  // showScanFrame = true,
+  // captureWithScanFrame = true,
   onModelDownloadProgress = (_e: any) => {},
   onBarcodeScan = (_e: any) => {},
   onImageCaptured = (_e: any) => {},
@@ -256,12 +256,13 @@ const Camera: React.FC<Props> = ({
         key={reRender}
         style={styles.flex}
         apiKey={apiKey}
-        showScanFrame={showScanFrame}
-        captureWithScanFrame={captureWithScanFrame}
+        // showScanFrame={showScanFrame}
+        // captureWithScanFrame={captureWithScanFrame}
         mode={mode}
         captureMode={captureMode}
+        
         delayTime={delayTime ? delayTime : 100}
-        showDocumentBoundaries={showDocumentBoundaries}
+        // showDocumentBoundaries={showDocumentBoundaries}
         isOnDeviceOCR={isOnDeviceOCR}
         token={token}
         locationId={locationId}
