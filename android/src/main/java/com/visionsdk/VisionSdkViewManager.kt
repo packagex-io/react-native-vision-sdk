@@ -84,8 +84,8 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
   private var focusSettings: FocusSettings = FocusSettings(appContext)
 
   //object detection configurations
-  private var objectDetectionConfiguration: ObjectDetectionConfiguration = ObjectDetectionConfiguration()
-
+  private var objectDetectionConfiguration: ObjectDetectionConfiguration =
+    ObjectDetectionConfiguration()
 
 
   companion object {
@@ -282,15 +282,16 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
     onOCRResponseFailed(exception)
   }
 
-  override fun onImageCaptured(bitmap: Bitmap, documentBitmap: Bitmap?, value: List<String>) {
+  override fun onImageCaptured(bitmap: Bitmap, value: List<String>) {
     Log.d(TAG, "onImageCaptured: ")
 
     saveBitmapAndSendEvent(bitmap)
-
-    if (isOnDeviceOCR) {
-      performLocalOCR(bitmap, value)
-    } else {
-      makeOCRApiCall(bitmap, value)
+    if (detectionMode == DetectionMode.OCR) {
+      if (isOnDeviceOCR) {
+        performLocalOCR(bitmap, value)
+      } else {
+        makeOCRApiCall(bitmap, value)
+      }
     }
   }
 
@@ -300,11 +301,18 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
 
     val savedBitmapFile = File(parentDir, Date().time.toString() + ".jpg")
 
-    bitmap.save(savedBitmapFile, compressFormat = Bitmap.CompressFormat.JPEG)
+    bitmap.save(fileToSaveBitmapTo = savedBitmapFile, compressFormat = Bitmap.CompressFormat.JPEG)
+
+    val filesList = parentDir.list() ?: emptyArray()
+    if (filesList.size > 10) {
+      filesList.sortBy { it }
+      val fileToDelete = File(parentDir, filesList[0])
+      fileToDelete.delete()
+    }
 
     val event = Arguments.createMap().apply {
       putString("image", savedBitmapFile.toUri().toString())
-      }
+    }
     appContext
       .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
       .emit("onImageCaptured", event)
@@ -567,7 +575,7 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
     lifecycleOwner?.lifecycle?.coroutineScope?.launchOnIO {
       try {
         if (onDeviceOCRManager?.isConfigured()?.not() == true) {
-          onDeviceOCRManager?.configure(apiKey,token) {
+          onDeviceOCRManager?.configure(apiKey, token) {
 //                Log.d(TAG, "Install Progress: $it")
             if (onDeviceOCRManager?.isModelAlreadyDownloaded() == false) {
               val event = Arguments.createMap().apply {

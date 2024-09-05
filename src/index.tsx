@@ -14,7 +14,7 @@ type Props = {
   reRender?: string;
   delayTime?: number;
   captureMode?: 'manual' | 'auto';
-  mode?: 'barcode' | 'qrcode' | 'ocr' | 'photo' |'autoBarCodeOrQRCode';
+  mode?: 'barcode' | 'qrcode' | 'ocr' | 'photo' | 'autoBarCodeOrQRCode';
   token?: string;
   locationId?: string;
   options?: any;
@@ -96,7 +96,7 @@ const Camera: React.FC<Props> = ({
     },
     setCameraSettings: (val: any) => {
       setCameraSettings(val);
-    }
+    },
   }));
 
   const onPressCaptures = () => {
@@ -248,7 +248,8 @@ const Camera: React.FC<Props> = ({
       DeviceEventEmitter.removeAllListeners('onImageCaptured');
       DeviceEventEmitter.removeAllListeners('onError');
     };
-  }, []);
+  }, [mode]);
+
   return (
     <>
       <VisionSdkView

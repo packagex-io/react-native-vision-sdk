@@ -25,7 +25,10 @@ export default function App() {
   const [modelSize, setModelSize] = useState<string>('large');
   const [loading, setLoading] = useState<boolean>(false);
   const [result, setResult] = useState<any>('');
-  const [mode, setMode] = useState<any>('barcode');
+
+  const [mode, setMode] = useState<'barcode' | 'qrcode' | 'ocr' | 'photo'>(
+    'barcode'
+  );
   const [flash, setFlash] = useState<boolean>(false);
   const [detectedData, setDetectedData] = useState<detectedDataProps>({
     barcode: false,
@@ -67,7 +70,7 @@ export default function App() {
       progress: 0,
     });
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (Platform.OS === 'android') {
       handleCameraPress();
     }
@@ -114,8 +117,9 @@ export default function App() {
 
   const onPressCapture = () => {
     // if (Platform.OS === 'android') {
-    setLoading(true);
+    if (mode === 'ocr') setLoading(true);
     // }
+    console.log('mode==== > ', mode);
     visionSdk?.current?.cameraCaptureHandler();
   };
   const toggleFlash = (val: boolean) => {
@@ -135,7 +139,10 @@ export default function App() {
       toggleFlash(flash);
     }
   }, [flash]);
-
+  useEffect(() => {
+    console.log('useEffect mode==== > ', mode);
+  }, [mode]);
+  const getMode = () => mode;
   const onPressOnDeviceOcr = (type = 'shipping_label', size = 'large') => {
     visionSdk?.current?.stopRunningHandler();
     setLoading(true);
@@ -233,67 +240,73 @@ export default function App() {
     // </View>
 
     <View>
-      <View style={{backgroundColor: 'red', height: '60%'}}></View>
-      <View style={{ height: '20%'}}>
-      <VisionSdkView
-        refProp={visionSdk}
-        isOnDeviceOCR={isOnDeviceOCR}
-        // showScanFrame={true}
-        // showDocumentBoundaries={true}
-        // captureWithScanFrame={true}
-        captureMode={captureMode}
-        mode={mode}
-        environment="sandbox"
-        apiKey="key_141b2eda27Z0Cm2y0h0P6waB3Z6pjPgrmGAHNSU62rZelUthBEOOdsVTqZQCRVgPLqI5yMPqpw2ZBy2z"
-        flash={flash}
-        onDetected={(e: any) => {
-          setDetectedData(Platform.OS === 'android' ? e : e.nativeEvent);
-        }}
-        onBarcodeScan={(e: any) => {
-          console.log('BarCodeScanHandler', e);
-          setLoading(false);
-          visionSdk?.current?.restartScanningHandler();
-        }}
-        onOCRScan={(e: any) => {
-          let scanRes = Platform.OS === 'ios' ? e.nativeEvent.data.data : e;
-          if (Platform.OS === 'android') {
-            const parsedOuterJson = JSON.parse(scanRes.data);
-            scanRes = parsedOuterJson.data;
-          }
-          setResult(scanRes);
-          setLoading(false);
-          Vibration.vibrate(100);
-          // setTimeout(() => {
-          visionSdk?.current?.restartScanningHandler();
-          // }, 200);
-        }}
-        onImageCaptured={(e: any) => {
-          console.log('onImageCaptured==------>>', e);
-        }}
-        onModelDownloadProgress={(e: any) => {
-          let response = Platform.OS === 'android' ? e : e.nativeEvent;
-          console.log(
-            'ModelDownloadProgress==------>>',
-            Math.floor(response.progress * 100)
-          );
-          if (isMultipleOfTen(Math.floor(response.progress * 100))) {
-            setModelDownloadingProgress(response);
-            if (response.downloadStatus) {
-              visionSdk?.current?.startRunningHandler();
+      <View style={{ backgroundColor: 'red', height: '60%' }}></View>
+      <View style={{ height: '20%' }}>
+        <VisionSdkView
+          refProp={visionSdk}
+          isOnDeviceOCR={isOnDeviceOCR}
+          // showScanFrame={true}
+          // showDocumentBoundaries={true}
+          // captureWithScanFrame={true}
+          captureMode={captureMode}
+          mode={mode}
+          environment="sandbox"
+          apiKey="key_141b2eda27Z0Cm2y0h0P6waB3Z6pjPgrmGAHNSU62rZelUthBEOOdsVTqZQCRVgPLqI5yMPqpw2ZBy2z"
+          flash={flash}
+          onDetected={(e: any) => {
+            setDetectedData(Platform.OS === 'android' ? e : e.nativeEvent);
+          }}
+          onBarcodeScan={(e: any) => {
+            console.log('onImageCaptured mode==------>>', mode);
+            console.log('BarCodeScanHandler', e);
+            setLoading(false);
+            visionSdk?.current?.restartScanningHandler();
+          }}
+          onOCRScan={(e: any) => {
+            let scanRes = Platform.OS === 'ios' ? e.nativeEvent.data.data : e;
+            if (Platform.OS === 'android') {
+              const parsedOuterJson = JSON.parse(scanRes.data);
+              scanRes = parsedOuterJson.data;
             }
-          }
-          setLoading(false);
-        }}
-        onError={(e: any) => {
-          let error = Platform.OS === 'android' ? e : e.nativeEvent;
-          console.log('onError', error);
-          Alert.alert('ERROR', error?.message);
-          setLoading(false);
-        }}
-      />
+            setResult(scanRes);
+            setLoading(false);
+            Vibration.vibrate(100);
+            // setTimeout(() => {
+            visionSdk?.current?.restartScanningHandler();
+            // }, 200);
+          }}
+          onImageCaptured={(e: any) => {
+            console.log('onImageCaptured mode==------>>', mode);
+
+            if (mode === 'photo') {
+              visionSdk?.current?.restartScanningHandler();
+            }
+            console.log('onImageCaptured==------>>', e);
+          }}
+          onModelDownloadProgress={(e: any) => {
+            let response = Platform.OS === 'android' ? e : e.nativeEvent;
+            console.log(
+              'ModelDownloadProgress==------>>',
+              Math.floor(response.progress * 100)
+            );
+            if (isMultipleOfTen(Math.floor(response.progress * 100))) {
+              setModelDownloadingProgress(response);
+              if (response.downloadStatus) {
+                visionSdk?.current?.startRunningHandler();
+              }
+            }
+            setLoading(false);
+          }}
+          onError={(e: any) => {
+            let error = Platform.OS === 'android' ? e : e.nativeEvent;
+            console.log('onError', error);
+            Alert.alert('ERROR', error?.message);
+            setLoading(false);
+          }}
+        />
       </View>
-      
-      <View style={{backgroundColor: 'blue', height: '20%'}}></View>
+
+      <View style={{ backgroundColor: 'blue', height: '20%' }}></View>
     </View>
   );
 }
