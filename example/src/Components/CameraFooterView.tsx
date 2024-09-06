@@ -5,7 +5,7 @@ import {
   TouchableOpacity,
   Platform,
   Text,
-  FlatList
+  FlatList,
 } from 'react-native';
 import OCRSelectionView from './OCRSelectionView';
 import CaptureModesView from './CaptureModesView';
@@ -22,7 +22,7 @@ function CameraFooterView({
   modelSize,
   mode,
   zoomLevel,
-  setZoomLevel
+  setZoomLevel,
 }: any) {
   const [showOcrTypes, setShowOcrTypes] = useState<boolean>(false);
   const [showOcrSize, setShowOcrSize] = useState<boolean>(false);
@@ -31,7 +31,7 @@ function CameraFooterView({
     { id: '1', level: 1, label: '1X' },
     { id: '2', level: 1.8, label: '1.8X' },
     { id: '3', level: 2, label: '2X' },
-    { id: '4', level: 3, label: '3X' }
+    { id: '4', level: 3, label: '3X' },
   ];
 
   const renderItem = ({ item }) => (
@@ -39,7 +39,7 @@ function CameraFooterView({
       <View
         style={{
           ...styles.circle,
-          backgroundColor: zoomLevel === item.level ? '#7420E2' : '#000000'
+          backgroundColor: zoomLevel === item.level ? '#7420E2' : '#000000',
         }}
       >
         <Text style={styles.zoomTextStyle}>{item.label}</Text>
@@ -63,23 +63,25 @@ function CameraFooterView({
         )}
       </View>
       <View style={styles.centerContainer}>
-      <CaptureModesView
+        <CaptureModesView
           setCaptureMode={setCaptureMode}
           captureMode={captureMode}
-      />
+        />
 
-       
-      <View style={styles.zoomOuterView}>
-      <FlatList style={styles.zoomContainer}
-        data={zoomLevels}
-        contentContainerStyle={{ justifyContent: 'center', alignItems: 'center' }}
-        horizontal={true} // Ensures buttons are displayed in a row
-        keyExtractor={item => item.id}
-        renderItem={renderItem}
-      />
-      
-      </View>
-      
+        <View style={styles.zoomOuterView}>
+          <FlatList
+            style={styles.zoomContainer}
+            data={zoomLevels}
+            contentContainerStyle={{
+              justifyContent: 'center',
+              alignItems: 'center',
+            }}
+            horizontal={true} // Ensures buttons are displayed in a row
+            keyExtractor={(item) => item.id}
+            renderItem={renderItem}
+          />
+        </View>
+
         {captureMode === 'manual' && (
           <TouchableOpacity onPress={onPressCapture} style={styles.outerCircle}>
             <View style={styles.innerCircle} />
@@ -139,7 +141,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     position: 'absolute',
-    bottom: 0
+    bottom: 0,
   },
   sideContainer: {
     width: '30%',
@@ -179,23 +181,23 @@ const styles = StyleSheet.create({
     marginVertical: 1,
     borderRadius: 25, // Half of the width/height to make it a circle
     justifyContent: 'center',
-    alignItems: 'center'
+    alignItems: 'center',
   },
   zoomOuterView: {
-    
-    position:'absolute',
-    top:-60
+    position: 'absolute',
+    top: -60,
   },
   zoomTextStyle: {
     color: 'white',
     justifyContent: 'center',
     textTransform: 'capitalize',
-    fontSize: 14
+    fontSize: 14,
   },
   zoomContainer: {
+    width: '100%',
     flexDirection: 'row',
     height: 50,
-  }
+  },
 });
 
 export default CameraFooterView;

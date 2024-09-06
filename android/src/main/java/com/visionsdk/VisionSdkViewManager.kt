@@ -358,7 +358,7 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
   }
 
   override fun getCommandsMap(): Map<String?, Int?> {
-    Log.d("React", " View manager getCommandsMap:")
+    Log.d(TAG, "getCommandsMap: ")
     return mapOf(
       "captureImage" to
         0,
@@ -390,9 +390,10 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
     commandType: Int,
     args: ReadableArray?
   ) {
+    Log.d(TAG, "receiveCommand: $commandType")
     Assertions.assertNotNull(view)
     Assertions.assertNotNull(args)
-    when (commandType) {
+    when (commandType?.toInt()) {
       0 -> {
         captureImage()
         return
@@ -598,27 +599,27 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
     this.flash = flash
   }
 
-//  @ReactProp(name = "zoomLevel")
-//  fun setZoomLevel(view: View, zoomLevel: Float? = 1.0f) {
-//    Log.d(TAG, "setZoomLevel: " + zoomLevel)
-//    visionCameraView?.setZoomRatio(zoomLevel?: 1f)
-//  }
+  @ReactProp(name = "zoomLevel")
+  fun setZoomLevel(view: VisionCameraView, zoomLevel: Float) {
+    Log.d(TAG, "setZoomLevel: $zoomLevel")
+    visionCameraView?.setZoomRatio(zoomLevel)
+  }
 
   @ReactProp(name = "apiKey")
   fun setApiKey(view: View, apiKey: String = "") {
-    Log.d(TAG, "apiKey: " + apiKey)
+    Log.d(TAG, "apiKey: $apiKey")
     this.apiKey = apiKey
   }
 
   @ReactProp(name = "token")
   fun setToken(view: View, token: String = "") {
-    Log.d(TAG, "token: " + token)
+    Log.d(TAG, "token: $token")
     this.token = token
   }
 
   @ReactProp(name = "environment")
   fun setEnvironment(view: View, env: String = "") {
-    Log.d(TAG, "environment: " + env)
+    Log.d(TAG, "environment: $env")
     environment = when (env.lowercase()) {
       "dev" -> Environment.DEV
       "staging" -> Environment.STAGING
@@ -631,7 +632,7 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
 
   @ReactProp(name = "captureMode")
   fun setCaptureMode(view: View, captureMode: String = "") {
-    Log.d(TAG, "captureMode: " + captureMode)
+    Log.d(TAG, "captureMode: $captureMode")
     scanningMode = when (captureMode.lowercase()) {
       "auto" -> ScanningMode.Auto
       "manual" -> ScanningMode.Manual
@@ -643,7 +644,7 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
 
   @ReactProp(name = "mode")
   fun setMode(view: View, mode: String = "") {
-    Log.d(TAG, "mode: " + mode)
+    Log.d(TAG, "mode: $mode")
     detectionMode = when (mode.lowercase()) {
       "ocr" -> DetectionMode.OCR
       "barcode" -> DetectionMode.Barcode
@@ -656,7 +657,7 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
 
   @ReactProp(name = "isOnDeviceOCR")
   fun isOnDeviceOCR(view: View, isOnDeviceOCR: Boolean = false) {
-    Log.d(TAG, "isOnDevice: " + isOnDeviceOCR)
+    Log.d(TAG, "isOnDevice: $isOnDeviceOCR")
     this.isOnDeviceOCR = isOnDeviceOCR
   }
 
@@ -680,13 +681,13 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
 
   @ReactProp(name = "locationId")
   fun setLocationId(view: View, locationId: String = "") {
-    Log.d(TAG, "locationId: " + locationId)
+    Log.d(TAG, "locationId: $locationId")
     this.locationId = locationId
   }
 
   @ReactProp(name = "options")
   fun setOptions(view: View, options: String) {
-    Log.d(TAG, "options: " + options)
+    Log.d(TAG, "options: $options")
     this.options = JSONObject(options).toMap()
   }
 
@@ -706,6 +707,7 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
 
   override fun onCameraStarted() {
     Log.d(TAG, "onCameraStarted: ")
+    Log.d(TAG, "maxZoomLevel: ${visionCameraView?.getMaxZoomRatioAvailable()}")
     setFocusSettings()
   }
 

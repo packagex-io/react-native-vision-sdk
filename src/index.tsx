@@ -6,7 +6,6 @@ import {
   DeviceEventEmitter,
 } from 'react-native';
 import { VisionSdkView } from './VisionSdkViewManager';
-import type { Float } from 'react-native/Libraries/Types/CodegenTypes';
 
 type Props = {
   children?: React.ReactNode;
@@ -20,7 +19,7 @@ type Props = {
   options?: any;
   environment?: 'prod' | 'sandbox';
   flash?: boolean;
-  zoomLevel?: Float;
+  zoomLevel?: number;
   isOnDeviceOCR?: boolean;
   onModelDownloadProgress?: (_e: any) => void;
   onBarcodeScan?: (_e: any) => void;
