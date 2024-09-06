@@ -5,7 +5,6 @@ import {
   Platform,
   ViewStyle,
 } from 'react-native';
-import type { Float } from 'react-native/Libraries/Types/CodegenTypes';
 
 const LINKING_ERROR =
   `The package 'react-native-vision-sdk' doesn't seem to be linked. Make sure: \n\n` +
@@ -18,14 +17,14 @@ type VisionSdkProps = {
   style?: ViewStyle;
   mode?: String;
   ref?: any;
-  apiKey?: String;
-  token?: String;
-  locationId?: String;
+  apiKey?: string;
+  token?: string;
+  locationId?: string;
   options?: any;
-  environment?: String;
+  environment?: string;
   flash?: boolean;
-  zoomLevel?: Float;
-  captureMode?: String;
+  zoomLevel?: number;
+  captureMode?: string;
   showDocumentBoundaries?: boolean;
   isOnDeviceOCR: boolean;
   showScanFrame?: boolean;
