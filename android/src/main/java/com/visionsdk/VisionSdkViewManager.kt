@@ -366,26 +366,22 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
         1,
       "startRunning" to
         2,
-      "setZoomTo" to
-        3,
-      "setHeight" to
-        4,
       "setMetaData" to
-        5,
+        3,
       "setRecipient" to
-        6,
+        4,
       "setSender" to
-        7,
+        5,
       "configureOnDeviceModel" to
-        8,
+        6,
       "restartScanning" to
-        9,
+        7,
       "setFocusSettings" to
-        10,
+        8,
       "setObjectDetectionSettings" to
-        11,
+        9,
       "setCameraSettings" to
-        12,
+        10,
     )
   }
 
@@ -413,51 +409,41 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
       }
 
       3 -> {
-        setZoomTo(args?.getDouble(0)?.toFloat())
-        return
-      }
-
-      4 -> {
-        setHeight(args?.getInt(0))
-        return
-      }
-
-      5 -> {
         setMetaData(args?.getString(0))
         return
       }
 
-      6 -> {
+      4 -> {
         setRecipient(args?.getString(0))
         return
       }
 
-      7 -> {
+      5 -> {
         setSender(args?.getString(0))
         return
       }
 
-      8 -> {
+      6 -> {
         configureOnDeviceModel(args?.getMap(0).toString())
         return
       }
 
-      9 -> {
+      7 -> {
         restartScanning()
         return
       }
 
-      10 -> {
+      8 -> {
         configureFocusSettings(args?.getMap(0).toString())
         return
       }
 
-      11 -> {
+      9 -> {
         setObjectDetectionSettings(args?.getMap(0).toString())
         return
       }
 
-      12 -> {
+      10 -> {
         setCameraSettings(args?.getMap(0).toString())
         return
       }
@@ -495,17 +481,6 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
     //  focusImageRect = RectF(100f,100f,200f,200f),
 //    visionCameraView?.requestLayout();
 
-  }
-
-  @ReactProp(name = "flash")
-  fun flash(view: View, flash: Boolean = false) {
-    Log.d(TAG, "flash: ")
-    this.flash = flash
-  }
-
-  private fun setZoomTo(zoom: Float? = 1f) {
-    Log.d(TAG, "setZoomTo: " + zoom)
-    visionCameraView?.setZoomRatio(zoom ?: 1f)
   }
 
   private fun setHeight(height: Int?) {
@@ -614,6 +589,19 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
   private fun restartScanning() {
     Log.d(TAG, "restartScanning: ")
     visionCameraView?.rescan()
+  }
+
+  //  React Props
+  @ReactProp(name = "flash")
+  fun flash(view: View, flash: Boolean = false) {
+    Log.d(TAG, "flash: ")
+    this.flash = flash
+  }
+
+  @ReactProp(name = "zoomLevel")
+  private fun setZoomTo(zoomLevel: Float? = 1f) {
+    Log.d(TAG, "setZoomTo: " + zoomLevel)
+    visionCameraView?.setZoomRatio(zoomLevel ?: 1f)
   }
 
   @ReactProp(name = "apiKey")

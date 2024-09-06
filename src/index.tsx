@@ -13,7 +13,6 @@ type Props = {
   refProp?: any;
   apiKey?: string;
   reRender?: string;
-  delayTime?: number;
   captureMode?: 'manual' | 'auto';
   mode?: 'barcode' | 'qrcode' | 'ocr' | 'photo' | 'autoBarCodeOrQRCode';
   token?: string;
@@ -36,7 +35,6 @@ const Camera: React.FC<Props> = ({
   refProp,
   apiKey = '',
   reRender,
-  delayTime = 100,
   captureMode = 'manual',
   mode = 'barcode',
   token = '',
@@ -69,9 +67,6 @@ const Camera: React.FC<Props> = ({
     },
     setMetadata: (val: any) => {
       setMetadata(val);
-    },
-    setHeight: (val: any) => {
-      setHeight(val);
     },
     setRecipient: (val: any) => {
       setRecipient(val);
@@ -125,22 +120,12 @@ const Camera: React.FC<Props> = ({
     );
   };
 
-  const setHeight = (value: any) => {
-    UIManager.dispatchViewManagerCommand(
-      findNodeHandle(VisionSDKViewRef.current),
-      (UIManager.hasViewManagerConfig('VisionSDKView') &&
-        UIManager.getViewManagerConfig('VisionSDKView').Commands.setHeight) ||
-        3,
-      [value]
-    );
-  };
-
   const setMetadata = (value: any) => {
     UIManager.dispatchViewManagerCommand(
       findNodeHandle(VisionSDKViewRef.current),
       (UIManager.hasViewManagerConfig('VisionSDKView') &&
         UIManager.getViewManagerConfig('VisionSDKView').Commands.setMetaData) ||
-        4,
+        3,
       [value]
     );
   };
@@ -150,7 +135,7 @@ const Camera: React.FC<Props> = ({
       (UIManager.hasViewManagerConfig('VisionSDKView') &&
         UIManager.getViewManagerConfig('VisionSDKView').Commands
           .setRecipient) ||
-        5,
+        4,
       [value]
     );
   };
@@ -159,7 +144,7 @@ const Camera: React.FC<Props> = ({
       findNodeHandle(VisionSDKViewRef.current),
       (UIManager.hasViewManagerConfig('VisionSDKView') &&
         UIManager.getViewManagerConfig('VisionSDKView').Commands.setSender) ||
-        6,
+        5,
       [value]
     );
   };
@@ -169,7 +154,7 @@ const Camera: React.FC<Props> = ({
       (UIManager.hasViewManagerConfig('VisionSDKView') &&
         UIManager.getViewManagerConfig('VisionSDKView').Commands
           .configureOnDeviceModel) ||
-        7,
+        6,
       [val]
     );
   };
@@ -179,7 +164,7 @@ const Camera: React.FC<Props> = ({
       (UIManager.hasViewManagerConfig('VisionSDKView') &&
         UIManager.getViewManagerConfig('VisionSDKView').Commands
           .restartScanning) ||
-        8,
+        7,
       []
     );
   };
@@ -189,7 +174,7 @@ const Camera: React.FC<Props> = ({
       (UIManager.hasViewManagerConfig('VisionSDKView') &&
         UIManager.getViewManagerConfig('VisionSDKView').Commands
           .setFocusSettings) ||
-        9,
+        8,
       [val]
     );
   };
@@ -199,7 +184,7 @@ const Camera: React.FC<Props> = ({
       (UIManager.hasViewManagerConfig('VisionSDKView') &&
         UIManager.getViewManagerConfig('VisionSDKView').Commands
           .setObjectDetectionSettings) ||
-        10,
+        9,
       [val]
     );
   };
@@ -209,7 +194,7 @@ const Camera: React.FC<Props> = ({
       (UIManager.hasViewManagerConfig('VisionSDKView') &&
         UIManager.getViewManagerConfig('VisionSDKView').Commands
           .setCameraSettings) ||
-        11,
+        10,
       [val]
     );
   };
@@ -244,7 +229,6 @@ const Camera: React.FC<Props> = ({
         apiKey={apiKey}
         mode={mode}
         captureMode={captureMode}
-        delayTime={delayTime ? delayTime : 100}
         isOnDeviceOCR={isOnDeviceOCR}
         token={token}
         locationId={locationId}

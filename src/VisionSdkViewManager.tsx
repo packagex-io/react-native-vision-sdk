@@ -26,7 +26,6 @@ type VisionSdkProps = {
   flash?: boolean;
   zoomLevel?: Float;
   captureMode?: String;
-  delayTime: number;
   showDocumentBoundaries?: boolean;
   isOnDeviceOCR: boolean;
   showScanFrame?: boolean;
