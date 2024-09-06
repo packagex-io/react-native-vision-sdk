@@ -41,28 +41,6 @@ class VisionSdkViewManager: RCTViewManager {
         }
     }
     
-    @objc func setZoomTo(_ node: NSNumber,zoomValue: NSNumber) {
-        let zoomFloatValue = zoomValue.floatValue
-        DispatchQueue.main.async {
-            let component =
-            self.bridge.uiManager.view(
-                forReactTag: node
-            ) as! RNCodeScannerView
-            
-            component.setZoomTo(zoomFloatValue as NSNumber)
-        }
-    }
-    
-    @objc func setHeight(_ node: NSNumber, height: NSNumber) {
-        DispatchQueue.main.async {
-            let component =
-            self.bridge.uiManager.view(
-                forReactTag: node
-            ) as! RNCodeScannerView
-            component.setHeight(height as NSNumber)
-        }
-    }
-    
     @objc func setMetaData(_ node: NSNumber, metaData: NSString) {
         DispatchQueue.main.async {
             let component =

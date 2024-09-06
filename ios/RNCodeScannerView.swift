@@ -25,7 +25,7 @@ class RNCodeScannerView: UIView {
     //MARK: - Props Received from React-Native
     var token: String?  // Dynamic Prop | Optional:
 //    var delayTime: Double? // Dynamic Prop | Optional:
-    var height: Double? // Dynamic Prop | Optional:
+//    var height: Double? // Dynamic Prop | Optional:
     
     var locationId: String? // Dynamic Prop | Optional:
     var options: [String: Any]? // Dynamic Prop | Optional:
@@ -72,7 +72,7 @@ class RNCodeScannerView: UIView {
         if previousSize != newSize {
             // If user initially set isOnDeviceOCR = true then configureOnDeviceModel method will be called from here
             configureOnDeviceModel()
-            print("user is here --------------> 2")
+//            print("user is here --------------> 2")
             previousSize = newSize
 //            print("View size changed to \(newSize)")
             codeScannerView?.frame = self.bounds
@@ -322,26 +322,15 @@ extension RNCodeScannerView {
     
     /// Handles the Zoom Level of the Camera Device
     /// - Parameter zoomLevel: zoomLevel can be any Integar Number
-    func setZoomTo(_ zoomLevel: NSNumber) {
-//        assert(Thread.isMainThread)
-        let videoDevice: AVCaptureDevice = VisionSDK.CodeScannerView.videoDevice
-        DispatchQueue.main.async {
-            try? videoDevice.lockForConfiguration()
-            videoDevice.videoZoomFactor = CGFloat(zoomLevel)
-            videoDevice.unlockForConfiguration()
-        }
-    }
-
-    /// Sets the custom camera screen height from client/React Native side to control camera screen height
-    /// - Parameter height: height description - > The possible value of height can be between 0.0 to 1.0, i.e. 0.5 means 50% of height of screen.
-    @objc func setHeight(_ height: NSNumber) {
-//        codeScannerView!.deConfigure()
-        codeScannerView!.frame = CGRect(x: 0, y: 0, width: UIScreen.main.bounds.width, height: UIScreen.main.bounds.height * CGFloat((height)))
-//        ConfigureCodeScannerView()
-//        codeScannerView!.startRunning()
-//        self.addSubview(codeScannerView!)
-        codeScannerView!.layoutIfNeeded()
-    }
+//    func setZoomTo(_ zoomLevel: NSNumber) {
+////        assert(Thread.isMainThread)
+//        let videoDevice: AVCaptureDevice = VisionSDK.CodeScannerView.videoDevice
+//        DispatchQueue.main.async {
+//            try? videoDevice.lockForConfiguration()
+//            videoDevice.videoZoomFactor = CGFloat(zoomLevel)
+//            videoDevice.unlockForConfiguration()
+//        }
+//    }
     
     /// Sets the custom metaData from client/React Native side to control scanning inputs/outputs
     /// - Parameter metaData: metaData description
@@ -372,6 +361,18 @@ extension RNCodeScannerView {
             if videoDevice.isTorchAvailable {
                 try? videoDevice.lockForConfiguration()
                 videoDevice.torchMode = flash ? .on : .off
+                videoDevice.unlockForConfiguration()
+            }
+        }
+    }
+    
+    @objc func setZoomLevel(_ zoomLevel: NSNumber) {
+        let zoomFloatValue = zoomLevel.floatValue
+        DispatchQueue.main.async {
+            let videoDevice: AVCaptureDevice = VisionSDK.CodeScannerView.videoDevice
+            DispatchQueue.main.async {
+                try? videoDevice.lockForConfiguration()
+                videoDevice.videoZoomFactor = CGFloat(zoomFloatValue)
                 videoDevice.unlockForConfiguration()
             }
         }
