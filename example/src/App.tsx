@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, Platform, Alert, Vibration } from 'react-native';
+import { View, StyleSheet, Platform, Alert, Vibration, Text } from 'react-native';
 import VisionSdkView from 'react-native-vision-sdk';
 import CameraFooterView from './Components/CameraFooterView';
 import DownloadingProgressView from './Components/DownloadingProgressView';
@@ -231,6 +231,8 @@ export default function App() {
         setModelSize={setModelSize}
         modelSize={modelSize}
         mode={mode}
+        zoomLevel = {zoomLevel}
+        setZoomLevel={setZoomLevel}
       />
     </View>
   );

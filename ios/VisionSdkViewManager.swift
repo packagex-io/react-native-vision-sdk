@@ -27,8 +27,6 @@ class VisionSdkViewManager: RCTViewManager {
         }
     }
     
-    
-    
     @objc func startRunning(_ node: NSNumber) {
         
         DispatchQueue.main.async {
@@ -50,7 +48,6 @@ class VisionSdkViewManager: RCTViewManager {
             component.setMetaData(metaData as NSString)
         }
     }
-    
     
     @objc func setRecipient(_ node: NSNumber, recipient: NSString) {
         DispatchQueue.main.async {
@@ -255,13 +252,6 @@ class VisionSdkViewManager: RCTViewManager {
             if let nthFrameToProcess = cameraSettings["nthFrameToProcess"] as? Int {
                 updatedCameraSettings.nthFrameToProcess = Int64(nthFrameToProcess)
             }
-
-//            if let shouldAutoSaveCapturedImage = cameraSettings["shouldAutoSaveCapturedImage"] as? Bool {
-//                updatedCameraSettings.shouldAutoSaveCapturedImage = shouldAutoSaveCapturedImage
-//            }
-//
-//            updatedCameraSettings.sessionPreset = .high
-            
             component.codeScannerView?.cameraSettings = updatedCameraSettings
         }
     }
@@ -280,7 +270,7 @@ class VisionSdkViewManager: RCTViewManager {
 }
 
 
-// UIColors Extension for converting hex color to iOS format color.
+//MARK: - UIColors Extension for converting hex color to iOS format color.
 extension UIColor {
     
     convenience init?(hex: String) {
@@ -325,33 +315,3 @@ extension UIColor {
        }
 }
 
-
-//extension UIColor {
-//    convenience init(hex: String) {
-//        var hexFormatted: String = hex.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
-//
-//        if hexFormatted.hasPrefix("#") {
-//            hexFormatted.remove(at: hexFormatted.startIndex)
-//        }
-//
-//        var alpha: CGFloat = 1.0
-//        var rgbValue: UInt64 = 0
-//        Scanner(string: hexFormatted).scanHexInt64(&rgbValue)
-//
-//        if hexFormatted.count == 8 {
-//            alpha = CGFloat((rgbValue & 0xFF000000) >> 24) / 255.0
-//            let red = CGFloat((rgbValue & 0x00FF0000) >> 16) / 255.0
-//            let green = CGFloat((rgbValue & 0x0000FF00) >> 8) / 255.0
-//            let blue = CGFloat(rgbValue & 0x000000FF) / 255.0
-//            self.init(red: red, green: green, blue: blue, alpha: alpha)
-//        } else if hexFormatted.count == 6 {
-//            let red = CGFloat((rgbValue & 0xFF0000) >> 16) / 255.0
-//            let green = CGFloat((rgbValue & 0x00FF00) >> 8) / 255.0
-//            let blue = CGFloat(rgbValue & 0x0000FF) / 255.0
-//            self.init(red: red, green: green, blue: blue, alpha: alpha)
-//        } else {
-//            // Invalid hex string length
-//            self.init(red: 0, green: 0, blue: 0, alpha: 1)
-//        }
-//    }
-//}

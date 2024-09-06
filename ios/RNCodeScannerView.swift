@@ -320,18 +320,6 @@ extension RNCodeScannerView {
 //MARK: -
 extension RNCodeScannerView {
     
-    /// Handles the Zoom Level of the Camera Device
-    /// - Parameter zoomLevel: zoomLevel can be any Integar Number
-//    func setZoomTo(_ zoomLevel: NSNumber) {
-////        assert(Thread.isMainThread)
-//        let videoDevice: AVCaptureDevice = VisionSDK.CodeScannerView.videoDevice
-//        DispatchQueue.main.async {
-//            try? videoDevice.lockForConfiguration()
-//            videoDevice.videoZoomFactor = CGFloat(zoomLevel)
-//            videoDevice.unlockForConfiguration()
-//        }
-//    }
-    
     /// Sets the custom metaData from client/React Native side to control scanning inputs/outputs
     /// - Parameter metaData: metaData description
     @objc func setMetaData(_ metaData: NSString) {
@@ -349,39 +337,6 @@ extension RNCodeScannerView {
     @objc func setSender(_ sender: NSString) {
         self.sender = convertToDictionary(text: sender as? String ?? "")
     }
-    
-//    @objc func setShowScanFrame(_ showScanFrame: Bool) {
-//        self.shouldDisplayFocusImage = showScanFrame
-//        codeScannerView!.focusSettings.shouldDisplayFocusImage = showScanFrame
-//    }
-    
-    @objc func setFlash(_ flash: Bool) {
-        let videoDevice: AVCaptureDevice = CodeScannerView.videoDevice
-        DispatchQueue.main.async {
-            if videoDevice.isTorchAvailable {
-                try? videoDevice.lockForConfiguration()
-                videoDevice.torchMode = flash ? .on : .off
-                videoDevice.unlockForConfiguration()
-            }
-        }
-    }
-    
-    @objc func setZoomLevel(_ zoomLevel: NSNumber) {
-        let zoomFloatValue = zoomLevel.floatValue
-        DispatchQueue.main.async {
-            let videoDevice: AVCaptureDevice = VisionSDK.CodeScannerView.videoDevice
-            DispatchQueue.main.async {
-                try? videoDevice.lockForConfiguration()
-                videoDevice.videoZoomFactor = CGFloat(zoomFloatValue)
-                videoDevice.unlockForConfiguration()
-            }
-        }
-    }
-    
-//    @objc func setCaptureWithScanFrame(_ captureWithScanFrame: Bool) {
-//        self.shouldScanInFocusImageRect = captureWithScanFrame
-//        codeScannerView!.focusSettings.shouldScanInFocusImageRect = captureWithScanFrame
-//    }
     
     /// Sets the location Id for desired location to scan on specific location
     /// - Parameter locationId: Passed location Id from React Native App
@@ -403,27 +358,22 @@ extension RNCodeScannerView {
         if mode == "ocr" {
             codeScannerView!.setScanModeTo(.ocr)
             scanMode = .ocr
-//            codeScannerView!.objectDetectionConfiguration.isBarCodeOrQRCodeIndicationOn = true
         }
         else if mode == "barcode" || mode == "barcodeSingleCapture" {
             codeScannerView!.setScanModeTo(.barCode)
             scanMode = .barCode
-//            codeScannerView!.objectDetectionConfiguration.isBarCodeOrQRCodeIndicationOn = true
         }
         else if mode == "photo" {
             codeScannerView!.setScanModeTo(.photo)
             scanMode = .photo
-//            codeScannerView!.objectDetectionConfiguration.isBarCodeOrQRCodeIndicationOn = false
         }
         else if mode == "autoBarCodeOrQRCode" {
             codeScannerView!.setScanModeTo(.autoBarCodeOrQRCode)
             scanMode = .autoBarCodeOrQRCode
-//            codeScannerView!.objectDetectionConfiguration.isBarCodeOrQRCodeIndicationOn = true
         }
         else {
             codeScannerView!.setScanModeTo(.qrCode)
             scanMode = .qrCode
-//            codeScannerView!.objectDetectionConfiguration.isBarCodeOrQRCodeIndicationOn = true
         }
     }
     
@@ -480,12 +430,6 @@ extension RNCodeScannerView {
     @objc func setToken(_ token: NSString) {
         self.token = token as String
     }
-    
-//    /// Sets the delay time, i.e. how much delay should be there after one scan is scanned, or camera button is tapped.
-//    /// - Parameter delayTime: delayTime as seconds, 1000 = 1 second
-//    @objc func setDelayTime(_ delayTime: NSNumber) {
-//        self.delayTime = delayTime as? Double
-//    }
     
     /// Sets the custom options from client/React Native side to control scanning inputs/outputs
     /// - Parameter options: options description
@@ -551,6 +495,33 @@ extension RNCodeScannerView {
             break
         }
     }
+    
+    /// Handles the Flash of the Camera Device
+    /// - Parameter flash: flash can be true or false
+    @objc func setFlash(_ flash: Bool) {
+        let videoDevice: AVCaptureDevice = CodeScannerView.videoDevice
+        DispatchQueue.main.async {
+            if videoDevice.isTorchAvailable {
+                try? videoDevice.lockForConfiguration()
+                videoDevice.torchMode = flash ? .on : .off
+                videoDevice.unlockForConfiguration()
+            }
+        }
+    }
+    
+    /// Handles the Zoom Level of the Camera Device
+    /// - Parameter zoomLevel: zoomLevel can be any Integar Number
+    @objc func setZoomLevel(_ zoomLevel: NSNumber) {
+        let zoomFloatValue = zoomLevel.floatValue
+        DispatchQueue.main.async {
+            let videoDevice: AVCaptureDevice = VisionSDK.CodeScannerView.videoDevice
+            DispatchQueue.main.async {
+                try? videoDevice.lockForConfiguration()
+                videoDevice.videoZoomFactor = CGFloat(zoomFloatValue)
+                videoDevice.unlockForConfiguration()
+            }
+        }
+    }
 }
 
 //MARK: - Other Helper functions
@@ -581,6 +552,8 @@ extension RNCodeScannerView {
     }
 }
 
+
+// MARK: - Helper Methods for storing and Retrieving image from storage.
 
 extension RNCodeScannerView {
     
