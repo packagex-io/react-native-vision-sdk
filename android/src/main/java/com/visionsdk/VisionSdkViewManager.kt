@@ -598,11 +598,11 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
     this.flash = flash
   }
 
-  @ReactProp(name = "zoomLevel")
-  private fun setZoomTo(zoomLevel: Float? = 1f) {
-    Log.d(TAG, "setZoomTo: " + zoomLevel)
-    visionCameraView?.setZoomRatio(zoomLevel ?: 1f)
-  }
+//  @ReactProp(name = "zoomLevel")
+//  fun setZoomLevel(view: View, zoomLevel: Float? = 1.0f) {
+//    Log.d(TAG, "setZoomLevel: " + zoomLevel)
+//    visionCameraView?.setZoomRatio(zoomLevel?: 1f)
+//  }
 
   @ReactProp(name = "apiKey")
   fun setApiKey(view: View, apiKey: String = "") {
