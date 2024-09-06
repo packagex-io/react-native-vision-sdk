@@ -6,6 +6,7 @@ import {
   DeviceEventEmitter,
 } from 'react-native';
 import { VisionSdkView } from './VisionSdkViewManager';
+import type { Float } from 'react-native/Libraries/Types/CodegenTypes';
 
 type Props = {
   children?: React.ReactNode;
@@ -20,10 +21,8 @@ type Props = {
   options?: any;
   environment?: 'prod' | 'sandbox';
   flash?: boolean;
-  // showDocumentBoundaries?: boolean;
+  zoomLevel?: Float;
   isOnDeviceOCR?: boolean;
-  // showScanFrame?: boolean;
-  // captureWithScanFrame?: boolean;
   onModelDownloadProgress?: (_e: any) => void;
   onBarcodeScan?: (_e: any) => void;
   onImageCaptured?: (_e: any) => void;
@@ -45,10 +44,8 @@ const Camera: React.FC<Props> = ({
   options = {},
   environment = 'prod',
   flash = false,
-  // showDocumentBoundaries = false,
+  zoomLevel = 1.8,
   isOnDeviceOCR = false,
-  // showScanFrame = true,
-  // captureWithScanFrame = true,
   onModelDownloadProgress = (_e: any) => {},
   onBarcodeScan = (_e: any) => {},
   onImageCaptured = (_e: any) => {},
@@ -69,9 +66,6 @@ const Camera: React.FC<Props> = ({
     },
     startRunningHandler: () => {
       onPressStartRunning();
-    },
-    setToDefaultZoom: (val: any) => {
-      onPressZoom(val);
     },
     setMetadata: (val: any) => {
       setMetadata(val);
@@ -131,21 +125,12 @@ const Camera: React.FC<Props> = ({
     );
   };
 
-  const onPressZoom = (value: any) => {
-    UIManager.dispatchViewManagerCommand(
-      findNodeHandle(VisionSDKViewRef.current),
-      (UIManager.hasViewManagerConfig('VisionSDKView') &&
-        UIManager.getViewManagerConfig('VisionSDKView').Commands.setZoomTo) ||
-        3,
-      [value]
-    );
-  };
   const setHeight = (value: any) => {
     UIManager.dispatchViewManagerCommand(
       findNodeHandle(VisionSDKViewRef.current),
       (UIManager.hasViewManagerConfig('VisionSDKView') &&
         UIManager.getViewManagerConfig('VisionSDKView').Commands.setHeight) ||
-        4,
+        3,
       [value]
     );
   };
@@ -155,7 +140,7 @@ const Camera: React.FC<Props> = ({
       findNodeHandle(VisionSDKViewRef.current),
       (UIManager.hasViewManagerConfig('VisionSDKView') &&
         UIManager.getViewManagerConfig('VisionSDKView').Commands.setMetaData) ||
-        5,
+        4,
       [value]
     );
   };
@@ -165,7 +150,7 @@ const Camera: React.FC<Props> = ({
       (UIManager.hasViewManagerConfig('VisionSDKView') &&
         UIManager.getViewManagerConfig('VisionSDKView').Commands
           .setRecipient) ||
-        6,
+        5,
       [value]
     );
   };
@@ -174,7 +159,7 @@ const Camera: React.FC<Props> = ({
       findNodeHandle(VisionSDKViewRef.current),
       (UIManager.hasViewManagerConfig('VisionSDKView') &&
         UIManager.getViewManagerConfig('VisionSDKView').Commands.setSender) ||
-        7,
+        6,
       [value]
     );
   };
@@ -184,7 +169,7 @@ const Camera: React.FC<Props> = ({
       (UIManager.hasViewManagerConfig('VisionSDKView') &&
         UIManager.getViewManagerConfig('VisionSDKView').Commands
           .configureOnDeviceModel) ||
-        8,
+        7,
       [val]
     );
   };
@@ -194,7 +179,7 @@ const Camera: React.FC<Props> = ({
       (UIManager.hasViewManagerConfig('VisionSDKView') &&
         UIManager.getViewManagerConfig('VisionSDKView').Commands
           .restartScanning) ||
-        9,
+        8,
       []
     );
   };
@@ -204,7 +189,7 @@ const Camera: React.FC<Props> = ({
       (UIManager.hasViewManagerConfig('VisionSDKView') &&
         UIManager.getViewManagerConfig('VisionSDKView').Commands
           .setFocusSettings) ||
-        10,
+        9,
       [val]
     );
   };
@@ -214,7 +199,7 @@ const Camera: React.FC<Props> = ({
       (UIManager.hasViewManagerConfig('VisionSDKView') &&
         UIManager.getViewManagerConfig('VisionSDKView').Commands
           .setObjectDetectionSettings) ||
-        11,
+        10,
       [val]
     );
   };
@@ -224,7 +209,7 @@ const Camera: React.FC<Props> = ({
       (UIManager.hasViewManagerConfig('VisionSDKView') &&
         UIManager.getViewManagerConfig('VisionSDKView').Commands
           .setCameraSettings) ||
-        12,
+        11,
       [val]
     );
   };
@@ -257,19 +242,16 @@ const Camera: React.FC<Props> = ({
         key={reRender}
         style={styles.flex}
         apiKey={apiKey}
-        // showScanFrame={showScanFrame}
-        // captureWithScanFrame={captureWithScanFrame}
         mode={mode}
         captureMode={captureMode}
-        
         delayTime={delayTime ? delayTime : 100}
-        // showDocumentBoundaries={showDocumentBoundaries}
         isOnDeviceOCR={isOnDeviceOCR}
         token={token}
         locationId={locationId}
         options={JSON.stringify(options)} // ideally this should be passed from variable, that is receiving data from ScannerContainer
         environment={environment}
         flash={flash}
+        zoomLevel={zoomLevel}
         onBarcodeScan={onBarcodeScan}
         onModelDownloadProgress={onModelDownloadProgress}
         onImageCaptured={onImageCaptured}

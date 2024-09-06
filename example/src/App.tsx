@@ -7,6 +7,7 @@ import CameraHeaderView from './Components/CameraHeaderView';
 import LoaderView from './Components/LoaderView';
 import ResultView from './Components/ResultView';
 import { PERMISSIONS, RESULTS, request } from 'react-native-permissions';
+import { Float } from 'react-native/Libraries/Types/CodegenTypes';
 
 interface downloadingProgress {
   downloadStatus: boolean;
@@ -30,6 +31,7 @@ export default function App() {
     'barcode'
   );
   const [flash, setFlash] = useState<boolean>(false);
+  const [zoomLevel, setZoomLevel] = useState<Float>(1.8);
   const [detectedData, setDetectedData] = useState<detectedDataProps>({
     barcode: false,
     qrcode: false,
@@ -104,11 +106,9 @@ export default function App() {
       codeDetectionConfidence: 0.5,
       documentDetectionConfidence: 0.5,
       secondsToWaitBeforeDocumentCapture: 2.0,
-      // selectedTemplateId: '1',
     });
     visionSdk?.current?.setCameraSettings({
       nthFrameToProcess: 10,
-      // shouldAutoSaveCapturedImage: true,
     });
 
     visionSdk?.current?.startRunningHandler();
@@ -116,10 +116,7 @@ export default function App() {
   }, []);
 
   const onPressCapture = () => {
-    // if (Platform.OS === 'android') {
     if (mode === 'ocr') setLoading(true);
-    // }
-    console.log('mode==== > ', mode);
     visionSdk?.current?.cameraCaptureHandler();
   };
   const toggleFlash = (val: boolean) => {
@@ -152,161 +149,89 @@ export default function App() {
     });
   };
   return (
-    // <View style={styles.mainContainer}>
-    //   <VisionSdkView
-    //     refProp={visionSdk}
-    //     isOnDeviceOCR={isOnDeviceOCR}
-    //     // showScanFrame={true}
-    //     // showDocumentBoundaries={true}
-    //     // captureWithScanFrame={true}
-    //     captureMode={captureMode}
-    //     mode={mode}
-    //     environment="sandbox"
-    //     apiKey="key_141b2eda27Z0Cm2y0h0P6waB3Z6pjPgrmGAHNSU62rZelUthBEOOdsVTqZQCRVgPLqI5yMPqpw2ZBy2z"
-    //     flash={flash}
-    //     onDetected={(e: any) => {
-    //       setDetectedData(Platform.OS === 'android' ? e : e.nativeEvent);
-    //     }}
-    //     onBarcodeScan={(e: any) => {
-    //       console.log('BarCodeScanHandler', e);
-    //       setLoading(false);
-    //       visionSdk?.current?.restartScanningHandler();
-    //     }}
-    //     onOCRScan={(e: any) => {
-    //       let scanRes = Platform.OS === 'ios' ? e.nativeEvent.data.data : e;
-    //       if (Platform.OS === 'android') {
-    //         const parsedOuterJson = JSON.parse(scanRes.data);
-    //         scanRes = parsedOuterJson.data;
-    //       }
-    //       setResult(scanRes);
-    //       setLoading(false);
-    //       Vibration.vibrate(100);
-    //       // setTimeout(() => {
-    //       visionSdk?.current?.restartScanningHandler();
-    //       // }, 200);
-    //     }}
-    //     onImageCaptured={(e: any) => {
-    //       console.log('onImageCaptured==------>>', e);
-    //     }}
-    //     onModelDownloadProgress={(e: any) => {
-    //       let response = Platform.OS === 'android' ? e : e.nativeEvent;
-    //       console.log(
-    //         'ModelDownloadProgress==------>>',
-    //         Math.floor(response.progress * 100)
-    //       );
-    //       if (isMultipleOfTen(Math.floor(response.progress * 100))) {
-    //         setModelDownloadingProgress(response);
-    //         if (response.downloadStatus) {
-    //           visionSdk?.current?.startRunningHandler();
-    //         }
-    //       }
-    //       setLoading(false);
-    //     }}
-    //     onError={(e: any) => {
-    //       let error = Platform.OS === 'android' ? e : e.nativeEvent;
-    //       console.log('onError', error);
-    //       Alert.alert('ERROR', error?.message);
-    //       setLoading(false);
-    //     }}
-    //   />
-    //   <ResultView
-    //     visible={result ? true : false}
-    //     result={result}
-    //     setResult={setResult}
-    //   />
-    //   <LoaderView visible={loading} />
-    //   <CameraHeaderView
-    //     detectedData={detectedData}
-    //     toggleFlash={toggleFlash}
-    //     mode={mode}
-    //     setMode={setMode}
-    //   />
-
-    //   <DownloadingProgressView
-    //     visible={!modelDownloadingProgress.downloadStatus}
-    //     progress={modelDownloadingProgress?.progress}
-    //   />
-    //   <CameraFooterView
-    //     setCaptureMode={setCaptureMode}
-    //     captureMode={captureMode}
-    //     setIsOnDeviceOCR={setIsOnDeviceOCR}
-    //     isOnDeviceOCR={isOnDeviceOCR}
-    //     onPressCapture={onPressCapture}
-    //     onPressOnDeviceOcr={onPressOnDeviceOcr}
-    //     setModelSize={setModelSize}
-    //     modelSize={modelSize}
-    //     mode={mode}
-    //   />
-    // </View>
-
-    <View>
-      <View style={{ backgroundColor: 'red', height: '60%' }}></View>
-      <View style={{ height: '20%' }}>
-        <VisionSdkView
-          refProp={visionSdk}
-          isOnDeviceOCR={isOnDeviceOCR}
-          // showScanFrame={true}
-          // showDocumentBoundaries={true}
-          // captureWithScanFrame={true}
-          captureMode={captureMode}
-          mode={mode}
-          environment="sandbox"
-          apiKey="key_141b2eda27Z0Cm2y0h0P6waB3Z6pjPgrmGAHNSU62rZelUthBEOOdsVTqZQCRVgPLqI5yMPqpw2ZBy2z"
-          flash={flash}
-          onDetected={(e: any) => {
-            setDetectedData(Platform.OS === 'android' ? e : e.nativeEvent);
-          }}
-          onBarcodeScan={(e: any) => {
-            console.log('onImageCaptured mode==------>>', mode);
-            console.log('BarCodeScanHandler', e);
-            setLoading(false);
-            visionSdk?.current?.restartScanningHandler();
-          }}
-          onOCRScan={(e: any) => {
-            let scanRes = Platform.OS === 'ios' ? e.nativeEvent.data.data : e;
-            if (Platform.OS === 'android') {
-              const parsedOuterJson = JSON.parse(scanRes.data);
-              scanRes = parsedOuterJson.data;
+    <View style={styles.mainContainer}>
+      <VisionSdkView
+        refProp={visionSdk}
+        isOnDeviceOCR={isOnDeviceOCR}
+        captureMode={captureMode}
+        mode={mode}
+        environment="sandbox"
+        apiKey="key_141b2eda27Z0Cm2y0h0P6waB3Z6pjPgrmGAHNSU62rZelUthBEOOdsVTqZQCRVgPLqI5yMPqpw2ZBy2z"
+        flash={flash}
+        zoomLevel={zoomLevel}
+        onDetected={(e: any) => {
+          setDetectedData(Platform.OS === 'android' ? e : e.nativeEvent);
+        }}
+        onBarcodeScan={(e: any) => {
+          console.log('BarCodeScanHandler', e);
+          setLoading(false);
+          visionSdk?.current?.restartScanningHandler();
+        }}
+        onOCRScan={(e: any) => {
+          let scanRes = Platform.OS === 'ios' ? e.nativeEvent.data.data : e;
+          if (Platform.OS === 'android') {
+            const parsedOuterJson = JSON.parse(scanRes.data);
+            scanRes = parsedOuterJson.data;
+          }
+          setResult(scanRes);
+          setLoading(false);
+          Vibration.vibrate(100);
+          // setTimeout(() => {
+          visionSdk?.current?.restartScanningHandler();
+          // }, 200);
+        }}
+        onImageCaptured={(e: any) => {
+          console.log('onImageCaptured==------>>', e);
+        }}
+        onModelDownloadProgress={(e: any) => {
+          let response = Platform.OS === 'android' ? e : e.nativeEvent;
+          console.log(
+            'ModelDownloadProgress==------>>',
+            Math.floor(response.progress * 100)
+          );
+          if (isMultipleOfTen(Math.floor(response.progress * 100))) {
+            setModelDownloadingProgress(response);
+            if (response.downloadStatus) {
+              visionSdk?.current?.startRunningHandler();
             }
-            setResult(scanRes);
-            setLoading(false);
-            Vibration.vibrate(100);
-            // setTimeout(() => {
-            visionSdk?.current?.restartScanningHandler();
-            // }, 200);
-          }}
-          onImageCaptured={(e: any) => {
-            console.log('onImageCaptured mode==------>>', mode);
+          }
+          setLoading(false);
+        }}
+        onError={(e: any) => {
+          let error = Platform.OS === 'android' ? e : e.nativeEvent;
+          console.log('onError', error);
+          Alert.alert('ERROR', error?.message);
+          setLoading(false);
+        }}
+      />
+      <ResultView
+        visible={result ? true : false}
+        result={result}
+        setResult={setResult}
+      />
+      <LoaderView visible={loading} />
+      <CameraHeaderView
+        detectedData={detectedData}
+        toggleFlash={toggleFlash}
+        mode={mode}
+        setMode={setMode}
+      />
 
-            if (mode === 'photo') {
-              visionSdk?.current?.restartScanningHandler();
-            }
-            console.log('onImageCaptured==------>>', e);
-          }}
-          onModelDownloadProgress={(e: any) => {
-            let response = Platform.OS === 'android' ? e : e.nativeEvent;
-            console.log(
-              'ModelDownloadProgress==------>>',
-              Math.floor(response.progress * 100)
-            );
-            if (isMultipleOfTen(Math.floor(response.progress * 100))) {
-              setModelDownloadingProgress(response);
-              if (response.downloadStatus) {
-                visionSdk?.current?.startRunningHandler();
-              }
-            }
-            setLoading(false);
-          }}
-          onError={(e: any) => {
-            let error = Platform.OS === 'android' ? e : e.nativeEvent;
-            console.log('onError', error);
-            Alert.alert('ERROR', error?.message);
-            setLoading(false);
-          }}
-        />
-      </View>
-
-      <View style={{ backgroundColor: 'blue', height: '20%' }}></View>
+      <DownloadingProgressView
+        visible={!modelDownloadingProgress.downloadStatus}
+        progress={modelDownloadingProgress?.progress}
+      />
+      <CameraFooterView
+        setCaptureMode={setCaptureMode}
+        captureMode={captureMode}
+        setIsOnDeviceOCR={setIsOnDeviceOCR}
+        isOnDeviceOCR={isOnDeviceOCR}
+        onPressCapture={onPressCapture}
+        onPressOnDeviceOcr={onPressOnDeviceOcr}
+        setModelSize={setModelSize}
+        modelSize={modelSize}
+        mode={mode}
+      />
     </View>
   );
 }
