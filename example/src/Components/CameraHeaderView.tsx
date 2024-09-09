@@ -17,6 +17,12 @@ function CameraHeaderView({ detectedData, toggleFlash, mode, setMode }: any) {
   const checkIconColor = (val: boolean) => {
     return val ? '#4FBF67' : 'white';
   };
+  const formatModeName = (mode: any) => 
+    mode
+        .replace(/([a-z])([A-Z])/g, '$1 $2')  // Insert space before uppercase letters
+        .split(' ')                           // Split by space
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))  // Capitalize each word
+        .join(' ');  
   return (
     <View style={styles.mainContainer}>
       <View style={styles.leftIconContainer}>
@@ -58,7 +64,7 @@ function CameraHeaderView({ detectedData, toggleFlash, mode, setMode }: any) {
           style={styles.switchIconContainer}
         >
           <Text style={{ color: 'white' }}>
-            {mode.charAt(0).toUpperCase() + mode.slice(1)}
+          {formatModeName(mode)}
           </Text>
         </TouchableOpacity>
       </View>
@@ -114,7 +120,7 @@ const styles = StyleSheet.create({
       Platform.OS === 'android' ? 'rgba(0, 0, 0, 0.7)' : 'rgba(0, 0, 0, 0.5)',
   },
   sideContainer: {
-    width: '35%',
+    width: '55%',
     height: '30%',
     justifyContent: 'center',
     alignItems: 'flex-end',

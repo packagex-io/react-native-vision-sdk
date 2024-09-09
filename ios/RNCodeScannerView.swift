@@ -355,25 +355,29 @@ extension RNCodeScannerView {
             return
         }
         
-        if mode == "ocr" {
+        if mode.lowercased == "ocr" {
             codeScannerView!.setScanModeTo(.ocr)
             scanMode = .ocr
         }
-        else if mode == "barcode" || mode == "barcodeSingleCapture" {
+        else if mode.lowercased == "barcode" || mode == "barcodeSingleCapture" {
             codeScannerView!.setScanModeTo(.barCode)
             scanMode = .barCode
         }
-        else if mode == "photo" {
+        else if mode.lowercased == "photo" {
             codeScannerView!.setScanModeTo(.photo)
             scanMode = .photo
         }
-        else if mode == "barCodeOrQRCode" {
+        else if mode.lowercased == "barcodeorqrcode" {
             codeScannerView!.setScanModeTo(.autoBarCodeOrQRCode)
             scanMode = .autoBarCodeOrQRCode
         }
-        else {
+        else if mode.lowercased == "qrcode" {
             codeScannerView!.setScanModeTo(.qrCode)
             scanMode = .qrCode
+        }
+        else {
+            codeScannerView!.setScanModeTo(.barCode)
+            scanMode = .barCode
         }
     }
     
