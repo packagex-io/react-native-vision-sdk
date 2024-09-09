@@ -641,8 +641,8 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
       "barcode" -> DetectionMode.Barcode
       "qrcode" -> DetectionMode.QRCode
       "photo" -> DetectionMode.Photo
-      "barCodeOrQRCode" -> DetectionMode.BarcodeOrQRCode
-      else -> DetectionMode.OCR
+      "barcodeorqrcode" -> DetectionMode.BarcodeOrQRCode
+      else -> DetectionMode.Barcode
     }
     visionCameraView?.setDetectionMode(detectionMode)
   }
