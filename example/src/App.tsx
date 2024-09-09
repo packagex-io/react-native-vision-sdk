@@ -111,6 +111,16 @@ export default function App() {
       nthFrameToProcess: 10,
     });
 
+    visionSdk?.current?.setSender({ 
+      contact_id: '2' 
+    })
+    visionSdk?.current?.setRecipient({ 
+      contact_id: '3' 
+    })
+    visionSdk?.current?.setMetadata({ 
+       service: 'inbound', 
+       uuid: 'uniqueId'  
+    })
     visionSdk?.current?.startRunningHandler();
     setLoading(false);
   }, []);

@@ -39,33 +39,33 @@ class VisionSdkViewManager: RCTViewManager {
         }
     }
     
-    @objc func setMetaData(_ node: NSNumber, metaData: NSString) {
+    @objc func setMetaData(_ node: NSNumber, metaData: NSDictionary) {
         DispatchQueue.main.async {
             let component =
             self.bridge.uiManager.view(
                 forReactTag: node
             ) as! RNCodeScannerView
-            component.setMetaData(metaData as NSString)
+            component.setMetaData(metaData as NSDictionary)
         }
     }
     
-    @objc func setRecipient(_ node: NSNumber, recipient: NSString) {
+    @objc func setRecipient(_ node: NSNumber, recipient: NSDictionary) {
         DispatchQueue.main.async {
             let component =
             self.bridge.uiManager.view(
                 forReactTag: node
             ) as! RNCodeScannerView
-            component.setRecipient(recipient as NSString)
+            component.setRecipient(recipient as NSDictionary)
         }
     }
     
-    @objc func setSender(_ node: NSNumber, sender: NSString) {
+    @objc func setSender(_ node: NSNumber, sender: NSDictionary) {
         DispatchQueue.main.async {
             let component =
             self.bridge.uiManager.view(
                 forReactTag: node
             ) as! RNCodeScannerView
-            component.setSender(sender as NSString)
+            component.setSender(sender as NSDictionary)
         }
     }
     

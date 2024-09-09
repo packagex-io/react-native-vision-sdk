@@ -322,20 +322,20 @@ extension RNCodeScannerView {
     
     /// Sets the custom metaData from client/React Native side to control scanning inputs/outputs
     /// - Parameter metaData: metaData description
-    @objc func setMetaData(_ metaData: NSString) {
-        self.metaData = convertToDictionary(text: metaData as? String ?? "")
+    @objc func setMetaData(_ metaData: NSDictionary) {
+        self.metaData = metaData as? [String : Any]
     }
     
     /// Sets the pre-selected recipeint from client/React Native side to bulk scan and assign all the items to same recipient whoms contact_id has been passed
     /// - Parameter recipient: recipient description
-    @objc func setRecipient(_ recipient: NSString) {
-        self.recipient = convertToDictionary(text: recipient as? String ?? "")
+    @objc func setRecipient(_ recipient: NSDictionary) {
+        self.recipient = recipient as? [String : Any]
     }
     
     /// Sets the pre-selected sender from client/React Native side
     /// - Parameter sender: sender description
-    @objc func setSender(_ sender: NSString) {
-        self.sender = convertToDictionary(text: sender as? String ?? "")
+    @objc func setSender(_ sender: NSDictionary) {
+        self.sender = sender as? [String : Any]
     }
     
     /// Sets the location Id for desired location to scan on specific location
@@ -367,7 +367,7 @@ extension RNCodeScannerView {
             codeScannerView!.setScanModeTo(.photo)
             scanMode = .photo
         }
-        else if mode == "autoBarCodeOrQRCode" {
+        else if mode == "barCodeOrQRCode" {
             codeScannerView!.setScanModeTo(.autoBarCodeOrQRCode)
             scanMode = .autoBarCodeOrQRCode
         }
@@ -433,8 +433,8 @@ extension RNCodeScannerView {
     
     /// Sets the custom options from client/React Native side to control scanning inputs/outputs
     /// - Parameter options: options description
-    @objc func setOptions(_ options: NSString) {
-        self.options = convertToDictionary(text: options as? String ?? "")
+    @objc func setOptions(_ options: NSDictionary) {
+        self.options = options as? [String : Any]
     }
     
     /// Sets the ondeviceOCR, i.e. is user scanning in On Device OCR mode or not.
@@ -512,11 +512,18 @@ extension RNCodeScannerView {
     /// Handles the Zoom Level of the Camera Device
     /// - Parameter zoomLevel: zoomLevel can be any Integar Number
     @objc func setZoomLevel(_ zoomLevel: NSNumber) {
-        let zoomFloatValue = zoomLevel.floatValue
+        var zoomFloatValue = zoomLevel.floatValue
         DispatchQueue.main.async {
             let videoDevice: AVCaptureDevice = VisionSDK.CodeScannerView.videoDevice
             DispatchQueue.main.async {
                 try? videoDevice.lockForConfiguration()
+                
+                if CGFloat(zoomFloatValue) < videoDevice.minAvailableVideoZoomFactor {
+                    zoomFloatValue = Float(videoDevice.minAvailableVideoZoomFactor)
+                }
+                else if CGFloat(zoomFloatValue) > videoDevice.maxAvailableVideoZoomFactor {
+                    zoomFloatValue = Float(videoDevice.maxAvailableVideoZoomFactor)
+                }
                 videoDevice.videoZoomFactor = CGFloat(zoomFloatValue)
                 videoDevice.unlockForConfiguration()
             }
@@ -528,19 +535,19 @@ extension RNCodeScannerView {
 //MARK: -
 extension RNCodeScannerView {
     
-    /// Converts the string input to swift supported dictionary
-    /// - Parameter text: Inputs JSON formatted string
-    /// - Returns: Returns Swift supported dictionary
-    func convertToDictionary(text: String) -> [String: Any]? {
-        if let data = text.data(using: .utf8) {
-            do {
-                return try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any]
-            } catch {
-                print(error.localizedDescription)
-            }
-        }
-        return nil
-    }
+//    /// Converts the string input to swift supported dictionary
+//    /// - Parameter text: Inputs JSON formatted string
+//    /// - Returns: Returns Swift supported dictionary
+//    func convertToDictionary(text: String) -> [String: Any]? {
+//        if let data = text.data(using: .utf8) {
+//            do {
+//                return try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any]
+//            } catch {
+//                print(error.localizedDescription)
+//            }
+//        }
+//        return nil
+//    }
     
     func handleCapturedImage(withImage savedImageURL: URL?) {
         if savedImageURL == nil {
