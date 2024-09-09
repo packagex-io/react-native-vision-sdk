@@ -48,21 +48,19 @@ function ModeSelectionView({
             {mode == 'qrcode' && (
               <MaterialIcons name="done" size={20} color="white" />
             )}
-             
           </TouchableOpacity>
           <View style={styles.horizontalLine} />
           <TouchableOpacity
             onPress={() => {
-              setMode('autoBarCodeOrQRCode');
+              setMode('BarCode Or QRCode');
               closeModal();
             }}
             style={styles.rowStyle}
           >
-            <Text style={styles.textStyle}>Auto BarCode Or QRCode</Text>
-            {mode == 'autoBarCodeOrQRCode' && (
+            <Text style={styles.textStyle}>BarCode Or QRCode</Text>
+            {mode == 'BarCode Or QRCode' && (
               <MaterialIcons name="done" size={20} color="white" />
             )}
-             
           </TouchableOpacity>
           <View style={styles.horizontalLine} />
           <TouchableOpacity

@@ -19,6 +19,7 @@ import com.facebook.infer.annotation.Assertions
 import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.ReadableArray
+import com.facebook.react.bridge.ReadableMap
 import com.facebook.react.modules.core.DeviceEventManagerModule
 import com.facebook.react.uimanager.ThemedReactContext
 import com.facebook.react.uimanager.ViewGroupManager
@@ -410,17 +411,17 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
       }
 
       3 -> {
-        setMetaData(args?.getString(0))
+        setMetaData(args?.getMap(0))
         return
       }
 
       4 -> {
-        setRecipient(args?.getString(0))
+        setRecipient(args?.getMap(0))
         return
       }
 
       5 -> {
-        setSender(args?.getString(0))
+        setSender(args?.getMap(0))
         return
       }
 
@@ -464,8 +465,6 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
   private fun captureImage() {
     Log.d(TAG, "captureImage: ")
     visionCameraView?.capture()
-//    val bitmap = BitmapFactory.decodeResource(context?.resources, R.drawable.sample_ocr)
-//    onImageCaptured(bitmap, null, emptyList())
   }
 
   private fun stopScanning() {
@@ -475,39 +474,30 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
   }
 
   private fun startCamera() {
-//    configureCamera()
     Log.d(TAG, "startCamera: ")
     visionCameraView?.startCamera()
-    //focusImage = R.drawable.default_focus_frame,
-    //  focusImageRect = RectF(100f,100f,200f,200f),
-//    visionCameraView?.requestLayout();
-
   }
 
-  private fun setHeight(height: Int?) {
-    Log.d(TAG, "setHeight: ")
+  private fun setMetaData(metaData: ReadableMap?) {
+    Log.d(TAG, "metaData: $metaData")
+    this.metaData = metaData?.toHashMap()
   }
 
-  private fun setMetaData(metaData: String?) {
-    Log.d(TAG, "metaData: " + metaData)
-    this.metaData = JSONObject(metaData).toMap()
-  }
-
-  private fun setRecipient(recipient: String?) {
-    Log.d(TAG, "recipient: " + recipient)
-    if (recipient?.isEmpty() == true) {
+  private fun setRecipient(recipient: ReadableMap?) {
+    Log.d(TAG, "recipient: $recipient")
+    if (recipient == null) {
       this.recipient = emptyMap()
     } else {
-      this.recipient = JSONObject(recipient).toMap()
+      this.recipient = recipient.toHashMap()
     }
   }
 
-  private fun setSender(sender: String?) {
-    Log.d(TAG, "sender: " + sender)
-    if (sender?.isEmpty() == true) {
+  private fun setSender(sender: ReadableMap?) {
+    Log.d(TAG, "sender: $sender")
+    if (sender == null) {
       this.sender = emptyMap()
     } else {
-      this.sender = JSONObject(sender).toMap()
+      this.sender = sender.toHashMap()
     }
   }
 
@@ -597,6 +587,7 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
   fun flash(view: View, flash: Boolean = false) {
     Log.d(TAG, "flash: ")
     this.flash = flash
+    this.visionCameraView?.setFlashTurnedOn(flash)
   }
 
   @ReactProp(name = "zoomLevel")
@@ -650,6 +641,7 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
       "barcode" -> DetectionMode.Barcode
       "qrcode" -> DetectionMode.QRCode
       "photo" -> DetectionMode.Photo
+      "barCodeOrQRCode" -> DetectionMode.BarcodeOrQRCode
       else -> DetectionMode.OCR
     }
     visionCameraView?.setDetectionMode(detectionMode)
@@ -661,24 +653,6 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
     this.isOnDeviceOCR = isOnDeviceOCR
   }
 
-//  @ReactProp(name = "showScanFrame")
-//  fun showScanFrame(view: View, showScanFrame: Boolean = false) {
-//    Log.d(TAG, "showScanFrame: " + showScanFrame)
-//    shouldDisplayFocusImage = showScanFrame
-//  }
-
-//  @ReactProp(name = "captureWithScanFrame")
-//  fun captureWithScanFrame(view: View, captureWithScanFrame: Boolean = false) {
-//    Log.d(TAG, "captureWithScanFrame: " + captureWithScanFrame)
-//    shouldScanInFocusImageRect = captureWithScanFrame
-//  }
-
-//  @ReactProp(name = "showDocumentBoundaries")
-//  fun showDocumentBoundaries(view: View, showDocumentBoundaries: Boolean = false) {
-//    Log.d(TAG, "showDocumentBoundaries: " + showDocumentBoundaries)
-//    this.showDocumentBoundaries = showDocumentBoundaries
-//  }
-
   @ReactProp(name = "locationId")
   fun setLocationId(view: View, locationId: String = "") {
     Log.d(TAG, "locationId: $locationId")
@@ -686,13 +660,13 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
   }
 
   @ReactProp(name = "options")
-  fun setOptions(view: View, options: String) {
+  fun setOptions(view: View, options: ReadableMap) {
     Log.d(TAG, "options: $options")
-    this.options = JSONObject(options).toMap()
+    this.options = options.toHashMap()
   }
 
 
-  private fun JSONObject.toMap(): Map<String, Any> = keys().asSequence().associateWith {
+  private fun JSONObject.toMap(): Map<String, Any> = keys().asSequence().associateWith { it ->
     when (val value = this[it]) {
       is JSONArray -> {
         val map = (0 until value.length()).associate { Pair(it.toString(), value[it]) }

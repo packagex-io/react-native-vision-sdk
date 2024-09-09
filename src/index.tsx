@@ -13,7 +13,7 @@ type Props = {
   apiKey?: string;
   reRender?: string;
   captureMode?: 'manual' | 'auto';
-  mode?: 'barcode' | 'qrcode' | 'ocr' | 'photo' | 'autoBarCodeOrQRCode';
+  mode?: 'barcode' | 'qrcode' | 'ocr' | 'photo' | 'barCodeOrQRCode';
   token?: string;
   locationId?: string;
   options?: any;
@@ -29,6 +29,27 @@ type Props = {
   onError?: (e: any) => void;
 };
 
+const sdkOptions = {
+  tracker: {
+    type: 'inbound',
+    create_automatically: 'false',
+    status: 'pickup_available',
+  },
+  transform: {
+    use_existing_tracking_number: true,
+    tracker: null,
+  },
+  match: {
+    location: true,
+    use_best_match: true,
+    search: ['recipient'],
+  },
+  postprocess: {
+    require_unique_hash: true,
+    parse_addresses: ['sender', 'recipient'],
+  },
+};
+
 const Camera: React.FC<Props> = ({
   children,
   refProp,
@@ -38,7 +59,7 @@ const Camera: React.FC<Props> = ({
   mode = 'barcode',
   token = '',
   locationId = '',
-  options = {},
+  options = sdkOptions,
   environment = 'prod',
   flash = false,
   zoomLevel = 1.8,
