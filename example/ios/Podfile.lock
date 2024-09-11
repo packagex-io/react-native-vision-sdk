@@ -1193,7 +1193,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - Yoga
   - SocketRocket (0.7.0)
-  - VisionSDK (1.3.9)
+  - VisionSDK (1.4.0)
   - Yoga (0.0.0)
 
 DEPENDENCIES:
@@ -1256,7 +1256,7 @@ DEPENDENCIES:
   - RNPermissions (from `../node_modules/react-native-permissions`)
   - RNSVG (from `../node_modules/react-native-svg`)
   - RNVectorIcons (from `../node_modules/react-native-vector-icons`)
-  - VisionSDK (= 1.3.9)
+  - VisionSDK (= 1.4.0)
   - Yoga (from `../node_modules/react-native/ReactCommon/yoga`)
 
 SPEC REPOS:
@@ -1442,9 +1442,9 @@ SPEC CHECKSUMS:
   RNSVG: 5da7a24f31968ec74f0b091e3440080f347e279b
   RNVectorIcons: 2a2f79274248390b80684ea3c4400bd374a15c90
   SocketRocket: abac6f5de4d4d62d24e11868d7a2f427e0ef940d
-  VisionSDK: c681624a718da04c1113d79551196adb1d66f79f
+  VisionSDK: 4930fff27367d9867a0e88f166adc8871c2679cf
   Yoga: 950bbfd7e6f04790fdb51149ed51df41f329fcc8
 
-PODFILE CHECKSUM: 351d93a2cd245a8d1fba0e509ed3287404be3468
+PODFILE CHECKSUM: 61a3d0e7474aeb9d5c3e45f498fdeb39641a89db
 
 COCOAPODS: 1.15.2

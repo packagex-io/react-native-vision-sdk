@@ -24,36 +24,15 @@ class RNCodeScannerView: UIView {
     
     //MARK: - Props Received from React-Native
     var token: String?  // Dynamic Prop | Optional:
-//    var delayTime: Double? // Dynamic Prop | Optional:
-//    var height: Double? // Dynamic Prop | Optional:
-    
     var locationId: String? // Dynamic Prop | Optional:
     var options: [String: Any]? // Dynamic Prop | Optional:
     var metaData: [String: Any]? // Dynamic Prop | Optional:
     var recipient: [String: Any]? // Dynamic Prop | Optional:
     var sender: [String: Any]? // Dynamic Prop | Optional:
-    
-//    var focusImageRect: CGRect = .zero
-//    var shouldDisplayFocusImage: Bool = true // Dynamic Prop | Optional:
-//    var shouldScanInFocusImageRect: Bool = true // Dynamic Prop | Optional:
     var scanMode: CodeScannerMode = .barCode // Dynamic Prop | Optional:
     var captureMode: CaptureMode = .manual // Dynamic Prop | Optional:
     var captureType: CaptureType = .single // Static Prop | Optional:
     var sessionPreset: AVCaptureSession.Preset = .high
-//    var showDocumentBoundries: Bool = true // Static Prop | Optional:
-//    var documentBoundryBorderColor: UIColor = .purple // Static Prop | Optional:
-//    var documentBoundryFillColor: UIColor = .purple // Static Prop | Optional:
-//    var focusImageTintColor: UIColor = .white // Static Prop | Optional:
-//    var focusImageHighlightedColor: UIColor = .white // Static Prop | Optional:
-//    var isTextIndicationOn: Bool = true // Static Prop | Optional:
-//    var isBarCodeOrQRCodeIndicationOn: Bool = true // Static Prop | Optional:
-//    var isDocumentIndicationOn: Bool = true // Static Prop | Optional:
-//    var codeDetectionConfidence: Float = 0.5 // Static Prop | Optional:
-//    var documentDetectionConfidence: Float = 0.6 // Static Prop | Optional:
-//    var secondsToWaitBeforeDocumentCapture: Double = 0.6 // Static Prop | Optional:
-//    var selectedTemplateId: String = "" // Static Prop | Optional:
-//    var nthFrameToProcess: Int64 = 10 // Static Prop | Optional:
-//    var shouldAutoSaveCapturedImage: Bool = true // Static Prop | Optional:
     
     //MARK: - On-Device OCR Specific Variables
     var isOnDeviceOCR: Bool? // Dynamic Prop | Optional:
@@ -64,15 +43,12 @@ class RNCodeScannerView: UIView {
     
     override func layoutSubviews() {
         super.layoutSubviews()
-        
-        
         // View's size changed
         let newSize = bounds.size
         
         if previousSize != newSize {
             // If user initially set isOnDeviceOCR = true then configureOnDeviceModel method will be called from here
             configureOnDeviceModel()
-//            print("user is here --------------> 2")
             previousSize = newSize
 //            print("View size changed to \(newSize)")
             codeScannerView?.frame = self.bounds
@@ -85,9 +61,7 @@ class RNCodeScannerView: UIView {
         super.init(frame: UIScreen.main.bounds)
         codeScannerView?.stopRunning()
         codeScannerView = CodeScannerView(frame: CGRect(x: 0, y: 0, width: UIScreen.main.bounds.width, height: UIScreen.main.bounds.height))
-                
         self.addSubview(codeScannerView!)
-        
         codeScannerView!.configure(delegate: self, sessionPreset: sessionPreset, captureMode: captureMode, captureType: captureType, scanMode: scanMode)
     }
     
@@ -136,7 +110,7 @@ extension RNCodeScannerView: CodeScannerViewDelegate {
             }
         }
         else {
-            print("Hello we are here ------------------- >")
+            onError!(["message": "Error converting image"])
         }
     }
 }
@@ -539,20 +513,8 @@ extension RNCodeScannerView {
 //MARK: -
 extension RNCodeScannerView {
     
-//    /// Converts the string input to swift supported dictionary
-//    /// - Parameter text: Inputs JSON formatted string
-//    /// - Returns: Returns Swift supported dictionary
-//    func convertToDictionary(text: String) -> [String: Any]? {
-//        if let data = text.data(using: .utf8) {
-//            do {
-//                return try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any]
-//            } catch {
-//                print(error.localizedDescription)
-//            }
-//        }
-//        return nil
-//    }
-    
+    /// Send converted (UIImage to URL) image to client side, via event onImageCaptured
+    /// - Parameter savedImageURL: url of the converted image
     func handleCapturedImage(withImage savedImageURL: URL?) {
         if savedImageURL == nil {
             onImageCaptured!(["image": "Nil: URL not found"])
@@ -565,7 +527,6 @@ extension RNCodeScannerView {
 
 
 // MARK: - Helper Methods for storing and Retrieving image from storage.
-
 extension RNCodeScannerView {
     
     private func loadImage(from url: URL) -> UIImage? {

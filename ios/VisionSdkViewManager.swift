@@ -3,108 +3,74 @@ import VisionSDK
 @objc(VisionSdkViewManager)
 class VisionSdkViewManager: RCTViewManager {
     
-    @objc func captureImage(_ node: NSNumber) {
-        
+    @objc func getComponent(_ node: NSNumber, completion: @escaping (RNCodeScannerView?) -> Void) {
         DispatchQueue.main.async {
-            let component =
-            self.bridge.uiManager.view(
-                forReactTag: node
-            ) as! RNCodeScannerView
-            
-            component.codeScannerView!.capturePhoto()
+            if let component = self.bridge.uiManager.view(forReactTag: node) as? RNCodeScannerView {
+                completion(component)
+            } else {
+                completion(nil)
+            }
+        }
+    }
+    
+    @objc func captureImage(_ node: NSNumber) {
+        getComponent(node) { component in
+            component?.codeScannerView!.capturePhoto()
         }
     }
     
     @objc func stopRunning(_ node: NSNumber) {
-        
-        DispatchQueue.main.async {
-            let component =
-            self.bridge.uiManager.view(
-                forReactTag: node
-            ) as! RNCodeScannerView
-            
-            component.codeScannerView?.stopRunning()
+        getComponent(node) { component in
+            component?.codeScannerView!.stopRunning()
         }
     }
     
     @objc func startRunning(_ node: NSNumber) {
-        
-        DispatchQueue.main.async {
-            let component =
-            self.bridge.uiManager.view(
-                forReactTag: node
-            ) as! RNCodeScannerView
-            
-            component.codeScannerView?.startRunning()
+        getComponent(node) { component in
+            component?.codeScannerView?.startRunning()
         }
     }
     
     @objc func setMetaData(_ node: NSNumber, metaData: NSDictionary) {
-        DispatchQueue.main.async {
-            let component =
-            self.bridge.uiManager.view(
-                forReactTag: node
-            ) as! RNCodeScannerView
-            component.setMetaData(metaData as NSDictionary)
+        getComponent(node) { component in
+            component?.setMetaData(metaData as NSDictionary)
         }
     }
     
     @objc func setRecipient(_ node: NSNumber, recipient: NSDictionary) {
-        DispatchQueue.main.async {
-            let component =
-            self.bridge.uiManager.view(
-                forReactTag: node
-            ) as! RNCodeScannerView
-            component.setRecipient(recipient as NSDictionary)
+        getComponent(node) { component in
+            component?.setRecipient(recipient as NSDictionary)
         }
     }
     
     @objc func setSender(_ node: NSNumber, sender: NSDictionary) {
-        DispatchQueue.main.async {
-            let component =
-            self.bridge.uiManager.view(
-                forReactTag: node
-            ) as! RNCodeScannerView
-            component.setSender(sender as NSDictionary)
+        getComponent(node) { component in
+            component?.setSender(sender as NSDictionary)
         }
     }
     
     @objc func configureOnDeviceModel(_ node: NSNumber, onDeviceConfigs: NSDictionary) {
-        
-        DispatchQueue.main.async {
-            let component =
-            self.bridge.uiManager.view(
-                forReactTag: node
-            ) as! RNCodeScannerView
-            
+        getComponent(node) { component in
             if onDeviceConfigs["size"] != nil {
-                component.setModelSize(onDeviceConfigs["size"] as! NSString)
+                component?.setModelSize(onDeviceConfigs["size"] as! NSString)
             }
             
             if onDeviceConfigs["type"] != nil {
-                component.setModelType(onDeviceConfigs["type"] as! NSString)
+                component?.setModelType(onDeviceConfigs["type"] as! NSString)
             }
-            
-            component.configureOnDeviceModel()
+            component?.configureOnDeviceModel()
         }
     }
     
     @objc func restartScanning(_ node: NSNumber) {
-        DispatchQueue.main.async {
-            let component =
-            self.bridge.uiManager.view(
-                forReactTag: node
-            ) as! RNCodeScannerView
-            component.codeScannerView?.rescan()
+        getComponent(node) { component in
+            component?.codeScannerView?.rescan()
         }
     }
     
     @objc func setFocusSettings(_ node: NSNumber, focusSettings: NSDictionary) {
         
-        DispatchQueue.main.async {
-            guard let component = self.bridge.uiManager.view(forReactTag: node) as? RNCodeScannerView else {
-                return
-            }
+        getComponent(node) { component in
             let updatedFocusSettings = VisionSDK.CodeScannerView.FocusSettings()
             
             // Extract and assign each value to the corresponding property
@@ -193,17 +159,13 @@ class VisionSdkViewManager: RCTViewManager {
                 }
             }
             
-            component.codeScannerView?.focusSettings = updatedFocusSettings
+            component?.codeScannerView?.focusSettings = updatedFocusSettings
         }
     }
     
     @objc func setObjectDetectionSettings(_ node: NSNumber, objectDetectionSettings: NSDictionary) {
         
-        DispatchQueue.main.async {
-            guard let component = self.bridge.uiManager.view(forReactTag: node) as? RNCodeScannerView else {
-                return
-            }
-            
+        getComponent(node) { component in
             let detectionSettings = VisionSDK.CodeScannerView.ObjectDetectionConfiguration()
             
             // Update the camera settings in the component
@@ -231,28 +193,25 @@ class VisionSdkViewManager: RCTViewManager {
                 detectionSettings.secondsToWaitBeforeDocumentCapture = secondsToWaitBeforeDocumentCapture
             }
 
-            if let selectedTemplateId = objectDetectionSettings["selectedTemplateId"] as? String {
-                detectionSettings.selectedTemplateId = selectedTemplateId
-            }
+//            if let selectedTemplateId = objectDetectionSettings["selectedTemplateId"] as? String {
+//                detectionSettings.selectedTemplateId = selectedTemplateId
+//            }
 
-            component.codeScannerView?.objectDetectionConfiguration = detectionSettings
+            component?.codeScannerView?.objectDetectionConfiguration = detectionSettings
         }
     }
     
     @objc func setCameraSettings(_ node: NSNumber, cameraSettings: NSDictionary) {
        
-        DispatchQueue.main.async {
-            guard let component = self.bridge.uiManager.view(forReactTag: node) as? RNCodeScannerView else {
-                return
-            }
-            
+        getComponent(node) { component in
             let updatedCameraSettings = VisionSDK.CodeScannerView.CameraSettings()
 
             // Update and print each setting
             if let nthFrameToProcess = cameraSettings["nthFrameToProcess"] as? Int {
                 updatedCameraSettings.nthFrameToProcess = Int64(nthFrameToProcess)
             }
-            component.codeScannerView?.cameraSettings = updatedCameraSettings
+            
+            component?.codeScannerView?.cameraSettings = updatedCameraSettings
         }
     }
 
