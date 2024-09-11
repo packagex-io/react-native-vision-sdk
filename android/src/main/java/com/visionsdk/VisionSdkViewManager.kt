@@ -278,8 +278,6 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
 
 
   override fun onFailure(exception: VisionSDKException) {
-//    exception.printStackTrace()
-//    Log.d(TAG, "onFailure: " + exception.message)
     onOCRResponseFailed(exception)
   }
 
@@ -287,6 +285,7 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
     Log.d(TAG, "onImageCaptured: ")
 
     saveBitmapAndSendEvent(bitmap)
+
     if (detectionMode == DetectionMode.OCR) {
       if (isOnDeviceOCR) {
         performLocalOCR(bitmap, value)
