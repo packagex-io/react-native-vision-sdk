@@ -75,7 +75,7 @@ class RNCodeScannerView: UIView {
 extension RNCodeScannerView: CodeScannerViewDelegate {
     func codeScannerView(_ scannerView: VisionSDK.CodeScannerView, didFailure error: NSError) {
         if onError != nil {
-            onError!(["data": error.localizedDescription, "code": error.code])
+            onError!(["message": error.localizedDescription, "code": error.code])
         }
     }
     
