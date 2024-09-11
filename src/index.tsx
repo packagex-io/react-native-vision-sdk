@@ -12,18 +12,15 @@ type Props = {
   refProp?: any;
   apiKey?: string;
   reRender?: string;
-  delayTime?: number;
   captureMode?: 'manual' | 'auto';
-  mode?: 'barcode' | 'qrcode' | 'ocr' | 'photo';
+  mode?: 'barcode' | 'qrcode' | 'ocr' | 'photo' | 'barCodeOrQRCode';
   token?: string;
   locationId?: string;
   options?: any;
   environment?: 'prod' | 'sandbox';
   flash?: boolean;
-  showDocumentBoundaries?: boolean;
+  zoomLevel?: number;
   isOnDeviceOCR?: boolean;
-  showScanFrame?: boolean;
-  captureWithScanFrame?: boolean;
   onModelDownloadProgress?: (_e: any) => void;
   onBarcodeScan?: (_e: any) => void;
   onImageCaptured?: (_e: any) => void;
@@ -32,23 +29,41 @@ type Props = {
   onError?: (e: any) => void;
 };
 
+const sdkOptions = {
+  tracker: {
+    type: 'inbound',
+    create_automatically: 'false',
+    status: 'pickup_available',
+  },
+  transform: {
+    use_existing_tracking_number: true,
+    tracker: null,
+  },
+  match: {
+    location: true,
+    use_best_match: true,
+    search: ['recipient'],
+  },
+  postprocess: {
+    require_unique_hash: true,
+    parse_addresses: ['sender', 'recipient'],
+  },
+};
+
 const Camera: React.FC<Props> = ({
   children,
   refProp,
   apiKey = '',
   reRender,
-  delayTime = 100,
   captureMode = 'manual',
   mode = 'barcode',
   token = '',
   locationId = '',
-  options = {},
+  options = sdkOptions,
   environment = 'prod',
   flash = false,
-  showDocumentBoundaries = false,
+  zoomLevel = 1.8,
   isOnDeviceOCR = false,
-  showScanFrame = true,
-  captureWithScanFrame = true,
   onModelDownloadProgress = (_e: any) => {},
   onBarcodeScan = (_e: any) => {},
   onImageCaptured = (_e: any) => {},
@@ -64,17 +79,14 @@ const Camera: React.FC<Props> = ({
     stopRunningHandler: () => {
       onPressStopRunning();
     },
+    restartScanningHandler: () => {
+      onPressRestartScanning();
+    },
     startRunningHandler: () => {
       onPressStartRunning();
     },
-    setToDefaultZoom: (val: any) => {
-      onPressZoom(val);
-    },
     setMetadata: (val: any) => {
       setMetadata(val);
-    },
-    setHeight: (val: any) => {
-      setHeight(val);
     },
     setRecipient: (val: any) => {
       setRecipient(val);
@@ -84,6 +96,15 @@ const Camera: React.FC<Props> = ({
     },
     configureOnDeviceModel: (val: any) => {
       configureOnDeviceModel(val);
+    },
+    setFocusSettings: (val: any) => {
+      setFocusSettings(val);
+    },
+    setObjectDetectionSettings: (val: any) => {
+      setObjectDetectionSettings(val);
+    },
+    setCameraSettings: (val: any) => {
+      setCameraSettings(val);
     },
   }));
 
@@ -119,31 +140,12 @@ const Camera: React.FC<Props> = ({
     );
   };
 
-  const onPressZoom = (value: any) => {
-    UIManager.dispatchViewManagerCommand(
-      findNodeHandle(VisionSDKViewRef.current),
-      (UIManager.hasViewManagerConfig('VisionSDKView') &&
-        UIManager.getViewManagerConfig('VisionSDKView').Commands.setZoomTo) ||
-        3,
-      [value]
-    );
-  };
-  const setHeight = (value: any) => {
-    UIManager.dispatchViewManagerCommand(
-      findNodeHandle(VisionSDKViewRef.current),
-      (UIManager.hasViewManagerConfig('VisionSDKView') &&
-        UIManager.getViewManagerConfig('VisionSDKView').Commands.setHeight) ||
-        4,
-      [value]
-    );
-  };
-
   const setMetadata = (value: any) => {
     UIManager.dispatchViewManagerCommand(
       findNodeHandle(VisionSDKViewRef.current),
       (UIManager.hasViewManagerConfig('VisionSDKView') &&
         UIManager.getViewManagerConfig('VisionSDKView').Commands.setMetaData) ||
-        5,
+        3,
       [value]
     );
   };
@@ -153,7 +155,7 @@ const Camera: React.FC<Props> = ({
       (UIManager.hasViewManagerConfig('VisionSDKView') &&
         UIManager.getViewManagerConfig('VisionSDKView').Commands
           .setRecipient) ||
-        6,
+        4,
       [value]
     );
   };
@@ -162,7 +164,7 @@ const Camera: React.FC<Props> = ({
       findNodeHandle(VisionSDKViewRef.current),
       (UIManager.hasViewManagerConfig('VisionSDKView') &&
         UIManager.getViewManagerConfig('VisionSDKView').Commands.setSender) ||
-        7,
+        5,
       [value]
     );
   };
@@ -172,7 +174,47 @@ const Camera: React.FC<Props> = ({
       (UIManager.hasViewManagerConfig('VisionSDKView') &&
         UIManager.getViewManagerConfig('VisionSDKView').Commands
           .configureOnDeviceModel) ||
+        6,
+      [val]
+    );
+  };
+  const onPressRestartScanning = () => {
+    UIManager.dispatchViewManagerCommand(
+      findNodeHandle(VisionSDKViewRef.current),
+      (UIManager.hasViewManagerConfig('VisionSDKView') &&
+        UIManager.getViewManagerConfig('VisionSDKView').Commands
+          .restartScanning) ||
+        7,
+      []
+    );
+  };
+  const setFocusSettings = (val: any) => {
+    UIManager.dispatchViewManagerCommand(
+      findNodeHandle(VisionSDKViewRef.current),
+      (UIManager.hasViewManagerConfig('VisionSDKView') &&
+        UIManager.getViewManagerConfig('VisionSDKView').Commands
+          .setFocusSettings) ||
         8,
+      [val]
+    );
+  };
+  const setObjectDetectionSettings = (val: any) => {
+    UIManager.dispatchViewManagerCommand(
+      findNodeHandle(VisionSDKViewRef.current),
+      (UIManager.hasViewManagerConfig('VisionSDKView') &&
+        UIManager.getViewManagerConfig('VisionSDKView').Commands
+          .setObjectDetectionSettings) ||
+        9,
+      [val]
+    );
+  };
+  const setCameraSettings = (val: any) => {
+    UIManager.dispatchViewManagerCommand(
+      findNodeHandle(VisionSDKViewRef.current),
+      (UIManager.hasViewManagerConfig('VisionSDKView') &&
+        UIManager.getViewManagerConfig('VisionSDKView').Commands
+          .setCameraSettings) ||
+        10,
       [val]
     );
   };
@@ -196,7 +238,8 @@ const Camera: React.FC<Props> = ({
       DeviceEventEmitter.removeAllListeners('onImageCaptured');
       DeviceEventEmitter.removeAllListeners('onError');
     };
-  }, []);
+  }, [mode]);
+
   return (
     <>
       <VisionSdkView
@@ -204,18 +247,15 @@ const Camera: React.FC<Props> = ({
         key={reRender}
         style={styles.flex}
         apiKey={apiKey}
-        showScanFrame={showScanFrame}
-        captureWithScanFrame={captureWithScanFrame}
         mode={mode}
         captureMode={captureMode}
-        delayTime={delayTime ? delayTime : 100}
-        showDocumentBoundaries={showDocumentBoundaries}
         isOnDeviceOCR={isOnDeviceOCR}
         token={token}
         locationId={locationId}
-        options={JSON.stringify(options)} // ideally this should be passed from variable, that is receiving data from ScannerContainer
+        options={options} // ideally this should be passed from variable, that is receiving data from ScannerContainer
         environment={environment}
         flash={flash}
+        zoomLevel={zoomLevel}
         onBarcodeScan={onBarcodeScan}
         onModelDownloadProgress={onModelDownloadProgress}
         onImageCaptured={onImageCaptured}
