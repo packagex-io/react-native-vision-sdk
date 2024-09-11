@@ -80,7 +80,7 @@ To use the camera,
    <string>Your own description of the purpose</string>
    ...
 
-### Basis Of Usage
+### Basic Usage
 
 ```js
 import React, { useEffect, useRef } from 'react';
@@ -88,7 +88,6 @@ import VisionSdkView from 'react-native-vision-sdk';
 const ScannerView = () => {
   const visionSdk = useRef(null);
   useEffect(() => {
-    visionSdk?.current?.setHeight(1);
     visionSdk?.current?.startRunningHandler();
   }, []);
   return (
@@ -105,15 +104,6 @@ const ScannerView = () => {
 };
 ```
 
-### Camera View Height
-
-Set Camera View Height
-
-```js
-// This is only required for IOS
-visionSdk.current.setHeight(1); // value should be in between 0 to 1.
-```
-
 ### Start Camera
 
 Start camera session and scanning.
@@ -122,7 +112,15 @@ Start camera session and scanning.
 visionSdk.current.startRunningHandler();
 ```
 
-### Close Camera
+### Restart Camera
+
+Restart scanning after every scan.
+
+```js
+visionSdk.current.restartScanningHandler();
+```
+
+### Stop Camera
 
 Stops camera session and scanning.
 
@@ -138,12 +136,52 @@ You can capture an image when captureMode is manual.
 visionSdk.current.cameraCaptureHandler();
 ```
 
-### Set Zoom Value
+### Set Focus Settings (Optional)
 
-You can set the Zoom value. Zoom value is device dependent. It will be vary between 1 to 5.
+You can customize camera focus settings.
 
 ```js
-visionSdk.current.setToDefaultZoom(1.8); 
+  visionSdk?.current?.setFocusSettings({
+      shouldDisplayFocusImage: true,
+      shouldScanInFocusImageRect: true,
+      showCodeBoundariesInMultipleScan: true,
+      validCodeBoundaryBorderColor: '#2abd51',
+      validCodeBoundaryBorderWidth: 2,
+      validCodeBoundaryFillColor: '#2abd51',
+      inValidCodeBoundaryBorderColor: '#cc0829',
+      inValidCodeBoundaryBorderWidth: 2,
+      inValidCodeBoundaryFillColor: '#cc0829',
+      showDocumentBoundaries: true,
+      documentBoundaryBorderColor: '#241616',
+      documentBoundaryFillColor: '#e3000080',
+      focusImageTintColor: '#ffffff',
+      focusImageHighlightedColor: '#e30000',
+    });
+```
+
+### Set Object Detection Settings (Optional)
+
+You can customize object detetction indications to avoid extra processing.
+
+```js
+  visionSdk?.current?.setObjectDetectionSettings({
+      isTextIndicationOn: true,
+      isBarCodeOrQRCodeIndicationOn: true,
+      isDocumentIndicationOn: true,
+      codeDetectionConfidence: 0.5,
+      documentDetectionConfidence: 0.5,
+      secondsToWaitBeforeDocumentCapture: 2.0,
+    });
+```
+
+### Set Camera Settings (Optional)
+
+You can customize frames processing by setting N number that will process every Nth frame.
+
+```js
+  visionSdk?.current?.setCameraSettings({
+      nthFrameToProcess: 10,
+    });
 ```
 
 ### Configure On-Device Model
@@ -159,22 +197,19 @@ visionSdk.current.configureOnDeviceModel({ type: 'shipping_label', size: 'large'
 
 All the props will be passed.
 
-| **Prop**                    | **Type**                                | **Description**                                                                                                   |
-| --------------------------- | --------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| `refProp`                   | `Function`                              | Catch the reference of the component to manipulate modes or to access callback functions.                         |
-| `mode`                      | `string: (ocr, barcode, qrcode, photo)` | Default mode is ‘barcode’, you can either use other like ocr, qrcode, photo.                                      |
-| `captureMode`               | `string: (manual, auto)`                | Default captureMode is ‘manual’, you can either use ‘auto’.                                                       |
-| `apiKey`                    | `string`                                | In order to use the OCR API/MODEL, You must set your API key or either an Auth token..                            |
-| `token`                     | `string`                                | In order to use the OCR API/MODEL, You must set your API key or either an Auth token..                            |
-| `environment`               | `string: (sandbox, prod)`               | If you are using OCR mode then you can set your development environment. (Default env is prod)                    |
-| `isOnDeviceOCR`             | `boolean: (true, false)`                | This prop will work if the mode is ocr for document detection in OnDevice/Cloud based on value.                   |
-| `flash`                     | `boolean: (true, false)`                | You can turn ON/OFF camera flash by using this prop. (Default value is false)                                     |
-| `showDocumentBoundaries`    | `boolean: (true, false)`                | To draw boundaries around detected document in camera stream. (Default value is false)                            |
-| `delayTime`                 | `number: (milliseconds)`                | Time threshold to wait before capturing a document automatically in OCR mode. (Default value is 100 milliseconds) |
-| `locationId`                | `string: (ex# loc_2rpHXFf6ith)`         | By default your location will get from apiKey or either you can set location id.                                  |
-| `options`                   | `Object: {x: number, y: string}`        | Option contains different other optional parameters you can provide along with the image (optional)               |
-| `showScanFrame`             | `boolean: (true, false)`                | You can use rectangle frame by setting it true, (Default value is false)                                          |
-| `captureWithScanFrame`      | `boolean: (true, false)`                | You can choose the capture area to be full screen or rectangular frame.                                           |
+| **Prop**                    | **Type**                                                | **Description**                                                                                   |
+| --------------------------- | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `refProp`                   | `Function`                                              | Catch the reference of the component to manipulate modes or to access callback functions.         |
+| `mode`                      | `string: (ocr, barcode, qrcode,barCodeOrQrCode, photo)` | Default mode is ‘barcode’, you can either use other like ocr, qrcode, photo.                      |
+| `captureMode`               | `string: (manual, auto)`                                | Default captureMode is ‘manual’, you can either use ‘auto’.                                       |
+| `apiKey`                    | `string`                                                | In order to use the OCR API/MODEL, You must set your API key or either an Auth token..            |
+| `token`                     | `string`                                                | In order to use the OCR API/MODEL, You must set your API key or either an Auth token..            |
+| `environment`               | `string: (sandbox, prod)`                               | If you are using OCR mode then you can set your development environment. (Default env is prod)    |
+| `isOnDeviceOCR`             | `boolean: (true, false)`                                | This prop will work if the mode is ocr for document detection in OnDevice/Cloud based on value.   |
+| `flash`                     | `boolean: (true, false)`                                | You can turn ON/OFF camera flash by using this prop. (Default value is false)                     |
+| `zoomLevel`                 | `number:  (1 to 5)`                                     | You can set the Zoom value. Zoom value is device dependent. It will be vary between 1 to 5.       |
+| `locationId`                | `string: (ex# loc_2rpHXFf6ith)`                         | By default your location will get from apiKey or either you can set location id.                  |
+| `options`                   | `Object: {x: number, y: string}`                        | Option contains different other optional parameters you can provide along with the image.         |
 
 ### API Key
 
@@ -187,6 +222,7 @@ guide [here](https://docs.packagex.io/docs/getting-started/welcome).
 
 barCode - Detects barcodes only in this mode.
 qrCode - Detects qr codes only in this mode.
+barCodeOrQrCode - Detects both qr and bar codes in this mode.
 ocr - Use this mode to capture photos for later user in OCR API call.
 photo - You can capture simple photos.
 
@@ -199,11 +235,8 @@ onOCRScan: Return ocr detected data
 onDetected: Return the indicators for ‘barcode’,'qrcode','document' and ‘text’
 onBarcodeScan: Return the detected data for barcode and qrcode mode
 onModelDownloadProgress: Return the OCR model dowmloading status
-onError: Return Description of the error, use it for debug purpose only
+onError: Returns the object with error code and error message
 onImageCaptured: Return image which is capture in photo mode
-ErrorCode: Description camera_unavailable camera not available on device
-permission: Permission not satisfied
-others: other errors (check errorMessage for description)
 ```
 
 ## Contributing
