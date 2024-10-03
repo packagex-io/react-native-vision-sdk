@@ -154,7 +154,7 @@ export default function App() {
     <View style={styles.mainContainer}>
       <VisionSdkView
         refProp={visionSdk}
-        isOnDeviceOCR={isOnDeviceOCR}
+        ocrMode={'on-device-with-api'}
         captureMode={captureMode}
         mode={mode}
         environment="sandbox"
