@@ -25,7 +25,7 @@ function DownloadingProgressView({ visible, progress }: any) {
                 top: '40%',
               }}
             >
-              {Math.floor(progress * 100).toFixed(2)}%
+              {Math.floor(progress * 100)}%
             </Text>
           </View>
           <Text style={styles.descriptionTextStyle}>
