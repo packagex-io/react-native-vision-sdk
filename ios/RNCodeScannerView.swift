@@ -98,7 +98,7 @@ extension RNCodeScannerView: CodeScannerViewDelegate {
                 handleCapturedImage(withImage: savedImageURL)
             }
             else {
-              if (ocrMode == "on-device" || ocrMode == "on-device-with-api") {
+              if (ocrMode == "on-device" || ocrMode == "on-device-with-translation") {
                     handleCapturedImage(withImage: savedImageURL)
                     self.callOCROnDeviceAPI(image.ciImage!, image, withbarCodes: barcodes)
                 }
@@ -120,7 +120,7 @@ extension RNCodeScannerView {
     
     /// This method initialises and setup On-Device OCR model to detect labels, can be called from client side, will download and prepare model only if scanMode == ocr
     func configureOnDeviceModel() {
-        if (ocrMode == "on-device" || ocrMode == "on-device-with-api") && self.scanMode == .ocr { // as we will download on-device model only when scanMode == ocr
+        if (ocrMode == "on-device" || ocrMode == "on-device-with-translation") && self.scanMode == .ocr { // as we will download on-device model only when scanMode == ocr
             setupDownloadOnDeviceOCR { }
         }
     }
@@ -167,7 +167,7 @@ extension RNCodeScannerView {
                     return
                 }
               
-              if self?.ocrMode == "on-device-with-api" { // on-device + matching API case
+              if self?.ocrMode == "on-device-with-translation" { // on-device + matching API case
                 var tokenValue: String? = nil
                 if let token = self?.token, !token.isEmpty {
                     tokenValue = token
@@ -492,7 +492,7 @@ extension RNCodeScannerView {
     }
     
     /// Sets the ocrMode, i.e. is user scanning in On Device OCR mode, Cloud or On Device with Api
-    /// - Parameter ocrMode: possible values - > 'cloud' | 'on-device' | 'on-device-with-api'
+    /// - Parameter ocrMode: possible values - > 'cloud' | 'on-device' | 'on-device-with-translation'
     @objc func setOcrMode(_ ocrMode: NSString) {
       self.ocrMode = ocrMode as String
     }
