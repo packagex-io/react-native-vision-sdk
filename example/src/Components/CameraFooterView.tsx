@@ -56,7 +56,13 @@ function CameraFooterView({
             style={styles.switchIconContainer}
           >
             {/* <Octicons name="arrow-switch" size={30} color="white" /> */}
-            <Text style={{ color: 'white', textTransform: 'capitalize' }}>
+            <Text
+              numberOfLines={2}
+              style={{
+                color: 'white',
+                textTransform: 'capitalize',
+              }}
+            >
               {ocrMode}
             </Text>
           </TouchableOpacity>
@@ -119,6 +125,7 @@ function CameraFooterView({
 }
 const styles = StyleSheet.create({
   switchIconContainer: {
+    maxWidth: 100,
     backgroundColor: '#7420E2',
     paddingVertical: 8,
     paddingHorizontal: 15,

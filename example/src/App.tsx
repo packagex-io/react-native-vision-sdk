@@ -162,8 +162,10 @@ export default function App() {
         ocrMode={ocrMode}
         captureMode={captureMode}
         mode={mode}
-        environment="sandbox"
-        apiKey="key_141b2eda27Z0Cm2y0h0P6waB3Z6pjPgrmGAHNSU62rZelUthBEOOdsVTqZQCRVgPLqI5yMPqpw2ZBy2z"
+        environment="staging"
+        apiKey="key_00203c5642F9SYnJkKyi9dRw1eeteeUwXhbEfGuPZ4NML8l2bAfysni4ZpcZEBKn0gnbcOZYwIaJnOyp"
+        // environment="sandbox"
+        // apiKey="key_141b2eda27Z0Cm2y0h0P6waB3Z6pjPgrmGAHNSU62rZelUthBEOOdsVTqZQCRVgPLqI5yMPqpw2ZBy2z"
         flash={flash}
         zoomLevel={zoomLevel}
         onDetected={(e: any) => {

@@ -32,7 +32,7 @@ type Props = {
 const sdkOptions = {
   tracker: {
     type: 'inbound',
-    create_automatically: 'false',
+    create_automatically: false,
     status: 'pickup_available',
   },
   transform: {
