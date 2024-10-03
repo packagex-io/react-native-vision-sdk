@@ -35,7 +35,7 @@ class RNCodeScannerView: UIView {
     var sessionPreset: AVCaptureSession.Preset = .high
     
     //MARK: - On-Device OCR Specific Variables
-    var isOnDeviceOCR: Bool? // Dynamic Prop | Optional:
+    var ocrMode: String = "cloud" // Dynamic Prop | Optional:
     var onDeviceModelType: VSDKModelClass = VSDKModelClass.shippingLabel // Dynamic Prop | Optional:
     var onDeviceModelSize: VSDKModelSize = VSDKModelSize.large // Dynamic Prop | Optional:
     
@@ -47,8 +47,6 @@ class RNCodeScannerView: UIView {
         let newSize = bounds.size
         
         if previousSize != newSize {
-            // If user initially set isOnDeviceOCR = true then configureOnDeviceModel method will be called from here
-//            configureOnDeviceModel()
             previousSize = newSize
 //            print("View size changed to \(newSize)")
             codeScannerView?.frame = self.bounds
@@ -100,7 +98,7 @@ extension RNCodeScannerView: CodeScannerViewDelegate {
                 handleCapturedImage(withImage: savedImageURL)
             }
             else {
-                if let _ = isOnDeviceOCR, isOnDeviceOCR == true {
+              if (ocrMode == "on-device" || ocrMode == "on-device-with-api") {
                     handleCapturedImage(withImage: savedImageURL)
                     self.callOCROnDeviceAPI(image.ciImage!, image, withbarCodes: barcodes)
                 }
@@ -122,7 +120,7 @@ extension RNCodeScannerView {
     
     /// This method initialises and setup On-Device OCR model to detect labels, can be called from client side, will download and prepare model only if scanMode == ocr
     func configureOnDeviceModel() {
-        if (isOnDeviceOCR ?? false) && self.scanMode == .ocr { // as we will download on-device model only when scanMode == ocr
+        if (ocrMode == "on-device" || ocrMode == "on-device-with-api") && self.scanMode == .ocr { // as we will download on-device model only when scanMode == ocr
             setupDownloadOnDeviceOCR { }
         }
     }
@@ -169,7 +167,7 @@ extension RNCodeScannerView {
                     return
                 }
               
-              if true { // on-device + matching API case
+              if self?.ocrMode == "on-device-with-api" { // on-device + matching API case
                 var tokenValue: String? = nil
                 if let token = self?.token, !token.isEmpty {
                     tokenValue = token
@@ -241,16 +239,6 @@ extension RNCodeScannerView {
                           }
                       }
                   }
-                  
-                  
-                  
-                  
-                  
-                  
-                  
-                  
-                  
-                  
                 }
               }
               
@@ -503,10 +491,10 @@ extension RNCodeScannerView {
         self.options = options as? [String : Any]
     }
     
-    /// Sets the ondeviceOCR, i.e. is user scanning in On Device OCR mode or not.
-    /// - Parameter onDeviceOCR: returns true or false
-    @objc func setIsOnDeviceOCR(_ isOnDeviceOCR: Bool) {
-        self.isOnDeviceOCR = isOnDeviceOCR
+    /// Sets the ocrMode, i.e. is user scanning in On Device OCR mode, Cloud or On Device with Api
+    /// - Parameter ocrMode: possible values - > 'cloud' | 'on-device' | 'on-device-with-api'
+    @objc func setOcrMode(_ ocrMode: NSString) {
+      self.ocrMode = ocrMode as String
     }
     
     /// Sets the ModelType for On Device, i.e. Which model class should be used for scanning
