@@ -57,7 +57,7 @@ function OCRSelectionView({
             }}
             style={styles.rowStyle}
           >
-            <Text style={styles.textStyle}>On-Device With Api</Text>
+            <Text style={styles.textStyle}>On-Device With Translation</Text>
             {ocrMode === 'on-device-with-translation' && (
               <MaterialIcons name="done" size={20} color="white" />
             )}
