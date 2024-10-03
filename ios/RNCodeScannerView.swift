@@ -48,7 +48,7 @@ class RNCodeScannerView: UIView {
         
         if previousSize != newSize {
             // If user initially set isOnDeviceOCR = true then configureOnDeviceModel method will be called from here
-            configureOnDeviceModel()
+//            configureOnDeviceModel()
             previousSize = newSize
 //            print("View size changed to \(newSize)")
             codeScannerView?.frame = self.bounds
@@ -101,7 +101,8 @@ extension RNCodeScannerView: CodeScannerViewDelegate {
             }
             else {
                 if let _ = isOnDeviceOCR, isOnDeviceOCR == true {
-                    self.callOCROnDeviceAPI(image.ciImage!, withbarCodes: barcodes)
+                    handleCapturedImage(withImage: savedImageURL)
+                    self.callOCROnDeviceAPI(image.ciImage!, image, withbarCodes: barcodes)
                 }
                 else {
                     handleCapturedImage(withImage: savedImageURL)
@@ -153,7 +154,7 @@ extension RNCodeScannerView {
     /// - Parameters:
     ///   - ciImage: ciImage of label that is going to be detected
     ///   - barcodes: barcodes that are detected by SDK within the label
-    func callOCROnDeviceAPI( _ ciImage: CIImage, withbarCodes barcodes: [String]) {
+  func callOCROnDeviceAPI( _ ciImage: CIImage, _ uiImage: UIImage, withbarCodes barcodes: [String]) {
         
         OnDeviceOCRManager.shared.extractDataFromImage(ciImage, withBarcodes: barcodes) { [weak self] data, error in
             if let error = error {
@@ -167,7 +168,93 @@ extension RNCodeScannerView {
                     }
                     return
                 }
+              
+              if true { // on-device + matching API case
+                var tokenValue: String? = nil
+                if let token = self?.token, !token.isEmpty {
+                    tokenValue = token
+                }
                 
+  //              ["parse_addresses": true, "match_contacts": true]
+                VisionAPIManager.shared.callMatchingAPIWith(uiImage, andBarcodes: barcodes, andApiKey: !VSDKConstants.apiKey.isEmpty ? VSDKConstants.apiKey : nil, andToken: tokenValue, withResponseData: responseData, andLocationId: (self?.locationId ?? "").isEmpty ? nil : self?.locationId, andOptions: self?.options ?? [:], andMetaData: self?.metaData ?? [:], andRecipient: self?.recipient ?? [:], andSender: self?.sender ?? [:]) { [weak self] data, error in
+                 
+                  
+                  
+                  
+                  guard let self = self else { return }
+                  
+                  // Check if there's an error or response data is nil
+                  guard error == nil else {
+                      DispatchQueue.main.async {
+                          self.callForOCRWithImageFailedWithMessage(message: error?.localizedDescription ?? "")
+                      }
+                      return
+                  }
+                  
+                  guard let data = data else {
+                      DispatchQueue.main.async {
+                          self.callForOCRWithImageFailedWithMessage(message: "Data of request was found nil")
+                      }
+                      return
+                  }
+                  
+      //            _ = (response as! HTTPURLResponse).statusCode
+                  
+                  DispatchQueue.main.async {
+                      
+                      do {
+                          
+                          if let jsonResponse = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+                             let responseJson = jsonResponse["data"] {
+                            
+                            if (try? JSONSerialization.data(withJSONObject: responseJson)) != nil {
+                              print(jsonResponse)
+                              if let statusCode = jsonResponse["status"] as? Int, (200...205).contains(statusCode) {
+                                self.callForOCRWithImageCompletedWithData(data: jsonResponse)
+                              }
+                              else {
+                                self.callForOCRWithImageFailedWithMessage(message: jsonResponse["message"] as? String ?? "Something went wrong!")
+                              }
+                            }
+                          }
+                      }
+                      catch let error {
+                          do {
+                              // create json object from data or use JSONDecoder to convert to Model stuct
+                              if let jsonResponse = try JSONSerialization.jsonObject(
+                                  with: data, options: .mutableContainers) as? [String: Any]
+                              {
+                                  if let message = jsonResponse["message"] as? String {
+                                      self.callForOCRWithImageFailedWithMessage(message: message)
+                                  }
+                                  else {
+                                      self.callForOCRWithImageFailedWithMessage(message: error.localizedDescription)
+                                  }
+                                  
+                              }
+                              else {
+                                  throw URLError(.badServerResponse)
+                              }
+                          }
+                          catch let error {
+                              self.callForOCRWithImageFailedWithMessage(message: error.localizedDescription)
+                          }
+                      }
+                  }
+                  
+                  
+                  
+                  
+                  
+                  
+                  
+                  
+                  
+                  
+                }
+              }
+              
+              else {
                 DispatchQueue.main.async {
                     do {
                         if let jsonResponse = try JSONSerialization.jsonObject(with: responseData) as? [String: Any] {
@@ -181,6 +268,7 @@ extension RNCodeScannerView {
                         self?.callForOCRWithImageFailedWithMessage(message: error.localizedDescription)
                     }
                 }
+              }
             }
         }
     }
@@ -235,16 +323,16 @@ extension RNCodeScannerView {
                     
                     if let jsonResponse = try JSONSerialization.jsonObject(with: data) as? [String: Any],
                        let responseJson = jsonResponse["data"] {
-                        
-                        if (try? JSONSerialization.data(withJSONObject: responseJson)) != nil {
-                            print(jsonResponse)
-                            if jsonResponse["status"] as? Int == 401 {
-                                self.callForOCRWithImageFailedWithMessage(message: jsonResponse["message"] as? String ?? "Something went wrong!")
-                            }
-                            else {
-                                self.callForOCRWithImageCompletedWithData(data: jsonResponse)
-                            }
+                      
+                      if (try? JSONSerialization.data(withJSONObject: responseJson)) != nil {
+                        print(jsonResponse)
+                        if let statusCode = jsonResponse["status"] as? Int, (200...205).contains(statusCode) {
+                          self.callForOCRWithImageCompletedWithData(data: jsonResponse)
                         }
+                        else {
+                          self.callForOCRWithImageFailedWithMessage(message: jsonResponse["message"] as? String ?? "Something went wrong!")
+                        }
+                      }
                     }
                 }
                 catch let error {
