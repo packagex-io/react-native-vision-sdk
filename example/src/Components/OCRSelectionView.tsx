@@ -52,13 +52,13 @@ function OCRSelectionView({
           <View style={styles.horizontalLine} />
           <TouchableOpacity
             onPress={() => {
-              setOcrMode('on-device-with-api');
+              setOcrMode('on-device-with-translation');
               closeModal();
             }}
             style={styles.rowStyle}
           >
             <Text style={styles.textStyle}>On-Device With Api</Text>
-            {ocrMode === 'on-device-with-api' && (
+            {ocrMode === 'on-device-with-translation' && (
               <MaterialIcons name="done" size={20} color="white" />
             )}
           </TouchableOpacity>

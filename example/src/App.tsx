@@ -30,7 +30,7 @@ export default function App() {
   const visionSdk = React.useRef<any>(null);
   const [captureMode, setCaptureMode] = useState<'manual' | 'auto'>('manual');
   const [ocrMode, setOcrMode] = useState<
-    'cloud' | 'on-device' | 'on-device-with-api'
+    'cloud' | 'on-device' | 'on-device-with-translation'
   >('cloud');
   const [modelSize, setModelSize] = useState<string>('large');
   const [loading, setLoading] = useState<boolean>(false);
@@ -132,7 +132,7 @@ export default function App() {
   useEffect(() => {
     switch (ocrMode) {
       case 'on-device':
-      case 'on-device-with-api': {
+      case 'on-device-with-translation': {
         onPressOnDeviceOcr();
       }
     }

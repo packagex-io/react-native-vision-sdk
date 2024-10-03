@@ -20,7 +20,7 @@ type Props = {
   environment?: 'prod' | 'sandbox';
   flash?: boolean;
   zoomLevel?: number;
-  ocrMode?: 'cloud' | 'on-device' | 'on-device-with-api';
+  ocrMode?: 'cloud' | 'on-device' | 'on-device-with-translation';
   onModelDownloadProgress?: (_e: any) => void;
   onBarcodeScan?: (_e: any) => void;
   onImageCaptured?: (_e: any) => void;

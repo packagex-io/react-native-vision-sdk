@@ -310,7 +310,7 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
           onDeviceOCR(bitmap, value)
         }
 
-        "on-device-with-api" -> {
+        "on-device-with-translation" -> {
           onDeviceWithMatchingApi(bitmap, value)
         }
       }
