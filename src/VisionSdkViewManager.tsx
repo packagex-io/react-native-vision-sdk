@@ -15,7 +15,7 @@ const LINKING_ERROR =
 type VisionSdkProps = {
   children?: ReactNode;
   style?: ViewStyle;
-  mode?: String;
+  mode?: string;
   ref?: any;
   apiKey?: string;
   token?: string;
@@ -26,7 +26,7 @@ type VisionSdkProps = {
   zoomLevel?: number;
   captureMode?: string;
   showDocumentBoundaries?: boolean;
-  isOnDeviceOCR: boolean;
+  ocrMode: string;
   showScanFrame?: boolean;
   captureWithScanFrame?: boolean;
   onBarcodeScan?: (e: any) => void;

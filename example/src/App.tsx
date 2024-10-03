@@ -1,5 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, Platform, Alert, Vibration, Text } from 'react-native';
+import {
+  View,
+  StyleSheet,
+  Platform,
+  Alert,
+  Vibration,
+  Text,
+} from 'react-native';
 import VisionSdkView from 'react-native-vision-sdk';
 import CameraFooterView from './Components/CameraFooterView';
 import DownloadingProgressView from './Components/DownloadingProgressView';
@@ -180,16 +187,16 @@ export default function App() {
         }}
         onModelDownloadProgress={(e: any) => {
           let response = Platform.OS === 'android' ? e : e.nativeEvent;
-          console.log(
-            'ModelDownloadProgress==------>>',
-            Math.floor(response.progress * 100)
-          );
-          if (isMultipleOfTen(Math.floor(response.progress * 100))) {
+          console.log('ModelDownloadProgress==------>>', response.progress);
+          // if (isMultipleOfTen(Math.floor(response.progress * 100))) {
+          if (response.progress !== modelDownloadingProgress.progress) {
             setModelDownloadingProgress(response);
-            if (response.downloadStatus) {
-              visionSdk?.current?.startRunningHandler();
-            }
           }
+
+          if (response.downloadStatus) {
+            visionSdk?.current?.startRunningHandler();
+          }
+          // }
           setLoading(false);
         }}
         onError={(e: any) => {
@@ -226,7 +233,7 @@ export default function App() {
         setModelSize={setModelSize}
         modelSize={modelSize}
         mode={mode}
-        zoomLevel = {zoomLevel}
+        zoomLevel={zoomLevel}
         setZoomLevel={setZoomLevel}
       />
     </View>

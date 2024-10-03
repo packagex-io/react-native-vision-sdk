@@ -10,7 +10,7 @@ function DownloadingProgressView({ visible, progress }: any) {
           <View style={{ alignSelf: 'center' }}>
             <Circle
               size={200}
-              progress={progress}
+              progress={0.0072737690061330795}
               color="#3498db"
               strokeCap="round"
             />

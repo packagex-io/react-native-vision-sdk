@@ -20,7 +20,7 @@ type Props = {
   environment?: 'prod' | 'sandbox';
   flash?: boolean;
   zoomLevel?: number;
-  isOnDeviceOCR?: boolean;
+  ocrMode?: 'cloud' | 'on-device' | 'on-device-with-api';
   onModelDownloadProgress?: (_e: any) => void;
   onBarcodeScan?: (_e: any) => void;
   onImageCaptured?: (_e: any) => void;
@@ -63,7 +63,7 @@ const Camera: React.FC<Props> = ({
   environment = 'prod',
   flash = false,
   zoomLevel = 1.8,
-  isOnDeviceOCR = false,
+  ocrMode = 'cloud',
   onModelDownloadProgress = (_e: any) => {},
   onBarcodeScan = (_e: any) => {},
   onImageCaptured = (_e: any) => {},
@@ -238,7 +238,7 @@ const Camera: React.FC<Props> = ({
       DeviceEventEmitter.removeAllListeners('onImageCaptured');
       DeviceEventEmitter.removeAllListeners('onError');
     };
-  }, [mode]);
+  }, [mode, ocrMode]);
 
   return (
     <>
@@ -249,7 +249,7 @@ const Camera: React.FC<Props> = ({
         apiKey={apiKey}
         mode={mode}
         captureMode={captureMode}
-        isOnDeviceOCR={isOnDeviceOCR}
+        ocrMode={ocrMode}
         token={token}
         locationId={locationId}
         options={options} // ideally this should be passed from variable, that is receiving data from ScannerContainer
