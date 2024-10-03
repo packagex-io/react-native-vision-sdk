@@ -640,25 +640,25 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
           var lastProgress = 0.00
           onDeviceOCRManager?.configure(apiKey, token) {
             val progressInt = (it).toDecimalPoints(2).toDouble()
-//            if (progressInt != lastProgress) {
-            lastProgress = progressInt
+            if (progressInt != lastProgress) {
+              lastProgress = progressInt
 
-            Log.d(TAG, "Install Progress: ${(it * 100).toInt()}")
-            if (onDeviceOCRManager?.isModelAlreadyDownloaded() == false) {
-              val event = Arguments.createMap().apply {
-                putDouble("progress", it.toDouble())
-                putBoolean("downloadStatus", false)
+              Log.d(TAG, "Install Progress: ${(it * 100).toInt()}")
+              if (onDeviceOCRManager?.isModelAlreadyDownloaded() == false) {
+                val event = Arguments.createMap().apply {
+                  putDouble("progress", lastProgress)
+                  putBoolean("downloadStatus", false)
+                }
+                appContext
+                  .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
+                  .emit("onModelDownloadProgress", event)
               }
-              appContext
-                .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
-                .emit("onModelDownloadProgress", event)
             }
-//            }
           }
         }
 
         val event = Arguments.createMap().apply {
-          putDouble("progress", 1.0)
+          putDouble("progress", 1.00)
           putBoolean("downloadStatus", true)
         }
         appContext
