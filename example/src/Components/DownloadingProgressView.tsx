@@ -10,7 +10,7 @@ function DownloadingProgressView({ visible, progress }: any) {
           <View style={{ alignSelf: 'center' }}>
             <Circle
               size={200}
-              progress={progress}
+              progress={0.0072737690061330795}
               color="#3498db"
               strokeCap="round"
             />
@@ -25,7 +25,7 @@ function DownloadingProgressView({ visible, progress }: any) {
                 top: '40%',
               }}
             >
-              {Math.floor(progress * 100)}%
+              {Math.floor(progress * 100).toFixed(2)}%
             </Text>
           </View>
           <Text style={styles.descriptionTextStyle}>
