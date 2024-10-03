@@ -29,7 +29,9 @@ interface detectedDataProps {
 export default function App() {
   const visionSdk = React.useRef<any>(null);
   const [captureMode, setCaptureMode] = useState<'manual' | 'auto'>('manual');
-  const [isOnDeviceOCR, setIsOnDeviceOCR] = useState<boolean>(false);
+  const [ocrMode, setOcrMode] = useState<
+    'cloud' | 'on-device' | 'on-device-with-translation'
+  >('cloud');
   const [modelSize, setModelSize] = useState<string>('large');
   const [loading, setLoading] = useState<boolean>(false);
   const [result, setResult] = useState<any>('');
@@ -128,10 +130,13 @@ export default function App() {
     return number % 1 === 0;
   }
   useEffect(() => {
-    if (isOnDeviceOCR) {
-      onPressOnDeviceOcr();
+    switch (ocrMode) {
+      case 'on-device':
+      case 'on-device-with-translation': {
+        onPressOnDeviceOcr();
+      }
     }
-  }, [isOnDeviceOCR]);
+  }, [ocrMode]);
 
   useEffect(() => {
     if (flash) {
@@ -154,7 +159,7 @@ export default function App() {
     <View style={styles.mainContainer}>
       <VisionSdkView
         refProp={visionSdk}
-        ocrMode={'on-device-with-api'}
+        ocrMode={ocrMode}
         captureMode={captureMode}
         mode={mode}
         environment="sandbox"
@@ -189,9 +194,9 @@ export default function App() {
           let response = Platform.OS === 'android' ? e : e.nativeEvent;
           console.log('ModelDownloadProgress==------>>', response.progress);
           // if (isMultipleOfTen(Math.floor(response.progress * 100))) {
-          if (response.progress !== modelDownloadingProgress.progress) {
-            setModelDownloadingProgress(response);
-          }
+          // if (response.progress !== modelDownloadingProgress.progress) {
+          setModelDownloadingProgress(response);
+          // }
 
           if (response.downloadStatus) {
             visionSdk?.current?.startRunningHandler();
@@ -226,8 +231,8 @@ export default function App() {
       <CameraFooterView
         setCaptureMode={setCaptureMode}
         captureMode={captureMode}
-        setIsOnDeviceOCR={setIsOnDeviceOCR}
-        isOnDeviceOCR={isOnDeviceOCR}
+        setOcrMode={setOcrMode}
+        ocrMode={ocrMode}
         onPressCapture={onPressCapture}
         onPressOnDeviceOcr={onPressOnDeviceOcr}
         setModelSize={setModelSize}
