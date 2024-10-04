@@ -117,9 +117,7 @@ extension RNCodeScannerView {
   
   /// This method initialises and setup On-Device OCR model to detect labels, can be called from client side, will download and prepare model only if scanMode == ocr
   func configureOnDeviceModel() {
-    if (ocrMode == "on-device" || ocrMode == "on-device-with-translation") && self.scanMode == .ocr { // as we will download on-device model only when scanMode == ocr
       setupDownloadOnDeviceOCR { }
-    }
   }
   
   /// This Method downloads and prepare offline / On Device OCR for use in the App.
@@ -272,7 +270,7 @@ extension RNCodeScannerView {
            let responseJson = jsonResponse["data"] {
           
           if (try? JSONSerialization.data(withJSONObject: responseJson)) != nil {
-            print(jsonResponse)
+            debugPrint("json response ------------- >",jsonResponse)
             if let statusCode = jsonResponse["status"] as? Int, (200...205).contains(statusCode) {
               self.callForOCRWithImageCompletedWithData(data: jsonResponse)
             }
