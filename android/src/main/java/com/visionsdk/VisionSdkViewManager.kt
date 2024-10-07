@@ -384,7 +384,8 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
     }
   }
 
-  private fun onDeviceWithMatchingApi(
+  private fun
+    onDeviceWithMatchingApi(
     bitmap: Bitmap,
     list: List<String>
   ) {
@@ -393,7 +394,7 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
       try {
         val onDeviceResponse = getOndeviceOCRResponse(bitmap, list) ?: return@launchOnIO
 
-        val result = ApiManager().shippingLabelWithOnDeviceResponseApiCallSync(
+        val result = ApiManager().matchingApiSync(
           apiKey = apiKey,
           token = token,
           bitmap = bitmap,
@@ -849,8 +850,3 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
     return Base64.encodeToString(byteArray, Base64.DEFAULT)
   }
 }
-
-
-
-
-
