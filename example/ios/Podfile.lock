@@ -1169,9 +1169,9 @@ PODS:
     - React-utils (= 0.74.5)
   - RNPermissions (4.1.5):
     - React-Core
-  - RNSVG (15.6.0):
+  - RNSVG (15.7.1):
     - React-Core
-  - RNVectorIcons (10.1.0):
+  - RNVectorIcons (10.2.0):
     - DoubleConversion
     - glog
     - hermes-engine
@@ -1439,12 +1439,12 @@ SPEC CHECKSUMS:
   React-utils: f242eb7e7889419d979ca0e1c02ccc0ea6e43b29
   ReactCommon: f7da14a8827b72704169a48c929bcde802698361
   RNPermissions: 294531ede5a64d1528463e88fffef05675842042
-  RNSVG: 5da7a24f31968ec74f0b091e3440080f347e279b
-  RNVectorIcons: 2a2f79274248390b80684ea3c4400bd374a15c90
+  RNSVG: 4590aa95758149fa27c5c83e54a6a466349a1688
+  RNVectorIcons: 845eda5c7819bd29699cafd0fc98c9d4afe28c96
   SocketRocket: abac6f5de4d4d62d24e11868d7a2f427e0ef940d
   VisionSDK: 8de7d7082a3633badc430026dcbecba689adaccc
   Yoga: 950bbfd7e6f04790fdb51149ed51df41f329fcc8
 
-PODFILE CHECKSUM: 80d761e7eaad5d1a4d04f9a1eb67c2d9d7898931
+PODFILE CHECKSUM: 0529fadfb6d25d1a701393dd374a44f8b29d808a
 
 COCOAPODS: 1.15.2
