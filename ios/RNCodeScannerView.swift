@@ -99,8 +99,10 @@ extension RNCodeScannerView: CodeScannerViewDelegate {
       switch ocrMode {
       case "on-device", "on-device-with-translation":
         self.onDeviceFlow(withImage: image, andBarcodes: barcodes)
+        break
       case "cloud":
         self.callScanAPIWithImage(withImage: image, andBarcodes: barcodes)
+        break
       default:
         print("default case")
       }
@@ -361,27 +363,33 @@ extension RNCodeScannerView {
       return
     }
     
-    if mode.lowercased == "ocr" {
+    switch mode.lowercased {
+    case "ocr":
       codeScannerView!.setScanModeTo(.ocr)
       scanMode = .ocr
-    }
-    else if mode.lowercased == "barcode" || mode == "barcodeSingleCapture" {
+      break
+      
+    case "barcode", "barcodeSingleCapture":
       codeScannerView!.setScanModeTo(.barCode)
       scanMode = .barCode
-    }
-    else if mode.lowercased == "photo" {
+      break
+      
+    case "photo":
       codeScannerView!.setScanModeTo(.photo)
       scanMode = .photo
-    }
-    else if mode.lowercased == "barcodeorqrcode" {
+      break
+      
+    case "barcodeorqrcode":
       codeScannerView!.setScanModeTo(.autoBarCodeOrQRCode)
       scanMode = .autoBarCodeOrQRCode
-    }
-    else if mode.lowercased == "qrcode" {
+      break
+      
+    case "qrcode":
       codeScannerView!.setScanModeTo(.qrCode)
       scanMode = .qrCode
-    }
-    else {
+      break
+      
+    default:
       codeScannerView!.setScanModeTo(.barCode)
       scanMode = .barCode
     }
