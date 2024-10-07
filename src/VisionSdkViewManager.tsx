@@ -1,10 +1,6 @@
 import type { ReactNode } from 'react';
-import {
-  requireNativeComponent,
-  UIManager,
-  Platform,
-  ViewStyle,
-} from 'react-native';
+import { requireNativeComponent, UIManager, Platform } from 'react-native';
+import type { ViewStyle } from 'react-native';
 
 const LINKING_ERROR =
   `The package 'react-native-vision-sdk' doesn't seem to be linked. Make sure: \n\n` +
