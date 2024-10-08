@@ -1,5 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, Platform, Alert, Vibration, Text } from 'react-native';
+import {
+  View,
+  StyleSheet,
+  Platform,
+  Alert,
+  Vibration,
+  Text,
+} from 'react-native';
 import VisionSdkView from 'react-native-vision-sdk';
 import CameraFooterView from './Components/CameraFooterView';
 import DownloadingProgressView from './Components/DownloadingProgressView';
@@ -176,7 +183,7 @@ export default function App() {
           // }, 200);
         }}
         onImageCaptured={(e: any) => {
-          console.log('onImageCaptured==------>>', e);
+          // console.log('onImageCaptured==------>>', e);
         }}
         onModelDownloadProgress={(e: any) => {
           let response = Platform.OS === 'android' ? e : e.nativeEvent;
@@ -226,7 +233,7 @@ export default function App() {
         setModelSize={setModelSize}
         modelSize={modelSize}
         mode={mode}
-        zoomLevel = {zoomLevel}
+        zoomLevel={zoomLevel}
         setZoomLevel={setZoomLevel}
       />
     </View>
