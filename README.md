@@ -1,4 +1,5 @@
 # React Native Vision SDK
+
 VisionSDK provides a simple and efficient way to detect barcodes and QR codes in both manual and
 automatic capturing modes. It also includes AI capabilities to extract information from logistic
 documents.
@@ -10,9 +11,9 @@ Some key features of the VisionSDK Integration include:
 - Document detection
 - Capturing of image
 - Information extraction from logistic documents (via both local ML models (offline) and REST API)
-    - Shipping Label
-    - Bill of Lading
-    - Price Tag (under progress)
+  - Shipping Label
+  - Bill of Lading
+  - Price Tag (under progress)
 
 ![Example1](ReadMeContent/Videos/Sample/VisionSDKSample.gif)
 
@@ -21,6 +22,7 @@ Some key features of the VisionSDK Integration include:
 To install the `react-native-vision-sdk` package, you can use either `npm` or `yarn`:
 
 ### Using Npm
+
 ```sh
 npm install --save react-native-vision-sdk
 ```
@@ -31,14 +33,14 @@ npm install --save react-native-vision-sdk
 yarn add react-native-vision-sdk
 ```
 
-
-
 ### Manual installation
 
 #### IOS
 
 1. Open up `ios/Podfile`
-  - Set `platform :ios, 15.0   # Vision-sdk requires at least IOS 15.0 or higher`
+
+- Set `platform :ios, 15.0   # Vision-sdk requires at least IOS 15.0 or higher`
+
 2. Run `pod install`
 
 IOS Development Requirements
@@ -49,20 +51,20 @@ IOS Development Requirements
 
 #### ANDROID
 
-  Modify your android/build.gradle configuration:
-  set the minSdkVersion to 29 atleast, Vision-sdk requires at least version 29 of minSdkVersion.
-  
-  ```
-  buildscript {
-    ext {
-      buildToolsVersion = "34.0.0"
-      minSdkVersion = 29   // Change over here
-      compileSdkVersion = 34
-      targetSdkVersion = 34
-      ndkVersion = "26.1.10909125"
-      kotlinVersion = "1.9.24"
-    }
-  ```
+Modify your android/build.gradle configuration:
+set the minSdkVersion to 29 atleast, Vision-sdk requires at least version 29 of minSdkVersion.
+
+```
+buildscript {
+  ext {
+    buildToolsVersion = "34.0.0"
+    minSdkVersion = 29   // Change over here
+    compileSdkVersion = 34
+    targetSdkVersion = 34
+    ndkVersion = "26.1.10909125"
+    kotlinVersion = "1.9.24"
+  }
+```
 
 ## Permissions
 
@@ -70,11 +72,11 @@ To use the camera,
 
 1. On Android you must ask for camera permission:
    you have to add the following code to the AndroidManifest.xml:
-  ...
- <uses-permission android:name="android.permission.CAMERA" />
- ...
+   ...
+   <uses-permission android:name="android.permission.CAMERA" />
+   ...
 
-3. On iOS, you must update Info.plist with a usage description for camera
+2. On iOS, you must update Info.plist with a usage description for camera
    ...
    <key>NSCameraUsageDescription</key>
    <string>Your own description of the purpose</string>
@@ -106,7 +108,7 @@ const ScannerView = () => {
 
 ### Start Camera
 
-Start camera session and scanning.
+This method start camera session and scanning.
 
 ```js
 visionSdk.current.startRunningHandler();
@@ -114,7 +116,7 @@ visionSdk.current.startRunningHandler();
 
 ### Restart Camera
 
-Restart scanning after every scan.
+This method restart scanning after every scan.
 
 ```js
 visionSdk.current.restartScanningHandler();
@@ -122,7 +124,7 @@ visionSdk.current.restartScanningHandler();
 
 ### Stop Camera
 
-Stops camera session and scanning.
+This method stops camera session and scanning.
 
 ```js
 visionSdk.current.stopRunningHandler();
@@ -141,37 +143,37 @@ visionSdk.current.cameraCaptureHandler();
 You can customize camera focus settings.
 
 ```js
-  visionSdk?.current?.setFocusSettings({
-      shouldDisplayFocusImage: true,
-      shouldScanInFocusImageRect: true,
-      showCodeBoundariesInMultipleScan: true,
-      validCodeBoundaryBorderColor: '#2abd51',
-      validCodeBoundaryBorderWidth: 2,
-      validCodeBoundaryFillColor: '#2abd51',
-      inValidCodeBoundaryBorderColor: '#cc0829',
-      inValidCodeBoundaryBorderWidth: 2,
-      inValidCodeBoundaryFillColor: '#cc0829',
-      showDocumentBoundaries: true,
-      documentBoundaryBorderColor: '#241616',
-      documentBoundaryFillColor: '#e3000080',
-      focusImageTintColor: '#ffffff',
-      focusImageHighlightedColor: '#e30000',
-    });
+visionSdk?.current?.setFocusSettings({
+  shouldDisplayFocusImage: true,
+  shouldScanInFocusImageRect: true,
+  showCodeBoundariesInMultipleScan: true,
+  validCodeBoundaryBorderColor: '#2abd51',
+  validCodeBoundaryBorderWidth: 2,
+  validCodeBoundaryFillColor: '#2abd51',
+  inValidCodeBoundaryBorderColor: '#cc0829',
+  inValidCodeBoundaryBorderWidth: 2,
+  inValidCodeBoundaryFillColor: '#cc0829',
+  showDocumentBoundaries: true,
+  documentBoundaryBorderColor: '#241616',
+  documentBoundaryFillColor: '#e3000080',
+  focusImageTintColor: '#ffffff',
+  focusImageHighlightedColor: '#e30000',
+});
 ```
 
 ### Set Object Detection Settings (Optional)
 
-You can customize object detetction indications to avoid extra processing.
+You can customize object detection indications to avoid extra processing.
 
 ```js
-  visionSdk?.current?.setObjectDetectionSettings({
-      isTextIndicationOn: true,
-      isBarCodeOrQRCodeIndicationOn: true,
-      isDocumentIndicationOn: true,
-      codeDetectionConfidence: 0.5,
-      documentDetectionConfidence: 0.5,
-      secondsToWaitBeforeDocumentCapture: 2.0,
-    });
+visionSdk?.current?.setObjectDetectionSettings({
+  isTextIndicationOn: true,
+  isBarCodeOrQRCodeIndicationOn: true,
+  isDocumentIndicationOn: true,
+  codeDetectionConfidence: 0.5,
+  documentDetectionConfidence: 0.5,
+  secondsToWaitBeforeDocumentCapture: 2.0,
+});
 ```
 
 ### Set Camera Settings (Optional)
@@ -179,37 +181,39 @@ You can customize object detetction indications to avoid extra processing.
 You can customize frames processing by setting N number that will process every Nth frame.
 
 ```js
-  visionSdk?.current?.setCameraSettings({
-      nthFrameToProcess: 10,
-    });
+visionSdk?.current?.setCameraSettings({
+  nthFrameToProcess: 10,
+});
 ```
 
 ### Configure On-Device Model
 
-Configure on-device model by passing model type and model size. Before calling configureOnDeviceModel you have to set isOnDeviceOCR prop with true.
+Configure on-device model by passing model type and model size in configureOnDeviceModel method, starts model configuration.
 
 ```js
-visionSdk.current.configureOnDeviceModel({ type: 'shipping_label', size: 'large' });
+visionSdk.current.configureOnDeviceModel({
+  type: 'shipping_label',
+  size: 'large',
+});
 ```
-
 
 ### Props
 
 All the props will be passed.
 
-| **Prop**                    | **Type**                                                | **Description**                                                                                   |
-| --------------------------- | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
-| `refProp`                   | `Function`                                              | Catch the reference of the component to manipulate modes or to access callback functions.         |
-| `mode`                      | `string: (ocr, barcode, qrcode,barCodeOrQrCode, photo)` | Default mode is ‘barcode’, you can either use other like ocr, qrcode, photo.                      |
-| `captureMode`               | `string: (manual, auto)`                                | Default captureMode is ‘manual’, you can either use ‘auto’.                                       |
-| `apiKey`                    | `string`                                                | In order to use the OCR API/MODEL, You must set your API key or either an Auth token..            |
-| `token`                     | `string`                                                | In order to use the OCR API/MODEL, You must set your API key or either an Auth token..            |
-| `environment`               | `string: (sandbox, prod)`                               | If you are using OCR mode then you can set your development environment. (Default env is prod)    |
-| `isOnDeviceOCR`             | `boolean: (true, false)`                                | This prop will work if the mode is ocr for document detection in OnDevice/Cloud based on value.   |
-| `flash`                     | `boolean: (true, false)`                                | You can turn ON/OFF camera flash by using this prop. (Default value is false)                     |
-| `zoomLevel`                 | `number:  (1 to 5)`                                     | You can set the Zoom value. Zoom value is device dependent. It will be vary between 1 to 5.       |
-| `locationId`                | `string: (ex# loc_2rpHXFf6ith)`                         | By default your location will get from apiKey or either you can set location id.                  |
-| `options`                   | `Object: {x: number, y: string}`                        | Option contains different other optional parameters you can provide along with the image.         |
+| **Prop**      | **Type**                                                 | **Description**                                                                                                        |
+| ------------- | -------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `refProp`     | `Function`                                               | Catch the reference of the component to manipulate modes or to access callback functions.                              |
+| `mode`        | `string: (ocr, barcode, qrcode, barCodeOrQrCode, photo)` | Default mode is ‘barcode’, you can either use other like ocr, qrcode, photo.                                           |
+| `captureMode` | `string: (manual, auto)`                                 | Default captureMode is ‘manual’, you can either use ‘auto’.                                                            |
+| `apiKey`      | `string`                                                 | In order to use the OCR API/MODEL, You must set your API key or either an Auth token..                                 |
+| `token`       | `string`                                                 | In order to use the OCR API/MODEL, You must set your API key or either an Auth token.                                  |
+| `environment` | `string: (sandbox, prod)`                                | If you are using OCR mode then you can set your development environment. (Default env is prod)                         |
+| `ocrMode`     | `string: (cloud, on-device, on-device-with-translation)` | ocrMode defines whether you want to scan using cloud API, on-Device Model or on-Device Model with response translation |
+| `flash`       | `boolean: (true, false)`                                 | You can turn ON/OFF camera flash by using this prop. (Default value is false)                                          |
+| `zoomLevel`   | `number:  (1 to 5)`                                      | You can set the Zoom value. Zoom value is device dependent. It will be vary between 1 to 5.                            |
+| `locationId`  | `string: (ex# loc_2rpHXFf6ith)`                          | By default your location will get from apiKey or either you can set location id.                                       |
+| `options`     | `Object: {x: number, y: string}`                         | Option contains different other optional parameters you can provide along with the image.                              |
 
 ### API Key
 
@@ -220,10 +224,10 @@ guide [here](https://docs.packagex.io/docs/getting-started/welcome).
 
 ### Mode Details
 
-barCode - Detects barcodes only in this mode.
-qrCode - Detects qr codes only in this mode.
+barCode - Detects barcode only in this mode.
+qrCode - Detects qrcode only in this mode.
 barCodeOrQrCode - Detects both qr and bar codes in this mode.
-ocr - Use this mode to capture photos for later user in OCR API call.
+ocr - Use this mode to capture photos for later use in OCR API call.
 photo - You can capture simple photos.
 
 ### The Response Object
@@ -232,11 +236,11 @@ In the callbacks, Success or error will be returned. It returns with the OCR Res
 
 ```js
 onOCRScan: Return ocr detected data
-onDetected: Return the indicators for ‘barcode’,'qrcode','document' and ‘text’
-onBarcodeScan: Return the detected data for barcode and qrcode mode
-onModelDownloadProgress: Return the OCR model dowmloading status
+onDetected: Return the boolean indicators for 'barcode','qrcode','document' and 'text'
+onBarcodeScan: Return the detected textual data of barcode or qrcode
+onModelDownloadProgress: Return the OCR model downloading status
 onError: Returns the object with error code and error message
-onImageCaptured: Return image which is capture in photo mode
+onImageCaptured: Return image which is capture in photo & OCR mode
 ```
 
 ## Contributing

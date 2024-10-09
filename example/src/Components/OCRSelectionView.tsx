@@ -5,8 +5,8 @@ import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 function OCRSelectionView({
   setShowOcrTypes,
   showOcrTypes,
-  setIsOnDeviceOCR,
-  isOnDeviceOCR,
+  setOcrMode,
+  ocrMode,
 }: any) {
   const closeModal = () => {
     setShowOcrTypes(false);
@@ -26,26 +26,39 @@ function OCRSelectionView({
         <View style={styles.modalView}>
           <TouchableOpacity
             onPress={() => {
-              setIsOnDeviceOCR(false);
+              setOcrMode('cloud');
               closeModal();
             }}
             style={styles.rowStyle}
           >
-            <Text style={styles.textStyle}>SL Cloud OCR</Text>
-            {!isOnDeviceOCR && (
+            <Text style={styles.textStyle}>Cloud </Text>
+            {ocrMode === 'cloud' && (
               <MaterialIcons name="done" size={20} color="white" />
             )}
           </TouchableOpacity>
           <View style={styles.horizontalLine} />
           <TouchableOpacity
             onPress={() => {
-              setIsOnDeviceOCR(true);
+              setOcrMode('on-device');
               closeModal();
             }}
             style={styles.rowStyle}
           >
-            <Text style={styles.textStyle}>SL On-Device OCR</Text>
-            {isOnDeviceOCR && (
+            <Text style={styles.textStyle}>On-Device</Text>
+            {ocrMode === 'on-device' && (
+              <MaterialIcons name="done" size={20} color="white" />
+            )}
+          </TouchableOpacity>
+          <View style={styles.horizontalLine} />
+          <TouchableOpacity
+            onPress={() => {
+              setOcrMode('on-device-with-translation');
+              closeModal();
+            }}
+            style={styles.rowStyle}
+          >
+            <Text style={styles.textStyle}>On-Device With Translation</Text>
+            {ocrMode === 'on-device-with-translation' && (
               <MaterialIcons name="done" size={20} color="white" />
             )}
           </TouchableOpacity>

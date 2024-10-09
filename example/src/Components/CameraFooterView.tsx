@@ -14,8 +14,8 @@ import ModelSizeSelectionView from './ModelSizeSelectionView';
 function CameraFooterView({
   setCaptureMode,
   captureMode,
-  setIsOnDeviceOCR,
-  isOnDeviceOCR,
+  setOcrMode,
+  ocrMode,
   onPressCapture,
   onPressOnDeviceOcr,
   setModelSize,
@@ -56,8 +56,14 @@ function CameraFooterView({
             style={styles.switchIconContainer}
           >
             {/* <Octicons name="arrow-switch" size={30} color="white" /> */}
-            <Text style={{ color: 'white' }}>
-              {isOnDeviceOCR ? 'On-Device' : 'Cloud'}
+            <Text
+              numberOfLines={2}
+              style={{
+                color: 'white',
+                textTransform: 'capitalize',
+              }}
+            >
+              {ocrMode}
             </Text>
           </TouchableOpacity>
         )}
@@ -89,7 +95,7 @@ function CameraFooterView({
         )}
       </View>
       <View style={[styles.sideContainer]}>
-        {isOnDeviceOCR && (
+        {ocrMode != 'cloud' && (
           <TouchableOpacity
             onPress={() => setShowOcrSize(true)}
             style={styles.sizeIconContainer}
@@ -103,8 +109,8 @@ function CameraFooterView({
       <OCRSelectionView
         setShowOcrTypes={setShowOcrTypes}
         showOcrTypes={showOcrTypes}
-        setIsOnDeviceOCR={setIsOnDeviceOCR}
-        isOnDeviceOCR={isOnDeviceOCR}
+        setOcrMode={setOcrMode}
+        ocrMode={ocrMode}
         onPressOnDeviceOcr={onPressOnDeviceOcr}
       />
       <ModelSizeSelectionView
@@ -119,6 +125,7 @@ function CameraFooterView({
 }
 const styles = StyleSheet.create({
   switchIconContainer: {
+    maxWidth: 100,
     backgroundColor: '#7420E2',
     paddingVertical: 8,
     paddingHorizontal: 15,

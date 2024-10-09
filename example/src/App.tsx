@@ -1,5 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, Platform, Alert, Vibration, Text } from 'react-native';
+import {
+  View,
+  StyleSheet,
+  Platform,
+  Alert,
+  Vibration,
+  Text,
+} from 'react-native';
 import VisionSdkView from 'react-native-vision-sdk';
 import CameraFooterView from './Components/CameraFooterView';
 import DownloadingProgressView from './Components/DownloadingProgressView';
@@ -22,7 +29,9 @@ interface detectedDataProps {
 export default function App() {
   const visionSdk = React.useRef<any>(null);
   const [captureMode, setCaptureMode] = useState<'manual' | 'auto'>('manual');
-  const [isOnDeviceOCR, setIsOnDeviceOCR] = useState<boolean>(false);
+  const [ocrMode, setOcrMode] = useState<
+    'cloud' | 'on-device' | 'on-device-with-translation'
+  >('cloud');
   const [modelSize, setModelSize] = useState<string>('large');
   const [loading, setLoading] = useState<boolean>(false);
   const [result, setResult] = useState<any>('');
@@ -121,10 +130,13 @@ export default function App() {
     return number % 1 === 0;
   }
   useEffect(() => {
-    if (isOnDeviceOCR) {
-      onPressOnDeviceOcr();
+    switch (ocrMode) {
+      case 'on-device':
+      case 'on-device-with-translation': {
+        onPressOnDeviceOcr();
+      }
     }
-  }, [isOnDeviceOCR]);
+  }, [ocrMode]);
 
   useEffect(() => {
     if (flash) {
@@ -147,7 +159,7 @@ export default function App() {
     <View style={styles.mainContainer}>
       <VisionSdkView
         refProp={visionSdk}
-        isOnDeviceOCR={isOnDeviceOCR}
+        ocrMode={ocrMode}
         captureMode={captureMode}
         mode={mode}
         environment="sandbox"
@@ -180,17 +192,19 @@ export default function App() {
         }}
         onModelDownloadProgress={(e: any) => {
           let response = Platform.OS === 'android' ? e : e.nativeEvent;
-          console.log(
-            'ModelDownloadProgress==------>>',
-            Math.floor(response.progress * 100)
-          );
-          if (isMultipleOfTen(Math.floor(response.progress * 100))) {
-            setModelDownloadingProgress(response);
-            if (response.downloadStatus) {
-              visionSdk?.current?.startRunningHandler();
-            }
+          console.log('ModelDownloadProgress==------>>', response.progress);
+          // if (isMultipleOfTen(Math.floor(response.progress * 100))) {
+          // if (response.progress !== modelDownloadingProgress.progress) {
+          setModelDownloadingProgress(response);
+          // }
+
+          if (response.downloadStatus) {
+            visionSdk?.current?.startRunningHandler();
           }
-          setLoading(false);
+          // }
+          setTimeout(() => {
+            setLoading(false);
+          }, 1000);
         }}
         onError={(e: any) => {
           let error = Platform.OS === 'android' ? e : e.nativeEvent;
@@ -219,14 +233,14 @@ export default function App() {
       <CameraFooterView
         setCaptureMode={setCaptureMode}
         captureMode={captureMode}
-        setIsOnDeviceOCR={setIsOnDeviceOCR}
-        isOnDeviceOCR={isOnDeviceOCR}
+        setOcrMode={setOcrMode}
+        ocrMode={ocrMode}
         onPressCapture={onPressCapture}
         onPressOnDeviceOcr={onPressOnDeviceOcr}
         setModelSize={setModelSize}
         modelSize={modelSize}
         mode={mode}
-        zoomLevel = {zoomLevel}
+        zoomLevel={zoomLevel}
         setZoomLevel={setZoomLevel}
       />
     </View>
