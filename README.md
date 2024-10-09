@@ -108,7 +108,7 @@ const ScannerView = () => {
 
 ### Start Camera
 
-Start camera session and scanning.
+This method start camera session and scanning.
 
 ```js
 visionSdk.current.startRunningHandler();
@@ -116,7 +116,7 @@ visionSdk.current.startRunningHandler();
 
 ### Restart Camera
 
-Restart scanning after every scan.
+This method restart scanning after every scan.
 
 ```js
 visionSdk.current.restartScanningHandler();
@@ -124,7 +124,7 @@ visionSdk.current.restartScanningHandler();
 
 ### Stop Camera
 
-Stops camera session and scanning.
+This method stops camera session and scanning.
 
 ```js
 visionSdk.current.stopRunningHandler();
@@ -163,7 +163,7 @@ visionSdk?.current?.setFocusSettings({
 
 ### Set Object Detection Settings (Optional)
 
-You can customize object detetction indications to avoid extra processing.
+You can customize object detection indications to avoid extra processing.
 
 ```js
 visionSdk?.current?.setObjectDetectionSettings({
@@ -204,10 +204,10 @@ All the props will be passed.
 | **Prop**      | **Type**                                                 | **Description**                                                                                                        |
 | ------------- | -------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
 | `refProp`     | `Function`                                               | Catch the reference of the component to manipulate modes or to access callback functions.                              |
-| `mode`        | `string: (ocr, barcode, qrcode,barCodeOrQrCode, photo)`  | Default mode is ‘barcode’, you can either use other like ocr, qrcode, photo.                                           |
+| `mode`        | `string: (ocr, barcode, qrcode, barCodeOrQrCode, photo)` | Default mode is ‘barcode’, you can either use other like ocr, qrcode, photo.                                           |
 | `captureMode` | `string: (manual, auto)`                                 | Default captureMode is ‘manual’, you can either use ‘auto’.                                                            |
 | `apiKey`      | `string`                                                 | In order to use the OCR API/MODEL, You must set your API key or either an Auth token..                                 |
-| `token`       | `string`                                                 | In order to use the OCR API/MODEL, You must set your API key or either an Auth token..                                 |
+| `token`       | `string`                                                 | In order to use the OCR API/MODEL, You must set your API key or either an Auth token.                                  |
 | `environment` | `string: (sandbox, prod)`                                | If you are using OCR mode then you can set your development environment. (Default env is prod)                         |
 | `ocrMode`     | `string: (cloud, on-device, on-device-with-translation)` | ocrMode defines whether you want to scan using cloud API, on-Device Model or on-Device Model with response translation |
 | `flash`       | `boolean: (true, false)`                                 | You can turn ON/OFF camera flash by using this prop. (Default value is false)                                          |
@@ -224,10 +224,10 @@ guide [here](https://docs.packagex.io/docs/getting-started/welcome).
 
 ### Mode Details
 
-barCode - Detects barcodes only in this mode.
-qrCode - Detects qr codes only in this mode.
+barCode - Detects barcode only in this mode.
+qrCode - Detects qrcode only in this mode.
 barCodeOrQrCode - Detects both qr and bar codes in this mode.
-ocr - Use this mode to capture photos for later user in OCR API call.
+ocr - Use this mode to capture photos for later use in OCR API call.
 photo - You can capture simple photos.
 
 ### The Response Object
@@ -236,11 +236,11 @@ In the callbacks, Success or error will be returned. It returns with the OCR Res
 
 ```js
 onOCRScan: Return ocr detected data
-onDetected: Return the indicators for ‘barcode’,'qrcode','document' and ‘text’
-onBarcodeScan: Return the detected data for barcode and qrcode mode
-onModelDownloadProgress: Return the OCR model dowmloading status
+onDetected: Return the boolean indicators for 'barcode','qrcode','document' and 'text'
+onBarcodeScan: Return the detected textual data of barcode or qrcode
+onModelDownloadProgress: Return the OCR model downloading status
 onError: Returns the object with error code and error message
-onImageCaptured: Return image which is capture in photo mode
+onImageCaptured: Return image which is capture in photo & OCR mode
 ```
 
 ## Contributing
