@@ -9,24 +9,53 @@ runs:
       with:
         node-version: 18.x
 
-    - name: Cache dependencies
-      id: yarn-cache
-      uses: actions/cache@v3
-      with:
-        path: |
-          **/node_modules
-        key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
-        restore-keys: |
-          ${{ runner.os }}-yarn-
-
     - name: Install Yarn
       run: |
         corepack enable
         corepack prepare yarn@1.22.22 --activate
       shell: bash
 
-    - name: Install dependencies
-      if: steps.yarn-cache.outputs.cache-hit != 'true'
-      run: |
-        yarn set version 1.22.22
-      shell: bash
+    # Check node_modules
+    - name: Check cached node_modules
+      id: check-cached-node-modules
+      uses: actions/cache/restore@v4
+      with:
+        path: |
+          **/node_modules
+        key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
+        lookup-only: true
+        
+    # - name: Cache dependencies
+    #   id: yarn-cache
+    #   uses: actions/cache@v3
+    #   with:
+    #     path: |
+    #       **/node_modules
+    #     key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
+    #     restore-keys: |
+    #       ${{ runner.os }}-yarn-
+
+    # Conditionally install if node_modules are changed
+    - name: Install node_modules
+      if: ${{ success() && steps.check-cached-node-modules.outputs.cache-hit != 'true' }}
+      run: yarn install --frozen-lockfile
+
+ 
+    # Conditionally Cache node_modules only
+    - name: Cache node_modules
+      id: cache-node-modules
+      if: ${{ success() && steps.check-cached-node-modules.outputs.cache-hit != 'true' }}
+      uses: actions/cache/save@v4
+      with:
+        path: |
+          **/node_modules
+        key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
+
+    # Restore node_modules
+    - name: Restore node_modules
+      if: ${{ success() }}
+      uses: actions/cache/restore@v4
+      with:
+        path: |
+          **/node_modules
+        key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
