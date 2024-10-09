@@ -202,7 +202,9 @@ export default function App() {
             visionSdk?.current?.startRunningHandler();
           }
           // }
-          setLoading(false);
+          setTimeout(() => {
+            setLoading(false);
+          }, 1000);
         }}
         onError={(e: any) => {
           let error = Platform.OS === 'android' ? e : e.nativeEvent;
