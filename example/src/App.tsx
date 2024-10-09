@@ -6,7 +6,6 @@ import {
   Alert,
   Vibration,
   Text,
-  Button,
 } from 'react-native';
 import VisionSdkView from 'react-native-vision-sdk';
 import CameraFooterView from './Components/CameraFooterView';
