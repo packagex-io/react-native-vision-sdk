@@ -19,7 +19,6 @@ runs:
     - name: Check cached node_modules
       id: check-cached-node-modules
       uses: actions/cache/restore@v4
-      shell: bash
       with:
         path: |
           **/node_modules
@@ -48,7 +47,6 @@ runs:
       id: cache-node-modules
       if: ${{ success() && steps.check-cached-node-modules.outputs.cache-hit != 'true' }}
       uses: actions/cache/save@v4
-      shell: bash
       with:
         path: |
           **/node_modules
@@ -58,7 +56,6 @@ runs:
     - name: Restore node_modules
       if: ${{ success() }}
       uses: actions/cache/restore@v4
-      shell: bash
       with:
         path: |
           **/node_modules
