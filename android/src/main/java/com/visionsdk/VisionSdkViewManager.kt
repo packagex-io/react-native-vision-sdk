@@ -39,10 +39,10 @@ import io.packagex.visionsdk.exceptions.VisionSDKException
 import io.packagex.visionsdk.interfaces.CameraLifecycleCallback
 import io.packagex.visionsdk.interfaces.OCRResult
 import io.packagex.visionsdk.interfaces.ScannerCallback
-import io.packagex.visionsdk.ocr.ml.core.ModelClass
-import io.packagex.visionsdk.ocr.ml.core.ModelSize
 import io.packagex.visionsdk.ocr.ml.core.OnDeviceOCRManager
-import io.packagex.visionsdk.ocr.ml.core.PlatformType
+import io.packagex.visionsdk.ocr.ml.core.enums.ModelClass
+import io.packagex.visionsdk.ocr.ml.core.enums.ModelSize
+import io.packagex.visionsdk.ocr.ml.core.enums.PlatformType
 import io.packagex.visionsdk.ui.views.VisionCameraView
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
