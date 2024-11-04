@@ -96,13 +96,15 @@ extension RNCodeScannerView: CodeScannerViewDelegate {
       
       handleCapturedImage(withImage: savedImageURL)
       
-      switch ocrMode {
-      case "on-device", "on-device-with-translation":
-        self.onDeviceFlow(withImage: image, andBarcodes: barcodes)
-      case "cloud":
-        self.callScanAPIWithImage(withImage: image, andBarcodes: barcodes)
-      default:
-        print("default case")
+      if scanMode == .ocr {
+        switch ocrMode {
+        case "on-device", "on-device-with-translation":
+          self.onDeviceFlow(withImage: image, andBarcodes: barcodes)
+        case "cloud":
+          self.callScanAPIWithImage(withImage: image, andBarcodes: barcodes)
+        default:
+          print("default case")
+        }
       }
     }
     else {
