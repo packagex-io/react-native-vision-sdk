@@ -2,15 +2,42 @@ import React from 'react';
 import { View, StyleSheet, Text, TouchableOpacity, Modal } from 'react-native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 
-function OCRSelectionView({
+type OCRSelectionViewProps = {
+  setShowOcrTypes: (show: boolean) => void;
+  showOcrTypes: boolean;
+  setOcrMode: (mode:  "cloud" | "on-device" | "on-device-with-translation" | 'bill-of-lading') => void;
+  ocrMode: string;
+};
+
+const OCRSelectionView: React.FC<OCRSelectionViewProps> = ({
   setShowOcrTypes,
   showOcrTypes,
   setOcrMode,
   ocrMode,
-}: any) {
-  const closeModal = () => {
-    setShowOcrTypes(false);
-  };
+}) => {
+  const closeModal = () => setShowOcrTypes(false);
+
+  const options = [
+    { label: 'Cloud', mode: 'cloud' },
+    { label: 'On-Device', mode: 'on-device' },
+    { label: 'On-Device With Translation', mode: 'on-device-with-translation' },
+    { label: 'Bill Of Lading', mode: 'bill-of-lading' },
+  ];
+
+  const renderOption = ({ label, mode }: { label: string; mode: string }) => (
+    <TouchableOpacity
+      key={mode}
+      onPress={() => {
+        setOcrMode(mode);
+        closeModal();
+      }}
+      style={styles.rowStyle}
+    >
+      <Text style={styles.textStyle}>{label}</Text>
+      {ocrMode === mode && <MaterialIcons name="done" size={20} color="white" />}
+    </TouchableOpacity>
+  );
+
   return (
     <Modal
       animationType="fade"
@@ -24,49 +51,18 @@ function OCRSelectionView({
         style={styles.centeredViewModal}
       >
         <View style={styles.modalView}>
-          <TouchableOpacity
-            onPress={() => {
-              setOcrMode('cloud');
-              closeModal();
-            }}
-            style={styles.rowStyle}
-          >
-            <Text style={styles.textStyle}>Cloud </Text>
-            {ocrMode === 'cloud' && (
-              <MaterialIcons name="done" size={20} color="white" />
-            )}
-          </TouchableOpacity>
-          <View style={styles.horizontalLine} />
-          <TouchableOpacity
-            onPress={() => {
-              setOcrMode('on-device');
-              closeModal();
-            }}
-            style={styles.rowStyle}
-          >
-            <Text style={styles.textStyle}>On-Device</Text>
-            {ocrMode === 'on-device' && (
-              <MaterialIcons name="done" size={20} color="white" />
-            )}
-          </TouchableOpacity>
-          <View style={styles.horizontalLine} />
-          <TouchableOpacity
-            onPress={() => {
-              setOcrMode('on-device-with-translation');
-              closeModal();
-            }}
-            style={styles.rowStyle}
-          >
-            <Text style={styles.textStyle}>On-Device With Translation</Text>
-            {ocrMode === 'on-device-with-translation' && (
-              <MaterialIcons name="done" size={20} color="white" />
-            )}
-          </TouchableOpacity>
+          {options.map((option) => (
+            <React.Fragment key={option.mode}>
+              {renderOption(option)}
+              <View style={styles.horizontalLine} />
+            </React.Fragment>
+          ))}
         </View>
       </TouchableOpacity>
     </Modal>
   );
-}
+};
+
 const styles = StyleSheet.create({
   centeredViewModal: {
     flex: 1,
@@ -82,10 +78,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     width: '55%',
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 4,
     elevation: 5,

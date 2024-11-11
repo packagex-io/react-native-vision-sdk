@@ -61,7 +61,140 @@ class VisionSdkViewManager: RCTViewManager {
             component?.configureOnDeviceModel()
         }
     }
-    
+
+
+    @objc func  getPrediction (_ node: NSNumber, image imagePath: String, barcode barcodeArray: [String]) {
+        getComponent(node) { component in
+              // Load the image (either from a local URI or URL)
+              print("Image Path: \(imagePath)")
+              self.loadImage(from: imagePath) { loadedImage in
+                // Ensure we have a valid UIImage to send
+                guard let finalImage = loadedImage else {
+                  print("Failed to load image.")
+                  return
+                }
+                print("Loaded Image: \(finalImage)")
+                // Call onDeviceFlow with the UIImage and barcodes
+                component?.getPrediction(withImage: finalImage, andBarcodes: barcodeArray)
+              }
+            }
+    }
+    @objc func  getPredictionWithCloudTransformations (_ node: NSNumber, image: String, barcode: [String]) {
+        getComponent(node) { component in
+              // Load the image (either from a local URI or URL)
+              print("Image Path: \(image)")
+              self.loadImage(from: image) { loadedImage in
+                // Ensure we have a valid UIImage to send
+                guard let finalImage = loadedImage else {
+                  print("Failed to load image.")
+                  return
+                }
+                print("Loaded Image: \(finalImage)")
+                // Call onDeviceFlow with the UIImage and barcodes
+                component?.getPredictionWithCloudTransformations(withImage: finalImage, andBarcodes: barcode)
+              }
+            }
+    }
+    @objc func getPredictionShippingLabelCloud(_ node: NSNumber, image: String, barcode: [String]) {
+        getComponent(node) { component in
+              // Load the image (either from a local URI or URL)
+              print("Image Path: \(image)")
+              self.loadImage(from: image) { loadedImage in
+                // Ensure we have a valid UIImage to send
+                guard let finalImage = loadedImage else {
+                  print("Failed to load image.")
+                  return
+                }
+                print("Loaded Image: \(finalImage)")
+                // Call onDeviceFlow with the UIImage and barcodes
+                component?.getPredictionShippingLabelCloud(withImage: finalImage, andBarcodes: barcode)
+              }
+            }
+    }
+    @objc func getPredictionBillOfLadingCloud(_ node: NSNumber, image: String, barcode: [String], withImageResizing:Bool) {
+        getComponent(node) { component in
+              // Load the image (either from a local URI or URL)
+              print("Image Path: \(image)")
+              self.loadImage(from: image) { loadedImage in
+                // Ensure we have a valid UIImage to send
+                guard let finalImage = loadedImage else {
+                  print("Failed to load image.")
+                  return
+                }
+                print("Loaded Image: \(finalImage)")
+                // Call onDeviceFlow with the UIImage and barcodes
+                  component?.getPredictionBillOfLadingCloud(withImage: finalImage, andBarcodes: barcode, withImageResizing:withImageResizing)
+              }
+            }
+    }
+
+    // Helper function to load UIImage from a local URI or URL
+        private func loadImage(from imagePath: String, completion: @escaping (UIImage?) -> Void) {
+            var adjustedImagePath = imagePath
+            
+            // Check if the path starts with "file://" and adjust if not
+            if !adjustedImagePath.hasPrefix("file://") {
+                adjustedImagePath = "file://" + adjustedImagePath
+            }
+
+            // Check if the path starts with "http" for remote URLs or "file://" for local files
+            if adjustedImagePath.hasPrefix("http") {
+                // It's a remote URL
+                guard let remoteUrl = URL(string: adjustedImagePath) else {
+                    print("Invalid remote URL.")
+                    completion(nil)
+                    return
+                }
+
+                // Load image from the remote URL
+                let task = URLSession.shared.dataTask(with: remoteUrl) { data, response, error in
+                    if let data = data, error == nil, let image = UIImage(data: data) {
+                        DispatchQueue.main.async {
+                            completion(image)
+                        }
+                    } else {
+                        print("Error loading image from URL: \(error?.localizedDescription ?? "Unknown error")")
+                        DispatchQueue.main.async {
+                            completion(nil)
+                        }
+                    }
+                }
+                task.resume()
+                
+            } else if !adjustedImagePath.isEmpty {
+                // It's a local file
+                guard let localUrl = URL(string: adjustedImagePath) else {
+                    print("Invalid local URL.")
+                    completion(nil)
+                    return
+                }
+
+                // Check if the file exists
+                if !FileManager.default.fileExists(atPath: localUrl.path) {
+                    print("File does not exist at path: \(localUrl.path)")
+                    completion(nil)
+                    return
+                }
+
+                // Load image from the local URL
+                DispatchQueue.global(qos: .default).async {
+                    if let data = try? Data(contentsOf: localUrl), let image = UIImage(data: data) {
+                        DispatchQueue.main.async {
+                            completion(image)
+                        }
+                    } else {
+                        print("Failed to load image from local URL.")
+                        DispatchQueue.main.async {
+                            completion(nil)
+                        }
+                    }
+                }
+            } else {
+                print("Invalid image path. Must start with http or file://.")
+                completion(nil)
+            }
+        }
+
     @objc func restartScanning(_ node: NSNumber) {
         getComponent(node) { component in
             component?.codeScannerView?.rescan()

@@ -62,7 +62,7 @@ buildscript {
     compileSdkVersion = 34
     targetSdkVersion = 34
     ndkVersion = "26.1.10909125"
-    kotlinVersion = "1.9.24"
+    kotlinVersion = "2.0.20"
   }
 ```
 
@@ -94,7 +94,7 @@ const ScannerView = () => {
   }, []);
   return (
     <VisionSdkView
-      refProp={visionSdk}
+      ref={visionSdk}
       mode="barcode"
       captureMode="auto"
       onBarcodeScan={(value) => console.log('BarCodeScanHandler', value)}
@@ -197,13 +197,95 @@ visionSdk.current.configureOnDeviceModel({
 });
 ```
 
+## Prediction Methods
+
+The SDK offers several prediction methods categorized based on the type of processing:
+
+---
+
+### `on-device`
+
+The methods in this category use on-device processing, allowing for fast, offline analysis of images and barcodes, suitable for situations without internet access.
+
+#### `getPrediction`
+
+This method uses an on-device model to perform predictions on the provided image and barcode data, ensuring fast, private processing.
+
+```js
+/**
+ * This method uses an on-device model to get a prediction based on the provided image and barcode data.
+ * @param image The image to be analyzed.
+ * @param barcode An array of barcode values to analyze alongside the image.
+ */
+visionSdk.current.getPrediction(image, barcode);
+```
+
+---
+
+### `on-device-with-translation`
+
+Methods in this category use on-device models combined with synchronized cloud transformations, which enhance the prediction accuracy and add more context to the results.
+
+#### `getPredictionWithCloudTransformations`
+
+This method uses an on-device model with synchronized cloud transformations for more comprehensive and detailed analysis.
+
+```js
+/**
+ * This method uses an on-device model with synchronized cloud transformations to get a prediction.
+ * @param image The image to be analyzed.
+ * @param barcode An array of barcode values to analyze alongside the image.
+ */
+visionSdk.current.getPredictionWithCloudTransformations(image, barcode);
+```
+
+---
+
+### `cloud`
+
+The methods in this category use cloud processing, which is ideal for complex analyses requiring more computational power or enhanced data resources.
+
+#### `getPredictionShippingLabelCloud`
+
+This method uses cloud processing to analyze a shipping label image and any associated barcodes.
+
+```js
+/**
+ * This method uses cloud processing to get a prediction for a shipping label.
+ * @param image The image of the shipping label.
+ * @param barcode Array of barcode strings associated with the shipping label.
+ */
+visionSdk.current.getPredictionShippingLabelCloud(image, barcode);
+```
+
+---
+
+### `bill-of-lading`
+
+The methods in this section are optimized specifically for Bill of Lading documents and use cloud processing tailored to the document’s requirements.
+
+#### `getPredictionBillOfLadingCloud`
+
+This method applies cloud processing to analyze Bill of Lading images and associated barcodes, providing data relevant to logistics and shipping.
+
+```js
+/**
+ * This method uses cloud processing to get a prediction for a Bill of Lading.
+ * @param image The image of the Bill of Lading.
+ * @param barcode Array of barcode strings.
+ * @param withImageResizing Whether to resize the image (default: true).
+ */
+visionSdk.current.getPredictionBillOfLadingCloud(image, barcode, withImageResizing);
+```
+
+
 ### Props
 
 All the props will be passed.
 
 | **Prop**      | **Type**                                                 | **Description**                                                                                                        |
 | ------------- | -------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| `refProp`     | `Function`                                               | Catch the reference of the component to manipulate modes or to access callback functions.                              |
+| `ref`         | `Function`                                               | Catch the reference of the component to manipulate modes or to access callback functions.                              |
 | `mode`        | `string: (ocr, barcode, qrcode, barCodeOrQrCode, photo)` | Default mode is ‘barcode’, you can either use other like ocr, qrcode, photo.                                           |
 | `captureMode` | `string: (manual, auto)`                                 | Default captureMode is ‘manual’, you can either use ‘auto’.                                                            |
 | `apiKey`      | `string`                                                 | In order to use the OCR API/MODEL, You must set your API key or either an Auth token..                                 |
