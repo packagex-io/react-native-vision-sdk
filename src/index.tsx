@@ -63,6 +63,8 @@ const Camera = forwardRef<VisionSdkRefProps, VisionSdkProps>(
     },
     ref
   ) => {
+    console.log({ rest });
+
     // Ref for the Vision SDK View
     const VisionSDKViewRef = useRef(null);
 
