@@ -86,9 +86,10 @@ To use the camera,
 
 ```js
 import React, { useEffect, useRef } from 'react';
-import VisionSdkView from 'react-native-vision-sdk';
+import VisionSdkView { VisionSdkRefProps } from 'react-native-vision-sdk';
 const ScannerView = () => {
-  const visionSdk = useRef(null);
+  const visionSdk = useRef<VisionSdkRefProps>(null);
+
   useEffect(() => {
     visionSdk?.current?.startRunningHandler();
   }, []);
