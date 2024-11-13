@@ -94,18 +94,19 @@ extension RNCodeScannerView: CodeScannerViewDelegate {
     
     if let savedImageURL = saveImageToVisionSDK(image: image, withName: UUID().uuidString) {
       
-      handleCapturedImage(withImage: savedImageURL)
-      
-      if scanMode == .ocr {
-        switch ocrMode {
-        case "on-device", "on-device-with-translation":
-          self.onDeviceFlow(withImage: image, andBarcodes: barcodes)
-        case "cloud":
-          self.callScanAPIWithImage(withImage: image, andBarcodes: barcodes)
-        default:
-          print("default case")
-        }
-      }
+        handleCapturedImage(withImage: savedImageURL, barcodes: barcodes, nativeImage: image)
+                  switch ocrMode {
+                  case "on-device":
+                      self.getPrediction(withImage: image, andBarcodes: barcodes)
+                  case "on-device-with-translation":
+                      self.getPredictionWithCloudTransformations(withImage: image, andBarcodes: barcodes)
+                  case "cloud":
+                      self.getPredictionShippingLabelCloud(withImage: image, andBarcodes: barcodes)
+                  case "bill-of-lading":
+                      self.getPredictionBillOfLadingCloud(withImage: image, andBarcodes: barcodes, withImageResizing: true)
+                  default:
+                      print("default case")
+                  }
     }
     else {
       onError!(["message": "Error converting image"])
@@ -118,63 +119,111 @@ extension RNCodeScannerView: CodeScannerViewDelegate {
 extension RNCodeScannerView {
   
   /// This method initialises and setup On-Device OCR model to detect labels, can be called from client side, will download and prepare model only if scanMode == ocr
-  func configureOnDeviceModel() {
-      setupDownloadOnDeviceOCR { }
-  }
-  
-  /// This Method downloads and prepare offline / On Device OCR for use in the App.
-  /// - Parameter completion: completionHandler
-  func setupDownloadOnDeviceOCR(completion: @escaping () -> Void) {
+ func configureOnDeviceModel() {
+    // Calling the setupDownloadOnDeviceOCR method
+    setupDownloadOnDeviceOCR { 
+        // Completion block after OCR setup
+        // Add any actions you want to take after the OCR is downloaded and prepared
+        debugPrint("On-Device OCR setup completed")
+    }
+}
+
+/// This method downloads and prepares offline / On Device OCR for use in the app.
+/// - Parameter completion: completionHandler
+func setupDownloadOnDeviceOCR(completion: @escaping () -> Void) {
     var tokenValue: String? = nil
     if let token = token, !token.isEmpty {
-      tokenValue = token
+        tokenValue = token
     }
     
-    OnDeviceOCRManager.shared.prepareOfflineOCR(withApiKey: !VSDKConstants.apiKey.isEmpty ? VSDKConstants.apiKey : nil, andToken: tokenValue, forModelClass: onDeviceModelType, withModelSize: onDeviceModelSize) { currentProgress, totalSize in
-      debugPrint(((currentProgress / totalSize) * 100))
-      self.onModelDownloadProgress!(["progress": ((currentProgress / totalSize)), "downloadStatus": false]) // rename this downloadStatus to onSuccessfull completion
+    
+    // Calling the prepareOfflineOCR method with progress tracking
+    OnDeviceOCRManager.shared.prepareOfflineOCR(withApiKey: !VSDKConstants.apiKey.isEmpty ? VSDKConstants.apiKey : nil,
+                                                andToken: tokenValue,
+                                                forModelClass: onDeviceModelType,
+                                                withModelSize: onDeviceModelSize) { currentProgress, totalSize, isModelAlreadyDownloaded in
+        // If the model is already downloaded, set progress to 100% and download status to true
+        if isModelAlreadyDownloaded {
+            self.onModelDownloadProgress!(["progress": (1),
+                                           "downloadStatus": true]) // Indicate that the model is already downloaded
+        } else {
+            // Progress tracking and debugging output
+            debugPrint(String(format: "Download progress: %.2f%%", (currentProgress / totalSize) * 100))
+            
+            // Calling the download progress handler
+            self.onModelDownloadProgress!(["progress": ((currentProgress / totalSize)),
+                                           "downloadStatus": false]) // Update download status to false during download
+        }
     } withCompletion: { error in
-      
-      if error == nil {
-        self.onModelDownloadProgress!(["progress": (1), "downloadStatus": true])
-        completion()
-      }
-      else {
-        self.callForOCRWithImageFailedWithMessage(message: error?.localizedDescription ?? "We got On-Device OCR error!")
-      }
+        // Handling download completion
+        if error == nil {
+            // If no error, set progress to 100% and download status to true
+            self.onModelDownloadProgress!(["progress": (1),
+                                           "downloadStatus": true]) // Indicating successful download completion
+            completion() // Call completion to indicate success
+        } else {
+          self.callForOCRWithImageFailedWithMessage(message: error?.localizedDescription ?? "We got On-Device OCR error!")
+        }
     }
-  }
-  
-  /// This method pass ciImage of label to downloaded on-device OCR model that extracts informations from label and returns the response
-  /// - Parameters:
-  ///   - uiImage: uiImage of label that is going to be detected
-  ///   - barcodes: barcodes that are detected by SDK within the label
-  func onDeviceFlow(withImage uiImage: UIImage, andBarcodes barcodes: [String]) {
-    
-    OnDeviceOCRManager.shared.extractDataFromImage(uiImage.ciImage!, withBarcodes: barcodes) { [weak self] data, error in
-      if let error = error {
-        self?.callForOCRWithImageFailedWithMessage(message: error.localizedDescription)
-      }
-      
-      else {
-        guard let responseData = data else {
-          DispatchQueue.main.async {
-            self?.callForOCRWithImageFailedWithMessage(message: "Data of request was found nil")
-          }
-          return
+}
+
+    /// This method pass ciImage of label to downloaded on-device OCR model that extracts informations from label and returns the response
+    /// - Parameters:
+    ///   - uiImage: uiImage of label that is going to be detected
+    ///   - barcodes: barcodes that are detected by SDK within the label
+    func getPrediction(withImage uiImage: UIImage, andBarcodes barcodes: [String]) {
+        guard let ciImage = convertToCIImage(from: uiImage) else {
+            callForOCRWithImageFailedWithMessage(message: "Failed to convert UIImage to CIImage.")
+            return
         }
-        
-        if self?.ocrMode == "on-device-with-translation" { // on-device + matching API case
-          self?.callMatchingAPIWithImage(usingImage: uiImage, withbarCodes: barcodes, responseData: responseData)
+
+        OnDeviceOCRManager.shared.extractDataFromImage(ciImage, withBarcodes: barcodes) { [weak self] data, error in
+            if let error = error {
+                self?.callForOCRWithImageFailedWithMessage(message: error.localizedDescription)
+            } else {
+                guard let responseData = data else {
+                    DispatchQueue.main.async {
+                        self?.callForOCRWithImageFailedWithMessage(message: "Data of request was found nil")
+                    }
+                    return
+                }
+                // Directly call on-device API response
+                self?.onDeviceAPIResponse(responseData: responseData)
+            }
         }
-        
+    }
+
+    /// This method pass ciImage of label to downloaded on-device OCR model that extracts informations from label and returns the response
+    /// - Parameters:
+    ///   - uiImage: uiImage of label that is going to be detected
+    ///   - barcodes: barcodes that are detected by SDK within the label
+    func getPredictionWithCloudTransformations(withImage uiImage: UIImage, andBarcodes barcodes: [String]) {
+        guard let ciImage = convertToCIImage(from: uiImage) else {
+            callForOCRWithImageFailedWithMessage(message: "Failed to convert UIImage to CIImage.")
+            return
+        }
+        OnDeviceOCRManager.shared.extractDataFromImage(ciImage, withBarcodes: barcodes) { [weak self] data, error in
+        if let error = error {
+          self?.callForOCRWithImageFailedWithMessage(message: error.localizedDescription)
+        }
         else {
-          self?.onDeviceAPIResponse(responseData: responseData)
+          guard let responseData = data else {
+            DispatchQueue.main.async {
+              self?.callForOCRWithImageFailedWithMessage(message: "Data of request was found nil")
+            }
+            return
+          }
+          
+          if self?.ocrMode == "on-device-with-translation" { // on-device + matching API case
+            self?.callMatchingAPIWithImage(usingImage: uiImage, withbarCodes: barcodes, responseData: responseData)
+          }
+          
+          else {
+            self?.onDeviceAPIResponse(responseData: responseData)
+          }
         }
       }
     }
-  }
-  
   /// This Method is responsible for sending the on-device extracted data object to client side.
   /// - Parameter responseData: responseData that needs to be sent back to client
   func onDeviceAPIResponse(responseData: Data) {
@@ -190,7 +239,7 @@ extension RNCodeScannerView {
     }
   }
 }
-// MARK: - VisionSDK API call function, callScanAPIWithImage, callMatchingAPIWithImage, handleAPIResponse
+// MARK: - VisionSDK API call function, getPredictionShippingLabelCloud, getPredictionBillOfLadingCloud, callMatchingAPIWithImage, handleAPIResponse
 //MARK: -
 extension RNCodeScannerView {
   
@@ -198,28 +247,39 @@ extension RNCodeScannerView {
   /// - Parameters:
   ///   - image: Captured image from VisionSDK to pass into API
   ///   - barcodes: Detected barcodes from VisionSDK to pass into API
-  ///   - savedImageURL: Captured Image URL that Vision SDK returns to instantly view as thumbnail
-  private func callScanAPIWithImage(withImage image: UIImage, andBarcodes barcodes: [String]) {
+    func getPredictionShippingLabelCloud(withImage image: UIImage, andBarcodes barcodes: [String]) {
     
     var tokenValue: String? = nil
     if let token = token, !token.isEmpty {
       tokenValue = token
     }
-    
+
     VisionAPIManager.shared.callScanAPIWith(image, andBarcodes: barcodes, andApiKey: !VSDKConstants.apiKey.isEmpty ? VSDKConstants.apiKey : nil, andToken: tokenValue, andLocationId: locationId ?? "", andOptions: options ?? [:], andMetaData: metaData ?? [:], andRecipient: recipient ?? [:], andSender: sender ?? [:]
     ) {
-      
       [weak self] data, error in
-      
-      //  if let data = data {
-      //    let json = String(data: data, encoding: String.Encoding.utf8)
-      //  }
-      
       guard let self = self else { return }
-      
       handleAPIResponse(error: error, data: data)
     }
   }
+    /// This Functions takes input params from VisionSDK and calls OCR API and fetch response from the server to pass it to react native app, function is called from the codeScannerView delegate method
+    /// - Parameters:
+    ///   - image: Captured image from VisionSDK to pass into API
+    ///   - barcodes: Detected barcodes from VisionSDK to pass into API
+    ///   - withImageResizing: Resizing
+    func getPredictionBillOfLadingCloud(withImage image: UIImage, andBarcodes barcodes: [String], withImageResizing: Bool) {
+          VisionAPIManager.shared.getPredictionBillOfLadingCloud(image, andBarcodes: barcodes, andApiKey: !VSDKConstants.apiKey.isEmpty ? VSDKConstants.apiKey : "", withImageResizing:withImageResizing) {
+        
+        [weak self] data, error in
+        
+        //  if let data = data {
+        //    let json = String(data: data, encoding: String.Encoding.utf8)
+        //  }
+        
+        guard let self = self else { return }
+        
+        handleAPIResponse(error: error, data: data)
+      }
+    }
   
   /// This Functions takes input params from On-Device VisionSDK flow and calls OCR Matching API to translate response from Platforms format to Receive App format.
   /// - Parameters:
@@ -245,68 +305,77 @@ extension RNCodeScannerView {
   /// - Parameters:
   ///   - error: error received from API
   ///   - data: data received from API
-  func handleAPIResponse(error: NSError?, data: Data?) {
-    
-    // Check if there's an error or response data is nil
-    guard error == nil else {
-      DispatchQueue.main.async {
-        self.callForOCRWithImageFailedWithMessage(message: error?.localizedDescription ?? "")
-      }
-      return
-    }
-    
-    guard let data = data else {
-      DispatchQueue.main.async {
-        self.callForOCRWithImageFailedWithMessage(message: "Data of request was found nil")
-      }
-      return
-    }
-    
-    // _ = (response as! HTTPURLResponse).statusCode
-    
-    DispatchQueue.main.async {
-      
-      do {
+    func handleAPIResponse(error: NSError?, data: Data?) {
+        // Check if there's an error, and log it if present
+        guard error == nil else {
+            // print("API Error:", error?.localizedDescription ?? "Unknown error")
+            DispatchQueue.main.async {
+                self.callForOCRWithImageFailedWithMessage(message: error?.localizedDescription ?? "An unknown error occurred.")
+            }
+            return
+        }
         
-        if let jsonResponse = try JSONSerialization.jsonObject(with: data) as? [String: Any],
-           let responseJson = jsonResponse["data"] {
-          
-          if (try? JSONSerialization.data(withJSONObject: responseJson)) != nil {
-            debugPrint("json response ------------- >",jsonResponse)
-            if let statusCode = jsonResponse["status"] as? Int, (200...205).contains(statusCode) {
-              self.callForOCRWithImageCompletedWithData(data: jsonResponse)
+        // Check if data is nil and log it if so
+        guard let data = data else {
+            // print("API Error: Data of request was found nil.")
+            DispatchQueue.main.async {
+                self.callForOCRWithImageFailedWithMessage(message: "Data of request was found nil.")
             }
-            else {
-              self.callForOCRWithImageFailedWithMessage(message: jsonResponse["message"] as? String ?? "Something went wrong!")
-            }
-          }
+            return
         }
-      }
-      catch let error {
-        do {
-          // create json object from data or use JSONDecoder to convert to Model stuct
-          if let jsonResponse = try JSONSerialization.jsonObject(
-            with: data, options: .mutableContainers) as? [String: Any]
-          {
-            if let message = jsonResponse["message"] as? String {
-              self.callForOCRWithImageFailedWithMessage(message: message)
+        
+        // Parsing JSON response
+        DispatchQueue.main.async {
+            do {
+                // Attempt to parse the data as JSON
+                if let jsonResponse = try JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                    print("Full JSON Response:", jsonResponse) // Print entire JSON response
+                    
+                    // Extract response "data" and "status" fields
+                    if let responseJson = jsonResponse["data"] {
+                        print("Parsed Data Field:", responseJson) // Print extracted data field
+                        
+                        // Check status code and handle success or error accordingly
+                        if let statusCode = jsonResponse["status"] as? Int {
+                            debugPrint("Status Code:", statusCode) // Print status code
+                            
+                            if (200...205).contains(statusCode) {
+                                self.callForOCRWithImageCompletedWithData(data: jsonResponse)
+                            } else {
+                                // Handle error message in case of non-successful status
+                                let errorMessage = jsonResponse["message"] as? String ?? "An unexpected error occurred."
+                                print("Error with status code \(statusCode):", errorMessage)
+                                self.callForOCRWithImageFailedWithMessage(message: errorMessage)
+                            }
+                        } else {
+                            print("Error: Missing or invalid status code in response.")
+                            self.callForOCRWithImageFailedWithMessage(message: "Invalid status code in response.")
+                        }
+                    } else {
+                        print("Error: Data field is missing in the JSON response.")
+                        self.callForOCRWithImageFailedWithMessage(message: "Response data was found nil.")
+                    }
+                }
+            } catch {
+                // Log parsing error details and attempt to extract any available message
+                print("Failed to parse JSON data:", error.localizedDescription)
+                do {
+                    if let jsonResponse = try JSONSerialization.jsonObject(with: data, options: .mutableContainers) as? [String: Any],
+                       let message = jsonResponse["message"] as? String {
+                        print("Message in error JSON:", message)
+                        self.callForOCRWithImageFailedWithMessage(message: message)
+                    } else {
+                        print("Unable to extract message from error JSON.")
+                        self.callForOCRWithImageFailedWithMessage(message: error.localizedDescription)
+                    }
+                } catch {
+                    print("Final Parsing Error:", error.localizedDescription)
+                    self.callForOCRWithImageFailedWithMessage(message: "Failed to parse response data.")
+                }
             }
-            else {
-              self.callForOCRWithImageFailedWithMessage(message: error.localizedDescription)
-            }
-            
-          }
-          else {
-            throw URLError(.badServerResponse)
-          }
         }
-        catch let error {
-          self.callForOCRWithImageFailedWithMessage(message: error.localizedDescription)
-        }
-      }
     }
-  }
-  
+
   /// This function returns the API response/data from here to React Native App as a prop in case of success.
   /// - Parameter data: Data to be sent to the React Native side
   func callForOCRWithImageCompletedWithData(data: [AnyHashable: Any]) {
@@ -638,12 +707,19 @@ extension RNCodeScannerView {
   
   /// Send converted (UIImage to URL) image to client side, via event onImageCaptured
   /// - Parameter savedImageURL: url of the converted image
-  func handleCapturedImage(withImage savedImageURL: URL?) {
+    func handleCapturedImage(withImage savedImageURL: URL?, barcodes: [String], nativeImage: UIImage) {
     if savedImageURL == nil {
       onImageCaptured!(["image": "Nil: URL not found"])
     }
     else {
-      onImageCaptured!(["image": savedImageURL!.path])
+        onImageCaptured!(["image": savedImageURL!.path, "barcodes": barcodes, "nativeImage":nativeImage])
     }
   }
+}
+
+
+
+// Convert UIImage to CIImage if it doesn't already have one
+func convertToCIImage(from uiImage: UIImage) -> CIImage? {
+    return uiImage.ciImage ?? CIImage(image: uiImage)
 }

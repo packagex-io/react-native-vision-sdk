@@ -20,7 +20,6 @@ RCT_EXPORT_VIEW_PROPERTY(zoomLevel, NSNumber)
 RCT_EXTERN_METHOD(captureImage:(nonnull NSNumber *)node)
 RCT_EXTERN_METHOD(stopRunning:(nonnull NSNumber *)node)
 RCT_EXTERN_METHOD(startRunning:(nonnull NSNumber *)node)
-
 RCT_EXTERN_METHOD(setMetaData:(nonnull NSNumber *)node  metaData:(nonnull NSDictionary *)metaData)
 RCT_EXTERN_METHOD(setRecipient:(nonnull NSNumber *)node  recipient:(nonnull NSDictionary *)recipient)
 RCT_EXTERN_METHOD(setSender:(nonnull NSNumber *)node  sender:(nonnull NSDictionary *)sender)
@@ -29,4 +28,19 @@ RCT_EXTERN_METHOD(restartScanning:(nonnull NSNumber *)node)
 RCT_EXTERN_METHOD(setFocusSettings:(nonnull NSNumber *)node focusSettings:(nonnull NSDictionary *)type)
 RCT_EXTERN_METHOD(setObjectDetectionSettings:(nonnull NSNumber *)node objectDetectionSettings:(nonnull NSDictionary *)type)
 RCT_EXTERN_METHOD(setCameraSettings:(nonnull NSNumber *)node cameraSettings:(nonnull NSDictionary *)type)
+// Objective-C method definition
+RCT_EXTERN_METHOD(getPrediction:(nonnull NSNumber *)node
+                  image:(nonnull NSString *)imagePath
+                  barcode:(nonnull NSArray<NSString *> *)barcodeArray)
+RCT_EXTERN_METHOD(getPredictionWithCloudTransformations:(nonnull NSNumber *)node
+                  image:(nonnull NSString *)image
+                  barcode:(nonnull NSArray<NSString *> *)barcode)
+RCT_EXTERN_METHOD(getPredictionShippingLabelCloud:(nonnull NSNumber *)node
+                  image:(nonnull NSString *)image
+                  barcode:(nonnull NSArray<NSString *> *)barcode)
+RCT_EXTERN_METHOD(getPredictionBillOfLadingCloud:(nonnull NSNumber *)node
+                  image:(nonnull NSString *)image
+                  barcode:(nonnull NSArray<NSString *> *)barcode
+                  withImageResizing:(nonnull BOOL *)withImageResizing)
 @end
+

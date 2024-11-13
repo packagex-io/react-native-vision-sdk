@@ -6,30 +6,27 @@ import {
   Modal,
   Text,
   ScrollView,
+  Image,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 
 function ResultView({ visible, result, setResult }: any) {
-  useEffect(() => {
-    console.log('result==------>>>', result);
-  }, [result]);
-  const renderItemView = (heading = '', value = '') => {
-    return (
-      value && (
-        <View style={styles.itemTextContainer}>
-          <Text style={styles.headingTextStyle}>{heading}:</Text>
-          <Text style={styles.answerTextStyle}>{value}</Text>
-        </View>
-      )
-    );
-  };
-  const renderHeadingItemView = (heading = '') => {
-    return (
+  // console.log('result==------>>>', result);
+
+  const renderItemView = (heading = '', value = '') =>
+    value ? (
       <View style={styles.itemTextContainer}>
-        <Text style={styles.subHeadingText}>{heading}:</Text>
+        <Text style={styles.headingTextStyle}>{heading}:</Text>
+        <Text style={styles.answerTextStyle}>{value}</Text>
       </View>
-    );
-  };
+    ) : null;
+
+  const renderHeadingItemView = (heading = '') => (
+    <View style={styles.itemTextContainer}>
+      <Text style={styles.subHeadingText}>{heading}</Text>
+    </View>
+  );
+
   return (
     <Modal animationType="fade" transparent visible={visible}>
       <View style={styles.centeredViewModal}>
@@ -46,44 +43,55 @@ function ResultView({ visible, result, setResult }: any) {
             </View>
           </View>
           <ScrollView>
+            {/* Display basic details */}
             {renderItemView('Account ID', result?.account_id)}
             {renderItemView('Tracking #', result?.tracking_number)}
             {renderItemView('RMA #', result?.rma_number)}
             {renderItemView('Reference Number #', result?.reference_number)}
             {renderItemView('Courier', result?.provider_name)}
             {renderItemView('Weight', result?.weight?.toString())}
-            <>
-              {renderHeadingItemView('Receiver Info')}
-              {renderItemView('Name', result?.recipient?.name)}
-              {renderItemView('Business Name', result?.recipient?.business)}
-              {renderItemView(
-                'Street Address',
-                result?.recipient?.address?.line1
-              )}
-              {renderItemView('City', result?.recipient?.address?.city)}
-              {renderItemView('State', result?.recipient?.address?.state)}
-              {renderItemView(
-                'Zip Code',
-                result?.recipient?.address?.postal_code
-              )}
-              {renderItemView(
-                'Address',
-                result?.recipient?.address?.formatted_address
-              )}
-            </>
-            <>
-              {renderHeadingItemView('Sender Info')}
-              {renderItemView('Name', result?.sender?.name)}
-              {renderItemView('Business Name', result?.sender?.business)}
-              {renderItemView('Street Address', result?.sender?.address?.line1)}
-              {renderItemView('City', result?.sender?.address?.city)}
-              {renderItemView('State', result?.sender?.address?.state)}
-              {renderItemView('Zip Code', result?.sender?.address?.postal_code)}
-              {renderItemView(
-                'Address',
-                result?.sender?.address?.formatted_address
-              )}
-            </>
+            {/* Receiver Info */}
+            {renderHeadingItemView('Receiver Info')}
+            {renderItemView('Name', result?.recipient?.name)}
+            {renderItemView('Business Name', result?.recipient?.business)}
+            {renderItemView(
+              'Street Address',
+              result?.recipient?.address?.line1
+            )}
+            {renderItemView('City', result?.recipient?.address?.city)}
+            {renderItemView('State', result?.recipient?.address?.state)}
+            {renderItemView(
+              'Zip Code',
+              result?.recipient?.address?.postal_code
+            )}
+            {renderItemView(
+              'Address',
+              result?.recipient?.address?.formatted_address
+            )}
+            {/* Sender Info */}
+            {renderHeadingItemView('Sender Info')}
+            {renderItemView('Name', result?.sender?.name)}
+            {renderItemView('Business Name', result?.sender?.business)}
+            {renderItemView('Street Address', result?.sender?.address?.line1)}
+            {renderItemView('City', result?.sender?.address?.city)}
+            {renderItemView('State', result?.sender?.address?.state)}
+            {renderItemView('Zip Code', result?.sender?.address?.postal_code)}
+            {renderItemView(
+              'Address',
+              result?.sender?.address?.formatted_address
+            )}
+
+            {/* Display image if available */}
+            {result?.image_url ? (
+              <View style={styles.imageContainer}>
+                <Image
+                  source={{ uri: result.image_url }}
+                  style={styles.imageStyle}
+                />
+              </View>
+            ) : null}
+
+            {/* Shipment Type */}
             {renderItemView('Shipment Type', result?.type)}
           </ScrollView>
         </View>
@@ -124,16 +132,6 @@ const styles = StyleSheet.create({
   headerView: {
     flexDirection: 'row',
   },
-  descriptionTextStyle: {
-    color: 'white',
-    marginTop: 15,
-    letterSpacing: 2,
-    textAlign: 'center',
-    fontSize: 14,
-    fontWeight: '500',
-    left: 5,
-    textAlignVertical: 'center',
-  },
   centeredViewModal: {
     flex: 1,
     justifyContent: 'center',
@@ -144,6 +142,15 @@ const styles = StyleSheet.create({
     paddingVertical: 40,
     paddingHorizontal: 10,
     height: '100%',
+  },
+  imageContainer: {
+    alignItems: 'center',
+    marginTop: 20,
+  },
+  imageStyle: {
+    width: 200,
+    height: 200,
+    resizeMode: 'contain',
   },
 });
 

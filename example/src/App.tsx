@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   StyleSheet,
@@ -7,87 +7,78 @@ import {
   Vibration,
   Text,
 } from 'react-native';
-import VisionSdkView from 'react-native-vision-sdk';
+import VisionSdkView, { VisionSdkRefProps } from '../../src/index';
 import CameraFooterView from './Components/CameraFooterView';
 import DownloadingProgressView from './Components/DownloadingProgressView';
 import CameraHeaderView from './Components/CameraHeaderView';
 import LoaderView from './Components/LoaderView';
 import ResultView from './Components/ResultView';
 import { PERMISSIONS, RESULTS, request } from 'react-native-permissions';
-import { Float } from 'react-native/Libraries/Types/CodegenTypes';
+import ResultViewBillOfLading from './Components/ResultViewBillOfLading';
 
-interface downloadingProgress {
+// Define interfaces for the state types
+interface DownloadingProgress {
   downloadStatus: boolean;
   progress: number;
 }
-interface detectedDataProps {
+
+interface DetectedDataProps {
   barcode: boolean;
   qrcode: boolean;
   text: boolean;
   document: boolean;
 }
-export default function App() {
-  const visionSdk = React.useRef<any>(null);
+
+const App: React.FC = () => {
+  const visionSdk = useRef<VisionSdkRefProps>(null);
   const [captureMode, setCaptureMode] = useState<'manual' | 'auto'>('manual');
   const [ocrMode, setOcrMode] = useState<
-    'cloud' | 'on-device' | 'on-device-with-translation'
+    'cloud' | 'on-device' | 'on-device-with-translation' | 'bill-of-lading'
   >('cloud');
   const [modelSize, setModelSize] = useState<string>('large');
   const [loading, setLoading] = useState<boolean>(false);
-  const [result, setResult] = useState<any>('');
-
+  const [result, setResult] = useState<string>('');
   const [mode, setMode] = useState<'barcode' | 'qrcode' | 'ocr' | 'photo'>(
     'barcode'
   );
   const [flash, setFlash] = useState<boolean>(false);
-  const [zoomLevel, setZoomLevel] = useState<Float>(1.8);
-  const [detectedData, setDetectedData] = useState<detectedDataProps>({
+  const [zoomLevel, setZoomLevel] = useState<number>(1.8);
+  const [detectedData, setDetectedData] = useState<DetectedDataProps>({
     barcode: false,
     qrcode: false,
     text: false,
     document: false,
   });
-
-  const handleCameraPress = async () => {
-    try {
-      let cameraPermission;
-      if (Platform.OS === 'ios') {
-        cameraPermission = PERMISSIONS.IOS.CAMERA;
-      } else {
-        cameraPermission = PERMISSIONS.ANDROID.CAMERA;
-      }
-
-      const result = await request(cameraPermission);
-
-      if (result === RESULTS.GRANTED) {
-        return true;
-      } else {
-        console.log('Camera Permission Error');
-
-        Alert.alert(
-          'Camera Permission Error',
-          'App needs camera permission to take pictures. Please go to app setting and enable camera permission.'
-        );
-        return false;
-      }
-    } catch (error) {
-      console.log('Error asking for camera permission', error);
-    }
-  };
-
   const [modelDownloadingProgress, setModelDownloadingProgress] =
-    useState<downloadingProgress>({
+    useState<DownloadingProgress>({
       downloadStatus: true,
       progress: 0,
     });
 
+  // Request camera permission on component mount (for Android)
   useEffect(() => {
+    const requestCameraPermission = async () => {
+      const cameraPermission =
+        Platform.OS === 'ios'
+          ? PERMISSIONS.IOS.CAMERA
+          : PERMISSIONS.ANDROID.CAMERA;
+
+      const result = await request(cameraPermission);
+      if (result !== RESULTS.GRANTED) {
+        Alert.alert(
+          'Camera Permission Error',
+          'App needs camera permission to take pictures. Please go to app settings and enable camera permission.'
+        );
+      }
+    };
+
     if (Platform.OS === 'android') {
-      handleCameraPress();
+      requestCameraPermission();
     }
   }, []);
 
-  React.useEffect(() => {
+  // Configure Vision SDK settings
+  useEffect(() => {
     visionSdk?.current?.setFocusSettings({
       shouldDisplayFocusImage: true,
       shouldScanInFocusImageRect: true,
@@ -119,105 +110,87 @@ export default function App() {
     setLoading(false);
   }, []);
 
+  // Capture photo when the button is pressed
   const onPressCapture = () => {
-    if (mode === 'ocr') setLoading(true);
+    if (mode === 'ocr') {
+      setLoading(true);
+      visionSdk?.current?.cameraCaptureHandler();
+      return;
+    }
+
+    visionSdk.current?.restartScanningHandler();
+
     visionSdk?.current?.cameraCaptureHandler();
   };
+  // Toggle flash functionality
   const toggleFlash = (val: boolean) => {
     setFlash(val);
   };
-  function isMultipleOfTen(number: any) {
-    return number % 1 === 0;
-  }
-  useEffect(() => {
-    switch (ocrMode) {
-      case 'on-device':
-      case 'on-device-with-translation': {
-        onPressOnDeviceOcr();
-      }
-    }
-  }, [ocrMode]);
-
-  useEffect(() => {
-    if (flash) {
-      toggleFlash(flash);
-    }
-  }, [flash]);
-  useEffect(() => {
-    console.log('useEffect mode==== > ', mode);
-  }, [mode]);
-  const getMode = () => mode;
+  // Function to configure on-device OCR
   const onPressOnDeviceOcr = (type = 'shipping_label', size = 'large') => {
     visionSdk?.current?.stopRunningHandler();
     setLoading(true);
     visionSdk?.current?.configureOnDeviceModel({
-      type: type,
-      size: size,
+      type,
+      size,
     });
   };
   return (
     <View style={styles.mainContainer}>
       <VisionSdkView
-        refProp={visionSdk}
+        ref={visionSdk}
         ocrMode={ocrMode}
         captureMode={captureMode}
         mode={mode}
         environment="sandbox"
-        apiKey="key_141b2eda27Z0Cm2y0h0P6waB3Z6pjPgrmGAHNSU62rZelUthBEOOdsVTqZQCRVgPLqI5yMPqpw2ZBy2z"
+        locationId="loc_w7rRdYB4zjC6PTXnqnLEtF"
+        apiKey="key_141b2eda27Z0Cm2y0h0P6waB3Z6pjPgrmGAHNSU62rZelUthBEOOdsVTqZQCRVgPLqI5yMPqpw2ZBy2z" // sandbox
+        // apiKey="key_89a819bbe4eMsZqh3lU3QJ4iKH8YtFA0J9Muee6I7Ss3VL3sgu99mRStS5hmol0Xd0ow9UMdvVjTXjg5" //dev
         flash={flash}
         zoomLevel={zoomLevel}
-        onDetected={(e: any) => {
-          setDetectedData(Platform.OS === 'android' ? e : e.nativeEvent);
+        onDetected={(event) => {
+          console.log('onDetected', event);
+          setDetectedData(event);
         }}
-        onBarcodeScan={(e: any) => {
-          console.log('BarCodeScanHandler', e);
+        onBarcodeScan={(event) => {
+          console.log('onBarcodeScan', event);
           setLoading(false);
-          visionSdk?.current?.restartScanningHandler();
+          visionSdk.current?.restartScanningHandler();
         }}
-        onOCRScan={(e: any) => {
-          let scanRes = Platform.OS === 'ios' ? e.nativeEvent.data.data : e;
-          if (Platform.OS === 'android') {
-            const parsedOuterJson = JSON.parse(scanRes.data);
-            scanRes = parsedOuterJson.data;
-          }
-          setResult(scanRes);
+        onOCRScan={(event) => {
+          console.log('onOCRScan', event?.data);
           setLoading(false);
+          setResult(event.data);
           Vibration.vibrate(100);
-          // setTimeout(() => {
-          visionSdk?.current?.restartScanningHandler();
-          // }, 200);
+          visionSdk.current?.restartScanningHandler();
         }}
-        onImageCaptured={(e: any) => {
-          console.log('onImageCaptured==------>>', e);
+        onImageCaptured={(event) => {
+          console.log('onImageCaptured', event);
+          visionSdk.current?.restartScanningHandler();
         }}
-        onModelDownloadProgress={(e: any) => {
-          let response = Platform.OS === 'android' ? e : e.nativeEvent;
-          console.log('ModelDownloadProgress==------>>', response.progress);
-          // if (isMultipleOfTen(Math.floor(response.progress * 100))) {
-          // if (response.progress !== modelDownloadingProgress.progress) {
-          setModelDownloadingProgress(response);
-          // }
-
-          if (response.downloadStatus) {
-            visionSdk?.current?.startRunningHandler();
-          }
-          // }
-          setTimeout(() => {
+        onModelDownloadProgress={(event) => {
+          console.log('onModelDownloadProgress', event);
+          setModelDownloadingProgress(event);
+          if (event.downloadStatus) {
+            visionSdk.current?.startRunningHandler();
             setLoading(false);
-          }, 1000);
+          }
         }}
-        onError={(e: any) => {
-          let error = Platform.OS === 'android' ? e : e.nativeEvent;
+        onError={(error) => {
           console.log('onError', error);
           Alert.alert('ERROR', error?.message);
           setLoading(false);
         }}
       />
-      <ResultView
-        visible={result ? true : false}
-        result={result}
-        setResult={setResult}
-      />
+      {mode == 'ocr' && ocrMode == 'bill-of-lading' ? (
+        <ResultViewBillOfLading
+          visible={!!result}
+          result={result}
+          setResult={setResult}
+        />
+      ) : mode == 'ocr' ? (
+        <ResultView visible={!!result} result={result} setResult={setResult} />
+      ) : null}
       <LoaderView visible={loading} />
       <CameraHeaderView
         detectedData={detectedData}
@@ -225,7 +198,6 @@ export default function App() {
         mode={mode}
         setMode={setMode}
       />
-
       <DownloadingProgressView
         visible={!modelDownloadingProgress.downloadStatus}
         progress={modelDownloadingProgress?.progress}
@@ -245,9 +217,10 @@ export default function App() {
       />
     </View>
   );
-}
+};
 const styles = StyleSheet.create({
   mainContainer: {
     flex: 1,
   },
 });
+export default App;

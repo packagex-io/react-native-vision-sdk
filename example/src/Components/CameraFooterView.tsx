@@ -11,7 +11,35 @@ import OCRSelectionView from './OCRSelectionView';
 import CaptureModesView from './CaptureModesView';
 import ModelSizeSelectionView from './ModelSizeSelectionView';
 
-function CameraFooterView({
+// Define a type for the zoom level
+interface ZoomLevel {
+  id: string;
+  level: number;
+  label: string;
+}
+
+// Define the props type for the CameraFooterView component
+interface CameraFooterViewProps {
+  setCaptureMode: (mode: 'manual' | 'auto') => void;
+  captureMode: string;
+  setOcrMode: (
+    mode:
+      | 'cloud'
+      | 'on-device'
+      | 'on-device-with-translation'
+      | 'bill-of-lading'
+  ) => void;
+  ocrMode: string;
+  onPressCapture: () => void;
+  onPressOnDeviceOcr: () => void;
+  setModelSize: (size: string) => void;
+  modelSize: string;
+  mode: string;
+  zoomLevel: number;
+  setZoomLevel: (level: number) => void;
+}
+
+const CameraFooterView = ({
   setCaptureMode,
   captureMode,
   setOcrMode,
@@ -23,95 +51,102 @@ function CameraFooterView({
   mode,
   zoomLevel,
   setZoomLevel,
-}: any) {
+}: CameraFooterViewProps) => {
+  // Local state to manage visibility of OCR type and size selection
   const [showOcrTypes, setShowOcrTypes] = useState<boolean>(false);
   const [showOcrSize, setShowOcrSize] = useState<boolean>(false);
 
-  const zoomLevels = [
+  // Define the available zoom levels
+  const zoomLevels: ZoomLevel[] = [
     { id: '1', level: 1, label: '1X' },
     { id: '2', level: 1.8, label: '1.8X' },
     { id: '3', level: 2, label: '2X' },
     { id: '4', level: 3, label: '3X' },
   ];
 
-  const renderItem = ({ item }) => (
+  // Render function for zoom level buttons
+  const renderZoomLevelItem = ({ item }: { item: ZoomLevel }) => (
     <TouchableOpacity onPress={() => setZoomLevel(item.level)}>
       <View
-        style={{
-          ...styles.circle,
-          backgroundColor: zoomLevel === item.level ? '#7420E2' : '#000000',
-        }}
+        style={[
+          styles.zoomCircle,
+          {
+            backgroundColor: zoomLevel === item.level ? '#7420E2' : '#444444', // Highlight the active zoom level
+          },
+        ]}
       >
-        <Text style={styles.zoomTextStyle}>{item.label}</Text>
+        <Text style={styles.zoomText}>{item.label}</Text>
       </View>
     </TouchableOpacity>
   );
 
   return (
-    <View style={styles.mainContainer}>
-      <View style={[styles.sideContainer, styles.rotatedIcon]}>
+    <View style={styles.container}>
+      {/* Left side container for OCR mode selection */}
+      <View style={styles.sideContainer}>
         {mode === 'ocr' && (
           <TouchableOpacity
             onPress={() => setShowOcrTypes(true)}
-            style={styles.switchIconContainer}
+            style={styles.ocrModeButton}
           >
-            {/* <Octicons name="arrow-switch" size={30} color="white" /> */}
-            <Text
-              numberOfLines={2}
-              style={{
-                color: 'white',
-                textTransform: 'capitalize',
-              }}
-            >
-              {ocrMode}
-            </Text>
+            <Text style={styles.buttonText}>{ocrMode}</Text>
           </TouchableOpacity>
         )}
       </View>
+
+      {/* Center container for capture mode and zoom controls */}
       <View style={styles.centerContainer}>
         <CaptureModesView
           setCaptureMode={setCaptureMode}
           captureMode={captureMode}
         />
 
-        <View style={styles.zoomOuterView}>
+        <View style={styles.zoomContainer}>
           <FlatList
-            style={styles.zoomContainer}
             data={zoomLevels}
-            contentContainerStyle={{
-              justifyContent: 'center',
-              alignItems: 'center',
-            }}
-            horizontal={true} // Ensures buttons are displayed in a row
+            horizontal
             keyExtractor={(item) => item.id}
-            renderItem={renderItem}
+            renderItem={renderZoomLevelItem}
+            contentContainerStyle={styles.zoomList}
           />
         </View>
 
+        {/* Capture button visible only in manual mode */}
         {captureMode === 'manual' && (
-          <TouchableOpacity onPress={onPressCapture} style={styles.outerCircle}>
-            <View style={styles.innerCircle} />
+          <TouchableOpacity
+            onPress={onPressCapture}
+            style={styles.captureButton}
+          >
+            <View style={styles.innerCaptureButton} />
           </TouchableOpacity>
         )}
       </View>
-      <View style={[styles.sideContainer]}>
-        {ocrMode != 'cloud' && (
+
+      {/* Right side container for model size selection */}
+      <View style={styles.sideContainer}>
+        {ocrMode !== 'cloud' && ocrMode !== 'bill-of-lading' ? (
           <TouchableOpacity
             onPress={() => setShowOcrSize(true)}
-            style={styles.sizeIconContainer}
+            style={styles.sizeButton}
           >
-            <Text style={{ color: 'white' }}>
+            <Text style={styles.buttonText}>
               {modelSize === 'large' ? 'Large' : 'Micro'}
             </Text>
           </TouchableOpacity>
-        )}
+        ) : null}
       </View>
+
+      {/* Additional selection views for OCR types and model size */}
       <OCRSelectionView
         setShowOcrTypes={setShowOcrTypes}
         showOcrTypes={showOcrTypes}
-        setOcrMode={setOcrMode}
+        setOcrMode={(val) => {
+          setOcrMode(val);
+          if (val == 'on-device' || val == 'on-device-with-translation') {
+            onPressOnDeviceOcr();
+          }
+        }}
         ocrMode={ocrMode}
-        onPressOnDeviceOcr={onPressOnDeviceOcr}
       />
       <ModelSizeSelectionView
         setShowOcrSize={setShowOcrSize}
@@ -122,88 +157,94 @@ function CameraFooterView({
       />
     </View>
   );
-}
+};
+
 const styles = StyleSheet.create({
-  switchIconContainer: {
-    maxWidth: 100,
-    backgroundColor: '#7420E2',
-    paddingVertical: 8,
-    paddingHorizontal: 15,
-    borderRadius: 10,
-  },
-  sizeIconContainer: {
-    backgroundColor: '#7420E2',
-    paddingVertical: 10,
-    paddingHorizontal: 10,
-    borderRadius: 10,
-  },
-  rotatedIcon: {
-    flexDirection: 'row',
-  },
-  mainContainer: {
+  container: {
     backgroundColor:
       Platform.OS === 'android' ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.5)',
-    height: 150,
+    height: 180,
     width: '100%',
     flexDirection: 'row',
     justifyContent: 'space-between',
     position: 'absolute',
     bottom: 0,
+    paddingHorizontal: 10,
   },
   sideContainer: {
     width: '30%',
-    height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
   },
   centerContainer: {
     width: '40%',
-    height: '100%',
     justifyContent: 'center',
-    alignContent: 'space-between',
     alignItems: 'center',
-    top: 10,
   },
-  outerCircle: {
+  ocrModeButton: {
+    backgroundColor: '#7420E2',
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  sizeButton: {
+    backgroundColor: '#7420E2',
+    padding: 10,
+    borderRadius: 10,
+  },
+  captureButton: {
     borderColor: 'white',
     borderWidth: 4,
     backgroundColor: 'rgba(0, 0, 0, 0.3)',
     width: 65,
     height: 65,
     borderRadius: 45,
-    overflow: 'hidden',
-    justifyContent: 'center',
-  },
-  innerCircle: {
-    alignSelf: 'center',
-    backgroundColor: 'white',
-    width: 50,
-    height: 50,
-    borderRadius: 30,
-  },
-  circle: {
-    width: 35, // Adjust the width and height as needed
-    height: 30,
-    marginHorizontal: 4,
-    marginVertical: 1,
-    borderRadius: 25, // Half of the width/height to make it a circle
     justifyContent: 'center',
     alignItems: 'center',
   },
-  zoomOuterView: {
-    position: 'absolute',
-    top: -60,
-  },
-  zoomTextStyle: {
-    color: 'white',
-    justifyContent: 'center',
-    textTransform: 'capitalize',
-    fontSize: 14,
+  innerCaptureButton: {
+    backgroundColor: 'white',
+    width: 50,
+    height: 50,
+    borderRadius: 25,
   },
   zoomContainer: {
-    width: '100%',
-    flexDirection: 'row',
-    height: 50,
+    position: 'absolute',
+    top: -60,
+    width: 200,
+  },
+  zoomList: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  zoomCircle: {
+    width: 35,
+    height: 30,
+    marginHorizontal: 4,
+    borderRadius: 25,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  zoomText: {
+    color: 'white',
+    textAlign: 'center',
+    fontSize: 14,
+  },
+  autoOcrButton: {
+    backgroundColor: '#7420E2',
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+    borderRadius: 10,
+    marginTop: 10,
+  },
+  autoOcrActive: {
+    backgroundColor: '#7420E250', // Dimmed color when active
+  },
+  buttonText: {
+    color: 'white',
+    textTransform: 'capitalize',
+    textAlign: 'center',
   },
 });
 
