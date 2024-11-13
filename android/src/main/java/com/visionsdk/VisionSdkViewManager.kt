@@ -454,7 +454,7 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
     val apiManager = ApiManager()
     apiManager.billOfLadingApiCallAsync(
       apiKey = apiKey,
-      token = "",
+      token = token,
       bitmap = bitmap,
       barcodeList = list,
       onScanResult = this
