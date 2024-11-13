@@ -142,10 +142,10 @@ const App: React.FC = () => {
         ocrMode={ocrMode}
         captureMode={captureMode}
         mode={mode}
-        environment="sandbox"
-        locationId="loc_w7rRdYB4zjC6PTXnqnLEtF"
-        apiKey="key_141b2eda27Z0Cm2y0h0P6waB3Z6pjPgrmGAHNSU62rZelUthBEOOdsVTqZQCRVgPLqI5yMPqpw2ZBy2z" // sandbox
-        // apiKey="key_89a819bbe4eMsZqh3lU3QJ4iKH8YtFA0J9Muee6I7Ss3VL3sgu99mRStS5hmol0Xd0ow9UMdvVjTXjg5" //dev
+        environment="staging"
+        locationId=""
+        token=''
+        apiKey=''
         flash={flash}
         zoomLevel={zoomLevel}
         onDetected={(event) => {

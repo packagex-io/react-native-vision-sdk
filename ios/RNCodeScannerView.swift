@@ -267,18 +267,16 @@ extension RNCodeScannerView {
     ///   - barcodes: Detected barcodes from VisionSDK to pass into API
     ///   - withImageResizing: Resizing
     func getPredictionBillOfLadingCloud(withImage image: UIImage, andBarcodes barcodes: [String], withImageResizing: Bool) {
-          VisionAPIManager.shared.getPredictionBillOfLadingCloud(image, andBarcodes: barcodes, andApiKey: !VSDKConstants.apiKey.isEmpty ? VSDKConstants.apiKey : "", withImageResizing:withImageResizing) {
-        
-        [weak self] data, error in
-        
-        //  if let data = data {
-        //    let json = String(data: data, encoding: String.Encoding.utf8)
-        //  }
-        
-        guard let self = self else { return }
-        
-        handleAPIResponse(error: error, data: data)
-      }
+        let tokenValue = token?.isEmpty == false ? token : nil
+        let apiKey = VSDKConstants.apiKey.isEmpty ? nil : VSDKConstants.apiKey
+        VisionAPIManager.shared.getPredictionBillOfLadingCloud(image, andBarcodes: barcodes,andApiKey: apiKey,andToken: tokenValue, withImageResizing: withImageResizing) { 
+          [weak self] data, error in
+            
+            // Early exit if self is deallocated.
+            guard let self = self else { return }
+            
+            handleAPIResponse(error: error, data: data)
+        }
     }
   
   /// This Functions takes input params from On-Device VisionSDK flow and calls OCR Matching API to translate response from Platforms format to Receive App format.
