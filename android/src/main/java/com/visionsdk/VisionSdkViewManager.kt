@@ -502,7 +502,7 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
     lifecycleOwner?.lifecycle?.coroutineScope?.launchOnIO {
       try {
         val onDeviceResponse = getOnDeviceOCRResponse(bitmap, list) ?: return@launchOnIO
-        
+
         val result = ApiManager().matchingApiSync(
           apiKey = apiKey,
           token = token,

@@ -119,33 +119,54 @@ extension RNCodeScannerView: CodeScannerViewDelegate {
 extension RNCodeScannerView {
   
   /// This method initialises and setup On-Device OCR model to detect labels, can be called from client side, will download and prepare model only if scanMode == ocr
-  func configureOnDeviceModel() {
-      setupDownloadOnDeviceOCR { }
-  }
-  
-  /// This Method downloads and prepare offline / On Device OCR for use in the App.
-  /// - Parameter completion: completionHandler
-  func setupDownloadOnDeviceOCR(completion: @escaping () -> Void) {
+ func configureOnDeviceModel() {
+    // Calling the setupDownloadOnDeviceOCR method
+    setupDownloadOnDeviceOCR { 
+        // Completion block after OCR setup
+        // Add any actions you want to take after the OCR is downloaded and prepared
+        debugPrint("On-Device OCR setup completed")
+    }
+}
+
+/// This method downloads and prepares offline / On Device OCR for use in the app.
+/// - Parameter completion: completionHandler
+func setupDownloadOnDeviceOCR(completion: @escaping () -> Void) {
     var tokenValue: String? = nil
     if let token = token, !token.isEmpty {
-      tokenValue = token
+        tokenValue = token
     }
     
-    OnDeviceOCRManager.shared.prepareOfflineOCR(withApiKey: !VSDKConstants.apiKey.isEmpty ? VSDKConstants.apiKey : nil, andToken: tokenValue, forModelClass: onDeviceModelType, withModelSize: onDeviceModelSize) { currentProgress, totalSize in
-      debugPrint(((currentProgress / totalSize) * 100))
-      self.onModelDownloadProgress!(["progress": ((currentProgress / totalSize)), "downloadStatus": false]) // rename this downloadStatus to onSuccessfull completion
+    
+    // Calling the prepareOfflineOCR method with progress tracking
+    OnDeviceOCRManager.shared.prepareOfflineOCR(withApiKey: !VSDKConstants.apiKey.isEmpty ? VSDKConstants.apiKey : nil,
+                                                andToken: tokenValue,
+                                                forModelClass: onDeviceModelType,
+                                                withModelSize: onDeviceModelSize) { currentProgress, totalSize, isModelAlreadyDownloaded in
+        // If the model is already downloaded, set progress to 100% and download status to true
+        if isModelAlreadyDownloaded {
+            self.onModelDownloadProgress!(["progress": (1),
+                                           "downloadStatus": true]) // Indicate that the model is already downloaded
+        } else {
+            // Progress tracking and debugging output
+            debugPrint(String(format: "Download progress: %.2f%%", (currentProgress / totalSize) * 100))
+            
+            // Calling the download progress handler
+            self.onModelDownloadProgress!(["progress": ((currentProgress / totalSize)),
+                                           "downloadStatus": false]) // Update download status to false during download
+        }
     } withCompletion: { error in
-      
-      if error == nil {
-        self.onModelDownloadProgress!(["progress": (1), "downloadStatus": true])
-        completion()
-      }
-      else {
-        self.callForOCRWithImageFailedWithMessage(message: error?.localizedDescription ?? "We got On-Device OCR error!")
-      }
+        // Handling download completion
+        if error == nil {
+            // If no error, set progress to 100% and download status to true
+            self.onModelDownloadProgress!(["progress": (1),
+                                           "downloadStatus": true]) // Indicating successful download completion
+            completion() // Call completion to indicate success
+        } else {
+          self.callForOCRWithImageFailedWithMessage(message: error?.localizedDescription ?? "We got On-Device OCR error!")
+        }
     }
-  }
-  
+}
+
     /// This method pass ciImage of label to downloaded on-device OCR model that extracts informations from label and returns the response
     /// - Parameters:
     ///   - uiImage: uiImage of label that is going to be detected

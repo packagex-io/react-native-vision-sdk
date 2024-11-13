@@ -18,7 +18,7 @@ end
 
 target 'VisionSdkExample' do
   config = use_native_modules!
-pod 'VisionSDK', "1.4.7"
+pod 'VisionSDK', "1.4.8"
   use_react_native!(
     :path => config[:reactNativePath],
  

@@ -53,12 +53,50 @@ export interface VisionSdkViewProps {
 
   /** Capture images with the scan frame */
   captureWithScanFrame?: boolean;
-  onBarcodeScan?: (e: any) => void;
-  onModelDownloadProgress?: (e: any) => void;
-  onImageCaptured?: (e: any) => void;
-  onOCRScan?: (e: any) => void;
-  onDetected?: (e: any) => void;
-  onError?: (e: any) => void;
+
+  /**
+   * Event handler for model download progress updates.
+   * @param event Model download progress information
+   */
+  onModelDownloadProgress: (
+    event: ModelDownloadProgress | { nativeEvent: ModelDownloadProgress }
+  ) => void;
+
+  /**
+   * Event handler for barcode scan events.
+   * @param event Barcode scan result
+   */
+  onBarcodeScan: (
+    event: BarcodeScanResult | { nativeEvent: BarcodeScanResult }
+  ) => void;
+
+  /**
+   * Event handler for image capture events.
+   * @param event Captured image details
+   */
+  onImageCaptured: (
+    event: ImageCaptureEvent | { nativeEvent: ImageCaptureEvent }
+  ) => void;
+
+  /**
+   * Event handler for OCR scan results.
+   * @param event OCR scan result
+   */
+  onOCRScan: (event: OCRScanResult | { nativeEvent: OCRScanResult }) => void;
+
+  /**
+   * Event handler for detection results.
+   * @param event Detection results (e.g., text, barcode, etc.)
+   */
+  onDetected: (
+    event: DetectionResult | { nativeEvent: DetectionResult }
+  ) => void;
+
+  /**
+   * Event handler for error events.
+   * @param event Error details
+   */
+  onError: (event: ErrorResult | { nativeEvent: ErrorResult }) => void;
 }
 
 /**
@@ -269,10 +307,39 @@ export interface VisionSdkProps {
     | 'on-device-with-translation'
     | 'bill-of-lading';
 
-  onModelDownloadProgress?: (_e: any) => void;
-  onBarcodeScan?: (_e: any) => void;
-  onImageCaptured?: (_e: any) => void;
-  onOCRScan?: (_e: any) => void;
-  onDetected?: (_e: any) => void;
-  onError?: (e: any) => void;
+  /**
+   * Event handler for model download progress.
+   * @param event Model download progress details
+   */
+  onModelDownloadProgress?: (event: ModelDownloadProgress) => void;
+
+  /**
+   * Event handler for barcode scan.
+   * @param event Barcode scan result
+   */
+  onBarcodeScan?: (event: BarcodeScanResult) => void;
+
+  /**
+   * Event handler for image capture.
+   * @param event Captured image details
+   */
+  onImageCaptured?: (event: ImageCaptureEvent) => void;
+
+  /**
+   * Event handler for OCR scan result.
+   * @param event OCR scan result
+   */
+  onOCRScan?: (event: OCRScanResult) => void;
+
+  /**
+   * Event handler for detected objects.
+   * @param event Detection results
+   */
+  onDetected?: (event: DetectionResult) => void;
+
+  /**
+   * Event handler for error events.
+   * @param event Error details
+   */
+  onError?: (event: ErrorResult) => void;
 }

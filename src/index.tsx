@@ -9,9 +9,19 @@ import {
   findNodeHandle,
   StyleSheet,
   DeviceEventEmitter,
+  Platform,
 } from 'react-native';
 import { VisionSdkView } from './VisionSdkViewManager';
-import { VisionSdkProps, VisionSdkRefProps } from './types';
+import {
+  VisionSdkProps,
+  VisionSdkRefProps,
+  ModelDownloadProgress,
+  BarcodeScanResult,
+  ImageCaptureEvent,
+  OCRScanResult,
+  DetectionResult,
+  ErrorResult,
+} from './types';
 
 export * from './types';
 // Default SDK options
@@ -58,13 +68,9 @@ const Camera = forwardRef<VisionSdkRefProps, VisionSdkProps>(
       onOCRScan = () => {},
       onDetected = () => {},
       onError = () => {},
-
-      ...rest // Use rest props
     },
     ref
   ) => {
-    console.log({ rest });
-
     // Ref for the Vision SDK View
     const VisionSDKViewRef = useRef(null);
 
@@ -86,6 +92,40 @@ const Camera = forwardRef<VisionSdkRefProps, VisionSdkProps>(
       getPredictionShippingLabelCloud,
       getPredictionBillOfLadingCloud,
     }
+
+    /* Command functions using dispatchCommand helper with name and enum fallback */
+    const dispatchCommand = (
+      commandName: keyof typeof Commands,
+      params: any[] = []
+    ) => {
+      try {
+        // Check if the commandName is valid (exists in the Commands enum)
+        if (!(commandName in Commands)) {
+          throw new Error(`"${commandName}" is not a valid command name.`);
+        }
+        // Attempt to retrieve the command from the VisionSDKView's UIManager configuration. If not found, fall back to using the command from the Commands enum.
+        const command =
+          UIManager.getViewManagerConfig('VisionSDKView')?.Commands[
+            commandName
+          ] ?? Commands[commandName];
+        // If command is not found in either UIManager or Commands, throw an error.
+        if (command === undefined) {
+          throw new Error(
+            `Command "${commandName}" not found in VisionSDKView or Commands.`
+          );
+        }
+        // Dispatch the command with the provided parameters to the native module (VisionSDKView).
+        UIManager.dispatchViewManagerCommand(
+          findNodeHandle(VisionSDKViewRef.current), // Find the native view reference
+          command, // The command to dispatch
+          params // Parameters to pass with the command
+        );
+      } catch (error: any) {
+        console.error(error.message);
+        onError({ message: error.message });
+      }
+    };
+
     // Expose handlers via ref to parent components
     // This allows the parent component to call functions like cameraCaptureHandler, stopRunningHandler, etc.
     useImperativeHandle(ref, () => ({
@@ -105,43 +145,6 @@ const Camera = forwardRef<VisionSdkRefProps, VisionSdkProps>(
       getPredictionShippingLabelCloud,
       getPredictionBillOfLadingCloud,
     }));
-
-    const dispatchCommand = (
-      commandName: keyof typeof Commands,
-      params: any[] = []
-    ) => {
-      if (commandName in Commands) {
-        // Attempt to get the command from the view manager config or fallback to Commands enum
-        const command =
-          UIManager.hasViewManagerConfig('VisionSDKView') &&
-          UIManager.getViewManagerConfig('VisionSDKView').Commands[commandName]
-            ? UIManager.getViewManagerConfig('VisionSDKView').Commands[
-                commandName
-              ]
-            : Commands[commandName];
-
-        // Dispatch the command if it is found
-        if (command !== undefined) {
-          UIManager.dispatchViewManagerCommand(
-            findNodeHandle(VisionSDKViewRef.current),
-            command,
-            params
-          );
-        } else {
-          console.error(
-            `Command "${commandName}" not found in VisionSDKView or Commands.`
-          );
-          onError({
-            message: `Command "${commandName}" not found in VisionSDKView or Commands.`,
-          });
-        }
-      } else {
-        console.error(`"${commandName}" is not a valid command name.`);
-        onError({ message: `"${commandName}" is not a valid command name.` });
-      }
-    };
-
-    // Command functions using dispatchCommand helper with name and enum fallback
 
     // Captures an image using the 'captureImage' command
     const cameraCaptureHandler = () => dispatchCommand('captureImage');
@@ -213,27 +216,67 @@ const Camera = forwardRef<VisionSdkRefProps, VisionSdkProps>(
         withImageResizing,
       ]);
 
-    // Subscribe to events on mount and cleanup on unmount
+    // Subscribe event listeners on mount, and cleanup on unmount
     useEffect(() => {
-      DeviceEventEmitter.addListener(
-        'onModelDownloadProgress',
-        onModelDownloadProgress
+      // Event listener setup
+      const eventListeners = [
+        ['onModelDownloadProgress', onModelDownloadProgressHandler],
+        ['onBarcodeScan', onBarcodeScanHandler],
+        ['onImageCaptured', onImageCapturedHandler],
+        ['onOCRScan', onOCRScanHandler],
+        ['onDetected', onDetectedHandler],
+        ['onError', onErrorHandler],
+      ];
+      // Add listeners
+      eventListeners.forEach(([event, handler]) =>
+        DeviceEventEmitter.addListener(
+          event as string,
+          handler as (event: any) => void
+        )
       );
-      DeviceEventEmitter.addListener('onBarcodeScan', onBarcodeScan);
-      DeviceEventEmitter.addListener('onImageCaptured', onImageCaptured);
-      DeviceEventEmitter.addListener('onOCRScan', onOCRScan);
-      DeviceEventEmitter.addListener('onDetected', onDetected);
-      DeviceEventEmitter.addListener('onError', onError);
 
+      // Cleanup listeners on unmount
       return () => {
-        DeviceEventEmitter.removeAllListeners('onModelDownloadProgress');
-        DeviceEventEmitter.removeAllListeners('onBarcodeScan');
-        DeviceEventEmitter.removeAllListeners('onOCRScan');
-        DeviceEventEmitter.removeAllListeners('onDetected');
-        DeviceEventEmitter.removeAllListeners('onImageCaptured');
-        DeviceEventEmitter.removeAllListeners('onError');
+        eventListeners.forEach(([event]) =>
+          DeviceEventEmitter.removeAllListeners(event as string)
+        );
       };
     }, [mode, ocrMode]);
+
+    // Helper function to handle events
+    const parseNativeEvent = <T,>(event: any): T =>
+      'nativeEvent' in event ? event.nativeEvent : event;
+
+    const onBarcodeScanHandler = (event: any) =>
+      onBarcodeScan(parseNativeEvent<BarcodeScanResult>(event));
+
+    const onModelDownloadProgressHandler = (event: any) =>
+      onModelDownloadProgress(parseNativeEvent<ModelDownloadProgress>(event));
+
+    const onImageCapturedHandler = (event: any) =>
+      onImageCaptured(parseNativeEvent<ImageCaptureEvent>(event));
+
+    const onDetectedHandler = (event: any) =>
+      onDetected(parseNativeEvent<DetectionResult>(event));
+
+    const onErrorHandler = (event: any) =>
+      onError(parseNativeEvent<ErrorResult>(event));
+
+    const onOCRScanHandler = (event: any) => {
+      console.log('OCR Scan Event:', event);
+      let ocrEvent = parseNativeEvent<OCRScanResult>(event);
+      // Parse data only if on Android and the data is a JSON string
+      if (Platform.OS === 'android' && typeof ocrEvent.data === 'string') {
+        try {
+          ocrEvent.data = JSON.parse(ocrEvent.data)?.data ?? ocrEvent.data;
+        } catch (error) {
+          ocrEvent.data = ocrEvent.data?.data ?? ocrEvent.data ?? null;
+        }
+      } else {
+        ocrEvent.data = ocrEvent.data?.data ?? ocrEvent.data ?? null;
+      }
+      onOCRScan(ocrEvent);
+    };
 
     return (
       <>
@@ -251,12 +294,12 @@ const Camera = forwardRef<VisionSdkRefProps, VisionSdkProps>(
           environment={environment}
           flash={flash}
           zoomLevel={zoomLevel}
-          onBarcodeScan={onBarcodeScan}
-          onModelDownloadProgress={onModelDownloadProgress}
-          onImageCaptured={onImageCaptured}
-          onOCRScan={onOCRScan}
-          onDetected={onDetected}
-          onError={onError}
+          onBarcodeScan={onBarcodeScanHandler}
+          onModelDownloadProgress={onModelDownloadProgressHandler}
+          onImageCaptured={onImageCapturedHandler}
+          onOCRScan={onOCRScanHandler}
+          onDetected={onDetectedHandler}
+          onError={onErrorHandler}
         >
           {children}
         </VisionSdkView>

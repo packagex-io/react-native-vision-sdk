@@ -148,106 +148,39 @@ const App: React.FC = () => {
         // apiKey="key_89a819bbe4eMsZqh3lU3QJ4iKH8YtFA0J9Muee6I7Ss3VL3sgu99mRStS5hmol0Xd0ow9UMdvVjTXjg5" //dev
         flash={flash}
         zoomLevel={zoomLevel}
-        onDetected={(e: any) => {
-          setDetectedData(Platform.OS === 'android' ? e : e.nativeEvent);
+        onDetected={(event) => {
+          console.log('onDetected', event);
+          setDetectedData(event);
         }}
-        onBarcodeScan={(e: any) => {
-          console.log('BarCodeScanHandler', e);
+        onBarcodeScan={(event) => {
+          console.log('onBarcodeScan', event);
           setLoading(false);
-          visionSdk?.current?.restartScanningHandler();
+          visionSdk.current?.restartScanningHandler();
         }}
-        onOCRScan={(e: any) => {
-          let scanRes = Platform.OS === 'ios' ? e.nativeEvent.data.data : e;
-          if (Platform.OS === 'android') {
-            const parsedOuterJson = JSON.parse(scanRes.data);
-            scanRes = parsedOuterJson.data;
-          }
-          setResult(scanRes);
+        onOCRScan={(event) => {
+          console.log('onOCRScan', event?.data);
           setLoading(false);
+          setResult(event.data);
           Vibration.vibrate(100);
-          // setTimeout(() => {
-          visionSdk?.current?.restartScanningHandler();
-          // }, 200);
+          visionSdk.current?.restartScanningHandler();
         }}
-        onImageCaptured={(e: any) => {
-          console.log('onImageCaptured==------>>', e);
+        onImageCaptured={(event) => {
+          console.log('onImageCaptured', event);
+          visionSdk.current?.restartScanningHandler();
         }}
-        onModelDownloadProgress={(e: any) => {
-          let response = Platform.OS === 'android' ? e : e.nativeEvent;
-          console.log('ModelDownloadProgress==------>>', response.progress);
-          setModelDownloadingProgress(response);
-
-          if (response.downloadStatus) {
+        onModelDownloadProgress={(event) => {
+          console.log('onModelDownloadProgress', event);
+          setModelDownloadingProgress(event);
+          if (event.downloadStatus) {
             visionSdk.current?.startRunningHandler();
-          }
-          // }
-          setTimeout(() => {
             setLoading(false);
-          }, 1000);
-        }}
-        onError={(e: any) => {
-          setLoading(false);
-          if (mode != 'ocr') {
-            visionSdk.current?.restartScanningHandler();
           }
-          let error = Platform.OS === 'android' ? e : e.nativeEvent;
+        }}
+        onError={(error) => {
           console.log('onError', error);
           Alert.alert('ERROR', error?.message);
+          setLoading(false);
         }}
-        // onDetected={(event) => {
-        //   setDetectedData(event);
-        // }}
-        // onBarcodeScan={(event) => {
-        //   console.log('BarCodeScanHandler', event);
-        //   setLoading(false);
-        //   visionSdk.current?.restartScanningHandler();
-        // }}
-        // onOCRScan={(event) => {
-        //   let scanRes = Platform.OS === 'ios' ? event.data?.data : event?.data;
-        //   console.log({ scanResscanRes: JSON.stringify(scanRes) });
-
-        //   if (Platform.OS === 'android') {
-        //     const parsedOuterJson = JSON.parse(scanRes);
-        //     scanRes = parsedOuterJson.data;
-        //   }
-        //   setResult(scanRes);
-        //   setLoading(false);
-        //   Vibration.vibrate(100);
-        //   visionSdk.current?.restartScanningHandler();
-        // }}
-        // onImageCaptured={(event) => {
-        //   console.log(event?.image, event?.barcodes, event?.nativeImage);
-        //   visionSdk.current?.restartScanningHandler();
-        //   // visionSdk?.current?.getPredictionShippingLabelCloud('https://storage.googleapis.com/px-platform-sandbox-scans/img_n9ABbnrQP1cvbToDbU12gf.jpeg', ["420100079998", "1Z39E57XYW56216130", "4201000692612903038078571004065022"]);
-        //   // visionSdk?.current?.getPrediction(event?.image, event.barcodes);
-        //   // visionSdk?.current?.getPredictionWithCloudTransformations(
-        //   //   event.image,
-        //   //   event.barcodes
-        //   // );
-        //   // visionSdk?.current?.getPredictionShippingLabelCloud(event.image, event.barcodes);
-        //   visionSdk?.current?.getPredictionBillOfLadingCloud(
-        //     event.image,
-        //     event.barcodes,
-        //     true
-        //   );
-        // }}
-        // onModelDownloadProgress={(event) => {
-        //   console.log('ModelDownloadProgress==------>>', event.progress);
-        //   setModelDownloadingProgress(event);
-
-        //   if (event.downloadStatus) {
-        //     visionSdk.current?.startRunningHandler();
-        //   }
-
-        //   setTimeout(() => {
-        //     setLoading(false);
-        //   }, 1000);
-        // }}
-        // onError={(error) => {
-        //   console.log('onError', error);
-        //   Alert.alert('ERROR', error?.message);
-        //   setLoading(false);
-        // }}
       />
       {mode == 'ocr' && ocrMode == 'bill-of-lading' ? (
         <ResultViewBillOfLading
@@ -290,5 +223,4 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 });
-
 export default App;
