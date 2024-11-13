@@ -5,9 +5,7 @@ runs:
   using: composite
   steps:
     - name: Setup Node.js
-      uses: actions/setup-node@v3
-      with:
-        node-version: 18.x
+      uses: actions/setup-node@v4
 
     - name: Install Yarn
       run: |
@@ -18,13 +16,13 @@ runs:
     # Check node_modules
     - name: Check cached node_modules
       id: check-cached-node-modules
-      uses: actions/cache/restore@v4
+      uses: actions/cache@v4
       with:
         path: |
           **/node_modules
         key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
         lookup-only: true
-        
+
     # - name: Cache dependencies
     #   id: yarn-cache
     #   uses: actions/cache@v3
@@ -41,7 +39,6 @@ runs:
       if: ${{ success() && steps.check-cached-node-modules.outputs.cache-hit != 'true' }}
       run: yarn install --frozen-lockfile
 
- 
     # Conditionally Cache node_modules only
     - name: Cache node_modules
       id: cache-node-modules
