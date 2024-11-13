@@ -105,7 +105,7 @@ Here’s an example of setting up the **Vision SDK** for barcode scanning in Rea
 
 ```tsx
 import React, { useEffect, useRef, useState } from 'react';
-import VisionSdkView { VisionSdkRefProps } from 'react-native-vision-sdk';
+import VisionSdkView, { VisionSdkRefProps } from 'react-native-vision-sdk';
 const ScannerView = () => {
   const visionSdk = useRef<VisionSdkRefProps>(null);
 
@@ -436,7 +436,7 @@ Here's how to set up the Vision SDK in your React Native component:
 
 ```tsx
 import React, { useEffect, useRef, useState } from 'react';
-import VisionSdkView { VisionSdkRefProps } from 'react-native-vision-sdk';
+import VisionSdkView, { VisionSdkRefProps } from 'react-native-vision-sdk';
 const ScannerView = () => {
   const visionSdk = useRef<VisionSdkRefProps>(null);
 

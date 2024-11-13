@@ -58,7 +58,7 @@ export interface VisionSdkViewProps {
    * Event handler for model download progress updates.
    * @param event Model download progress information
    */
-  onModelDownloadProgress: (
+  onModelDownloadProgress?: (
     event: ModelDownloadProgress | { nativeEvent: ModelDownloadProgress }
   ) => void;
 
@@ -66,7 +66,7 @@ export interface VisionSdkViewProps {
    * Event handler for barcode scan events.
    * @param event Barcode scan result
    */
-  onBarcodeScan: (
+  onBarcodeScan?: (
     event: BarcodeScanResult | { nativeEvent: BarcodeScanResult }
   ) => void;
 
@@ -74,7 +74,7 @@ export interface VisionSdkViewProps {
    * Event handler for image capture events.
    * @param event Captured image details
    */
-  onImageCaptured: (
+  onImageCaptured?: (
     event: ImageCaptureEvent | { nativeEvent: ImageCaptureEvent }
   ) => void;
 
@@ -82,13 +82,13 @@ export interface VisionSdkViewProps {
    * Event handler for OCR scan results.
    * @param event OCR scan result
    */
-  onOCRScan: (event: OCRScanResult | { nativeEvent: OCRScanResult }) => void;
+  onOCRScan?: (event: OCRScanResult | { nativeEvent: OCRScanResult }) => void;
 
   /**
    * Event handler for detection results.
    * @param event Detection results (e.g., text, barcode, etc.)
    */
-  onDetected: (
+  onDetected?: (
     event: DetectionResult | { nativeEvent: DetectionResult }
   ) => void;
 
@@ -96,7 +96,7 @@ export interface VisionSdkViewProps {
    * Event handler for error events.
    * @param event Error details
    */
-  onError: (event: ErrorResult | { nativeEvent: ErrorResult }) => void;
+  onError?: (event: ErrorResult | { nativeEvent: ErrorResult }) => void;
 }
 
 /**

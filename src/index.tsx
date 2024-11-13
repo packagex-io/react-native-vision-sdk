@@ -3,6 +3,7 @@ import React, {
   useImperativeHandle,
   useRef,
   forwardRef,
+  useCallback,
 } from 'react';
 import {
   UIManager,
@@ -244,20 +245,26 @@ const Camera = forwardRef<VisionSdkRefProps, VisionSdkProps>(
     }, [mode, ocrMode]);
 
     // Helper function to handle events
-    const parseNativeEvent = <T,>(event: any): T =>
-      'nativeEvent' in event ? event.nativeEvent : event;
+    const parseNativeEvent = useCallback(
+      <T,>(event: any): T =>
+        'nativeEvent' in event ? event.nativeEvent : event,
+      []
+    );
 
     const onBarcodeScanHandler = (event: any) =>
       onBarcodeScan(parseNativeEvent<BarcodeScanResult>(event));
 
+    // const onImageCaptured = useCallback((event) =>  console.log('Image Captured:', event), []);
     const onModelDownloadProgressHandler = (event: any) =>
       onModelDownloadProgress(parseNativeEvent<ModelDownloadProgress>(event));
 
     const onImageCapturedHandler = (event: any) =>
       onImageCaptured(parseNativeEvent<ImageCaptureEvent>(event));
 
-    const onDetectedHandler = (event: any) =>
-      onDetected(parseNativeEvent<DetectionResult>(event));
+    const onDetectedHandler = useCallback(
+      (event: any) => onDetected(parseNativeEvent<DetectionResult>(event)),
+      []
+    );
 
     const onErrorHandler = (event: any) =>
       onError(parseNativeEvent<ErrorResult>(event));
