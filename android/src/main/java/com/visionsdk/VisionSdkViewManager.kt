@@ -94,6 +94,9 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
 
   private var flash: Boolean = false // Boolean flag to enable or disable the flash
 
+  private var isMultipleScanEnabled: Boolean = false //  Boolean isMultipleScanEnabled to enable or disable the isMultipleScanEnabled
+
+
   private var lifecycleOwner: LifecycleOwner? = null // LifecycleOwner to manage the camera lifecycle
 
   private var shouldStartScanning = true // Flag to determine if scanning should start automatically
@@ -184,7 +187,7 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
    */
   private fun configureCamera() {
     visionCameraView?.configure(
-      isMultipleScanEnabled = true, // Enable multiple scans
+      isMultipleScanEnabled = isMultipleScanEnabled, // Enable multiple scans
       detectionMode = detectionMode, // Set detection mode
       scanningMode = scanningMode // Set scanning mode
     )
@@ -687,7 +690,7 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
       "medium" -> ModelSize.Medium
       "large" -> ModelSize.Large
       "xlarge" -> ModelSize.XLarge
-      else -> ModelSize.Nano
+      else -> ModelSize.Large
     }
   }
 
@@ -833,6 +836,14 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
     Log.d(TAG, "flash: $flash")
     this.flash = flash
     this.visionCameraView?.setFlashTurnedOn(flash)
+  }
+
+  // React Native property to enable or disable the isMultipleScanEnabled
+  @ReactProp(name = "isMultipleScanEnabled")
+  fun seIsMultipleScanEnabled(view: View, isMultipleScanEnabled: Boolean = false) {
+    Log.d(TAG, "isMultipleScanEnabled: $isMultipleScanEnabled")
+    this.isMultipleScanEnabled = isMultipleScanEnabled
+    visionCameraView?.setMultipleScanEnabled(isMultipleScanEnabled)
   }
 
   // React Native property to set the zoom level on the camera

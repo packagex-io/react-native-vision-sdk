@@ -2,6 +2,52 @@ import { ReactNode } from 'react';
 import { StyleProp, ViewStyle } from 'react-native';
 
 /**
+ * Capture modes for the Vision SDK.
+ */
+export type CaptureMode = 'manual' | 'auto';
+
+/**
+ * Modes for scanning or capturing in the Vision SDK.
+ */
+export type ScanMode =
+  | 'barcode'
+  | 'qrcode'
+  | 'ocr'
+  | 'photo'
+  | 'barCodeOrQRCode';
+
+/**
+ * OCR modes supported by the Vision SDK.
+ */
+export type OCRMode =
+  | 'cloud'
+  | 'on-device'
+  | 'on-device-with-translation'
+  | 'bill-of-lading'
+  | 'item_label';
+
+/**
+ * Environments for the Vision SDK operation.
+ */
+export type Environment = 'dev' | 'qa' | 'staging' | 'prod' | 'sandbox';
+
+/**
+ * Module types for specific Vision SDK functionalities.
+ */
+export type ModuleType = 'item_label' | 'shipping_label' | 'bill_of_lading';
+
+/**
+ * Sizes for the modules used in the Vision SDK.
+ */
+export type ModuleSize =
+  | 'nano'
+  | 'micro'
+  | 'small'
+  | 'medium'
+  | 'large'
+  | 'xlarge';
+
+/**
  * Props for the Vision SDK view component.
  */
 export interface VisionSdkViewProps {
@@ -35,6 +81,9 @@ export interface VisionSdkViewProps {
 
   /** Whether the flash should be enabled or not */
   flash?: boolean;
+
+  /** Whether the flash should be enabled or not */
+  isMultipleScanEnabled?: boolean;
 
   /** Zoom level for scanning or capturing */
   zoomLevel?: number;
@@ -203,7 +252,10 @@ export interface VisionSdkRefProps {
    * Configures the on-device model for processing in the Vision SDK.
    * @param val Configuration for the on-device model
    */
-  configureOnDeviceModel: (val: any) => void;
+  configureOnDeviceModel: (data?: {
+    type?: ModuleType;
+    size?: ModuleSize;
+  }) => void;
 
   /**
    * Gets a prediction based on the provided image and barcode.
@@ -277,10 +329,10 @@ export interface VisionSdkProps {
   reRender?: string;
 
   /** Capture mode (e.g., 'manual' or 'auto') */
-  captureMode?: 'manual' | 'auto';
+  captureMode?: CaptureMode;
 
   /** Mode of scanning (e.g., 'barcode', 'qrcode', 'ocr', etc.) */
-  mode?: 'barcode' | 'qrcode' | 'ocr' | 'photo' | 'barCodeOrQRCode';
+  mode?: ScanMode;
 
   /** Token for SDK authentication */
   token?: string;
@@ -292,21 +344,19 @@ export interface VisionSdkProps {
   options?: Record<string, any>;
 
   /** Environment for SDK operation (e.g., 'dev' or 'qa' or 'staging' or 'prod' or 'sandbox') */
-  environment?: 'dev' | 'qa' | 'staging' | 'prod' | 'sandbox';
+  environment?: Environment;
 
   /** Whether flash should be enabled */
   flash?: boolean;
+
+  /** Whether isMultipleScanEnabled should be enabled */
+  isMultipleScanEnabled?: boolean;
 
   /** Zoom level for scanning or capturing */
   zoomLevel?: number;
 
   /** OCR mode (e.g., cloud, on-device) */
-  ocrMode?:
-    | 'cloud'
-    | 'on-device'
-    | 'on-device-with-translation'
-    | 'bill-of-lading';
-
+  ocrMode?: OCRMode;
   /**
    * Event handler for model download progress.
    * @param event Model download progress details
