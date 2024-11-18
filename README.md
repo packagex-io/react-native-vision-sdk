@@ -350,6 +350,7 @@ Use the `VisionSdkView` component to configure and manage Vision SDK’s feature
 | `token`                   | `string`                                                 | In order to use the OCR API/MODEL, You must set your API key or either an Auth token.                                  |
 | `environment`             | `string: (sandbox, prod)`                                | If you are using OCR mode then you can set your development environment. (Default env is prod)                         |
 | `ocrMode`                 | `string: (cloud, on-device, on-device-with-translation)` | ocrMode defines whether you want to scan using cloud API, on-Device Model or on-Device Model with response translation |
+| `isMultipleScanEnabled`   | `boolean: (true, false)`                                 | You can enable or disable multiple scan mode by using this prop. (Default value is false)                              |
 | `flash`                   | `boolean: (true, false)`                                 | You can turn ON/OFF camera flash by using this prop. (Default value is false)                                          |
 | `zoomLevel`               | `number:  (1 to 5)`                                      | You can set the Zoom value. Zoom value is device dependent. It will be vary between 1 to 5.                            |
 | `locationId`              | `string: (ex# loc_2rpHXFf6ith)`                          | By default your location will get from apiKey or either you can set location id.                                       |

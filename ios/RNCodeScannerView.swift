@@ -31,7 +31,7 @@ class RNCodeScannerView: UIView {
   var sender: [String: Any]? // Dynamic Prop | Optional:
   var scanMode: CodeScannerMode = .barCode // Dynamic Prop | Optional:
   var captureMode: CaptureMode = .manual // Dynamic Prop | Optional:
-  var captureType: CaptureType = .single // Static Prop | Optional:
+  var isMultipleScanEnabled: CaptureType = .single // Static Prop | Optional:
   var sessionPreset: AVCaptureSession.Preset = .high
   
   //MARK: - On-Device OCR Specific Variables
@@ -60,7 +60,7 @@ class RNCodeScannerView: UIView {
     codeScannerView?.stopRunning()
     codeScannerView = CodeScannerView(frame: CGRect(x: 0, y: 0, width: UIScreen.main.bounds.width, height: UIScreen.main.bounds.height))
     self.addSubview(codeScannerView!)
-    codeScannerView!.configure(delegate: self, sessionPreset: sessionPreset, captureMode: captureMode, captureType: captureType, scanMode: scanMode)
+      codeScannerView!.configure(delegate: self, sessionPreset: sessionPreset, captureMode: captureMode, captureType: isMultipleScanEnabled, scanMode: scanMode)
   }
   
   required init?(coder aDecoder: NSCoder) {
@@ -107,7 +107,7 @@ extension RNCodeScannerView: CodeScannerViewDelegate {
                   default:
                       print("default case")
                   }
-    }
+    } 
     else {
       onError!(["message": "Error converting image"])
     }
@@ -471,6 +471,13 @@ extension RNCodeScannerView {
       codeScannerView?.setCaptureModeTo(.manual)
     }
   }
+    
+  /// Handles the isMultipleScanEnabled of the Camera Device
+  /// - Parameter isMultipleScanEnabled: isMultipleScanEnabled can be true or false
+    @objc func setIsMultipleScanEnabled(_ isMultipleScanEnabled: Bool) {
+        self.isMultipleScanEnabled = isMultipleScanEnabled ? .multiple : .single
+        codeScannerView?.setCaptureTypeTo( isMultipleScanEnabled ? .multiple : .single )
+    }
   
   /// API key for each Client, can be seperate for everyone.
   /// - Parameter apiKey: apiKey description
@@ -570,7 +577,7 @@ extension RNCodeScannerView {
       onDeviceModelSize = VSDKModelSize.xlarge
       break
     default:
-      onDeviceModelSize = VSDKModelSize.micro
+      onDeviceModelSize = VSDKModelSize.large
       break
     }
   }

@@ -127,7 +127,10 @@ const App: React.FC = () => {
     setFlash(val);
   };
   // Function to configure on-device OCR
-  const onPressOnDeviceOcr = (type = 'shipping_label', size = 'large') => {
+  const onPressOnDeviceOcr = (
+    type: 'item_label' | 'shipping_label' | 'bill_of_lading' = 'shipping_label',
+    size: 'nano' | 'micro' | 'small' | 'medium' | 'large' | 'xlarge' = 'large'
+  ) => {
     visionSdk?.current?.stopRunningHandler();
     setLoading(true);
     visionSdk?.current?.configureOnDeviceModel({
@@ -141,6 +144,7 @@ const App: React.FC = () => {
         ref={visionSdk}
         ocrMode={ocrMode}
         captureMode={captureMode}
+        isMultipleScanEnabled={true}
         mode={mode}
         environment="staging"
         locationId=""
