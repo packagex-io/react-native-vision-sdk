@@ -8,8 +8,6 @@
 # VSCode
 .vscode/
 jsconfig.json
-# Ignore package-lock.json
-package-lock.json
 
 # Xcode
 #
