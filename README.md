@@ -34,7 +34,7 @@ yarn add react-native-vision-sdk
 1. Open your `ios/Podfile` and add the following line to ensure compatibility:
    ```ruby
    platform :ios, '16.0'  # Vision SDK requires at least iOS 15.0 or higher
-   pod 'VisionSDK', "1.4.8"
+   pod 'VisionSDK', "1.5.1"
    ```
 2. Run `pod install` to install necessary dependencies.
 
@@ -60,6 +60,7 @@ buildscript {
   }
 }
 ```
+
 ## Android Setup
 
 In the `build.gradle` file of your Android project, add the following dependencies for Android integration:
@@ -67,7 +68,7 @@ In the `build.gradle` file of your Android project, add the following dependenci
 ```gradle
 dependencies {
     // Existing dependencies
-    implementation 'com.github.packagexlabs:vision-sdk-android:v2.0.20'
+    implementation 'com.github.packagexlabs:vision-sdk-android:v2.0.25'
     implementation 'com.github.asadullahilyas:HandyUtils:1.1.0'
 }
 ```
@@ -140,7 +141,6 @@ const ScannerView = () => {
     });
     visionSdk?.current?.startRunningHandler();
   }, []);
-
 
   return (
     <VisionSdkView
@@ -225,7 +225,7 @@ visionSdk?.current?.setObjectDetectionSettings({
   isDocumentIndicationOn: true,
   codeDetectionConfidence: 0.5,
   documentDetectionConfidence: 0.5,
-  secondsToWaitBeforeDocumentCapture: 2.0,
+  secondsToWaitBeforeDocumentCapture: 2,
 });
 ```
 
@@ -326,7 +326,7 @@ This method applies cloud processing to analyze Bill of Lading images and associ
  * This method uses cloud processing to get a prediction for a Bill of Lading.
  * @param image The image of the Bill of Lading.
  * @param barcode Array of barcode strings.
- * @param withImageResizing Whether to resize the image (default: true).
+ * @param withImageResizing (Optional) Whether to resize the image (default: true).
  */
 visionSdk.current.getPredictionBillOfLadingCloud(
   image,
@@ -335,32 +335,141 @@ visionSdk.current.getPredictionBillOfLadingCloud(
 );
 ```
 
+### `item_label`
+
+The methods in this section are optimized specifically for item label documents and use cloud processing tailored to the document’s requirements.
+
+#### `getPredictionItemLabelCloud`
+
+This method analyzes item labels using cloud processing, focusing on logistics-specific details.
+
+```js
+/**
+ * This method uses cloud processing to get a prediction for an item label.
+ * @param image The image of the item label.
+ * @param withImageResizing (Optional) Whether to resize the image (default: true).
+ */
+
+visionSdk.current.getPredictionItemLabelCloud(image, withImageResizing);
+```
+
+### `document_classification`
+
+The methods in this section are optimized specifically for document classification documents and use cloud processing tailored to the document’s requirements.
+
+#### `getPredictionDocumentClassificationCloud`
+
+This method is tailored for analyzing document classification images and their associated barcodes using cloud processing.
+
+```js
+/**
+ * This method uses cloud processing to get a prediction for document classification images.
+ * @param image The image of the Bill of Lading.
+ */
+
+visionSdk.current.getPredictionDocumentClassificationCloud(image);
+```
+
+## Error Reporting
+
+### `reportError`
+
+handle errors on the device. It supports capturing relevant UI information and logs for debugging.
+
+```js
+/**
+ * reportError for handling errors on the device.
+ *
+ * @param payload - An object containing the following properties:
+ *   @param reportText - A custom error message.
+ *   @param size - Size of the device module where the error occurred.
+ *   @param type - Type of the device module where the error occurred.
+ *   @param image - (Optional) Captured UI image related to the error.
+ *   @param response - (Optional) Device module response message.
+ */
+visionSdk.current.reportError(data);
+```
+
+## Template Management
+
+### `createTemplate`
+
+This method is used to create a new template for use in cloud predictions.
+
+```typescript
+/**
+ * Creates a new template.
+ */
+visionSdk.current.createTemplate();
+```
+
+### `getAllTemplates`
+
+This method is used to get all saved templates.
+
+```typescript
+/**
+ * Gets all saved templates.
+ */
+visionSdk.current.getAllTemplates();
+```
+
+### `deleteTemplateWithId`
+
+This method is used to delete a specific template by its ID.
+
+```typescript
+/**
+ * Deletes a specific template by its ID.
+ * @param id - The unique identifier of the template to be deleted.
+ */
+visionSdk.current.deleteTemplateWithId(id);
+```
+
+### `deleteAllTemplates`
+
+This method is used to delete all templates from storage.
+
+```typescript
+/**
+ * Deletes all templates from storage.
+ */
+visionSdk.current.deleteAllTemplates();
+```
+
+---
+
 ## Configuration
 
 Use the `VisionSdkView` component to configure and manage Vision SDK’s features.
 
 ### Props
 
-| **Prop**                  | **Type**                                                 | **Description**                                                                                                        |
-| ------------------------- | -------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| `ref`                     | `Function`                                               | Catch the reference of the component to manipulate modes or to access callback functions.                              |
-| `mode`                    | `string: (ocr, barcode, qrcode, barCodeOrQrCode, photo)` | Default mode is ‘barcode’, you can either use other like ocr, qrcode, photo.                                           |
-| `captureMode`             | `string: (manual, auto)`                                 | Default captureMode is ‘manual’, you can either use ‘auto’.                                                            |
-| `apiKey`                  | `string`                                                 | In order to use the OCR API/MODEL, You must set your API key or either an Auth token..                                 |
-| `token`                   | `string`                                                 | In order to use the OCR API/MODEL, You must set your API key or either an Auth token.                                  |
-| `environment`             | `string: (sandbox, prod)`                                | If you are using OCR mode then you can set your development environment. (Default env is prod)                         |
-| `ocrMode`                 | `string: (cloud, on-device, on-device-with-translation)` | ocrMode defines whether you want to scan using cloud API, on-Device Model or on-Device Model with response translation |
-| `isMultipleScanEnabled`   | `boolean: (true, false)`                                 | You can enable or disable multiple scan mode by using this prop. (Default value is false)                              |
-| `flash`                   | `boolean: (true, false)`                                 | You can turn ON/OFF camera flash by using this prop. (Default value is false)                                          |
-| `zoomLevel`               | `number:  (1 to 5)`                                      | You can set the Zoom value. Zoom value is device dependent. It will be vary between 1 to 5.                            |
-| `locationId`              | `string: (ex# loc_2rpHXFf6ith)`                          | By default your location will get from apiKey or either you can set location id.                                       |
-| `options`                 | `Object: {x: number, y: string}`                         | Option contains different other optional parameters you can provide along with the image.                              |
-| `onDetected`              | `function`                                               | Callback for detection events.                                                                                         |
-| `onBarcodeScan`           | `function`                                               | Callback when a barcode is scanned.                                                                                    |
-| `onOCRScan`               | `function`                                               | Callback for OCR events.                                                                                               |
-| `onImageCaptured`         | `function`                                               | Callback for image capture events.                                                                                     |
-| `onModelDownloadProgress` | `function`                                               | Event to monitor model download progress.                                                                              |
-| `onError`                 | `function`                                               | Callback for handling errors.                                                                                          |
+| **Prop**                           | **Type**                                                                                      | **Description**                                                                                                                                                                                                             |
+| ---------------------------------- | --------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ref`                              | `Function`                                                                                    | Catch the reference of the component to manipulate modes or to access callback functions.                                                                                                                                   |
+| `mode`                             | `string: (ocr, barcode, qrcode, barCodeOrQrCode, photo)`                                      | Default mode is ‘barcode’, you can either use other like ocr, qrcode, photo.                                                                                                                                                |
+| `captureMode`                      | `string: (manual, auto)`                                                                      | Default captureMode is ‘manual’, you can either use ‘auto’.                                                                                                                                                                 |
+| `apiKey`                           | `string`                                                                                      | In order to use the OCR API/MODEL, You must set your API key or either an Auth token..                                                                                                                                      |
+| `token`                            | `string`                                                                                      | In order to use the OCR API/MODEL, You must set your API key or either an Auth token.                                                                                                                                       |
+| `environment`                      | `string: (sandbox, prod)`                                                                     | If you are using OCR mode then you can set your development environment. (Default env is prod)                                                                                                                              |
+| `ocrMode`                          | `string: (cloud, on-device, on-device-with-translation, item_label, document_classification)` | ocrMode defines whether you want to scan using cloud API, on-Device Model or on-Device Model with response translation                                                                                                      |
+| `isMultipleScanEnabled`            | `boolean: (true, false)`                                                                      | You can enable or disable multiple scan mode by using this prop. (Default value is false)                                                                                                                                   |
+| `isEnableAutoOcrResponseWithImage` | `boolean: (true, false)`                                                                      | You can enable or disable automatic OCR responses that include the image with the OCR result using the isEnableAutoOcrResponseWithImage property. It accepts a boolean value (true or false), with a default value of true. |
+| `flash`                            | `boolean: (true, false)`                                                                      | You can turn ON/OFF camera flash by using this prop. (Default value is false)                                                                                                                                               |
+| `zoomLevel`                        | `number:  (1 to 5)`                                                                           | You can set the Zoom value. Zoom value is device dependent. It will be vary between 1 to 5.                                                                                                                                 |
+| `locationId`                       | `string: (ex# loc_2rpHXFf6ith)`                                                               | By default your location will get from apiKey or either you can set location id.                                                                                                                                            |
+| `options`                          | `Object: {x: number, y: string}`                                                              | Option contains different other optional parameters you can provide along with the image.                                                                                                                                   |
+| `onDetected`                       | `function`                                                                                    | Callback for detection events.                                                                                                                                                                                              |
+| `onBarcodeScan`                    | `function`                                                                                    | Callback when a barcode is scanned.                                                                                                                                                                                         |
+| `onOCRScan`                        | `function`                                                                                    | Callback for OCR events.                                                                                                                                                                                                    |
+| `onImageCaptured`                  | `function`                                                                                    | Callback for image capture events.                                                                                                                                                                                          |
+| `onModelDownloadProgress`          | `function`                                                                                    | Event to monitor model download progress.                                                                                                                                                                                   |
+| `onError`                          | `function`                                                                                    | Callback for handling errors.                                                                                                                                                                                               |
+| `onCreateTemplate`                 | `function`                                                                                    | Callback event handler that triggers when a template is successfully created.                                                                                                                                               |
+| `onGetTemplates`                   | `function`                                                                                    | Callback event handler that triggers when templates are successfully retrieved.                                                                                                                                             |
+| `onDeleteTemplateById`             | `function`                                                                                    | Callback event handler that triggers when a template is successfully deleted using its ID.                                                                                                                                  |
+| `onDeleteTemplates`                | `function`                                                                                    | Callback event handler that triggers when multiple templates are successfully deleted.                                                                                                                                      |
 
 ---
 
@@ -374,7 +483,12 @@ Triggered when any target (barcode, document, QR code, etc.) is detected.
 
 - **Response**:
   ```json
-  { "barcode": false, "document": false, "qrcode": false, "text": false }
+  {
+    "barcode": false,
+    "document": false,
+    "qrcode": false,
+    "text": false
+  }
   ```
   - `barcode`, `document`, `qrcode`, `text`: Indicates the detection of each type.
 
@@ -384,7 +498,9 @@ Called when a barcode is successfully scanned.
 
 - **Response**:
   ```json
-  { "code": [] }
+  {
+    "code": []
+  }
   ```
   - `code`: The scanned barcode data.
 
@@ -394,7 +510,9 @@ Triggered when OCR detects and returns text.
 
 - **Response**:
   ```json
-  { "data": {} }
+  {
+    "data": {}
+  }
   ```
   - `data`: Text recognized through OCR.
 
@@ -404,7 +522,10 @@ Fires when an image is captured.
 
 - **Response**:
   ```json
-  { "barcodes": [], "image": "/path/to/image" }
+  {
+    "barcodes": [],
+    "image": "/path/to/image"
+  }
   ```
   - `barcodes`: An array of detected barcodes in the image.
   - `image`: File path to the captured image.
@@ -426,7 +547,10 @@ Called when an error occurs.
 
 - **Response**:
   ```json
-  { "code": 1, "message": "" }
+  {
+    "code": 1,
+    "message": ""
+  }
   ```
   - `code`: Error code.
   - `message`: Description of the error.
@@ -473,13 +597,12 @@ const ScannerView = () => {
     visionSdk?.current?.startRunningHandler();
   }, []);
 
-
   return (
     <VisionSdkView
       ref={visionSdk}
       mode="ocr"
       captureMode="manual"
-      ocrMode='cloud'
+      ocrMode="cloud"
       environment="your-environment"
       locationId="your-location-id"
       apiKey="your-api-key"

@@ -10,6 +10,7 @@ import {
 import OCRSelectionView from './OCRSelectionView';
 import CaptureModesView from './CaptureModesView';
 import ModelSizeSelectionView from './ModelSizeSelectionView';
+import { OCRMode } from '../../../src';
 
 // Define a type for the zoom level
 interface ZoomLevel {
@@ -22,14 +23,8 @@ interface ZoomLevel {
 interface CameraFooterViewProps {
   setCaptureMode: (mode: 'manual' | 'auto') => void;
   captureMode: string;
-  setOcrMode: (
-    mode:
-      | 'cloud'
-      | 'on-device'
-      | 'on-device-with-translation'
-      | 'bill-of-lading'
-  ) => void;
-  ocrMode: string;
+  setOcrMode: (mode: OCRMode) => void;
+  ocrMode: OCRMode;
   onPressCapture: () => void;
   onPressOnDeviceOcr: () => void;
   setModelSize: (size: string) => void;
@@ -162,7 +157,7 @@ const CameraFooterView = ({
 const styles = StyleSheet.create({
   container: {
     backgroundColor:
-      Platform.OS === 'android' ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.5)',
+      Platform.OS === 'android' ? 'rgba(0, 0, 0, 0.7)' : 'rgba(0, 0, 0, 0.9)',
     height: 180,
     width: '100%',
     flexDirection: 'row',

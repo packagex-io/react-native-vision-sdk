@@ -1,5 +1,6 @@
 import VisionSDK
 
+@available(iOS 15.0, *)
 @objc(VisionSdkViewManager)
 class VisionSdkViewManager: RCTViewManager {
     
@@ -12,6 +13,37 @@ class VisionSdkViewManager: RCTViewManager {
             }
         }
     }
+    
+       // MARK: - Method to open the template controller for scanning
+       @objc func createTemplate(_ node: NSNumber) {
+           getComponent(node) { component in
+               component?.createTemplate()
+           }
+       }
+       
+    
+
+    // MARK: - Method to fetch saved templates from the RNCodeScannerView
+       @objc func getAllTemplates(_ node: NSNumber) {
+           getComponent(node) { component in
+               component?.getAllTemplates()
+           }
+       }
+
+       // MARK: - Method to delete template with a given ID
+       @objc func deleteTemplateWithId(_ node: NSNumber, id: NSString) {
+           getComponent(node) { component in
+               component?.deleteTemplate(withId: id as String)
+           }
+       }
+
+       // MARK: - Method to delete all templates
+       @objc func deleteAllTemplates(_ node: NSNumber) {
+           getComponent(node) { component in
+               component?.deleteAllTemplates()
+           }
+       }
+
     
     @objc func captureImage(_ node: NSNumber) {
         getComponent(node) { component in
@@ -51,150 +83,210 @@ class VisionSdkViewManager: RCTViewManager {
     
     @objc func configureOnDeviceModel(_ node: NSNumber, onDeviceConfigs: NSDictionary) {
         getComponent(node) { component in
-            if onDeviceConfigs["size"] != nil {
-                component?.setModelSize(onDeviceConfigs["size"] as! NSString)
-            }
-            
-            if onDeviceConfigs["type"] != nil {
-                component?.setModelType(onDeviceConfigs["type"] as! NSString)
-            }
-            component?.configureOnDeviceModel()
+            guard let modelType = (onDeviceConfigs["type"] as? String) else { return }
+            component?.configureOnDeviceModel(modelType: modelType , modelSize: onDeviceConfigs["size"] as? String)
         }
     }
-
-
-    @objc func  getPrediction (_ node: NSNumber, image imagePath: String, barcode barcodeArray: [String]) {
+    
+    
+    @objc func  getPrediction (_ node: NSNumber, image: String, barcode barcodeArray: [String]) {
         getComponent(node) { component in
-              // Load the image (either from a local URI or URL)
-              print("Image Path: \(imagePath)")
-              self.loadImage(from: imagePath) { loadedImage in
+            // Load the image (either from a local URI or URL)
+            print("Image Path: \(image)")
+            self.loadImage(from: image) { loadedImage in
                 // Ensure we have a valid UIImage to send
                 guard let finalImage = loadedImage else {
-                  print("Failed to load image.")
-                  return
+                    print("Failed to load image.")
+                    return
                 }
                 print("Loaded Image: \(finalImage)")
                 // Call onDeviceFlow with the UIImage and barcodes
-                component?.getPrediction(withImage: finalImage, andBarcodes: barcodeArray)
-              }
+                component?.getPrediction(withImage: finalImage, andBarcodes: barcodeArray, imagePath:image)
             }
+        }
     }
     @objc func  getPredictionWithCloudTransformations (_ node: NSNumber, image: String, barcode: [String]) {
         getComponent(node) { component in
-              // Load the image (either from a local URI or URL)
-              print("Image Path: \(image)")
-              self.loadImage(from: image) { loadedImage in
+            // Load the image (either from a local URI or URL)
+            print("Image Path: \(image)")
+            self.loadImage(from: image) { loadedImage in
                 // Ensure we have a valid UIImage to send
                 guard let finalImage = loadedImage else {
-                  print("Failed to load image.")
-                  return
+                    print("Failed to load image.")
+                    return
                 }
                 print("Loaded Image: \(finalImage)")
                 // Call onDeviceFlow with the UIImage and barcodes
-                component?.getPredictionWithCloudTransformations(withImage: finalImage, andBarcodes: barcode)
-              }
+                component?.getPredictionWithCloudTransformations(withImage: finalImage, andBarcodes: barcode, imagePath:image)
             }
+        }
     }
     @objc func getPredictionShippingLabelCloud(_ node: NSNumber, image: String, barcode: [String]) {
         getComponent(node) { component in
-              // Load the image (either from a local URI or URL)
-              print("Image Path: \(image)")
-              self.loadImage(from: image) { loadedImage in
+            // Load the image (either from a local URI or URL)
+            print("Image Path: \(image)")
+            self.loadImage(from: image) { loadedImage in
                 // Ensure we have a valid UIImage to send
                 guard let finalImage = loadedImage else {
-                  print("Failed to load image.")
-                  return
+                    print("Failed to load image.")
+                    return
                 }
                 print("Loaded Image: \(finalImage)")
                 // Call onDeviceFlow with the UIImage and barcodes
-                component?.getPredictionShippingLabelCloud(withImage: finalImage, andBarcodes: barcode)
-              }
+                component?.getPredictionShippingLabelCloud(withImage: finalImage, andBarcodes: barcode, imagePath:image)
             }
+        }
     }
     @objc func getPredictionBillOfLadingCloud(_ node: NSNumber, image: String, barcode: [String], withImageResizing:Bool) {
         getComponent(node) { component in
-              // Load the image (either from a local URI or URL)
-              print("Image Path: \(image)")
-              self.loadImage(from: image) { loadedImage in
+            // Load the image (either from a local URI or URL)
+            print("Image Path: \(image)")
+            self.loadImage(from: image) { loadedImage in
                 // Ensure we have a valid UIImage to send
                 guard let finalImage = loadedImage else {
-                  print("Failed to load image.")
-                  return
+                    print("Failed to load image.")
+                    return
                 }
                 print("Loaded Image: \(finalImage)")
                 // Call onDeviceFlow with the UIImage and barcodes
-                  component?.getPredictionBillOfLadingCloud(withImage: finalImage, andBarcodes: barcode, withImageResizing:withImageResizing)
-              }
-            }
-    }
-
-    // Helper function to load UIImage from a local URI or URL
-        private func loadImage(from imagePath: String, completion: @escaping (UIImage?) -> Void) {
-            var adjustedImagePath = imagePath
-            
-            // Check if the path starts with "file://" and adjust if not
-            if !adjustedImagePath.hasPrefix("file://") {
-                adjustedImagePath = "file://" + adjustedImagePath
-            }
-
-            // Check if the path starts with "http" for remote URLs or "file://" for local files
-            if adjustedImagePath.hasPrefix("http") {
-                // It's a remote URL
-                guard let remoteUrl = URL(string: adjustedImagePath) else {
-                    print("Invalid remote URL.")
-                    completion(nil)
-                    return
-                }
-
-                // Load image from the remote URL
-                let task = URLSession.shared.dataTask(with: remoteUrl) { data, response, error in
-                    if let data = data, error == nil, let image = UIImage(data: data) {
-                        DispatchQueue.main.async {
-                            completion(image)
-                        }
-                    } else {
-                        print("Error loading image from URL: \(error?.localizedDescription ?? "Unknown error")")
-                        DispatchQueue.main.async {
-                            completion(nil)
-                        }
-                    }
-                }
-                task.resume()
-                
-            } else if !adjustedImagePath.isEmpty {
-                // It's a local file
-                guard let localUrl = URL(string: adjustedImagePath) else {
-                    print("Invalid local URL.")
-                    completion(nil)
-                    return
-                }
-
-                // Check if the file exists
-                if !FileManager.default.fileExists(atPath: localUrl.path) {
-                    print("File does not exist at path: \(localUrl.path)")
-                    completion(nil)
-                    return
-                }
-
-                // Load image from the local URL
-                DispatchQueue.global(qos: .default).async {
-                    if let data = try? Data(contentsOf: localUrl), let image = UIImage(data: data) {
-                        DispatchQueue.main.async {
-                            completion(image)
-                        }
-                    } else {
-                        print("Failed to load image from local URL.")
-                        DispatchQueue.main.async {
-                            completion(nil)
-                        }
-                    }
-                }
-            } else {
-                print("Invalid image path. Must start with http or file://.")
-                completion(nil)
+                component?.getPredictionBillOfLadingCloud(withImage: finalImage, andBarcodes: barcode, withImageResizing:withImageResizing, imagePath:image)
             }
         }
+    }
+    @objc func getPredictionItemLabelCloud(_ node: NSNumber, image: String, withImageResizing:Bool) {
+        getComponent(node) { component in
+            // Load the image (either from a local URI or URL)
+            print("Image Path: \(image)")
+            self.loadImage(from: image) { loadedImage in
+                // Ensure we have a valid UIImage to send
+                guard let finalImage = loadedImage else {
+                    print("Failed to load image.")
+                    return
+                }
+                print("Loaded Image: \(finalImage)")
+                // Call onDeviceFlow with the UIImage and barcodes
+                component?.getPredictionItemLabelCloud(withImage: finalImage, withImageResizing:withImageResizing, imagePath:image)
+            }
+        }
+    }
+    
+    @objc func getPredictionDocumentClassificationCloud(_ node: NSNumber, image: String) {
+        getComponent(node) { component in
+            // Load the image (either from a local URI or URL)
+            print("Image Path: \(image)")
+            self.loadImage(from: image) { loadedImage in
+                // Ensure we have a valid UIImage to send
+                guard let finalImage = loadedImage else {
+                    print("Failed to load image.")
+                    return
+                }
+                print("Loaded Image: \(finalImage)")
+                // Call onDeviceFlow with the UIImage and barcodes
+                component?.getPredictionDocumentClassificationCloud(withImage: finalImage, imagePath:image)
+            }
+        }
+    }
+    
+    @objc func reportError (_ node: NSNumber, data: NSDictionary) {
+        getComponent(node) { component in
+            print("Parsed Data: \(data)")
+            let response = data["response"] as? Data
 
+            // Handle image if provided and not an empty string
+                if let imagePath = data["image"] as? String, !imagePath.isEmpty {
+                    self.loadImage(from: imagePath) { loadedImage in
+                        guard let finalImage = loadedImage else {
+                            print("Failed to load image.")
+                            return
+                        }
+                        component?.reportError(
+                            uiImage: finalImage,
+                            reportText: data["reportText"] as? String ?? "",
+                            response: response ?? nil,
+                            modelType: data["type"] as? String ?? "shipping_label",
+                            modelSize: data["size"] as? String ?? "larg"
+                        )
+                    }
+                    return
+                }
+            
+            // If no image, report the error without it
+            component?.reportError(
+                reportText: data["reportText"] as? String ?? "",
+                response: response ?? nil,
+                modelType: data["type"] as? String ?? "shipping_label",
+                modelSize: data["size"] as? String ?? "larg"
+            )
+        }
+    }
+    
+    // Helper function to load UIImage from a local URI or URL
+    private func loadImage(from imagePath: String, completion: @escaping (UIImage?) -> Void) {
+        var adjustedImagePath = imagePath
+        
+//        // Check if the path starts with "file://" and adjust if not
+        if !adjustedImagePath.hasPrefix("file://") {
+            adjustedImagePath = "file://" + adjustedImagePath
+        }
+        
+        // Check if the path starts with "http" for remote URLs or "file://" for local files
+        if adjustedImagePath.hasPrefix("http") {
+            // It's a remote URL
+            guard let remoteUrl = URL(string: adjustedImagePath) else {
+                print("Invalid remote URL.")
+                completion(nil)
+                return
+            }
+            
+            // Load image from the remote URL
+            let task = URLSession.shared.dataTask(with: remoteUrl) { data, response, error in
+                if let data = data, error == nil, let image = UIImage(data: data) {
+                    DispatchQueue.main.async {
+                        completion(image)
+                    }
+                } else {
+                    print("Error loading image from URL: \(error?.localizedDescription ?? "Unknown error")")
+                    DispatchQueue.main.async {
+                        completion(nil)
+                    }
+                }
+            }
+            task.resume()
+            
+        } else if !adjustedImagePath.isEmpty {
+            // It's a local file
+            guard let localUrl = URL(string: adjustedImagePath) else {
+                print("Invalid local URL.")
+                completion(nil)
+                return
+            }
+            
+            // Check if the file exists
+            if !FileManager.default.fileExists(atPath: localUrl.path) {
+                print("File does not exist at path: \(localUrl.path)")
+                completion(nil)
+                return
+            }
+            
+            // Load image from the local URL
+            DispatchQueue.global(qos: .default).async {
+                if let data = try? Data(contentsOf: localUrl), let image = UIImage(data: data) {
+                    DispatchQueue.main.async {
+                        completion(image)
+                    }
+                } else {
+                    print("Failed to load image from local URL.")
+                    DispatchQueue.main.async {
+                        completion(nil)
+                    }
+                }
+            }
+        } else {
+            print("Invalid image path. Must start with http or file://.")
+            completion(nil)
+        }
+    }
+    
     @objc func restartScanning(_ node: NSNumber) {
         getComponent(node) { component in
             component?.codeScannerView?.rescan()
@@ -212,7 +304,7 @@ class VisionSdkViewManager: RCTViewManager {
                let image = UIImage(data: imageData) {
                 updatedFocusSettings.focusImage = image
             }
-
+            
             if let focusImageRectDict = focusSettings["focusImageRect"] as? NSDictionary,
                let x = focusImageRectDict["x"] as? CGFloat,
                let y = focusImageRectDict["y"] as? CGFloat,
@@ -220,72 +312,72 @@ class VisionSdkViewManager: RCTViewManager {
                let height = focusImageRectDict["height"] as? CGFloat {
                 updatedFocusSettings.focusImageRect = CGRect(x: x, y: y, width: width, height: height)
             }
-
+            
             if let shouldDisplayFocusImage = focusSettings["shouldDisplayFocusImage"] as? Bool {
                 updatedFocusSettings.shouldDisplayFocusImage = shouldDisplayFocusImage
             }
-
+            
             if let shouldScanInFocusImageRect = focusSettings["shouldScanInFocusImageRect"] as? Bool {
                 updatedFocusSettings.shouldScanInFocusImageRect = shouldScanInFocusImageRect
             }
-
+            
             if let showCodeBoundariesInMultipleScan = focusSettings["showCodeBoundariesInMultipleScan"] as? Bool {
                 updatedFocusSettings.showCodeBoundariesInMultipleScan = showCodeBoundariesInMultipleScan
             }
-
+            
             if let showDocumentBoundaries = focusSettings["showDocumentBoundaries"] as? Bool {
                 updatedFocusSettings.showDocumentBoundries = showDocumentBoundaries
             }
-
+            
             if let _ = focusSettings["validCodeBoundaryBorderColor"] as? String {
                 if let color = UIColor(hex: focusSettings["validCodeBoundaryBorderColor"] as! String) {
                     updatedFocusSettings.validCodeBoundryBorderColor = color
                 }
             }
-
+            
             if let validCodeBoundaryBorderWidth = focusSettings["validCodeBoundaryBorderWidth"] as? NSNumber {
                 updatedFocusSettings.validCodeBoundryBorderWidth = CGFloat(validCodeBoundaryBorderWidth.floatValue)
             }
-
+            
             if let _ = focusSettings["validCodeBoundaryFillColor"] as? String {
                 if let color = UIColor(hex: focusSettings["validCodeBoundaryFillColor"] as! String) {
                     updatedFocusSettings.validCodeBoundryFillColor = color
                 }
             }
-
+            
             if let _ = focusSettings["inValidCodeBoundaryBorderColor"] as? String {
                 if let color = UIColor(hex: focusSettings["inValidCodeBoundaryBorderColor"] as! String) {
                     updatedFocusSettings.inValidCodeBoundryBorderColor = color
                 }
             }
-
+            
             if let inValidCodeBoundaryBorderWidth = focusSettings["inValidCodeBoundaryBorderWidth"] as? NSNumber {
                 updatedFocusSettings.inValidCodeBoundryBorderWidth = CGFloat(inValidCodeBoundaryBorderWidth.floatValue)
             }
-
+            
             if let _ = focusSettings["inValidCodeBoundaryFillColor"] as? String {
                 if let color = UIColor(hex: focusSettings["inValidCodeBoundaryFillColor"] as! String) {
                     updatedFocusSettings.inValidCodeBoundryFillColor = color
                 }
             }
-
+            
             if let _ = focusSettings["documentBoundaryBorderColor"] as? String {
                 if let color = UIColor(hex: focusSettings["documentBoundaryBorderColor"] as! String) {
                     updatedFocusSettings.documentBoundryBorderColor = color
                 }
             }
-
+            
             if let _ = focusSettings["documentBoundaryFillColor"] as? String {
                 let color = UIColor(hex: focusSettings["documentBoundaryFillColor"] as! String, alpha: 0.4)
                 updatedFocusSettings.documentBoundryFillColor = color
             }
-
+            
             if let _ = focusSettings["focusImageTintColor"] as? String {
                 if let color = UIColor(hex: focusSettings["focusImageTintColor"] as! String) {
                     updatedFocusSettings.focusImageTintColor = color
                 }
             }
-
+            
             if let _ = focusSettings["focusImageHighlightedColor"] as? String {
                 if let color = UIColor(hex: focusSettings["focusImageHighlightedColor"] as! String) {
                     updatedFocusSettings.focusImageHighlightedColor = color
@@ -305,40 +397,40 @@ class VisionSdkViewManager: RCTViewManager {
             if let isTextIndicationOn = objectDetectionSettings["isTextIndicationOn"] as? Bool {
                 detectionSettings.isTextIndicationOn = isTextIndicationOn
             }
-
+            
             if let isBarCodeOrQRCodeIndicationOn = objectDetectionSettings["isBarCodeOrQRCodeIndicationOn"] as? Bool {
                 detectionSettings.isBarCodeOrQRCodeIndicationOn = isBarCodeOrQRCodeIndicationOn
             }
-
+            
             if let isDocumentIndicationOn = objectDetectionSettings["isDocumentIndicationOn"] as? Bool {
                 detectionSettings.isDocumentIndicationOn = isDocumentIndicationOn
             }
-
+            
             if let codeDetectionConfidence = objectDetectionSettings["codeDetectionConfidence"] as? Float {
                 detectionSettings.codeDetectionConfidence = codeDetectionConfidence
             }
-
+            
             if let documentDetectionConfidence = objectDetectionSettings["documentDetectionConfidence"] as? Float {
                 detectionSettings.documentDetectionConfidence = documentDetectionConfidence
             }
-
+            
             if let secondsToWaitBeforeDocumentCapture = objectDetectionSettings["secondsToWaitBeforeDocumentCapture"] as? Double {
                 detectionSettings.secondsToWaitBeforeDocumentCapture = secondsToWaitBeforeDocumentCapture
             }
-
-//            if let selectedTemplateId = objectDetectionSettings["selectedTemplateId"] as? String {
-//                detectionSettings.selectedTemplateId = selectedTemplateId
-//            }
-
+            
+            //            if let selectedTemplateId = objectDetectionSettings["selectedTemplateId"] as? String {
+            //                detectionSettings.selectedTemplateId = selectedTemplateId
+            //            }
+            
             component?.codeScannerView?.objectDetectionConfiguration = detectionSettings
         }
     }
     
     @objc func setCameraSettings(_ node: NSNumber, cameraSettings: NSDictionary) {
-       
+        
         getComponent(node) { component in
             let updatedCameraSettings = VisionSDK.CodeScannerView.CameraSettings()
-
+            
             // Update and print each setting
             if let nthFrameToProcess = cameraSettings["nthFrameToProcess"] as? Int {
                 updatedCameraSettings.nthFrameToProcess = Int64(nthFrameToProcess)
@@ -347,7 +439,7 @@ class VisionSdkViewManager: RCTViewManager {
             component?.codeScannerView?.cameraSettings = updatedCameraSettings
         }
     }
-
+    
     
     
     override func view() -> UIView! {
@@ -367,11 +459,11 @@ extension UIColor {
     
     convenience init?(hex: String) {
         var hexSanitized = hex.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
-
+        
         if hexSanitized.hasPrefix("#") {
             hexSanitized.remove(at: hexSanitized.startIndex)
         }
-
+        
         guard hexSanitized.count == 6 else { return nil }
         
         if hexSanitized.count != 6 {
@@ -390,20 +482,20 @@ extension UIColor {
     }
     
     convenience init(hex: String, alpha: CGFloat = 1.0) {
-           var hexFormatted: String = hex.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
-           
-           if hexFormatted.hasPrefix("#") {
-               hexFormatted.remove(at: hexFormatted.startIndex)
-           }
-           
-           var rgbValue: UInt64 = 0
-           Scanner(string: hexFormatted).scanHexInt64(&rgbValue)
-           
-           let red = CGFloat((rgbValue & 0xFF0000) >> 16) / 255.0
-           let green = CGFloat((rgbValue & 0x00FF00) >> 8) / 255.0
-           let blue = CGFloat(rgbValue & 0x0000FF) / 255.0
-           
-           self.init(red: red, green: green, blue: blue, alpha: alpha)
-       }
+        var hexFormatted: String = hex.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+        
+        if hexFormatted.hasPrefix("#") {
+            hexFormatted.remove(at: hexFormatted.startIndex)
+        }
+        
+        var rgbValue: UInt64 = 0
+        Scanner(string: hexFormatted).scanHexInt64(&rgbValue)
+        
+        let red = CGFloat((rgbValue & 0xFF0000) >> 16) / 255.0
+        let green = CGFloat((rgbValue & 0x00FF00) >> 8) / 255.0
+        let blue = CGFloat(rgbValue & 0x0000FF) / 255.0
+        
+        self.init(red: red, green: green, blue: blue, alpha: alpha)
+    }
 }
 

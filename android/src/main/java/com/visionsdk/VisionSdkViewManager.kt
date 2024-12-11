@@ -1,6 +1,7 @@
 package com.visionsdk
 
 import android.content.Context
+import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Color
@@ -57,6 +58,11 @@ import android.os.Looper
 import java.io.InputStream
 import java.net.HttpURLConnection
 import java.net.URL
+import io.packagex.visionsdk.ui.startCreateTemplateScreen
+import androidx.activity.ComponentActivity
+import androidx.fragment.app.FragmentActivity
+import androidx.fragment.app.FragmentManager
+import java.io.FileInputStream
 
 // VisionSdkViewManager is a class responsible for managing the Vision SDK view component within
 // a React Native application. It connects native Vision SDK functionality with React Native through a bridge.
@@ -96,6 +102,7 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
 
   private var isMultipleScanEnabled: Boolean = false //  Boolean isMultipleScanEnabled to enable or disable the isMultipleScanEnabled
 
+  private var isEnableAutoOcrResponseWithImage : Boolean? = false //  Boolean isMultipleScanEnabled to enable or disable the isMultipleScanEnable
 
   private var lifecycleOwner: LifecycleOwner? = null // LifecycleOwner to manage the camera lifecycle
 
@@ -105,7 +112,9 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
 
   private var onDeviceOCRManager: OnDeviceOCRManager? = null // OCR manager for on-device OCR processing
 
-  private var modelSize: ModelSize = ModelSize.Large // Model size for on-device OCR (Large/Small)
+  private var modelSize: ModelSize? = null // Model size for on-device OCR (Large/Small)
+
+  private var imagePath: String? = "" // Image Path
 
   private var modelType: ModelClass = ModelClass.ShippingLabel // Model type for OCR processing (ShippingLabel, Invoice, etc.)
 
@@ -298,6 +307,109 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
     }
   }
 
+  private fun reportError(data: ReadableMap?) {
+    if (data == null) {
+      Log.e(TAG, "reportError: Data is null")
+      return
+    }
+
+    // Extension function to safely convert Any to Map<String, Any?>
+    fun Any?.asStringMap(): Map<String, Any?>? {
+      return if (this is Map<*, *>) {
+        this.entries
+          .filter { it.key is String }  // Only include entries with String keys
+          .associate { it.key as String to it.value }  // Safe cast of key to String
+      } else {
+        null
+      }
+    }
+
+    // Convert ReadableMap to a Kotlin Map
+    val parsedData = data.toHashMap()
+
+    // Extract properties with default values
+    val reportText = parsedData["reportText"] as? String ?: "No Report Text"
+    val modelType = parsedData["type"] as? String ?: "shipping_label"
+    val modelSize = parsedData["size"] as? String ?: "large"
+    val imagePath = parsedData["image"] as? String
+
+    // Safely handle 'response' as Map<String, Any?> or null
+    val response = parsedData["response"]?.asStringMap()
+
+    // Log all properties for debugging
+    Log.d(TAG, """
+        Report Error:
+        - Report Text: $reportText
+        - Model Type: $modelType
+        - Model Size: $modelSize
+        - Image Path: $imagePath
+        - Response: $response
+    """.trimIndent())
+
+    // Convert image path to Base64 if available
+    val base64Image = imagePath?.let { convertImageToBase64(it) }
+
+    // API call
+    val apiManager = ApiManager()
+    apiManager.reportAnIssueAsync(
+      context = appContext, // Replace with your application context or required context
+      apiKey = apiKey,      // Replace with the actual API key
+      token = token,        // Replace with the actual token
+      platformType = PlatformType.ReactNative, // Assuming platform is Android, adjust as needed
+      modelClass = getModelType(modelType),
+      modelSize = getModelSize(modelSize),
+      report = reportText,
+      customData = response,
+      base64ImageToReportOn = base64Image,
+      onComplete = { result ->
+        // Handle completion result here
+        Log.d(TAG, "Report completed with result: $result")
+      }
+    )
+  }
+
+  // Function to convert image to Base64
+  private fun convertImageToBase64(inputPath: String): String? {
+    return try {
+      Log.d(TAG, "Input path: $inputPath")
+
+      // Check if the input path is a URL
+      if (inputPath.startsWith("http://") || inputPath.startsWith("https://")) {
+        // Handle remote URL
+        val url = URL(inputPath)
+        val connection = url.openConnection() as HttpURLConnection
+        connection.doInput = true
+        connection.connect()
+        val inputStream = connection.inputStream
+        val bytes = inputStream.readBytes()
+        inputStream.close()
+        Base64.encodeToString(bytes, Base64.DEFAULT)
+      } else {
+        // Handle local file path
+        val correctedPath = if (inputPath.startsWith("file://")) {
+          inputPath.removePrefix("file://")
+        } else {
+          inputPath
+        }
+
+        val file = File(correctedPath)
+        if (!file.exists()) {
+          Log.e(TAG, "File does not exist at the specified path: $correctedPath")
+          null
+        } else {
+          Log.d(TAG, "File found: ${file.absolutePath}, Readable: ${file.canRead()}")
+          val inputStream = FileInputStream(file)
+          val bytes = inputStream.readBytes()
+          inputStream.close()
+          Base64.encodeToString(bytes, Base64.DEFAULT)
+        }
+      }
+    } catch (e: Exception) {
+      Log.e(TAG, "Error converting image to Base64: ${e.message}", e)
+      null
+    }
+  }
+
   /**
    * Sets focus settings for the camera if the camera is started, using the focus region manager.
    */
@@ -356,34 +468,39 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
   }
 
   /**
-   * Callback function triggered when an image is captured, saving the image and sending a corresponding event to JavaScript.
-   * Based on the detection and OCR modes, it calls the appropriate prediction method.
+   * Callback function triggered when an image is captured.
+   * Saves the image, sends a corresponding event to JavaScript,
+   * and processes the image based on detection and OCR modes.
    * @param bitmap - Captured image as a Bitmap
    * @param value - List of detected values (e.g., barcodes)
    */
   override fun onImageCaptured(bitmap: Bitmap, value: List<String>) {
     Log.d(TAG, "onImageCaptured: ")
+    this.imagePath = ""
+    val image = saveBitmapAndSendEvent(bitmap, value)
+    // Check if OCR mode is enabled and auto-response is required
+    if (detectionMode == DetectionMode.OCR && isEnableAutoOcrResponseWithImage == true) {
+      this.imagePath = image
+      handleOcrMode(bitmap, value)
+    }
+  }
 
-    saveBitmapAndSendEvent(bitmap, value)
-
-    if (detectionMode == DetectionMode.OCR) {
-      when (ocrMode) {
-        "on-device" -> {
-          getPrediction(bitmap, value)
-        }
-
-        "on-device-with-translation" -> {
-          getPredictionWithCloudTransformations(bitmap, value)
-        }
-
-        "cloud" -> {
-          getPredictionShippingLabelCloud(bitmap, value)
-        }
-
-        "bill-of-lading" -> {
-          getPredictionBillOfLadingCloud(bitmap, value)
-        }
-      }
+  /**
+   * Handles OCR processing based on the specified OCR mode.
+   * Calls the appropriate prediction method for the given mode.
+   *
+   * @param bitmap Captured image as a Bitmap.
+   * @param value List of detected values (e.g., barcodes, QR codes).
+   */
+  private fun handleOcrMode(bitmap: Bitmap, value: List<String>) {
+    when (ocrMode) {
+      "on-device" -> getPrediction(bitmap, value)
+      "on-device-with-translation" -> getPredictionWithCloudTransformations(bitmap, value)
+      "cloud" -> getPredictionShippingLabelCloud(bitmap, value)
+      "bill-of-lading" -> getPredictionBillOfLadingCloud(bitmap, value)
+      "item_label" -> getPredictionItemLabelCloud(bitmap)
+      "document_classification" -> getPredictionDocumentClassificationCloud(bitmap)
+      else -> Log.w(TAG, "Unsupported OCR mode: $ocrMode")
     }
   }
 
@@ -393,7 +510,7 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
    * @param bitmap - Bitmap to be saved
    * @param barcode - List of detected barcodes
    */
-  private fun saveBitmapAndSendEvent(bitmap: Bitmap, barcode: List<String>) {
+  private fun saveBitmapAndSendEvent(bitmap: Bitmap, barcode: List<String>): String {
     val parentDir = File(context?.filesDir, "VisionSdkSavedBitmaps")
     parentDir.mkdirs()
 
@@ -421,10 +538,13 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
       putString("image", savedBitmapFile.toUri().toString())
       putArray("barcodes", Arguments.fromList(barcode))
     }
-// Emit the event to JavaScript listeners for onImageCaptured
+    // Emit the event to JavaScript listeners for onImageCaptured
     appContext
       .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
       .emit("onImageCaptured", event)
+
+    // Return the image path as a string
+    return savedBitmapFile.absolutePath
   }
 
   /**
@@ -458,8 +578,38 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
     apiManager.billOfLadingApiCallAsync(
       apiKey = apiKey,
       token = token,
+      locationId = locationId,
+      options = options ?: emptyMap(),
       bitmap = bitmap,
       barcodeList = list,
+      onScanResult = this
+    )
+  }
+
+   /**
+   * Sends a item label prediction request to the cloud API using an image bitmap and barcode list.
+   * @param bitmap - The image to be sent for prediction
+   */
+  private fun getPredictionItemLabelCloud(bitmap: Bitmap) {
+    val apiManager = ApiManager()
+    apiManager.itemLabelApiCallAsync(
+      apiKey = apiKey,
+      token = token,
+      bitmap = bitmap,
+      onScanResult = this
+    )
+  }
+
+   /**
+   * Sends a item label prediction request to the cloud API using an image bitmap and barcode list.
+   * @param bitmap - The image to be sent for prediction
+   */
+  private fun getPredictionDocumentClassificationCloud(bitmap: Bitmap) {
+    val apiManager = ApiManager()
+    apiManager.documentClassificationApiCallAsync(
+      apiKey = apiKey,
+      token = token,
+      bitmap = bitmap,
       onScanResult = this
     )
   }
@@ -500,7 +650,7 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
    */
   private fun getPredictionWithCloudTransformations(
     bitmap: Bitmap,
-    list: List<String>
+    list: List<String>,
   ) {
     lifecycleOwner?.lifecycle?.coroutineScope?.launchOnIO {
       try {
@@ -565,41 +715,6 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
     }
   }
 
-  override fun getCommandsMap(): Map<String?, Int?> {
-//    Log.d(TAG, "getCommandsMap: ")
-    return mapOf(
-      "captureImage" to
-        0,
-      "stopRunning" to
-        1,
-      "startRunning" to
-        2,
-      "setMetaData" to
-        3,
-      "setRecipient" to
-        4,
-      "setSender" to
-        5,
-      "configureOnDeviceModel" to
-        6,
-      "restartScanning" to
-        7,
-      "setFocusSettings" to
-        8,
-      "setObjectDetectionSettings" to
-        9,
-      "setCameraSettings" to
-        10,
-      "getPrediction" to
-        11,
-      "getPredictionWithCloudTransformations" to
-        12,
-      "getPredictionShippingLabelCloud" to
-        13,
-      "getPredictionBillOfLadingCloud" to
-        14,
-    )
-  }
 
   // The receiveCommand method handles different commands from React Native to native code.
   override fun receiveCommand(
@@ -611,7 +726,7 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
     Assertions.assertNotNull(view)
     Assertions.assertNotNull(args)
     // Handle each command type based on the provided `commandType`.
-    when (commandType?.toInt()) {
+    when (commandType) {
       0 -> captureImage()  // Command to capture an image.
       1 -> stopScanning()  // Command to stop scanning.
       2 -> startCamera()   // Command to start the camera.
@@ -627,10 +742,15 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
       12 -> handleDevicePredictionWithCloudTransformations(args)  // Command to handle cloud-based prediction.
       13 -> handleCloudPrediction(args)  // Command for shipping label prediction.
       14 -> handlePredictionBillOfLadingCloud(args)  // Command for bill of lading prediction.
+      15 -> handlePredictionItemLabelCloud(args)  // Command for item label prediction.
+      16 -> handlePredictionDocumentClassificationCloud(args)  // Command for document classification prediction.
+      17 -> reportError(args?.getMap(0))  // Command for Reports errors for on-device.
+      18 -> createTemplate()  // Command for creates a new template.
+      19 -> getAllTemplates()  // Command for get all saved templates.
+      20 -> deleteTemplateWithId(args)  // Command for delete a specific template by its ID.
+      21 -> deleteAllTemplates()  // Command for delete all templates from storage.
       else -> throw IllegalArgumentException("Unsupported command $commandType received.")  // Invalid command.
     }
-
-
   }
 
   // Capture image from the camera
@@ -690,9 +810,22 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
       "medium" -> ModelSize.Medium
       "large" -> ModelSize.Large
       "xlarge" -> ModelSize.XLarge
-      else -> ModelSize.Large
+      else -> null
     }
   }
+
+  fun getModelSize(modelSize: String?): ModelSize {
+    Log.d(TAG, "modelSize: $modelSize")
+    return when (modelSize?.lowercase()) {
+        "nano" -> ModelSize.Nano
+        "micro" -> ModelSize.Micro
+        "small" -> ModelSize.Small
+        "medium" -> ModelSize.Medium
+        "large" -> ModelSize.Large
+        "xlarge" -> ModelSize.XLarge
+        else -> ModelSize.Large
+    }
+}
 
   // setModelType allows configuration of the OCR model type based on a string value passed from React Native.\
   fun setModelType(modelType: String?) {
@@ -701,9 +834,21 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
       "shipping_label" -> ModelClass.ShippingLabel
       "bill_of_lading" -> ModelClass.BillOfLading
       "item_label" -> ModelClass.ItemLabel
+      "document_classification" -> ModelClass.DocumentClassification
       else -> ModelClass.ShippingLabel
     }
 
+  }
+
+  fun getModelType(modelType: String?): ModelClass {
+    Log.d(TAG, "modelType: $modelType")
+    return when (modelType?.lowercase()) {
+      "shipping_label" -> ModelClass.ShippingLabel
+      "bill_of_lading" -> ModelClass.BillOfLading
+      "item_label" -> ModelClass.ItemLabel
+      "document_classification" -> ModelClass.DocumentClassification
+      else -> ModelClass.ShippingLabel
+    }
   }
 
   // Configure the on-device model for OCR (Optical Character Recognition)
@@ -713,7 +858,7 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
     if (onDeviceConfigs != "null")
       onDeviceConfigs.ifNeitherNullNorEmptyNorBlank { onDeviceConfigs ->
         JSONObject(onDeviceConfigs).apply {
-          setModelSize(optString("size", "large"))
+          setModelSize(optString("size", ""))
           setModelType(optString("type", "shipping_label"))
         }
       }
@@ -784,6 +929,7 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
   // This method handles shipping label prediction.
   private fun handleDevicePrediction(args: ReadableArray?) {
     val image = args?.getString(0)
+    this.imagePath = image
     val barcodeArray = args?.getArray(1)
     val barcodeList = barcodeArray?.toArrayList()?.map { it.toString() } ?: emptyList()
     uriToBitmap(context!!, Uri.parse(image)) { bitmap ->
@@ -796,23 +942,25 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
   // This method handles Device based predictions.
   private fun handleDevicePredictionWithCloudTransformations(args: ReadableArray?) {
     val image = args?.getString(0)
+    this.imagePath = image
     val barcodeArray = args?.getArray(1)
     val barcodeList = barcodeArray?.toArrayList()?.map { it.toString() } ?: emptyList()
     uriToBitmap(context!!, Uri.parse(image)) { bitmap ->
       bitmap?.let {
         getPredictionWithCloudTransformations(it, barcodeList)  // Perform prediction on the image.
       }
-    }
+     }
   }
 
   // This method handles cloud-based shipping label prediction.
   private fun handleCloudPrediction(args: ReadableArray?) {
     val image = args?.getString(0)
+    this.imagePath = image
     val barcodeArray = args?.getArray(1)
     val barcodeList = barcodeArray?.toArrayList()?.map { it.toString() } ?: emptyList()
     uriToBitmap(context!!, Uri.parse(image)) { bitmap ->
       bitmap?.let {
-        getPredictionShippingLabelCloud(it, barcodeList)  // Perform cloud prediction with the image and barcode list
+        getPredictionShippingLabelCloud(it, barcodeList)  // Process shipping label prediction.
       }
     }
   }
@@ -820,13 +968,63 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
   // This method handles cloud-based bill of lading prediction.
   private fun handlePredictionBillOfLadingCloud(args: ReadableArray?) {
     val image = args?.getString(0)
+    this.imagePath = image
     val barcodeArray = args?.getArray(1)
     val barcodeList = barcodeArray?.toArrayList()?.map { it.toString() } ?: emptyList()
     uriToBitmap(context!!, Uri.parse(image)) { bitmap ->
       bitmap?.let {
-        getPredictionBillOfLadingCloud(it, barcodeList)  // Process shipping label prediction.
+        getPredictionBillOfLadingCloud(it, barcodeList)  // Process bill of lading prediction.
       }
     }
+  }
+
+  // This method handles cloud-based item label prediction.
+  private fun handlePredictionItemLabelCloud(args: ReadableArray?) {
+    val image = args?.getString(0)
+    this.imagePath = image
+    val withImageResizing = args?.getBoolean(1)
+    print(image)
+    print(withImageResizing)
+    uriToBitmap(context!!, Uri.parse(image)) { bitmap ->
+      bitmap?.let {
+        getPredictionItemLabelCloud(it)  // Process item label prediction.
+      }
+    }
+  }
+
+  // This method handles cloud-based document classification prediction.
+  private fun handlePredictionDocumentClassificationCloud(args: ReadableArray?) {
+    val image = args?.getString(0)
+    this.imagePath = image
+    print(image)
+    uriToBitmap(context!!, Uri.parse(image)) { bitmap ->
+      bitmap?.let {
+        getPredictionDocumentClassificationCloud(it)  // Process document classification prediction.
+      }
+    }
+  }
+
+  // This method is used to create a new template for use in cloud predictions.
+
+  private fun createTemplate() {
+    // appContext.currentActivity?.startActivity(
+    //   Intent(appContext, RNTemplateActivity::class.java)
+    // )
+  }
+  // This method is used to get all saved templates.
+  private fun getAllTemplates() {
+
+  }
+
+  // This method is used to delete a specific template by its ID.
+  private fun deleteTemplateWithId(args: ReadableArray?) {
+    val id = args?.getString(0)
+
+  }
+
+   // This method is used to delete all templates from storage.
+  private fun deleteAllTemplates() {
+
   }
 
   //  React Props
@@ -845,6 +1043,14 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
     this.isMultipleScanEnabled = isMultipleScanEnabled
     visionCameraView?.setMultipleScanEnabled(isMultipleScanEnabled)
   }
+
+  // React Native property to enable or disable the isEnableAutoOcrResponseWithImage
+  @ReactProp(name = "isEnableAutoOcrResponseWithImage")
+  fun seIsEnableAutoOcrResponseWithImage(view: View, isEnableAutoOcrResponseWithImage: Boolean = false) {
+    Log.d(TAG, "isEnableAutoOcrResponseWithImage: $isEnableAutoOcrResponseWithImage")
+    this.isEnableAutoOcrResponseWithImage = isEnableAutoOcrResponseWithImage
+  }
+
 
   // React Native property to set the zoom level on the camera
   @ReactProp(name = "zoomLevel")
@@ -946,6 +1152,7 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
     Log.d(TAG, "api responded with  ${response}")
     val event = Arguments.createMap().apply {
       putString("data", JSONObject(response).toString())
+      putString("imagePath", imagePath)
     }
     appContext
       .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)

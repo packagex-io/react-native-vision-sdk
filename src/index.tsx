@@ -22,30 +22,10 @@ import {
   OCRScanResult,
   DetectionResult,
   ErrorResult,
+  ReportErrorType,
 } from './types';
 
 export * from './types';
-// Default SDK options
-const sdkOptions = {
-  tracker: {
-    type: 'inbound',
-    create_automatically: false,
-    status: 'pickup_available',
-  },
-  transform: {
-    use_existing_tracking_number: true,
-    tracker: null,
-  },
-  match: {
-    location: true,
-    use_best_match: true,
-    search: ['recipient'],
-  },
-  postprocess: {
-    require_unique_hash: true,
-    parse_addresses: ['sender', 'recipient'],
-  },
-};
 
 // Camera component
 const Camera = forwardRef<VisionSdkRefProps, VisionSdkProps>(
@@ -58,10 +38,11 @@ const Camera = forwardRef<VisionSdkRefProps, VisionSdkProps>(
       mode = 'barcode',
       token = '',
       locationId = '',
-      options = sdkOptions,
+      options = {},
       environment = 'prod',
       isMultipleScanEnabled = false,
       flash = false,
+      isEnableAutoOcrResponseWithImage = true,
       zoomLevel = 1.8,
       ocrMode = 'cloud',
       onModelDownloadProgress = () => {},
@@ -70,6 +51,10 @@ const Camera = forwardRef<VisionSdkRefProps, VisionSdkProps>(
       onOCRScan = () => {},
       onDetected = () => {},
       onError = () => {},
+      onCreateTemplate = () => {},
+      onGetTemplates = () => {},
+      onDeleteTemplateById = () => {},
+      onDeleteTemplates = () => {},
     },
     ref
   ) => {
@@ -93,6 +78,13 @@ const Camera = forwardRef<VisionSdkRefProps, VisionSdkProps>(
       getPredictionWithCloudTransformations,
       getPredictionShippingLabelCloud,
       getPredictionBillOfLadingCloud,
+      getPredictionItemLabelCloud,
+      getPredictionDocumentClassificationCloud,
+      reportError,
+      createTemplate,
+      getAllTemplates,
+      deleteTemplateWithId,
+      deleteAllTemplates,
     }
 
     /* Command functions using dispatchCommand helper with name and enum fallback */
@@ -105,6 +97,8 @@ const Camera = forwardRef<VisionSdkRefProps, VisionSdkProps>(
         if (!(commandName in Commands)) {
           throw new Error(`"${commandName}" is not a valid command name.`);
         }
+        // Log params for debugging
+        console.log(`Dispatching command: ${commandName} with params:`, params);
         // Attempt to retrieve the command from the VisionSDKView's UIManager configuration. If not found, fall back to using the command from the Commands enum.
         const command =
           UIManager.getViewManagerConfig('VisionSDKView')?.Commands[
@@ -131,92 +125,106 @@ const Camera = forwardRef<VisionSdkRefProps, VisionSdkProps>(
     // Expose handlers via ref to parent components
     // This allows the parent component to call functions like cameraCaptureHandler, stopRunningHandler, etc.
     useImperativeHandle(ref, () => ({
-      cameraCaptureHandler,
-      stopRunningHandler,
-      restartScanningHandler,
-      startRunningHandler,
-      setMetadata,
-      setRecipient,
-      setSender,
-      configureOnDeviceModel,
-      setFocusSettings,
-      setObjectDetectionSettings,
-      setCameraSettings,
-      getPrediction,
-      getPredictionWithCloudTransformations,
-      getPredictionShippingLabelCloud,
-      getPredictionBillOfLadingCloud,
+      // 0: Captures an image using the 'captureImage' command
+      cameraCaptureHandler: () => dispatchCommand('captureImage'),
+
+      // 1: Stops the running process using the 'stopRunning' command
+      stopRunningHandler: () => dispatchCommand('stopRunning'),
+
+      // 2: Starts the running process using the 'startRunning' command
+      startRunningHandler: () => dispatchCommand('startRunning'),
+
+      // 3: Sets metadata using the 'setMetaData' command
+      setMetadata: (param) => dispatchCommand('setMetaData', [param]),
+
+      // 4: Sets the recipient information using the 'setRecipient' command
+      setRecipient: (param) => dispatchCommand('setRecipient', [param]),
+
+      // 5: Sets the sender information using the 'setSender' command
+      setSender: (param) => dispatchCommand('setSender', [param]),
+
+      // 6: Configures on-device model using the 'configureOnDeviceModel' command
+      configureOnDeviceModel: (param) =>
+        dispatchCommand('configureOnDeviceModel', [param]),
+
+      // 7: Restarts the scanning process using the 'restartScanning' command
+      restartScanningHandler: () => dispatchCommand('restartScanning'),
+
+      // 8: Sets focus settings using the 'setFocusSettings' command
+      setFocusSettings: (param) => dispatchCommand('setFocusSettings', [param]),
+
+      // 9: Sets object detection settings using the 'setObjectDetectionSettings' command
+      setObjectDetectionSettings: (param) =>
+        dispatchCommand('setObjectDetectionSettings', [param]),
+
+      // 10: Sets camera settings using the 'setCameraSettings' command
+      setCameraSettings: (param) =>
+        dispatchCommand('setCameraSettings', [param]),
+
+      // 11: Retrieves prediction using the 'getPrediction' command with image and barcode parameters
+      getPrediction: (image: string, barcode: string[]) =>
+        dispatchCommand('getPrediction', [image, barcode]),
+
+      // 12: Retrieves prediction with cloud transformations using the 'getPredictionWithCloudTransformations' command
+      getPredictionWithCloudTransformations: (
+        image: string,
+        barcode: string[]
+      ) =>
+        dispatchCommand('getPredictionWithCloudTransformations', [
+          image,
+          barcode,
+        ]),
+
+      // 13: Retrieves prediction for shipping label cloud using the 'getPredictionShippingLabelCloud' command
+      getPredictionShippingLabelCloud: (image: string, barcode: string[]) =>
+        dispatchCommand('getPredictionShippingLabelCloud', [image, barcode]),
+
+      // 14: Retrieves prediction for Bill of Lading cloud using the 'getPredictionBillOfLadingCloud' command
+      getPredictionBillOfLadingCloud: (
+        image: string,
+        barcode: string[],
+        withImageResizing: boolean = true
+      ) =>
+        dispatchCommand('getPredictionBillOfLadingCloud', [
+          image,
+          barcode,
+          withImageResizing,
+        ]),
+
+      // 15: Retrieves prediction for item label cloud using the 'getPredictionItemLabelCloud' command
+      getPredictionItemLabelCloud: (
+        image: string,
+        barcode?: string[],
+        withImageResizing: boolean = true
+      ) =>
+        dispatchCommand('getPredictionItemLabelCloud', [
+          image,
+          withImageResizing,
+          barcode,
+        ]),
+
+      // 16: Retrieves prediction for document classification cloud using the 'getPredictionDocumentClassificationCloud' command
+      getPredictionDocumentClassificationCloud: (image: string) =>
+        dispatchCommand('getPredictionDocumentClassificationCloud', [image]),
+
+      // 17: Reports errors for on-device issues using the 'reportError' command
+      reportError: (param: ReportErrorType) =>
+        dispatchCommand('reportError', [param]),
+
+      // 18: Creates a new template using the 'createTemplate' command
+      createTemplate: () => dispatchCommand('createTemplate'),
+
+      // 19: Get all saved templates using the 'getAllTemplates' command
+      getAllTemplates: () => dispatchCommand('getAllTemplates'),
+
+      // 20: Deletes a specific template by its ID using the 'deleteTemplateWithId' command
+      deleteTemplateWithId: (id: string) =>
+        dispatchCommand('deleteTemplateWithId', [id]),
+
+      // 21: Deletes all templates from storage using the 'deleteAllTemplates' command
+      deleteAllTemplates: () => dispatchCommand('deleteAllTemplates'),
+      // onCreateTemplate: () => dispatchCommand('deleteAllTemplates'),
     }));
-
-    // Captures an image using the 'captureImage' command
-    const cameraCaptureHandler = () => dispatchCommand('captureImage');
-
-    // Stops the running process using the 'stopRunning' command
-    const stopRunningHandler = () => dispatchCommand('stopRunning');
-
-    // Starts the running process using the 'startRunning' command
-    const startRunningHandler = () => dispatchCommand('startRunning');
-
-    // Sets metadata using the 'setMetaData' command
-    const setMetadata = (value: any) => dispatchCommand('setMetaData', [value]);
-
-    // Sets the recipient information using the 'setRecipient' command
-    const setRecipient = (value: any) =>
-      dispatchCommand('setRecipient', [value]);
-
-    // Sets the sender information using the 'setSender' command
-    const setSender = (value: any) => dispatchCommand('setSender', [value]);
-
-    // Configures on-device model using the 'configureOnDeviceModel' command
-    const configureOnDeviceModel = (val: any) =>
-      dispatchCommand('configureOnDeviceModel', [val]);
-
-    // Restarts the scanning process using the 'restartScanning' command
-    const restartScanningHandler = () => dispatchCommand('restartScanning');
-
-    // Sets focus settings using the 'setFocusSettings' command
-    const setFocusSettings = (val: any) =>
-      dispatchCommand('setFocusSettings', [val]);
-
-    // Sets object detection settings using the 'setObjectDetectionSettings' command
-    const setObjectDetectionSettings = (val: any) =>
-      dispatchCommand('setObjectDetectionSettings', [val]);
-
-    // Sets camera settings using the 'setCameraSettings' command
-    const setCameraSettings = (val: any) =>
-      dispatchCommand('setCameraSettings', [val]);
-
-    // Retrieves prediction using the 'getPrediction' command with image and barcode parameters
-    const getPrediction = (image: string, barcode: string[]) =>
-      dispatchCommand('getPrediction', [image, barcode]);
-
-    // Retrieves prediction with cloud transformations using the 'getPredictionWithCloudTransformations' command
-    const getPredictionWithCloudTransformations = (
-      image: string,
-      barcode: string[]
-    ) =>
-      dispatchCommand('getPredictionWithCloudTransformations', [
-        image,
-        barcode,
-      ]);
-
-    // Retrieves prediction for shipping label cloud using the 'getPredictionShippingLabelCloud' command
-    const getPredictionShippingLabelCloud = (
-      image: string,
-      barcode: string[]
-    ) => dispatchCommand('getPredictionShippingLabelCloud', [image, barcode]);
-
-    // Retrieves prediction for Bill of Lading cloud using the 'getPredictionBillOfLadingCloud' command
-    const getPredictionBillOfLadingCloud = (
-      image: string,
-      barcode: string[],
-      withImageResizing: boolean = true
-    ) =>
-      dispatchCommand('getPredictionBillOfLadingCloud', [
-        image,
-        barcode,
-        withImageResizing,
-      ]);
 
     // Subscribe event listeners on mount, and cleanup on unmount
     useEffect(() => {
@@ -228,6 +236,10 @@ const Camera = forwardRef<VisionSdkRefProps, VisionSdkProps>(
         ['onOCRScan', onOCRScanHandler],
         ['onDetected', onDetectedHandler],
         ['onError', onErrorHandler],
+        ['onCreateTemplate', onCreateTemplateHandler],
+        ['onGetTemplates', onGetTemplateHandler],
+        ['onDeleteTemplateById', onDeleteTemplateByIdHandler],
+        ['onDeleteTemplates', onDeleteTemplatesaHndler],
       ];
       // Add listeners
       eventListeners.forEach(([event, handler]) =>
@@ -243,14 +255,28 @@ const Camera = forwardRef<VisionSdkRefProps, VisionSdkProps>(
           DeviceEventEmitter.removeAllListeners(event as string)
         );
       };
-    }, [mode, ocrMode]);
+    }, [
+      mode,
+      ocrMode,
+      onModelDownloadProgress,
+      onBarcodeScan,
+      onImageCaptured,
+      onOCRScan,
+      onError,
+      onCreateTemplate,
+      onGetTemplates,
+      onDeleteTemplateById,
+      onDeleteTemplates,
+    ]);
 
     // Helper function to handle events
-    const parseNativeEvent = useCallback(
-      <T,>(event: any): T =>
-        'nativeEvent' in event ? event.nativeEvent : event,
-      []
-    );
+    const parseNativeEvent = useCallback(<T,>(event: any): T => {
+      // Ensure event is an object before checking for 'nativeEvent'
+      if (event && typeof event === 'object' && 'nativeEvent' in event) {
+        return event.nativeEvent;
+      }
+      return event; // If no 'nativeEvent', return the event itself
+    }, []);
 
     const onBarcodeScanHandler = (event: any) =>
       onBarcodeScan(parseNativeEvent<BarcodeScanResult>(event));
@@ -270,19 +296,37 @@ const Camera = forwardRef<VisionSdkRefProps, VisionSdkProps>(
     const onErrorHandler = (event: any) =>
       onError(parseNativeEvent<ErrorResult>(event));
 
+    const onCreateTemplateHandler = (event: any) =>
+      onCreateTemplate(parseNativeEvent<any>(event));
+    const onGetTemplateHandler = (event: any) =>
+      onGetTemplates(parseNativeEvent<any>(event));
+    const onDeleteTemplateByIdHandler = (event: any) =>
+      onDeleteTemplateById(parseNativeEvent<any>(event));
+    const onDeleteTemplatesaHndler = (event: any) =>
+      onDeleteTemplates(parseNativeEvent<any>(event));
+
     const onOCRScanHandler = (event: any) => {
-      console.log('OCR Scan Event:', event);
       let ocrEvent = parseNativeEvent<OCRScanResult>(event);
       // Parse data only if on Android and the data is a JSON string
       if (Platform.OS === 'android' && typeof ocrEvent.data === 'string') {
         try {
-          ocrEvent.data = JSON.parse(ocrEvent.data)?.data ?? ocrEvent.data;
+          // Attempt to parse the stringified JSON
+          const parsedData = JSON.parse(ocrEvent.data);
+          ocrEvent.data = parsedData?.data ?? ocrEvent.data; // Use parsed data if available
         } catch (error) {
+          // If JSON parsing fails, keep the original data or handle errors
           ocrEvent.data = ocrEvent.data?.data ?? ocrEvent.data ?? null;
         }
       } else {
+        // For other platforms, ensure ocrEvent.data is in the correct format
         ocrEvent.data = ocrEvent.data?.data ?? ocrEvent.data ?? null;
       }
+      // Ensure image_url and imagePath are populated correctly
+      ocrEvent.data.image_url =
+        ocrEvent?.data?.image_url ?? ocrEvent?.imagePath ?? '';
+      ocrEvent.imagePath =
+        ocrEvent?.data?.image_url ?? ocrEvent?.imagePath ?? '';
+      // Pass the final ocrEvent to the callback function
       onOCRScan(ocrEvent);
     };
 
@@ -295,6 +339,7 @@ const Camera = forwardRef<VisionSdkRefProps, VisionSdkProps>(
           isMultipleScanEnabled={isMultipleScanEnabled}
           apiKey={apiKey}
           mode={mode}
+          isEnableAutoOcrResponseWithImage={isEnableAutoOcrResponseWithImage}
           captureMode={captureMode}
           ocrMode={ocrMode}
           token={token}
@@ -309,6 +354,10 @@ const Camera = forwardRef<VisionSdkRefProps, VisionSdkProps>(
           onOCRScan={onOCRScanHandler}
           onDetected={onDetectedHandler}
           onError={onErrorHandler}
+          onCreateTemplate={onCreateTemplateHandler}
+          onGetTemplates={onGetTemplateHandler}
+          onDeleteTemplateById={onDeleteTemplateByIdHandler}
+          onDeleteTemplates={onDeleteTemplatesaHndler}
         >
           {children}
         </VisionSdkView>

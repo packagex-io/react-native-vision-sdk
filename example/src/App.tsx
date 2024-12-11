@@ -1,20 +1,17 @@
 import React, { useEffect, useRef, useState } from 'react';
-import {
-  View,
-  StyleSheet,
-  Platform,
-  Alert,
-  Vibration,
-  Text,
-} from 'react-native';
-import VisionSdkView, { VisionSdkRefProps } from '../../src/index';
+import { View, StyleSheet, Platform, Alert, Vibration } from 'react-native';
+import VisionSdkView, {
+  VisionSdkRefProps,
+  ModuleType,
+  OCRMode,
+  ModuleSize,
+} from '../../src/index';
 import CameraFooterView from './Components/CameraFooterView';
 import DownloadingProgressView from './Components/DownloadingProgressView';
 import CameraHeaderView from './Components/CameraHeaderView';
 import LoaderView from './Components/LoaderView';
-import ResultView from './Components/ResultView';
 import { PERMISSIONS, RESULTS, request } from 'react-native-permissions';
-import ResultViewBillOfLading from './Components/ResultViewBillOfLading';
+import ResultViewOCR from './Components/ResultViewOCR';
 
 // Define interfaces for the state types
 interface DownloadingProgress {
@@ -22,6 +19,26 @@ interface DownloadingProgress {
   progress: number;
 }
 
+const sdkOptions = {
+  tracker: {
+    type: 'inbound',
+    create_automatically: false,
+    status: 'pickup_available',
+  },
+  transform: {
+    use_existing_tracking_number: true,
+    tracker: null,
+  },
+  match: {
+    location: true,
+    use_best_match: true,
+    search: ['recipient'],
+  },
+  postprocess: {
+    require_unique_hash: true,
+    parse_addresses: ['sender', 'recipient'],
+  },
+};
 interface DetectedDataProps {
   barcode: boolean;
   qrcode: boolean;
@@ -32,12 +49,10 @@ interface DetectedDataProps {
 const App: React.FC = () => {
   const visionSdk = useRef<VisionSdkRefProps>(null);
   const [captureMode, setCaptureMode] = useState<'manual' | 'auto'>('manual');
-  const [ocrMode, setOcrMode] = useState<
-    'cloud' | 'on-device' | 'on-device-with-translation' | 'bill-of-lading'
-  >('cloud');
+  const [ocrMode, setOcrMode] = useState<OCRMode>('cloud');
   const [modelSize, setModelSize] = useState<string>('large');
   const [loading, setLoading] = useState<boolean>(false);
-  const [result, setResult] = useState<string>('');
+  const [result, setResult] = useState<any>(null);
   const [mode, setMode] = useState<'barcode' | 'qrcode' | 'ocr' | 'photo'>(
     'barcode'
   );
@@ -52,7 +67,7 @@ const App: React.FC = () => {
   const [modelDownloadingProgress, setModelDownloadingProgress] =
     useState<DownloadingProgress>({
       downloadStatus: true,
-      progress: 0,
+      progress: 1,
     });
 
   // Request camera permission on component mount (for Android)
@@ -109,11 +124,15 @@ const App: React.FC = () => {
     visionSdk?.current?.startRunningHandler();
     setLoading(false);
   }, []);
+  useEffect(() => {
+    if (modelDownloadingProgress.downloadStatus) {
+      setLoading(false);
+    }
+  }, [modelDownloadingProgress]);
 
   // Capture photo when the button is pressed
   const onPressCapture = () => {
     if (mode === 'ocr') {
-      setLoading(true);
       visionSdk?.current?.cameraCaptureHandler();
       return;
     }
@@ -128,8 +147,8 @@ const App: React.FC = () => {
   };
   // Function to configure on-device OCR
   const onPressOnDeviceOcr = (
-    type: 'item_label' | 'shipping_label' | 'bill_of_lading' = 'shipping_label',
-    size: 'nano' | 'micro' | 'small' | 'medium' | 'large' | 'xlarge' = 'large'
+    type: ModuleType = 'shipping_label',
+    size: ModuleSize = 'large'
   ) => {
     visionSdk?.current?.stopRunningHandler();
     setLoading(true);
@@ -138,6 +157,16 @@ const App: React.FC = () => {
       size,
     });
   };
+  const onReportError = (response) => {
+    visionSdk.current?.reportError({
+      reportText: 'respose is not correct',
+      type: 'document_classification',
+      size: 'large',
+      response: response,
+      image: response?.image_url ?? '',
+    });
+  };
+
   return (
     <View style={styles.mainContainer}>
       <VisionSdkView
@@ -146,10 +175,11 @@ const App: React.FC = () => {
         captureMode={captureMode}
         isMultipleScanEnabled={true}
         mode={mode}
-        environment="staging"
+        options={sdkOptions}
+        isEnableAutoOcrResponseWithImage={true}
         locationId=""
-        token=''
-        apiKey=''
+        token=""
+        apiKey=""
         flash={flash}
         zoomLevel={zoomLevel}
         onDetected={(event) => {
@@ -161,19 +191,18 @@ const App: React.FC = () => {
           setLoading(false);
           visionSdk.current?.restartScanningHandler();
         }}
+        onCreateTemplate={(event) => console.log(event)}
         onOCRScan={(event) => {
-          console.log('onOCRScan', event?.data);
           setLoading(false);
           setResult(event.data);
+          onReportError(event.data);
           Vibration.vibrate(100);
           visionSdk.current?.restartScanningHandler();
         }}
         onImageCaptured={(event) => {
-          console.log('onImageCaptured', event);
           visionSdk.current?.restartScanningHandler();
         }}
         onModelDownloadProgress={(event) => {
-          console.log('onModelDownloadProgress', event);
           setModelDownloadingProgress(event);
           if (event.downloadStatus) {
             visionSdk.current?.startRunningHandler();
@@ -186,14 +215,16 @@ const App: React.FC = () => {
           setLoading(false);
         }}
       />
-      {mode == 'ocr' && ocrMode == 'bill-of-lading' ? (
-        <ResultViewBillOfLading
+      {mode == 'ocr' ? (
+        <ResultViewOCR
+          mode={ocrMode}
           visible={!!result}
           result={result}
           setResult={setResult}
+          onReportError={(respose) => {
+            onReportError(respose);
+          }}
         />
-      ) : mode == 'ocr' ? (
-        <ResultView visible={!!result} result={result} setResult={setResult} />
       ) : null}
       <LoaderView visible={loading} />
       <CameraHeaderView
