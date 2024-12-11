@@ -1,12 +1,13 @@
 import React from 'react';
 import { View, StyleSheet, Text, TouchableOpacity, Modal } from 'react-native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import { OCRMode } from '../../../src';
 
 type OCRSelectionViewProps = {
   setShowOcrTypes: (show: boolean) => void;
   showOcrTypes: boolean;
-  setOcrMode: (mode:  "cloud" | "on-device" | "on-device-with-translation" | 'bill-of-lading') => void;
-  ocrMode: string;
+  setOcrMode: (mode: OCRMode) => void;
+  ocrMode: OCRMode;
 };
 
 const OCRSelectionView: React.FC<OCRSelectionViewProps> = ({
@@ -17,14 +18,16 @@ const OCRSelectionView: React.FC<OCRSelectionViewProps> = ({
 }) => {
   const closeModal = () => setShowOcrTypes(false);
 
-  const options = [
+  const options: { label: string; mode: OCRMode }[] = [
     { label: 'Cloud', mode: 'cloud' },
     { label: 'On-Device', mode: 'on-device' },
     { label: 'On-Device With Translation', mode: 'on-device-with-translation' },
     { label: 'Bill Of Lading', mode: 'bill-of-lading' },
+    { label: 'Item Label', mode: 'item_label' },
+    { label: 'Document Classification', mode: 'document_classification' },
   ];
 
-  const renderOption = ({ label, mode }: { label: string; mode: string }) => (
+  const renderOption = ({ label, mode }: { label: string; mode: OCRMode }) => (
     <TouchableOpacity
       key={mode}
       onPress={() => {
@@ -34,7 +37,9 @@ const OCRSelectionView: React.FC<OCRSelectionViewProps> = ({
       style={styles.rowStyle}
     >
       <Text style={styles.textStyle}>{label}</Text>
-      {ocrMode === mode && <MaterialIcons name="done" size={20} color="white" />}
+      {ocrMode === mode && (
+        <MaterialIcons name="done" size={20} color="white" />
+      )}
     </TouchableOpacity>
   );
 

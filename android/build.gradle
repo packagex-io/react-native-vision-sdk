@@ -139,7 +139,7 @@ dependencies {
   implementation "com.facebook.react:react-native:+"
   implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
 // From node_modules
-  implementation 'com.github.packagexlabs:vision-sdk-android:v2.0.21'
+  implementation 'com.github.packagexlabs:vision-sdk-android:v2.0.25'
   implementation 'com.github.asadullahilyas:HandyUtils:1.1.0'
 }
 
