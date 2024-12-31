@@ -68,7 +68,7 @@ In the `build.gradle` file of your Android project, add the following dependenci
 ```gradle
 dependencies {
     // Existing dependencies
-    implementation 'com.github.packagexlabs:vision-sdk-android:v2.0.25'
+    implementation 'com.github.packagexlabs:vision-sdk-android:v2.0.31'
     implementation 'com.github.asadullahilyas:HandyUtils:1.1.0'
 }
 ```
