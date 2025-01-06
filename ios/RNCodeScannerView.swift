@@ -40,7 +40,7 @@ class RNCodeScannerView: UIView {
     var sessionPreset: AVCaptureSession.Preset = .high
     
     //MARK: - On-Device OCR Specific Variables
-    var ocrMode: String = "cloud" // Dynamic Prop | Optional:
+    var ocrMode: String = "shipping_label" // Dynamic Prop | Optional:
     var onDeviceModelType: VSDKModelClass = VSDKModelClass.shippingLabel // Dynamic Prop | Optional:
     var onDeviceModelSize: VSDKModelSize = VSDKModelSize.large // Dynamic Prop | Optional:
     
@@ -217,17 +217,17 @@ extension RNCodeScannerView: CodeScannerViewDelegate {
         }
         print("isEnableAutoOcrResponseWithImage: ", isEnableAutoOcrResponseWithImage ?? false ? "true": "false")
         switch ocrMode {
-        case "on-device":
+        case "on-device", "on_device":
             self.getPrediction(withImage: image, andBarcodes: barcodes, imagePath:  imagePath)
-        case "on-device-with-translation":
+        case "on-device-with-translation", "on_device_with_translation":
             self.getPredictionWithCloudTransformations(withImage: image, andBarcodes: barcodes,imagePath:  imagePath)
-        case "cloud":
+        case "cloud", "shipping_label", "shipping-label":
             self.getPredictionShippingLabelCloud(withImage: image, andBarcodes: barcodes,imagePath:  imagePath)
-        case "bill-of-lading":
+        case "bill_of_lading", "bill-of-lading":
             self.getPredictionBillOfLadingCloud(withImage: image, andBarcodes: barcodes, withImageResizing: true,imagePath:  imagePath)
-        case "item_label":
+        case "item_label", "item-label":
             self.getPredictionItemLabelCloud(withImage: image, withImageResizing: true,imagePath:  imagePath)
-        case "document_classification":
+        case "document_classification", "document-classification":
             self.getPredictionDocumentClassificationCloud(withImage: image, imagePath:imagePath)
             
         default:
@@ -370,10 +370,11 @@ extension RNCodeScannerView {
                     return
                 }
                 
-                if self?.ocrMode == "on-device-with-translation" { // on-device + matching API case
-                    self?.callMatchingAPIWithImage(usingImage: uiImage, withbarCodes: barcodes, responseData: responseData, imagePath:imagePath)
+                if let ocrMode = self?.ocrMode.lowercased(),
+                   ["on-device-with-translation", "on_device_with_translation"].contains(ocrMode) {
+                    // on-device + matching API case
+                    self?.callMatchingAPIWithImage(usingImage: uiImage, withbarCodes: barcodes, responseData: responseData, imagePath: imagePath)
                 }
-                
                 else {
                     self?.onDeviceAPIResponse(responseData: responseData, imagePath:imagePath)
                 }
@@ -790,14 +791,14 @@ extension RNCodeScannerView {
     /// - Returns: The corresponding `VSDKModelClass` value for the provided model size string.
     func getModelType(_ modelType: String) -> VSDKModelClass {
         switch modelType {
-        case "item_label":
-            return VSDKModelClass.itemLabel
-        case "shipping_label":
-            return VSDKModelClass.shippingLabel
-        case "bill_of_lading":
-            return VSDKModelClass.billOfLading
-        case "document_classification":
-            return VSDKModelClass.documentClassification
+        case "item_label", "item-label":
+             return VSDKModelClass.itemLabel
+         case "shipping_label", "shipping-label":
+             return VSDKModelClass.shippingLabel
+         case "bill_of_lading", "bill-of-lading":
+             return VSDKModelClass.billOfLading
+         case "document_classification", "document-classification":
+             return VSDKModelClass.documentClassification
         default:
             return VSDKModelClass.shippingLabel
         }
