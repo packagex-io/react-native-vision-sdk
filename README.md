@@ -34,7 +34,7 @@ yarn add react-native-vision-sdk
 1. Open your `ios/Podfile` and add the following line to ensure compatibility:
    ```ruby
    platform :ios, '16.0'  # Vision SDK requires at least iOS 15.0 or higher
-   pod 'VisionSDK', "1.5.5"
+   pod 'VisionSDK', "1.5.6"
    ```
 2. Run `pod install` to install necessary dependencies.
 
@@ -68,7 +68,7 @@ In the `build.gradle` file of your Android project, add the following dependenci
 ```gradle
 dependencies {
     // Existing dependencies
-    implementation 'com.github.packagexlabs:vision-sdk-android:v2.0.34'
+    implementation 'com.github.packagexlabs:vision-sdk-android:v2.0.35'
     implementation 'com.github.asadullahilyas:HandyUtils:1.1.0'
 }
 ```

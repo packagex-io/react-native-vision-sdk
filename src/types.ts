@@ -43,12 +43,20 @@ export type ScanMode =
  * @example 'cloud'
  */
 export type OCRMode =
+  | 'on_device'
+  | 'on_device_with_translation'
+  | 'shipping_label'
+  | 'bill_of_lading'
+  | 'item_label'
+  | 'document_classification'
+  //
   | 'cloud'
   | 'on-device'
   | 'on-device-with-translation'
+  | 'shipping-label'
   | 'bill-of-lading'
-  | 'item_label'
-  | 'document_classification';
+  | 'item-label'
+  | 'document-classification';
 
 /**
  * Environments for the Vision SDK operation.
@@ -78,7 +86,12 @@ export type ModuleType =
   | 'item_label'
   | 'shipping_label'
   | 'bill_of_lading'
-  | 'document_classification';
+  | 'document_classification'
+  //
+  | 'shipping-label'
+  | 'bill-of-lading'
+  | 'item-label'
+  | 'document-classification';
 
 /**
  * Sizes for the modules used in the Vision SDK.
@@ -286,7 +299,7 @@ export interface VisionSdkViewProps {
    */
   onDeleteTemplates?: (event: string | { nativeEvent: string }) => void;
 
-  /** 
+  /**
    * @type {(event: DetectionResult | { nativeEvent: DetectionResult }) => void}
    * @param {DetectionResult | { nativeEvent: DetectionResult }} event Detection results (e.g., text, barcode, etc.).
    * Optional event handler for detection results.
@@ -390,11 +403,12 @@ export interface OCRScanResult {
  */
 export interface BarcodeScanResult {
   /**
-   * @type {string}
-   * @description The scanned barcode value.
-   * @example '1234567890'
+   * @type {string[]}
+   * @description An array of scanned barcode values.
+   * Each element in the array represents a scanned barcode.
+   * @example ['1234567890', '0987654321']
    */
-  code: string;
+  code: string[];
 }
 
 /**

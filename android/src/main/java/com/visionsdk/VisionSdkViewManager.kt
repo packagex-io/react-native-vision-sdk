@@ -494,12 +494,12 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
    */
   private fun handleOcrMode(bitmap: Bitmap, value: List<String>) {
     when (ocrMode) {
-      "on-device" -> getPrediction(bitmap, value)
-      "on-device-with-translation" -> getPredictionWithCloudTransformations(bitmap, value)
-      "cloud" -> getPredictionShippingLabelCloud(bitmap, value)
-      "bill-of-lading" -> getPredictionBillOfLadingCloud(bitmap, value)
-      "item_label" -> getPredictionItemLabelCloud(bitmap)
-      "document_classification" -> getPredictionDocumentClassificationCloud(bitmap)
+     "on-device", "on_device" -> getPrediction(bitmap, value)
+     "on-device-with-translation", "on_device_with_translation" -> getPredictionWithCloudTransformations(bitmap, value)
+     "cloud", "shipping_label", "shipping-label" -> getPredictionShippingLabelCloud(bitmap, value)
+     "bill-of-lading", "bill_of_lading" -> getPredictionBillOfLadingCloud(bitmap, value)
+     "item-label", "item_label" -> getPredictionItemLabelCloud(bitmap)
+     "document-classification", "document_classification" -> getPredictionDocumentClassificationCloud(bitmap)
       else -> Log.w(TAG, "Unsupported OCR mode: $ocrMode")
     }
   }
@@ -831,10 +831,10 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
   fun setModelType(modelType: String?) {
     Log.d(TAG, "modelType: " + modelType)
     this.modelType = when (modelType?.lowercase()) {
-      "shipping_label" -> ModelClass.ShippingLabel
-      "bill_of_lading" -> ModelClass.BillOfLading
-      "item_label" -> ModelClass.ItemLabel
-      "document_classification" -> ModelClass.DocumentClassification
+      "shipping_label", "shipping-label" -> ModelClass.ShippingLabel
+      "bill_of_lading", "bill-of-lading" -> ModelClass.BillOfLading
+      "item_label", "item-label"   -> ModelClass.ItemLabel
+      "document_classification", "document-classification" -> ModelClass.DocumentClassification
       else -> ModelClass.ShippingLabel
     }
 
@@ -843,10 +843,10 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
   fun getModelType(modelType: String?): ModelClass {
     Log.d(TAG, "modelType: $modelType")
     return when (modelType?.lowercase()) {
-      "shipping_label" -> ModelClass.ShippingLabel
-      "bill_of_lading" -> ModelClass.BillOfLading
-      "item_label" -> ModelClass.ItemLabel
-      "document_classification" -> ModelClass.DocumentClassification
+    "shipping_label", "shipping-label" -> ModelClass.ShippingLabel
+    "bill_of_lading", "bill-of-lading" -> ModelClass.BillOfLading
+    "item_label", "item-label"   -> ModelClass.ItemLabel
+    "document_classification", "document-classification" -> ModelClass.DocumentClassification
       else -> ModelClass.ShippingLabel
     }
   }
