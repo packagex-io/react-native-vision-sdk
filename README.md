@@ -34,7 +34,7 @@ yarn add react-native-vision-sdk
 1. Open your `ios/Podfile` and add the following line to ensure compatibility:
    ```ruby
    platform :ios, '16.0'  # Vision SDK requires at least iOS 15.0 or higher
-   pod 'VisionSDK', "1.5.6"
+   pod 'VisionSDK', "1.5.7"
    ```
 2. Run `pod install` to install necessary dependencies.
 
