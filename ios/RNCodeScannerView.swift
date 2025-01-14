@@ -527,7 +527,8 @@ extension RNCodeScannerView {
             withModelSize: getModelSize(modelSize) ?? VSDKModelSize.large,
             image: uiImage?.ciImage ?? nil,
             reportText: reportText,
-            response: response
+            response: response, 
+            reportModel: nil
         ) { responseCode in
             print("Full JSON Response reportError:", responseCode)
             // Update the UI after processing
