@@ -45,6 +45,7 @@ const Camera = forwardRef<VisionSdkRefProps, VisionSdkProps>(
       isEnableAutoOcrResponseWithImage = true,
       zoomLevel = 1.8,
       ocrMode = 'cloud',
+      ocrType = 'shipping_label',
       onModelDownloadProgress = () => {},
       onBarcodeScan = () => {},
       onImageCaptured = () => {},
@@ -258,6 +259,7 @@ const Camera = forwardRef<VisionSdkRefProps, VisionSdkProps>(
     }, [
       mode,
       ocrMode,
+      ocrType,
       onModelDownloadProgress,
       onBarcodeScan,
       onImageCaptured,
@@ -278,34 +280,39 @@ const Camera = forwardRef<VisionSdkRefProps, VisionSdkProps>(
       return event; // If no 'nativeEvent', return the event itself
     }, []);
 
-    const onBarcodeScanHandler = (event: any) =>
-      onBarcodeScan(parseNativeEvent<BarcodeScanResult>(event));
+    const onBarcodeScanHandler =  useCallback((event: any) =>
+      onBarcodeScan(parseNativeEvent<BarcodeScanResult>(event)),
+    [])
 
     // const onImageCaptured = useCallback((event) =>  console.log('Image Captured:', event), []);
-    const onModelDownloadProgressHandler = (event: any) =>
-      onModelDownloadProgress(parseNativeEvent<ModelDownloadProgress>(event));
+    const onModelDownloadProgressHandler = useCallback((event: any) =>
+      onModelDownloadProgress(parseNativeEvent<ModelDownloadProgress>(event)), []);
 
-    const onImageCapturedHandler = (event: any) =>
-      onImageCaptured(parseNativeEvent<ImageCaptureEvent>(event));
+    const onImageCapturedHandler =  useCallback((event: any) =>
+      onImageCaptured(parseNativeEvent<ImageCaptureEvent>(event)), [])
 
     const onDetectedHandler = useCallback(
       (event: any) => onDetected(parseNativeEvent<DetectionResult>(event)),
       []
     );
 
-    const onErrorHandler = (event: any) =>
-      onError(parseNativeEvent<ErrorResult>(event));
+    const onErrorHandler = useCallback((event: any) =>
+      onError(parseNativeEvent<ErrorResult>(event)), [])
 
-    const onCreateTemplateHandler = (event: any) =>
-      onCreateTemplate(parseNativeEvent<any>(event));
-    const onGetTemplateHandler = (event: any) =>
-      onGetTemplates(parseNativeEvent<any>(event));
-    const onDeleteTemplateByIdHandler = (event: any) =>
-      onDeleteTemplateById(parseNativeEvent<any>(event));
-    const onDeleteTemplatesaHndler = (event: any) =>
-      onDeleteTemplates(parseNativeEvent<any>(event));
 
-    const onOCRScanHandler = (event: any) => {
+    const onCreateTemplateHandler = useCallback( (event: any) =>
+      onCreateTemplate(parseNativeEvent<any>(event)), []);
+
+    const onGetTemplateHandler = useCallback( (event: any) =>
+      onGetTemplates(parseNativeEvent<any>(event)) , []);
+
+    const onDeleteTemplateByIdHandler = useCallback( (event: any) =>
+      onDeleteTemplateById(parseNativeEvent<any>(event)), [])
+
+    const onDeleteTemplatesaHndler = useCallback( (event: any) =>
+      onDeleteTemplates(parseNativeEvent<any>(event)), [])
+
+    const onOCRScanHandler = useCallback( (event: any) => {
       let ocrEvent = parseNativeEvent<OCRScanResult>(event);
       // Parse data only if on Android and the data is a JSON string
       if (Platform.OS === 'android' && typeof ocrEvent.data === 'string') {
@@ -328,7 +335,7 @@ const Camera = forwardRef<VisionSdkRefProps, VisionSdkProps>(
         ocrEvent?.data?.image_url ?? ocrEvent?.imagePath ?? '';
       // Pass the final ocrEvent to the callback function
       onOCRScan(ocrEvent);
-    };
+    }, []);
 
     return (
       <>
@@ -342,6 +349,7 @@ const Camera = forwardRef<VisionSdkRefProps, VisionSdkProps>(
           isEnableAutoOcrResponseWithImage={isEnableAutoOcrResponseWithImage}
           captureMode={captureMode}
           ocrMode={ocrMode}
+          ocrType={ocrType}
           token={token}
           locationId={locationId}
           options={options} // ideally this should be passed from variable, that is receiving data from ScannerContainer
@@ -358,6 +366,7 @@ const Camera = forwardRef<VisionSdkRefProps, VisionSdkProps>(
           onGetTemplates={onGetTemplateHandler}
           onDeleteTemplateById={onDeleteTemplateByIdHandler}
           onDeleteTemplates={onDeleteTemplatesaHndler}
+          // onTest={(event) => console.log('Test:', parseNativeEvent(event))}
         >
           {children}
         </VisionSdkView>

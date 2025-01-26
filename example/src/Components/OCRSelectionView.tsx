@@ -1,13 +1,16 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { View, StyleSheet, Text, TouchableOpacity, Modal } from 'react-native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
-import { OCRMode } from '../../../src';
+import { OCRMode, OCRType } from '../../../src';
 
 type OCRSelectionViewProps = {
   setShowOcrTypes: (show: boolean) => void;
   showOcrTypes: boolean;
   setOcrMode: (mode: OCRMode) => void;
   ocrMode: OCRMode;
+  ocrType: OCRType;
+  setOcrType: (type: OCRType) => void;
+  setModelSize: (type: string) => void;
 };
 
 const OCRSelectionView: React.FC<OCRSelectionViewProps> = ({
@@ -15,33 +18,47 @@ const OCRSelectionView: React.FC<OCRSelectionViewProps> = ({
   showOcrTypes,
   setOcrMode,
   ocrMode,
+  ocrType,
+  setOcrType,
+  setModelSize
 }) => {
   const closeModal = () => setShowOcrTypes(false);
 
-  const options: { label: string; mode: OCRMode }[] = [
-    { label: 'Cloud', mode: 'cloud' },
-    { label: 'On-Device', mode: 'on-device' },
-    { label: 'On-Device With Translation', mode: 'on-device-with-translation' },
-    { label: 'Bill Of Lading', mode: 'bill-of-lading' },
-    { label: 'Item Label', mode: 'item_label' },
-    { label: 'Document Classification', mode: 'document_classification' },
+  const options: { label: string; mode: OCRMode; type: OCRType }[] = [
+    { label: 'Shipping Label (Cloud)', mode: 'cloud', type: 'shipping-label' },
+    { label: 'Shipping Label (Device)', mode: 'on-device', type: 'shipping-label' },
+    { label: 'On-Device With Translation', mode: 'on-device', type: 'on-device-with-translation' },
+    { label: 'Bill Of Lading (Cloud)', mode: 'cloud', type: 'bill-of-lading' },
+    { label: 'Bill Of Lading (Device)', mode: 'on-device', type: 'bill-of-lading' },
+    { label: 'Item Label (Cloud)', mode: 'cloud', type: 'item-label' },
+    { label: 'Item Label (Device)', mode: 'on-device', type: 'item-label' },
+    { label: 'Document Classification (Cloud)', mode: 'cloud', type: 'document-classification' },
+    { label: 'Document Classification (Device)', mode: 'on-device', type: 'document-classification' },
   ];
 
-  const renderOption = ({ label, mode }: { label: string; mode: OCRMode }) => (
-    <TouchableOpacity
-      key={mode}
-      onPress={() => {
-        setOcrMode(mode);
-        closeModal();
-      }}
-      style={styles.rowStyle}
-    >
-      <Text style={styles.textStyle}>{label}</Text>
-      {ocrMode === mode && (
-        <MaterialIcons name="done" size={20} color="white" />
-      )}
-    </TouchableOpacity>
-  );
+  const Option = ({ label, mode, type }: { label: string; mode: OCRMode; type: OCRType; }) => {
+    return (
+
+      <View style={{ justifyContent: 'space-between', alignItems: 'center', flexDirection: 'row', width: '100%', height: 48 }}>
+        <Text style={styles.textStyle}>{label}</Text>
+        {ocrMode.toLowerCase().trim() === mode.toLowerCase().trim() && ocrType.toLowerCase().trim() === type.toLowerCase().trim() && (
+          <MaterialIcons name="done" size={20} color="white" />
+        )}
+      </View>
+
+    )
+  };
+
+
+  const handlePressOption = useCallback((mode, type) => {
+    console.log("INSIDE HANDLE PRESS OPTION")
+    if (ocrType !== type) {
+      setModelSize('large');
+    }
+    setOcrMode(mode);
+    setOcrType(type)
+    closeModal();
+  }, [])
 
   return (
     <Modal
@@ -56,12 +73,23 @@ const OCRSelectionView: React.FC<OCRSelectionViewProps> = ({
         style={styles.centeredViewModal}
       >
         <View style={styles.modalView}>
-          {options.map((option) => (
-            <React.Fragment key={option.mode}>
-              {renderOption(option)}
+          {options.map((option, i) => (
+            <React.Fragment key={i}>
+              <TouchableOpacity style={styles.rowStyle} onPress={() => handlePressOption(option.mode, option.type)}>
+                <Option
+                  label={option.label}
+                  mode={option.mode}
+                  type={option.type}
+                />
+
+
+              </TouchableOpacity>
               <View style={styles.horizontalLine} />
             </React.Fragment>
+
+
           ))}
+
         </View>
       </TouchableOpacity>
     </Modal>
@@ -98,6 +126,7 @@ const styles = StyleSheet.create({
     height: 48,
     width: '100%',
     flexDirection: 'row',
+    flexWrap: 'wrap',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
@@ -105,6 +134,7 @@ const styles = StyleSheet.create({
   textStyle: {
     fontSize: 14,
     color: 'white',
+    alignSelf: 'center'
   },
 });
 

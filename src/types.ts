@@ -43,20 +43,24 @@ export type ScanMode =
  * @example 'cloud'
  */
 export type OCRMode =
+  | 'cloud'
   | 'on_device'
-  | 'on_device_with_translation'
+
+  | 'on-device'
+
+
+
+  export type OCRType =
   | 'shipping_label'
   | 'bill_of_lading'
   | 'item_label'
   | 'document_classification'
-  //
-  | 'cloud'
-  | 'on-device'
-  | 'on-device-with-translation'
   | 'shipping-label'
   | 'bill-of-lading'
   | 'item-label'
-  | 'document-classification';
+  | 'document-classification'
+  | 'on_device_with_translation'
+  | 'on-device-with-translation'
 
 /**
  * Environments for the Vision SDK operation.
@@ -206,6 +210,12 @@ export interface VisionSdkViewProps {
    * Optional OCR mode (e.g., cloud or on-device processing).
    */
   ocrMode?: string;
+
+    /**
+   * @type {string}
+   * Optional OCR type (e.g., shipping_label or item_label).
+   */
+    ocrType?: string;
 
   /**
    * @type {boolean}
@@ -401,14 +411,18 @@ export interface OCRScanResult {
  * Represents the result of a barcode scan event.
  * @interface
  */
+
 export interface BarcodeScanResult {
   /**
-   * @type {string[]}
-   * @description An array of scanned barcode values.
-   * Each element in the array represents a scanned barcode.
-   * @example ['1234567890', '0987654321']
+   * @type {BarcodeResult[]}
+   * @description An array of scanned barcode results, where each result contains detailed information.
    */
-  code: string[];
+  codes: BarcodeResult[];
+}
+
+export interface BarcodeResult {
+  scannedCode: string; // The scanned barcode value
+  gs1ExtractedInfo?: Record<string, string>; // Additional extracted information as a key-value map
 }
 
 /**
@@ -878,6 +892,15 @@ export interface VisionSdkProps {
    * @example 'cloud'
    */
   ocrMode?: OCRMode;
+
+    /**
+   * @optional
+   * @type {OCRType| undefined}
+   * @description Optional OCR type (e.g., shipping_label, item_label, bill_of_lading, document_classification).
+   * Define whether the OCR operation should happen in the cloud or on-device.
+   * @example 'shipping_label'
+   */
+  ocrType?: OCRType;
 
   /**
    * @optional

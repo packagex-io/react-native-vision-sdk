@@ -10,7 +10,7 @@ import {
 import OCRSelectionView from './OCRSelectionView';
 import CaptureModesView from './CaptureModesView';
 import ModelSizeSelectionView from './ModelSizeSelectionView';
-import { OCRMode } from '../../../src';
+import { OCRMode, OCRType } from '../../../src';
 
 // Define a type for the zoom level
 interface ZoomLevel {
@@ -24,7 +24,9 @@ interface CameraFooterViewProps {
   setCaptureMode: (mode: 'manual' | 'auto') => void;
   captureMode: string;
   setOcrMode: (mode: OCRMode) => void;
+  setOcrType: (type: OCRType) => void;
   ocrMode: OCRMode;
+  ocrType: OCRType;
   onPressCapture: () => void;
   onPressOnDeviceOcr: () => void;
   setModelSize: (size: string) => void;
@@ -39,6 +41,8 @@ const CameraFooterView = ({
   captureMode,
   setOcrMode,
   ocrMode,
+  ocrType,
+  setOcrType,
   onPressCapture,
   onPressOnDeviceOcr,
   setModelSize,
@@ -84,7 +88,7 @@ const CameraFooterView = ({
             onPress={() => setShowOcrTypes(true)}
             style={styles.ocrModeButton}
           >
-            <Text style={styles.buttonText}>{ocrMode}</Text>
+            <Text style={styles.buttonText}>{`${ocrType}-${ocrMode}`}</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -119,7 +123,7 @@ const CameraFooterView = ({
 
       {/* Right side container for model size selection */}
       <View style={styles.sideContainer}>
-        {ocrMode !== 'cloud' && ocrMode !== 'bill-of-lading' ? (
+        {ocrMode !== 'cloud' ? (
           <TouchableOpacity
             onPress={() => setShowOcrSize(true)}
             style={styles.sizeButton}
@@ -138,10 +142,14 @@ const CameraFooterView = ({
         setOcrMode={(val) => {
           setOcrMode(val);
           if (val == 'on-device' || val == 'on-device-with-translation') {
-            onPressOnDeviceOcr();
+            // onPressOnDeviceOcr();
           }
         }}
         ocrMode={ocrMode}
+        ocrType={ocrType}
+        setOcrType={setOcrType}
+        setModelSize={setModelSize}
+
       />
       <ModelSizeSelectionView
         setShowOcrSize={setShowOcrSize}
@@ -149,6 +157,7 @@ const CameraFooterView = ({
         onPressOnDeviceOcr={onPressOnDeviceOcr}
         setModelSize={setModelSize}
         modelSize={modelSize}
+        ocrType={ocrType}
       />
     </View>
   );
