@@ -28,7 +28,7 @@ import com.facebook.react.uimanager.ThemedReactContext
 import com.facebook.react.uimanager.ViewGroupManager
 import com.facebook.react.uimanager.annotations.ReactProp
 import io.packagex.visionsdk.ApiManager
-import io.packagex.visionsdk.Authentication
+//import io.packagex.visionsdk.Authentication
 import io.packagex.visionsdk.Environment
 import io.packagex.visionsdk.R
 import io.packagex.visionsdk.VisionSDK
@@ -42,7 +42,6 @@ import io.packagex.visionsdk.interfaces.CameraLifecycleCallback
 import io.packagex.visionsdk.interfaces.OCRResult
 import io.packagex.visionsdk.interfaces.ScannerCallback
 import io.packagex.visionsdk.ocr.ml.core.OnDeviceOCRManager
-import io.packagex.visionsdk.ocr.ml.core.enums.ModelClass
 import io.packagex.visionsdk.ocr.ml.core.enums.ModelSize
 import io.packagex.visionsdk.ocr.ml.core.enums.PlatformType
 import io.packagex.visionsdk.ui.views.VisionCameraView
@@ -62,6 +61,9 @@ import io.packagex.visionsdk.ui.startCreateTemplateScreen
 import androidx.activity.ComponentActivity
 import androidx.fragment.app.FragmentActivity
 import androidx.fragment.app.FragmentManager
+import io.packagex.visionsdk.dto.ScannedCodeResult
+import io.packagex.visionsdk.ocr.ml.core.enums.OCRModule
+import io.packagex.visionsdk.service.dto.SLModelToReport
 import java.io.FileInputStream
 
 // VisionSdkViewManager is a class responsible for managing the Vision SDK view component within
@@ -80,7 +82,9 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
 
   private var ocrMode: String = "cloud" // Mode for OCR, default is "cloud" for server-side OCR
 
-  private var locationId: String? = "" // Location identifier for the scanning process
+  private var ocrType: String = "shipping_label" //defines model type selected as string
+
+  private var locationId: String? = null// Location identifier for the scanning process
 
   private var options: Map<String, Any>? = emptyMap() // Options for configuring the Vision SDK, passed from React Native
 
@@ -108,15 +112,15 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
 
   private var shouldStartScanning = true // Flag to determine if scanning should start automatically
 
-  private var authentication: Authentication? = null // Authentication instance for Vision SDK login
+//  private var authentication: Authentication? = null // Authentication instance for Vision SDK login
 
   private var onDeviceOCRManager: OnDeviceOCRManager? = null // OCR manager for on-device OCR processing
 
-  private var modelSize: ModelSize? = null // Model size for on-device OCR (Large/Small)
+  private var modelSize: ModelSize? = ModelSize.Large // Model size for on-device OCR (Large/Small)
 
   private var imagePath: String? = "" // Image Path
 
-  private var modelType: ModelClass = ModelClass.ShippingLabel // Model type for OCR processing (ShippingLabel, Invoice, etc.)
+  private var modelType: OCRModule =  OCRModule.ShippingLabel(modelSize)// Model type for OCR processing (ShippingLabel, Invoice, etc.)
 
   private var cameraSettings: CameraSettings = CameraSettings() // Camera settings for configuring camera properties
 
@@ -159,6 +163,8 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
     visionCameraView = view // Assign the updated view to visionCameraView
     Log.d(TAG, "onAfterUpdateTransaction: ")
   }
+
+
 
   /**
    * Called when the view instance is removed from the view hierarchy.
@@ -356,8 +362,7 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
       apiKey = apiKey,      // Replace with the actual API key
       token = token,        // Replace with the actual token
       platformType = PlatformType.ReactNative, // Assuming platform is Android, adjust as needed
-      modelClass = getModelType(modelType),
-      modelSize = getModelSize(modelSize),
+      modelToReport = SLModelToReport(this.modelSize),
       report = reportText,
       customData = response,
       base64ImageToReportOn = base64Image,
@@ -438,6 +443,7 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
       putBoolean("qrcode", qrCodeDetected)
       putBoolean("text", textDetected)
       putBoolean("document", documentDetected)
+      putBoolean("test", false)
     }
     appContext
       .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
@@ -450,13 +456,7 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
    * @param barcodeList - List of detected barcode strings
    */
   override fun onCodesScanned(barcodeList: List<String>) {
-    Log.d(TAG, "onBarcodeDetected: ")
-    val event = Arguments.createMap().apply {
-      putArray("code", Arguments.fromArray(barcodeList.map { it }.toTypedArray()))
-    }
-    appContext
-      .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
-      .emit("onBarcodeScan", event)
+    //depreciated handler, definition moved to onScanResult
   }
 
   /**
@@ -475,15 +475,66 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
    * @param value - List of detected values (e.g., barcodes)
    */
   override fun onImageCaptured(bitmap: Bitmap, value: List<String>) {
+    //depreciated handler, definition moved to onImageCapturedUpdated
+  }
+
+  override fun onScanResult(barcodeList: List<ScannedCodeResult>) {
+    Log.d(TAG, "onScanResult called with barcodeList: $barcodeList")
+
+    if (barcodeList.isEmpty()) {
+      Log.e(TAG, "barcodeList is empty, skipping event emission")
+      return
+    }
+
+    try {
+      val event = Arguments.createMap().apply {
+        // Create a WritableArray to hold the scanned results
+        val codesArray = Arguments.createArray()
+
+        barcodeList.forEach { scannedCodeResult ->
+          // Create a WritableMap for each ScannedCodeResult
+          val codeMap = Arguments.createMap().apply {
+            putString("scannedCode", scannedCodeResult.scannedCode)
+
+            scannedCodeResult.gs1ExtractedInfo?.let { gs1Info ->
+              val gs1Map = Arguments.createMap()
+              for ((key, value) in gs1Info) {
+                gs1Map.putString(key, value)
+              }
+              putMap("gs1ExtractedInfo", gs1Map)
+            }
+          }
+
+          // Add the WritableMap to the WritableArray
+          codesArray.pushMap(codeMap)
+        }
+
+        // Add the array to the event
+        putArray("codes", codesArray)
+        Log.d(TAG, "Event map created successfully")
+      }
+
+      Log.d(TAG, "Emitting event: $event")
+      appContext
+        .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
+        .emit("onBarcodeScan", event)
+    } catch (e: Exception) {
+      Log.e(TAG, "Error in onScanResult: ${e.message}", e)
+    }
+  }
+
+
+  override fun onImageCapturedUpdated(bitmap: Bitmap, scannedCodeResults: List<ScannedCodeResult>) {
     Log.d(TAG, "onImageCaptured: ")
     this.imagePath = ""
-    val image = saveBitmapAndSendEvent(bitmap, value)
+    val image = saveBitmapAndSendEvent(bitmap, scannedCodeResults.map { it.scannedCode })
     // Check if OCR mode is enabled and auto-response is required
     if (detectionMode == DetectionMode.OCR && isEnableAutoOcrResponseWithImage == true) {
       this.imagePath = image
-      handleOcrMode(bitmap, value)
+      handleOcrMode(bitmap, scannedCodeResults.map { it.scannedCode })
     }
   }
+
 
   /**
    * Handles OCR processing based on the specified OCR mode.
@@ -493,15 +544,42 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
    * @param value List of detected values (e.g., barcodes, QR codes).
    */
   private fun handleOcrMode(bitmap: Bitmap, value: List<String>) {
+    Log.d(TAG, "ocr mode and type in handle ocr mode are $ocrMode, $ocrType")
+
     when (ocrMode) {
-     "on-device", "on_device" -> getPrediction(bitmap, value)
-     "on-device-with-translation", "on_device_with_translation" -> getPredictionWithCloudTransformations(bitmap, value)
-     "cloud", "shipping_label", "shipping-label" -> getPredictionShippingLabelCloud(bitmap, value)
-     "bill-of-lading", "bill_of_lading" -> getPredictionBillOfLadingCloud(bitmap, value)
-     "item-label", "item_label" -> getPredictionItemLabelCloud(bitmap)
-     "document-classification", "document_classification" -> getPredictionDocumentClassificationCloud(bitmap)
+      "cloud" -> when (ocrType) {
+        "shipping_label", "shipping-label" -> getPredictionShippingLabelCloud(bitmap, value)
+        "item_label", "item-label" -> getPredictionItemLabelCloud(bitmap)
+        "bill_of_lading", "bill-of-lading" -> getPredictionBillOfLadingCloud(bitmap, value)
+        "document_classification", "document-classification" -> getPredictionDocumentClassificationCloud(bitmap)
+
+        else -> Log.w(TAG, "Unsupported OCR type for cloud mode: $ocrType")
+      }
+      "on-device", "on_device" -> when(ocrType){
+        "on-device-with-translation", "on_device_with_translation" -> getPredictionWithCloudTransformations(bitmap, value)
+        else -> getPrediction(bitmap, value) // Handle all ocrTypes for on-device
+      }
+
       else -> Log.w(TAG, "Unsupported OCR mode: $ocrMode")
     }
+//    when (ocrMode to ocrType) {
+//      "cloud" to "shipping_label", "cloud" to "shipping-label" -> getPredictionShippingLabelCloud(bitmap, value)
+//      "cloud" to "item_label", "cloud" to "item-label" -> getPredictionItemLabelCloud(bitmap)
+//      "cloud" to "bill_of_lading", "cloud" to "bill-of-lading" -> getPredictionBillOfLadingCloud(bitmap, value)
+//      "cloud" to "document_classification", "cloud" to "document-classification" -> getPredictionDocumentClassificationCloud(bitmap)
+//      "on-device" to _ , "on_device" to _ -> getPrediction(bitmap, value)
+//      else -> Log.w(TAG, "Unsupported OCR config: $ocrMode")
+
+
+
+//     "on-device", "on_device" -> getPrediction(bitmap, value)
+//     "on-device-with-translation", "on_device_with_translation" -> getPredictionWithCloudTransformations(bitmap, value)
+//     "cloud", "shipping_label", "shipping-label" -> getPredictionShippingLabelCloud(bitmap, value)
+//     "bill-of-lading", "bill_of_lading" -> getPredictionBillOfLadingCloud(bitmap, value)
+//     "item-label", "item_label" -> getPredictionItemLabelCloud(bitmap)
+//     "document-classification", "document_classification" -> getPredictionDocumentClassificationCloud(bitmap)
+//      else -> Log.w(TAG, "Unsupported OCR mode: $ocrMode")
+//    }
   }
 
   /**
@@ -578,7 +656,7 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
     apiManager.billOfLadingApiCallAsync(
       apiKey = apiKey,
       token = token,
-      locationId = locationId,
+      locationId =  locationId?.takeIf { it.isNotEmpty() },
       options = options ?: emptyMap(),
       bitmap = bitmap,
       barcodeList = list,
@@ -661,7 +739,7 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
           token = token,
           bitmap = bitmap,
           barcodeList = list,
-          locationId = locationId ?: "",
+          locationId = locationId?.takeIf { it.isNotEmpty() },
           options = options ?: emptyMap(),
           metadata = metaData ?: emptyMap(),
           recipient = recipient ?: emptyMap(),
@@ -831,24 +909,13 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
   fun setModelType(modelType: String?) {
     Log.d(TAG, "modelType: " + modelType)
     this.modelType = when (modelType?.lowercase()) {
-      "shipping_label", "shipping-label" -> ModelClass.ShippingLabel
-      "bill_of_lading", "bill-of-lading" -> ModelClass.BillOfLading
-      "item_label", "item-label"   -> ModelClass.ItemLabel
-      "document_classification", "document-classification" -> ModelClass.DocumentClassification
-      else -> ModelClass.ShippingLabel
+      "shipping_label", "shipping-label" -> OCRModule.ShippingLabel(modelSize)
+      "bill_of_lading", "bill-of-lading" -> OCRModule.BillOfLading(modelSize)
+      "item_label", "item-label"   -> OCRModule.ItemLabel(modelSize)
+      "document_classification", "document-classification" -> OCRModule.DocumentClassification(modelSize)
+      else -> OCRModule.ShippingLabel(modelSize)
     }
 
-  }
-
-  fun getModelType(modelType: String?): ModelClass {
-    Log.d(TAG, "modelType: $modelType")
-    return when (modelType?.lowercase()) {
-    "shipping_label", "shipping-label" -> ModelClass.ShippingLabel
-    "bill_of_lading", "bill-of-lading" -> ModelClass.BillOfLading
-    "item_label", "item-label"   -> ModelClass.ItemLabel
-    "document_classification", "document-classification" -> ModelClass.DocumentClassification
-      else -> ModelClass.ShippingLabel
-    }
   }
 
   // Configure the on-device model for OCR (Optical Character Recognition)
@@ -868,8 +935,7 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
     onDeviceOCRManager = OnDeviceOCRManager(
       context = context!!,
       platformType = PlatformType.ReactNative,
-      modelClass = modelType,
-      modelSize = modelSize
+      ocrModule = modelType,
     )
     // Configure the OCR manager asynchronously, with download progress tracking
     lifecycleOwner?.lifecycle?.coroutineScope?.launchOnIO {
@@ -881,15 +947,19 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
             if (progressInt != lastProgress) {
               lastProgress = progressInt
               Log.d(TAG, "Install Progress: ${(it * 100).toInt()}")
+
+              // Emit download progress event to React Native
+              val event = Arguments.createMap().apply {
+                putDouble("progress", lastProgress)
+                putBoolean("downloadStatus", false)
+              }
+              appContext
+                .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
+                .emit("onModelDownloadProgress", event)
+
+
               if (onDeviceOCRManager?.isModelAlreadyDownloaded() == false) {
-                // Emit download progress event to React Native
-                val event = Arguments.createMap().apply {
-                  putDouble("progress", lastProgress)
-                  putBoolean("downloadStatus", false)
-                }
-                appContext
-                  .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
-                  .emit("onModelDownloadProgress", event)
+                //here was the code moved above
               }
             }
           }
@@ -967,6 +1037,7 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
 
   // This method handles cloud-based bill of lading prediction.
   private fun handlePredictionBillOfLadingCloud(args: ReadableArray?) {
+
     val image = args?.getString(0)
     this.imagePath = image
     val barcodeArray = args?.getArray(1)
@@ -1119,6 +1190,13 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
   fun ocrMode(view: View, ocrMode: String = "cloud") {
     Log.d(TAG, "ocrMode: $ocrMode")
     this.ocrMode = ocrMode
+  }
+
+  @ReactProp(name = "ocrType")
+  fun ocrType(view: View, ocrType: String = "shipping_label"){
+    Log.d(TAG,  "ocrType: $ocrType")
+    this.ocrType = ocrType
+    setModelType(ocrType)
   }
 
   // React Native property to set the location ID, used for location-specific functionalities
