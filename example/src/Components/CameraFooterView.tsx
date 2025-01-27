@@ -10,7 +10,7 @@ import {
 import OCRSelectionView from './OCRSelectionView';
 import CaptureModesView from './CaptureModesView';
 import ModelSizeSelectionView from './ModelSizeSelectionView';
-import { OCRMode, OCRType } from '../../../src';
+import { OCRConfig } from '../../../src';
 
 // Define a type for the zoom level
 interface ZoomLevel {
@@ -23,14 +23,11 @@ interface ZoomLevel {
 interface CameraFooterViewProps {
   setCaptureMode: (mode: 'manual' | 'auto') => void;
   captureMode: string;
-  setOcrMode: (mode: OCRMode) => void;
-  setOcrType: (type: OCRType) => void;
-  ocrMode: OCRMode;
-  ocrType: OCRType;
+  setOcrConfig: (config: OCRConfig) => void;
+  ocrConfig: OCRConfig;
   onPressCapture: () => void;
   onPressOnDeviceOcr: () => void;
-  setModelSize: (size: string) => void;
-  modelSize: string;
+
   mode: string;
   zoomLevel: number;
   setZoomLevel: (level: number) => void;
@@ -39,17 +36,20 @@ interface CameraFooterViewProps {
 const CameraFooterView = ({
   setCaptureMode,
   captureMode,
-  setOcrMode,
-  ocrMode,
-  ocrType,
-  setOcrType,
+
+
+
+
   onPressCapture,
   onPressOnDeviceOcr,
-  setModelSize,
-  modelSize,
+
+
   mode,
   zoomLevel,
   setZoomLevel,
+
+  ocrConfig,
+  setOcrConfig
 }: CameraFooterViewProps) => {
   // Local state to manage visibility of OCR type and size selection
   const [showOcrTypes, setShowOcrTypes] = useState<boolean>(false);
@@ -88,7 +88,7 @@ const CameraFooterView = ({
             onPress={() => setShowOcrTypes(true)}
             style={styles.ocrModeButton}
           >
-            <Text style={styles.buttonText}>{`${ocrType}-${ocrMode}`}</Text>
+            <Text style={styles.buttonText}>{`${ocrConfig.type}-${ocrConfig.mode}`}</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -123,13 +123,13 @@ const CameraFooterView = ({
 
       {/* Right side container for model size selection */}
       <View style={styles.sideContainer}>
-        {ocrMode !== 'cloud' ? (
+        {ocrConfig.mode !== 'cloud' ? (
           <TouchableOpacity
             onPress={() => setShowOcrSize(true)}
             style={styles.sizeButton}
           >
             <Text style={styles.buttonText}>
-              {modelSize === 'large' ? 'Large' : 'Micro'}
+              {ocrConfig.size === 'large' ? 'Large' : 'Micro'}
             </Text>
           </TouchableOpacity>
         ) : null}
@@ -139,25 +139,17 @@ const CameraFooterView = ({
       <OCRSelectionView
         setShowOcrTypes={setShowOcrTypes}
         showOcrTypes={showOcrTypes}
-        setOcrMode={(val) => {
-          setOcrMode(val);
-          if (val == 'on-device' || val == 'on-device-with-translation') {
-            // onPressOnDeviceOcr();
-          }
-        }}
-        ocrMode={ocrMode}
-        ocrType={ocrType}
-        setOcrType={setOcrType}
-        setModelSize={setModelSize}
+        ocrConfig={ocrConfig}
+        setOcrConfig={setOcrConfig}
 
       />
       <ModelSizeSelectionView
         setShowOcrSize={setShowOcrSize}
         showOcrSize={showOcrSize}
         onPressOnDeviceOcr={onPressOnDeviceOcr}
-        setModelSize={setModelSize}
-        modelSize={modelSize}
-        ocrType={ocrType}
+
+        ocrConfig={ocrConfig}
+        setOcrConfig={setOcrConfig}
       />
     </View>
   );

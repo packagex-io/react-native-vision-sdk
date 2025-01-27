@@ -5,9 +5,8 @@ import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 function ModelSizeSelectionView({
   setShowOcrSize,
   showOcrSize,
-  setModelSize,
-  modelSize,
-  ocrType
+  ocrConfig,
+  setOcrConfig
 }: any) {
   const closeModal = () => {
     setShowOcrSize(false);
@@ -22,7 +21,7 @@ function ModelSizeSelectionView({
     id: 2,
     label: 'Micro',
     size: 'micro',
-    disabled: !['shipping-label', 'shipping_label'].includes(ocrType) ,
+    disabled: !['shipping-label', 'shipping_label'].includes(ocrConfig.type) ,
   }, {
     id: 3,
     label: 'Small',
@@ -58,55 +57,21 @@ function ModelSizeSelectionView({
               <TouchableOpacity
                 disabled={option.disabled}
                 onPress={() => {
-                  if (modelSize !== option.size) {
-                    setModelSize(option.size);
+                  if (ocrConfig.size !== option.size) {
+                    setOcrConfig({...ocrConfig, size: option.size});
                   }
                   closeModal();
                 }}
                 style={{...styles.rowStyle, opacity: option.disabled ? 0.5 : 1}}
               >
                 <Text style={styles.textStyle}>{option.label}</Text>
-                {modelSize === option.size && (
+                {ocrConfig.size === option.size && (
                   <MaterialIcons name="done" size={20} color="white" />
                 )}
               </TouchableOpacity>
               <View style={styles.horizontalLine} />
             </React.Fragment>
           ))}
-          {/* {['shipping_label', 'shipping-label'].includes(ocrType) ?
-            <>
-              <TouchableOpacity
-                onPress={() => {
-                  if (modelSize !== 'micro') {
-                    setModelSize('micro');
-                  }
-                  closeModal();
-                }}
-                style={styles.rowStyle}
-              >
-                <Text style={styles.textStyle}>Micro</Text>
-                {modelSize === 'micro' && (
-                  <MaterialIcons name="done" size={20} color="white" />
-                )}
-              </TouchableOpacity>
-
-              <View style={styles.horizontalLine} />
-            </>
-            : null}
-          <TouchableOpacity
-            onPress={() => {
-              if (modelSize !== 'large') {
-                setModelSize('large');
-              }
-              closeModal();
-            }}
-            style={styles.rowStyle}
-          >
-            <Text style={styles.textStyle}>Large</Text>
-            {modelSize === 'large' && (
-              <MaterialIcons name="done" size={20} color="white" />
-            )}
-          </TouchableOpacity> */}
         </View>
       </TouchableOpacity>
     </Modal>

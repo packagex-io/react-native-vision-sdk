@@ -62,6 +62,13 @@ export type OCRMode =
   | 'on_device_with_translation'
   | 'on-device-with-translation'
 
+
+  export interface OCRConfig {
+    type: OCRType;
+    mode: OCRMode;
+    size: ModuleSize;
+  }
+
 /**
  * Environments for the Vision SDK operation.
  * @type {'dev' | 'qa' | 'staging' | 'prod' | 'sandbox'}

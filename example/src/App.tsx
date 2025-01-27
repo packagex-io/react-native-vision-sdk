@@ -3,9 +3,8 @@ import { View, StyleSheet, Platform, Alert, Vibration } from 'react-native';
 import VisionSdkView, {
   VisionSdkRefProps,
   ModuleType,
-  OCRMode,
   ModuleSize,
-  OCRType,
+  OCRConfig,
 } from '../../src/index';
 import CameraFooterView from './Components/CameraFooterView';
 import DownloadingProgressView from './Components/DownloadingProgressView';
@@ -51,9 +50,11 @@ interface DetectedDataProps {
 const App: React.FC = () => {
   const visionSdk = useRef<VisionSdkRefProps>(null);
   const [captureMode, setCaptureMode] = useState<'manual' | 'auto'>('manual');
-  const [ocrMode, setOcrMode] = useState<OCRMode>('cloud');
-  const [ocrType, setOcrType] = useState<OCRType>('shipping-label');
-  const [modelSize, setModelSize] = useState<ModuleSize>('large');
+  const [ocrConfig, setOcrConfig] = useState<OCRConfig>({
+    mode: 'cloud',
+    type: 'shipping-label',
+    size: 'large'
+  });
   const [loading, setLoading] = useState<boolean>(false);
   const [result, setResult] = useState<any>(null);
   const [mode, setMode] = useState<'barcode' | 'qrcode' | 'ocr' | 'photo'>(
@@ -88,46 +89,55 @@ const App: React.FC = () => {
           'Camera Permission Error',
           'App needs camera permission to take pictures. Please go to app settings and enable camera permission.'
         );
+      } else {
+        console.log("CAMERA PERMISSION IS GRANTED")
+        visionSdk?.current?.setFocusSettings({
+          shouldDisplayFocusImage: true,
+          shouldScanInFocusImageRect: true,
+          showCodeBoundariesInMultipleScan: true,
+          validCodeBoundaryBorderColor: '#2abd51',
+          validCodeBoundaryBorderWidth: 2,
+          validCodeBoundaryFillColor: '#2abd51',
+          inValidCodeBoundaryBorderColor: '#cc0829',
+          inValidCodeBoundaryBorderWidth: 2,
+          inValidCodeBoundaryFillColor: '#cc0829',
+          showDocumentBoundaries: true,
+          documentBoundaryBorderColor: '#241616',
+          documentBoundaryFillColor: '#e3000080',
+          focusImageTintColor: '#ffffff',
+          focusImageHighlightedColor: '#e30000',
+        });
+        visionSdk?.current?.setObjectDetectionSettings({
+          isTextIndicationOn: true,
+          isBarCodeOrQRCodeIndicationOn: true,
+          isDocumentIndicationOn: true,
+          codeDetectionConfidence: 0.5,
+          documentDetectionConfidence: 0.5,
+          secondsToWaitBeforeDocumentCapture: 2.0,
+        });
+        visionSdk?.current?.setCameraSettings({
+          nthFrameToProcess: 10,
+        });
+        visionSdk?.current?.startRunningHandler();
+        setLoading(false);
       }
     };
 
-    if (Platform.OS === 'android') {
-      requestCameraPermission();
-    }
+    // if (Platform.OS === 'android') {
+    requestCameraPermission();
+    // }
+
+    return () => {
+      visionSdk?.current?.stopRunningHandler();
+    };
   }, []);
 
   // Configure Vision SDK settings
-  useEffect(() => {
-    visionSdk?.current?.setFocusSettings({
-      shouldDisplayFocusImage: true,
-      shouldScanInFocusImageRect: true,
-      showCodeBoundariesInMultipleScan: true,
-      validCodeBoundaryBorderColor: '#2abd51',
-      validCodeBoundaryBorderWidth: 2,
-      validCodeBoundaryFillColor: '#2abd51',
-      inValidCodeBoundaryBorderColor: '#cc0829',
-      inValidCodeBoundaryBorderWidth: 2,
-      inValidCodeBoundaryFillColor: '#cc0829',
-      showDocumentBoundaries: true,
-      documentBoundaryBorderColor: '#241616',
-      documentBoundaryFillColor: '#e3000080',
-      focusImageTintColor: '#ffffff',
-      focusImageHighlightedColor: '#e30000',
-    });
-    visionSdk?.current?.setObjectDetectionSettings({
-      isTextIndicationOn: true,
-      isBarCodeOrQRCodeIndicationOn: true,
-      isDocumentIndicationOn: true,
-      codeDetectionConfidence: 0.5,
-      documentDetectionConfidence: 0.5,
-      secondsToWaitBeforeDocumentCapture: 2.0,
-    });
-    visionSdk?.current?.setCameraSettings({
-      nthFrameToProcess: 10,
-    });
-    visionSdk?.current?.startRunningHandler();
-    setLoading(false);
-  }, []);
+  // useEffect(() => {
+
+
+
+  // }, []);
 
   useEffect(() => {
     if (modelDownloadingProgress.downloadStatus) {
@@ -136,19 +146,19 @@ const App: React.FC = () => {
   }, [modelDownloadingProgress]);
 
   useEffect(() => {
-    if(['on-device', 'on_device'].includes(ocrMode)){
-      handlePressOnDeviceOcr(ocrType, modelSize)
+    if (['on-device', 'on_device'].includes(ocrConfig.mode)) {
+      handlePressOnDeviceOcr(ocrConfig.type, ocrConfig.size)
     }
-  }, [ocrMode, ocrType, modelSize])
+  }, [ocrConfig])
 
   // Capture photo when the button is pressed
   const handlePressCapture = useCallback(() => {
-    if (mode === 'ocr') {
-      visionSdk?.current?.cameraCaptureHandler();
-      return;
-    }
+    // if (mode === 'ocr') {
+    //   visionSdk?.current?.cameraCaptureHandler();
+    //   return;
+    // }
 
-    visionSdk.current?.restartScanningHandler();
+    // visionSdk.current?.restartScanningHandler();
 
     visionSdk?.current?.cameraCaptureHandler();
   }, [])
@@ -158,26 +168,16 @@ const App: React.FC = () => {
     setFlash(val);
   };
   // Function to configure on-device OCR
-  const handlePressOnDeviceOcr = useCallback((    type: ModuleType = 'shipping_label',
+  const handlePressOnDeviceOcr = useCallback((type: ModuleType = 'shipping_label',
     size: ModuleSize = 'large') => {
-      visionSdk?.current?.stopRunningHandler();
-      setLoading(true);
-      visionSdk?.current?.configureOnDeviceModel({
-        type,
-        size,
-      });
+    visionSdk?.current?.stopRunningHandler();
+    setLoading(true);
+    visionSdk?.current?.configureOnDeviceModel({
+      type,
+      size,
+    });
   }, [])
-  // const onPressOnDeviceOcr = (
-  //   type: ModuleType = 'shipping_label',
-  //   size: ModuleSize = 'large'
-  // ) => {
-  //   visionSdk?.current?.stopRunningHandler();
-  //   setLoading(true);
-  //   visionSdk?.current?.configureOnDeviceModel({
-  //     type,
-  //     size,
-  //   });
-  // };
+
   const onReportError = useCallback((response) => {
     visionSdk.current?.reportError({
       reportText: 'respose is not correct',
@@ -223,6 +223,7 @@ const App: React.FC = () => {
   }, [])
 
   const handleModelDownloadProgress = useCallback((event) => {
+    // console.log('onModelDownloadProgress', event);
     setModelDownloadingProgress(event);
     if (event.downloadStatus) {
       visionSdk.current?.startRunningHandler();
@@ -235,8 +236,8 @@ const App: React.FC = () => {
       <VisionSdkView
         environment='staging'
         ref={visionSdk}
-        ocrMode={ocrMode}
-        ocrType={ocrType}
+        ocrMode={ocrConfig.mode}
+        ocrType={ocrConfig.type}
         captureMode={captureMode}
         isMultipleScanEnabled={true}
         mode={mode}
@@ -257,7 +258,7 @@ const App: React.FC = () => {
       />
       {mode == 'ocr' ? (
         <ResultViewOCR
-          mode={ocrMode}
+          mode={ocrConfig.mode}
           visible={!!result}
           result={result}
           setResult={setResult}
@@ -280,14 +281,16 @@ const App: React.FC = () => {
       <CameraFooterView
         setCaptureMode={setCaptureMode}
         captureMode={captureMode}
-        setOcrMode={setOcrMode}
-        ocrMode={ocrMode}
-        ocrType={ocrType}
-        setOcrType={setOcrType}
+
+        ocrConfig={ocrConfig}
+        setOcrConfig={setOcrConfig}
+
+
+
         onPressCapture={handlePressCapture}
         onPressOnDeviceOcr={handlePressOnDeviceOcr}
-        setModelSize={setModelSize}
-        modelSize={modelSize}
+
+
         mode={mode}
         zoomLevel={zoomLevel}
         setZoomLevel={setZoomLevel}

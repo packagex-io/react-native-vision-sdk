@@ -366,7 +366,6 @@ const Camera = forwardRef<VisionSdkRefProps, VisionSdkProps>(
           onGetTemplates={onGetTemplateHandler}
           onDeleteTemplateById={onDeleteTemplateByIdHandler}
           onDeleteTemplates={onDeleteTemplatesaHndler}
-          // onTest={(event) => console.log('Test:', parseNativeEvent(event))}
         >
           {children}
         </VisionSdkView>

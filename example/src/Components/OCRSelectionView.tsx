@@ -1,26 +1,21 @@
 import React, { useCallback } from 'react';
 import { View, StyleSheet, Text, TouchableOpacity, Modal } from 'react-native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
-import { OCRMode, OCRType } from '../../../src';
+import { OCRConfig, OCRMode, OCRType } from '../../../src';
 
 type OCRSelectionViewProps = {
   setShowOcrTypes: (show: boolean) => void;
   showOcrTypes: boolean;
-  setOcrMode: (mode: OCRMode) => void;
-  ocrMode: OCRMode;
-  ocrType: OCRType;
-  setOcrType: (type: OCRType) => void;
-  setModelSize: (type: string) => void;
+  ocrConfig: OCRConfig;
+  setOcrConfig: (config: OCRConfig) => void;
 };
 
 const OCRSelectionView: React.FC<OCRSelectionViewProps> = ({
   setShowOcrTypes,
   showOcrTypes,
-  setOcrMode,
-  ocrMode,
-  ocrType,
-  setOcrType,
-  setModelSize
+  ocrConfig,
+  setOcrConfig
+
 }) => {
   const closeModal = () => setShowOcrTypes(false);
 
@@ -41,7 +36,7 @@ const OCRSelectionView: React.FC<OCRSelectionViewProps> = ({
 
       <View style={{ justifyContent: 'space-between', alignItems: 'center', flexDirection: 'row', width: '100%', height: 48 }}>
         <Text style={styles.textStyle}>{label}</Text>
-        {ocrMode.toLowerCase().trim() === mode.toLowerCase().trim() && ocrType.toLowerCase().trim() === type.toLowerCase().trim() && (
+        {ocrConfig.mode.toLowerCase().trim() === mode.toLowerCase().trim() && ocrConfig.type.toLowerCase().trim() === type.toLowerCase().trim() && (
           <MaterialIcons name="done" size={20} color="white" />
         )}
       </View>
@@ -51,12 +46,13 @@ const OCRSelectionView: React.FC<OCRSelectionViewProps> = ({
 
 
   const handlePressOption = useCallback((mode, type) => {
-    console.log("INSIDE HANDLE PRESS OPTION")
-    if (ocrType !== type) {
-      setModelSize('large');
-    }
-    setOcrMode(mode);
-    setOcrType(type)
+    setOcrConfig({
+      ...ocrConfig,
+      mode,
+      type,
+      size: ocrConfig.type === type ? ocrConfig.size : 'large'
+    });
+
     closeModal();
   }, [])
 
