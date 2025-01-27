@@ -384,7 +384,7 @@ class VisionSdkViewManager: RCTViewManager {
                 }
             }
             
-            component?.codeScannerView?.focusSettings = updatedFocusSettings
+          component?.codeScannerView?.setFocusSettingsTo(updatedFocusSettings)
         }
     }
     
@@ -422,7 +422,7 @@ class VisionSdkViewManager: RCTViewManager {
             //                detectionSettings.selectedTemplateId = selectedTemplateId
             //            }
             
-            component?.codeScannerView?.objectDetectionConfiguration = detectionSettings
+          component?.codeScannerView?.setObjectDetectionConfigurationTo(detectionSettings)
         }
     }
     
@@ -436,7 +436,7 @@ class VisionSdkViewManager: RCTViewManager {
                 updatedCameraSettings.nthFrameToProcess = Int64(nthFrameToProcess)
             }
             
-            component?.codeScannerView?.cameraSettings = updatedCameraSettings
+          component?.codeScannerView?.setCameraSettingsTo(updatedCameraSettings)
         }
     }
     
