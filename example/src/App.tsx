@@ -153,15 +153,29 @@ const App: React.FC = () => {
 
   // Capture photo when the button is pressed
   const handlePressCapture = useCallback(() => {
-    // if (mode === 'ocr') {
-    //   visionSdk?.current?.cameraCaptureHandler();
-    //   return;
-    // }
-
-    // visionSdk.current?.restartScanningHandler();
-
     visionSdk?.current?.cameraCaptureHandler();
   }, [])
+
+  // const handlePressCaptureTest = () => {
+  //   console.log("HANDLE PRESS CAPTURE TEST")
+  //   visionSdk.current?.reportError({
+  //     reportText: 'respose is not correct',
+  //     type: 'shipping_label',
+  //     size: 'large',
+  //     response: {},
+  //     image: '',
+  //     errorFlags: {
+  //       trackingNo: true,
+  //       courierName:  false,
+  //       weight: true,
+  //       dimensions: false,
+  //       receiverName: true,
+  //       receiverAddress: true,
+  //       senderName: false,
+  //       senderAddres: false
+  //     }
+  //   });
+  // }
 
   // Toggle flash functionality
   const toggleFlash = (val: boolean) => {

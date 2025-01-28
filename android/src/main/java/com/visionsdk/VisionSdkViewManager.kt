@@ -63,6 +63,9 @@ import androidx.fragment.app.FragmentActivity
 import androidx.fragment.app.FragmentManager
 import io.packagex.visionsdk.dto.ScannedCodeResult
 import io.packagex.visionsdk.ocr.ml.core.enums.OCRModule
+import io.packagex.visionsdk.service.dto.BOLModelToReport
+import io.packagex.visionsdk.service.dto.DCModelToReport
+import io.packagex.visionsdk.service.dto.ILModelToReport
 import io.packagex.visionsdk.service.dto.SLModelToReport
 import java.io.FileInputStream
 
@@ -342,6 +345,67 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
     // Safely handle 'response' as Map<String, Any?> or null
     val response = parsedData["response"]?.asStringMap()
 
+    val errorFlags: Map<String, Boolean> = parsedData["errorFlags"]?.asStringMap()?.mapValues { it.value as? Boolean ?: false } ?: emptyMap()
+
+
+    val modelToReport = when (modelType) {
+     in listOf("shipping_label", "shipping-label")  -> {
+        SLModelToReport(
+          this.modelSize,
+          trackingNo = errorFlags["trackingNo"] ?: false,
+          courierName = errorFlags["courierName"] ?: false,
+          weight = errorFlags["weight"] ?: false,
+          dimensions = errorFlags["dimensions"] ?: false,
+          receiverName = errorFlags["receiverName"] ?: false,
+          receiverAddress = errorFlags["receiverAddress"] ?: false,
+          senderName = errorFlags["senderName"] ?: false,
+          senderAddress = errorFlags["senderAddress"] ?: false
+        )
+     }
+      in listOf("item_label", "item-label") -> {
+        ILModelToReport(
+          this.modelSize,
+          supplierName = errorFlags["supplierName"] ?: false,
+          itemName = errorFlags["itemName"] ?: false,
+          itemSKU = errorFlags["itemSKU"] ?: false,
+          weight = errorFlags["weight"] ?: false,
+          quantity = errorFlags["quantity"] ?: false,
+          dimensions = errorFlags["dimensions"] ?: false,
+          productionDate = errorFlags["productionDate"] ?: false,
+          supplierAddress = errorFlags["supplierAddress"] ?: false
+        )
+      }
+      in listOf("bill_of_lading", "bill-of-lading") -> {
+        BOLModelToReport(
+          this.modelSize,
+          referenceNo = errorFlags["referenceNo"] ?: false,
+          loadNumber = errorFlags["loadNumber"] ?: false,
+          purchaseOrderNumber = errorFlags["purchaseOrderNumber"] ?: false,
+          invoiceNumber = errorFlags["invoiceNumber"] ?: false,
+          customerPurchaseOrderNumber = errorFlags["customerPurchaseOrderNumber"] ?: false,
+          orderNumber = errorFlags["orderNumber"] ?: false,
+          billOfLading = errorFlags["billOfLading"] ?: false,
+          masterBillOfLading = errorFlags["masterBillOfLading"] ?: false,
+          lineBillOfLading = errorFlags["lineBillOfLading"] ?: false,
+          houseBillOfLading = errorFlags["houseBillOfLading"] ?: false,
+          shippingId = errorFlags["shippingId"] ?: false,
+          shippingDate = errorFlags["shippingDate"] ?: false,
+          date = errorFlags["date"] ?: false
+        )
+      }
+      in listOf("document-classification") -> {
+        DCModelToReport(
+          this.modelSize,
+          documentClass = errorFlags["documentClass"] ?: false
+        )
+      }
+      else -> {
+        Log.e(TAG, "reportError: Unknown model type")
+        return
+      }
+    }
+
+
     // Log all properties for debugging
     Log.d(TAG, """
         Report Error:
@@ -353,7 +417,7 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
     """.trimIndent())
 
     // Convert image path to Base64 if available
-    val base64Image = imagePath?.let { convertImageToBase64(it) }
+    val base64Image = imagePath?.takeIf { it.isNotBlank() }?.let { convertImageToBase64(it) }
 
     // API call
     val apiManager = ApiManager()
@@ -362,7 +426,7 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
       apiKey = apiKey,      // Replace with the actual API key
       token = token,        // Replace with the actual token
       platformType = PlatformType.ReactNative, // Assuming platform is Android, adjust as needed
-      modelToReport = SLModelToReport(this.modelSize),
+      modelToReport = modelToReport,
       report = reportText,
       customData = response,
       base64ImageToReportOn = base64Image,

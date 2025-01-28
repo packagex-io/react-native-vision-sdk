@@ -504,6 +504,50 @@ export interface ReportErrorType {
    * @example { responseCode: 500, message: 'Internal Server Error' }
    */
   response?: any;
+  errorFlags?: ShippingLabelErrorFlags | ItemLabelErrorFlags | BillOfLadingErrorFlags | DocumentClassificationErrorFlags;
+}
+
+
+export interface ShippingLabelErrorFlags {
+  trackingNo?: boolean;
+  courierName?: boolean;
+  weight?: boolean;
+  dimensions?: boolean;
+  receiverName?: boolean;
+  receiverAddress?: boolean;
+  senderName?: boolean;
+  senderAddres?: boolean;
+}
+
+export interface ItemLabelErrorFlags {
+  supplierName?: boolean;
+  itemName?: boolean;
+  itemSKU?: boolean;
+  weight?: boolean;
+  quantity?: boolean;
+  dimensions?: boolean;
+  productionDate?: boolean;
+  supplierAddress?: boolean;
+}
+
+export interface BillOfLadingErrorFlags {
+  referenceNo?: boolean;
+  loadNumber?: boolean;
+  purchaseOrderNumber?: boolean;
+  invoiceNumber?: boolean;
+  customerPurchaseOrderNumber?: boolean;
+  orderNumber?: boolean;
+  billOfLading?: boolean;
+  masterBillOfLading?: boolean;
+  lineBillOfLading?: boolean;
+  houseBillOfLading?: boolean;
+  shippingId?: boolean;
+  shippingDate?: boolean;
+  date?: boolean;
+}
+
+export interface DocumentClassificationErrorFlags {
+   documentClass?: boolean;
 }
 
 /**
