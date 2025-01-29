@@ -190,6 +190,7 @@ class VisionSdkViewManager: RCTViewManager {
     @objc func reportError (_ node: NSNumber, data: NSDictionary) {
         getComponent(node) { component in
             print("Parsed Data: \(data)")
+          
             let response = data["response"] as? Data
 
             // Handle image if provided and not an empty string
@@ -204,7 +205,8 @@ class VisionSdkViewManager: RCTViewManager {
                             reportText: data["reportText"] as? String ?? "",
                             response: response ?? nil,
                             modelType: data["type"] as? String ?? "shipping_label",
-                            modelSize: data["size"] as? String ?? "larg"
+                            modelSize: data["size"] as? String ?? "large",
+                            errorFlags: data["errorFlags"] as? [String:Bool]
                         )
                     }
                     return
@@ -215,7 +217,8 @@ class VisionSdkViewManager: RCTViewManager {
                 reportText: data["reportText"] as? String ?? "",
                 response: response ?? nil,
                 modelType: data["type"] as? String ?? "shipping_label",
-                modelSize: data["size"] as? String ?? "larg"
+                modelSize: data["size"] as? String ?? "large",
+                errorFlags: data["errorFlags"] as? [String:Bool]
             )
         }
     }

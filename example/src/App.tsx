@@ -90,7 +90,6 @@ const App: React.FC = () => {
           'App needs camera permission to take pictures. Please go to app settings and enable camera permission.'
         );
       } else {
-        console.log("CAMERA PERMISSION IS GRANTED")
         visionSdk?.current?.setFocusSettings({
           shouldDisplayFocusImage: true,
           shouldScanInFocusImageRect: true,
@@ -156,26 +155,93 @@ const App: React.FC = () => {
     visionSdk?.current?.cameraCaptureHandler();
   }, [])
 
-  // const handlePressCaptureTest = () => {
-  //   console.log("HANDLE PRESS CAPTURE TEST")
-  //   visionSdk.current?.reportError({
-  //     reportText: 'respose is not correct',
-  //     type: 'shipping_label',
-  //     size: 'large',
-  //     response: {},
-  //     image: '',
-  //     errorFlags: {
-  //       trackingNo: true,
-  //       courierName:  false,
-  //       weight: true,
-  //       dimensions: false,
-  //       receiverName: true,
-  //       receiverAddress: true,
-  //       senderName: false,
-  //       senderAddres: false
-  //     }
-  //   });
-  // }
+
+    const testReportError = (type: String) => {
+      switch(type){
+        case 'shipping_label':
+          visionSdk.current?.reportError({
+            reportText: 'respose is not correct',
+            type: 'shipping_label',
+            size: 'large',
+            response: {},
+            image: '',
+            errorFlags: {
+              trackingNo: true,
+              courierName:  false,
+              weight: true,
+              dimensions: false,
+              receiverName: true,
+              receiverAddress: true,
+              senderName: false,
+              senderAddres: false
+            }
+          })
+          break;
+
+          case 'item_label':
+            visionSdk.current?.reportError({
+              reportText: 'respose is not correct',
+              type: 'item_label',
+              size: 'large',
+              response: {},
+              image: '',
+              errorFlags: {
+                supplierName: true,
+                itemName: false,
+                itemSKU: true,
+                weight: true,
+                quantity: true,
+                dimensions: true,
+                productionDate: false,
+                supplierAddress: true
+              }
+            })
+            break;
+
+            case 'BOL':
+              visionSdk.current?.reportError({
+                reportText: 'respose is not correct',
+                type: 'bill_of_lading',
+                size: 'large',
+                response: {},
+                image: '',
+                errorFlags: {
+                  referenceNo: true,
+                  loadNumber: false,
+                  purchaseOrderNumber: true,
+                  invoiceNumber: true,
+                  customerPurchaseOrderNumber: false,
+                  orderNumber: true,
+                  billOfLading: false,
+                  masterBillOfLading: false,
+                  lineBillOfLading: false,
+                  houseBillOfLading: true,
+                  shippingId: false,
+                  shippingDate: true,
+                  date: false
+                }
+              })
+              break;
+
+              case 'DC':
+              visionSdk.current?.reportError({
+                reportText: 'respose is not correct',
+                type: 'document_classification',
+                size: 'large',
+                response: {},
+                image: '',
+                errorFlags: {
+                  documentClass: true
+                }
+              });
+              break;
+              default:
+                break;
+      }
+    }
+
+
+
 
   // Toggle flash functionality
   const toggleFlash = (val: boolean) => {
@@ -237,7 +303,6 @@ const App: React.FC = () => {
   }, [])
 
   const handleModelDownloadProgress = useCallback((event) => {
-    // console.log('onModelDownloadProgress', event);
     setModelDownloadingProgress(event);
     if (event.downloadStatus) {
       visionSdk.current?.startRunningHandler();
@@ -295,16 +360,10 @@ const App: React.FC = () => {
       <CameraFooterView
         setCaptureMode={setCaptureMode}
         captureMode={captureMode}
-
         ocrConfig={ocrConfig}
         setOcrConfig={setOcrConfig}
-
-
-
         onPressCapture={handlePressCapture}
         onPressOnDeviceOcr={handlePressOnDeviceOcr}
-
-
         mode={mode}
         zoomLevel={zoomLevel}
         setZoomLevel={setZoomLevel}

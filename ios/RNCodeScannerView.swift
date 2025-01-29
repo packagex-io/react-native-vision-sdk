@@ -561,10 +561,73 @@ extension RNCodeScannerView {
         reportText: String,
         response: Data? = nil,
         modelType: String,
-        modelSize: String
+        modelSize: String,
+        errorFlags: [String: Bool]? = nil
     ) {
-        let tokenValue = token?.isEmpty == false ? token : nil
-        let apiKey = VSDKConstants.apiKey.isEmpty ? nil : VSDKConstants.apiKey
+      
+      let tokenValue = token?.isEmpty == false ? token : nil
+      let apiKey = VSDKConstants.apiKey.isEmpty ? nil : VSDKConstants.apiKey
+      
+      var parentReportModel: VisionSDK.VSDKAnalyticsReportModel?
+      
+      
+      guard let errorFlags = errorFlags else { return }
+      let modelClass = getModelType(modelType)
+      
+      switch(modelClass){
+      case .shippingLabel:
+          let slModelToReport = VisionSDK.SLReportModel()
+          slModelToReport.isCourierNameWrong = errorFlags["courierName"] ?? false
+          slModelToReport.isSenderNameWrong = errorFlags["senderName"] ?? false
+          slModelToReport.isSenderAddressWrong = errorFlags["senderAddres"] ?? false
+          slModelToReport.isReceiverNameWrong = errorFlags["receiverName"] ?? false
+          slModelToReport.isReceiverAddressWrong = errorFlags["receiverAddress"] ?? false
+          slModelToReport.isDimensionsValueWrong = errorFlags["dimensions"] ?? false
+          slModelToReport.isTrackingNoWrong = errorFlags["trackingNo"] ?? false
+          slModelToReport.isWeightWrong = errorFlags["weight"] ?? false
+          parentReportModel = slModelToReport
+        
+      case .billOfLading:
+          let bolModelToReport = VisionSDK.BOLReportModel()
+          bolModelToReport.isReferenceNoWrong = errorFlags["referenceNo"] ?? false
+          bolModelToReport.isLoadNumberWrong = errorFlags["loadNumber"] ?? false
+          bolModelToReport.isPurchaseOrderNumberWrong = errorFlags["purchaseOrderNumber"] ?? false
+          bolModelToReport.isInvoiceNumberWrong = errorFlags["invoiceNumber"] ?? false
+          bolModelToReport.isCustomerPurchaseOrderNumberWrong = errorFlags["customerPurchaseOrderNumber"] ?? false
+          bolModelToReport.isOrderNumberWrong = errorFlags["orderNumber"] ?? false
+          bolModelToReport.isBillOfLadingWrong = errorFlags["billOfLading"] ?? false
+          bolModelToReport.isMasterBillOfLadingWrong = errorFlags["masterBillOfLading"] ?? false
+          bolModelToReport.isLineBillOfLadingWrong = errorFlags["lineBillOfLading"] ?? false
+          bolModelToReport.isHouseBillOfLadingWrong = errorFlags["houseBillOfLading"] ?? false
+          bolModelToReport.isShippingIdWrong = errorFlags["shippingId"] ?? false
+          bolModelToReport.isShippingDateWrong = errorFlags["shippingDate"] ?? false
+          bolModelToReport.isDateWrong = errorFlags["date"] ?? false
+          parentReportModel = bolModelToReport
+        
+      case .itemLabel:
+          let ilModelToReport = VisionSDK.ILReportModel()
+          ilModelToReport.isSupplierNameWrong = errorFlags["supplierName"] ?? false
+          ilModelToReport.isItemNameWrong = errorFlags["itemName"] ?? false
+          ilModelToReport.isItemSKUWrong = errorFlags["itemSKU"] ?? false
+          ilModelToReport.isWeightWrong = errorFlags["weight"] ?? false
+          ilModelToReport.isQuantityWrong = errorFlags["quantity"] ?? false
+          ilModelToReport.isDimensionsValueWrong = errorFlags["dimensions"] ?? false
+          ilModelToReport.isProductionDateWrong = errorFlags["productionDate"] ?? false
+          ilModelToReport.isSupplierAddressWrong = errorFlags["supplierAddress"] ?? false
+          parentReportModel = ilModelToReport
+         
+        
+      case .documentClassification:
+          let dcModelToReport = VisionSDK.DCReportModel()
+          dcModelToReport.isDocumentClassWrong = errorFlags["documentClass"] ?? false
+          parentReportModel = dcModelToReport
+        
+      @unknown default:
+        print("⚠️ Unknown modelClass encountered: \(modelClass)")
+        
+      }
+      
+      
         // Call the `reportErrorWith` function of the OnDeviceOCRManager
         OnDeviceOCRManager.shared.reportErrorWith(
             apiKey,
@@ -574,7 +637,7 @@ extension RNCodeScannerView {
             image: uiImage?.ciImage ?? nil,
             reportText: reportText,
             response: response,
-            reportModel: nil
+            reportModel: parentReportModel
         ) { responseCode in
             print("Full JSON Response reportError:", responseCode)
             // Update the UI after processing
