@@ -46,16 +46,16 @@ const Camera = forwardRef<VisionSdkRefProps, VisionSdkProps>(
       zoomLevel = 1.8,
       ocrMode = 'cloud',
       ocrType = 'shipping_label',
-      onModelDownloadProgress = () => {},
-      onBarcodeScan = () => {},
-      onImageCaptured = () => {},
-      onOCRScan = () => {},
-      onDetected = () => {},
-      onError = () => {},
-      onCreateTemplate = () => {},
-      onGetTemplates = () => {},
-      onDeleteTemplateById = () => {},
-      onDeleteTemplates = () => {},
+      onModelDownloadProgress = () => { },
+      onBarcodeScan = () => { },
+      onImageCaptured = () => { },
+      onOCRScan = () => { },
+      onDetected = () => { },
+      onError = () => { },
+      onCreateTemplate = () => { },
+      onGetTemplates = () => { },
+      onDeleteTemplateById = () => { },
+      onDeleteTemplates = () => { },
     },
     ref
   ) => {
@@ -89,21 +89,17 @@ const Camera = forwardRef<VisionSdkRefProps, VisionSdkProps>(
     }
 
     /* Command functions using dispatchCommand helper with name and enum fallback */
-    const dispatchCommand = (
+    const dispatchCommand = useCallback((
       commandName: keyof typeof Commands,
       params: any[] = []
     ) => {
       try {
-        // Check if the commandName is valid (exists in the Commands enum)
-        if (!(commandName in Commands)) {
-          throw new Error(`"${commandName}" is not a valid command name.`);
-        }
         // Log params for debugging
         console.log(`Dispatching command: ${commandName} with params:`, params);
         // Attempt to retrieve the command from the VisionSDKView's UIManager configuration. If not found, fall back to using the command from the Commands enum.
         const command =
           UIManager.getViewManagerConfig('VisionSDKView')?.Commands[
-            commandName
+          commandName
           ] ?? Commands[commandName];
         // If command is not found in either UIManager or Commands, throw an error.
         if (command === undefined) {
@@ -111,17 +107,22 @@ const Camera = forwardRef<VisionSdkRefProps, VisionSdkProps>(
             `Command "${commandName}" not found in VisionSDKView or Commands.`
           );
         }
+
+        console.log(`📡 Dispatching command: ${commandName}`, params);
+
         // Dispatch the command with the provided parameters to the native module (VisionSDKView).
+        const viewHandle = findNodeHandle(VisionSDKViewRef.current)
+        if (!viewHandle) return
         UIManager.dispatchViewManagerCommand(
-          findNodeHandle(VisionSDKViewRef.current), // Find the native view reference
+          viewHandle, // Find the native view reference
           command, // The command to dispatch
           params // Parameters to pass with the command
         );
       } catch (error: any) {
-        console.error(error.message);
+        console.error(`🚨 Error dispatching command: ${error.message}`);
         onError({ message: error.message });
       }
-    };
+    }, [onError]);
 
     // Expose handlers via ref to parent components
     // This allows the parent component to call functions like cameraCaptureHandler, stopRunningHandler, etc.
@@ -136,38 +137,34 @@ const Camera = forwardRef<VisionSdkRefProps, VisionSdkProps>(
       startRunningHandler: () => dispatchCommand('startRunning'),
 
       // 3: Sets metadata using the 'setMetaData' command
-      setMetadata: (param) => dispatchCommand('setMetaData', [param]),
+      setMetadata: (param: any) => dispatchCommand('setMetaData', [param]),
 
       // 4: Sets the recipient information using the 'setRecipient' command
-      setRecipient: (param) => dispatchCommand('setRecipient', [param]),
+      setRecipient: (param: any) => dispatchCommand('setRecipient', [param]),
 
       // 5: Sets the sender information using the 'setSender' command
-      setSender: (param) => dispatchCommand('setSender', [param]),
+      setSender: (param: any) => dispatchCommand('setSender', [param]),
 
       // 6: Configures on-device model using the 'configureOnDeviceModel' command
-      configureOnDeviceModel: (param) =>
-        dispatchCommand('configureOnDeviceModel', [param]),
+      configureOnDeviceModel: (param: any) => dispatchCommand('configureOnDeviceModel', [param]),
 
       // 7: Restarts the scanning process using the 'restartScanning' command
-      restartScanningHandler: () => dispatchCommand('restartScanning'),
+      restartScanningHandler:() => dispatchCommand('restartScanning'),
 
       // 8: Sets focus settings using the 'setFocusSettings' command
-      setFocusSettings: (param) => dispatchCommand('setFocusSettings', [param]),
+      setFocusSettings: (param: any) => dispatchCommand('setFocusSettings', [param]),
 
       // 9: Sets object detection settings using the 'setObjectDetectionSettings' command
-      setObjectDetectionSettings: (param) =>
-        dispatchCommand('setObjectDetectionSettings', [param]),
+      setObjectDetectionSettings: (param: any) => dispatchCommand('setObjectDetectionSettings', [param]),
 
       // 10: Sets camera settings using the 'setCameraSettings' command
-      setCameraSettings: (param) =>
-        dispatchCommand('setCameraSettings', [param]),
+      setCameraSettings: (param: any) => dispatchCommand('setCameraSettings', [param]),
 
       // 11: Retrieves prediction using the 'getPrediction' command with image and barcode parameters
-      getPrediction: (image: string, barcode: string[]) =>
-        dispatchCommand('getPrediction', [image, barcode]),
+      getPrediction: (image: string, barcode: string[]) => dispatchCommand('getPrediction', [image, barcode]),
 
       // 12: Retrieves prediction with cloud transformations using the 'getPredictionWithCloudTransformations' command
-      getPredictionWithCloudTransformations: (
+      getPredictionWithCloudTransformations:(
         image: string,
         barcode: string[]
       ) =>
@@ -225,7 +222,9 @@ const Camera = forwardRef<VisionSdkRefProps, VisionSdkProps>(
       // 21: Deletes all templates from storage using the 'deleteAllTemplates' command
       deleteAllTemplates: () => dispatchCommand('deleteAllTemplates'),
       // onCreateTemplate: () => dispatchCommand('deleteAllTemplates'),
-    }));
+    }), [dispatchCommand]);
+
+
 
     // Subscribe event listeners on mount, and cleanup on unmount
     useEffect(() => {
@@ -240,10 +239,10 @@ const Camera = forwardRef<VisionSdkRefProps, VisionSdkProps>(
         ['onCreateTemplate', onCreateTemplateHandler],
         ['onGetTemplates', onGetTemplateHandler],
         ['onDeleteTemplateById', onDeleteTemplateByIdHandler],
-        ['onDeleteTemplates', onDeleteTemplatesaHndler],
+        ['onDeleteTemplates', onDeleteTemplatesaHandler],
       ];
       // Add listeners
-      eventListeners.forEach(([event, handler]) =>
+      const subscriptions = eventListeners.map(([event, handler]) =>
         DeviceEventEmitter.addListener(
           event as string,
           handler as (event: any) => void
@@ -252,24 +251,9 @@ const Camera = forwardRef<VisionSdkRefProps, VisionSdkProps>(
 
       // Cleanup listeners on unmount
       return () => {
-        eventListeners.forEach(([event]) =>
-          DeviceEventEmitter.removeAllListeners(event as string)
-        );
+        subscriptions.forEach((sub) => sub.remove());
       };
-    }, [
-      mode,
-      ocrMode,
-      ocrType,
-      onModelDownloadProgress,
-      onBarcodeScan,
-      onImageCaptured,
-      onOCRScan,
-      onError,
-      onCreateTemplate,
-      onGetTemplates,
-      onDeleteTemplateById,
-      onDeleteTemplates,
-    ]);
+    }, []);
 
     // Helper function to handle events
     const parseNativeEvent = useCallback(<T,>(event: any): T => {
@@ -280,15 +264,15 @@ const Camera = forwardRef<VisionSdkRefProps, VisionSdkProps>(
       return event; // If no 'nativeEvent', return the event itself
     }, []);
 
-    const onBarcodeScanHandler =  useCallback((event: any) =>
+    const onBarcodeScanHandler = useCallback((event: any) =>
       onBarcodeScan(parseNativeEvent<BarcodeScanResult>(event)),
-    [])
+      [])
 
     // const onImageCaptured = useCallback((event) =>  console.log('Image Captured:', event), []);
     const onModelDownloadProgressHandler = useCallback((event: any) =>
       onModelDownloadProgress(parseNativeEvent<ModelDownloadProgress>(event)), []);
 
-    const onImageCapturedHandler =  useCallback((event: any) =>
+    const onImageCapturedHandler = useCallback((event: any) =>
       onImageCaptured(parseNativeEvent<ImageCaptureEvent>(event)), [])
 
     const onDetectedHandler = useCallback(
@@ -300,26 +284,25 @@ const Camera = forwardRef<VisionSdkRefProps, VisionSdkProps>(
       onError(parseNativeEvent<ErrorResult>(event)), [])
 
 
-    const onCreateTemplateHandler = useCallback( (event: any) =>
+    const onCreateTemplateHandler = useCallback((event: any) =>
       onCreateTemplate(parseNativeEvent<any>(event)), []);
 
-    const onGetTemplateHandler = useCallback( (event: any) =>
-      onGetTemplates(parseNativeEvent<any>(event)) , []);
+    const onGetTemplateHandler = useCallback((event: any) =>
+      onGetTemplates(parseNativeEvent<any>(event)), []);
 
-    const onDeleteTemplateByIdHandler = useCallback( (event: any) =>
+    const onDeleteTemplateByIdHandler = useCallback((event: any) =>
       onDeleteTemplateById(parseNativeEvent<any>(event)), [])
 
-    const onDeleteTemplatesaHndler = useCallback( (event: any) =>
+    const onDeleteTemplatesaHandler = useCallback((event: any) =>
       onDeleteTemplates(parseNativeEvent<any>(event)), [])
 
-    const onOCRScanHandler = useCallback( (event: any) => {
+    const onOCRScanHandler = useCallback((event: any) => {
       let ocrEvent = parseNativeEvent<OCRScanResult>(event);
       // Parse data only if on Android and the data is a JSON string
       if (Platform.OS === 'android' && typeof ocrEvent.data === 'string') {
         try {
           // Attempt to parse the stringified JSON
-          const parsedData = JSON.parse(ocrEvent.data);
-          ocrEvent.data = parsedData?.data ?? ocrEvent.data; // Use parsed data if available
+          ocrEvent.data = JSON.parse(ocrEvent.data)?.data ?? ocrEvent.data;
         } catch (error) {
           // If JSON parsing fails, keep the original data or handle errors
           ocrEvent.data = ocrEvent.data?.data ?? ocrEvent.data ?? null;
@@ -335,40 +318,40 @@ const Camera = forwardRef<VisionSdkRefProps, VisionSdkProps>(
         ocrEvent?.data?.image_url ?? ocrEvent?.imagePath ?? '';
       // Pass the final ocrEvent to the callback function
       onOCRScan(ocrEvent);
-    }, []);
+    }, [onOCRScan]);
 
     return (
       <>
-        <VisionSdkView
-          ref={VisionSDKViewRef}
-          key={reRender}
-          style={styles.flex}
-          isMultipleScanEnabled={isMultipleScanEnabled}
-          apiKey={apiKey}
-          mode={mode}
-          isEnableAutoOcrResponseWithImage={isEnableAutoOcrResponseWithImage}
-          captureMode={captureMode}
-          ocrMode={ocrMode}
-          ocrType={ocrType}
-          token={token}
-          locationId={locationId}
-          options={options} // ideally this should be passed from variable, that is receiving data from ScannerContainer
-          environment={environment}
-          flash={flash}
-          zoomLevel={zoomLevel}
-          onBarcodeScan={onBarcodeScanHandler}
-          onModelDownloadProgress={onModelDownloadProgressHandler}
-          onImageCaptured={onImageCapturedHandler}
-          onOCRScan={onOCRScanHandler}
-          onDetected={onDetectedHandler}
-          onError={onErrorHandler}
-          onCreateTemplate={onCreateTemplateHandler}
-          onGetTemplates={onGetTemplateHandler}
-          onDeleteTemplateById={onDeleteTemplateByIdHandler}
-          onDeleteTemplates={onDeleteTemplatesaHndler}
-        >
-          {children}
-        </VisionSdkView>
+      <VisionSdkView
+        ref={VisionSDKViewRef}
+        key={reRender}
+        style={styles.flex}
+        isMultipleScanEnabled={isMultipleScanEnabled}
+        apiKey={apiKey}
+        mode={mode}
+        isEnableAutoOcrResponseWithImage={isEnableAutoOcrResponseWithImage}
+        captureMode={captureMode}
+        ocrMode={ocrMode}
+        ocrType={ocrType}
+        token={token}
+        locationId={locationId}
+        options={options} // ideally this should be passed from variable, that is receiving data from ScannerContainer
+        environment={environment}
+        flash={flash}
+        zoomLevel={zoomLevel}
+        onBarcodeScan={onBarcodeScanHandler}
+        onModelDownloadProgress={onModelDownloadProgressHandler}
+        onImageCaptured={onImageCapturedHandler}
+        onOCRScan={onOCRScanHandler}
+        onDetected={onDetectedHandler}
+        onError={onErrorHandler}
+        onCreateTemplate={onCreateTemplateHandler}
+        onGetTemplates={onGetTemplateHandler}
+        onDeleteTemplateById={onDeleteTemplateByIdHandler}
+        onDeleteTemplates={onDeleteTemplatesaHandler}
+      >
+        {children}
+      </VisionSdkView>
       </>
     );
   }
