@@ -5,13 +5,40 @@ import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 function ModelSizeSelectionView({
   setShowOcrSize,
   showOcrSize,
-  onPressOnDeviceOcr,
-  setModelSize,
-  modelSize,
+  ocrConfig,
+  setOcrConfig
 }: any) {
   const closeModal = () => {
     setShowOcrSize(false);
   };
+
+  const modelSizeOptions = [{
+    id: 1,
+    label: 'Nano',
+    size: 'nano',
+    disabled: true,
+  },{
+    id: 2,
+    label: 'Micro',
+    size: 'micro',
+    disabled: !['shipping-label', 'shipping_label'].includes(ocrConfig.type) ,
+  }, {
+    id: 3,
+    label: 'Small',
+    size: 'small',
+    disabled: true,
+  },{
+    id: 4,
+    label: 'Medium',
+    size: 'medium',
+    disabled: true,
+  },{
+    id: 5,
+    label: 'Large',
+    size: 'large',
+    disabled: false
+  }]
+
   return (
     <Modal
       animationType="fade"
@@ -25,37 +52,26 @@ function ModelSizeSelectionView({
         style={styles.centeredViewModal}
       >
         <View style={styles.modalView}>
-          <TouchableOpacity
-            onPress={() => {
-              if (modelSize !== 'micro') {
-                setModelSize('micro');
-                onPressOnDeviceOcr(undefined, 'micro');
-              }
-              closeModal();
-            }}
-            style={styles.rowStyle}
-          >
-            <Text style={styles.textStyle}>Micro</Text>
-            {modelSize === 'micro' && (
-              <MaterialIcons name="done" size={20} color="white" />
-            )}
-          </TouchableOpacity>
-          <View style={styles.horizontalLine} />
-          <TouchableOpacity
-            onPress={() => {
-              if (modelSize !== 'large') {
-                setModelSize('large');
-                onPressOnDeviceOcr(undefined, 'large');
-              }
-              closeModal();
-            }}
-            style={styles.rowStyle}
-          >
-            <Text style={styles.textStyle}>Large</Text>
-            {modelSize === 'large' && (
-              <MaterialIcons name="done" size={20} color="white" />
-            )}
-          </TouchableOpacity>
+          {modelSizeOptions.map((option, i) => (
+            <React.Fragment key={i}>
+              <TouchableOpacity
+                disabled={option.disabled}
+                onPress={() => {
+                  if (ocrConfig.size !== option.size) {
+                    setOcrConfig({...ocrConfig, size: option.size});
+                  }
+                  closeModal();
+                }}
+                style={{...styles.rowStyle, opacity: option.disabled ? 0.5 : 1}}
+              >
+                <Text style={styles.textStyle}>{option.label}</Text>
+                {ocrConfig.size === option.size && (
+                  <MaterialIcons name="done" size={20} color="white" />
+                )}
+              </TouchableOpacity>
+              <View style={styles.horizontalLine} />
+            </React.Fragment>
+          ))}
         </View>
       </TouchableOpacity>
     </Modal>
@@ -97,6 +113,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
+
   },
   textStyle: {
     fontSize: 14,

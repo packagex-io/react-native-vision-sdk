@@ -1,10 +1,10 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { View, StyleSheet, Platform, Alert, Vibration } from 'react-native';
 import VisionSdkView, {
   VisionSdkRefProps,
   ModuleType,
-  OCRMode,
   ModuleSize,
+  OCRConfig,
 } from '../../src/index';
 import CameraFooterView from './Components/CameraFooterView';
 import DownloadingProgressView from './Components/DownloadingProgressView';
@@ -37,8 +37,9 @@ const sdkOptions = {
   postprocess: {
     require_unique_hash: true,
     parse_addresses: ['sender', 'recipient'],
-  },
-};
+  }
+}
+
 interface DetectedDataProps {
   barcode: boolean;
   qrcode: boolean;
@@ -49,8 +50,11 @@ interface DetectedDataProps {
 const App: React.FC = () => {
   const visionSdk = useRef<VisionSdkRefProps>(null);
   const [captureMode, setCaptureMode] = useState<'manual' | 'auto'>('manual');
-  const [ocrMode, setOcrMode] = useState<OCRMode>('cloud');
-  const [modelSize, setModelSize] = useState<string>('large');
+  const [ocrConfig, setOcrConfig] = useState<OCRConfig>({
+    mode: 'cloud',
+    type: 'shipping-label',
+    size: 'large'
+  });
   const [loading, setLoading] = useState<boolean>(false);
   const [result, setResult] = useState<any>(null);
   const [mode, setMode] = useState<'barcode' | 'qrcode' | 'ocr' | 'photo'>(
@@ -64,6 +68,7 @@ const App: React.FC = () => {
     text: false,
     document: false,
   });
+
   const [modelDownloadingProgress, setModelDownloadingProgress] =
     useState<DownloadingProgress>({
       downloadStatus: true,
@@ -84,140 +89,255 @@ const App: React.FC = () => {
           'Camera Permission Error',
           'App needs camera permission to take pictures. Please go to app settings and enable camera permission.'
         );
+      } else {
+        visionSdk?.current?.setFocusSettings({
+          shouldDisplayFocusImage: true,
+          shouldScanInFocusImageRect: true,
+          showCodeBoundariesInMultipleScan: true,
+          validCodeBoundaryBorderColor: '#2abd51',
+          validCodeBoundaryBorderWidth: 2,
+          validCodeBoundaryFillColor: '#2abd51',
+          inValidCodeBoundaryBorderColor: '#cc0829',
+          inValidCodeBoundaryBorderWidth: 2,
+          inValidCodeBoundaryFillColor: '#cc0829',
+          showDocumentBoundaries: true,
+          documentBoundaryBorderColor: '#241616',
+          documentBoundaryFillColor: '#e3000080',
+          focusImageTintColor: '#ffffff',
+          focusImageHighlightedColor: '#e30000',
+        });
+        visionSdk?.current?.setObjectDetectionSettings({
+          isTextIndicationOn: true,
+          isBarCodeOrQRCodeIndicationOn: true,
+          isDocumentIndicationOn: true,
+          codeDetectionConfidence: 0.5,
+          documentDetectionConfidence: 0.5,
+          secondsToWaitBeforeDocumentCapture: 2.0,
+        });
+        visionSdk?.current?.setCameraSettings({
+          nthFrameToProcess: 10,
+        });
+        visionSdk?.current?.startRunningHandler();
+        setLoading(false);
       }
     };
 
-    if (Platform.OS === 'android') {
-      requestCameraPermission();
-    }
+    // if (Platform.OS === 'android') {
+    requestCameraPermission();
+    // }
+
+    return () => {
+      visionSdk?.current?.stopRunningHandler();
+    };
   }, []);
 
   // Configure Vision SDK settings
-  useEffect(() => {
-    visionSdk?.current?.setFocusSettings({
-      shouldDisplayFocusImage: true,
-      shouldScanInFocusImageRect: true,
-      showCodeBoundariesInMultipleScan: true,
-      validCodeBoundaryBorderColor: '#2abd51',
-      validCodeBoundaryBorderWidth: 2,
-      validCodeBoundaryFillColor: '#2abd51',
-      inValidCodeBoundaryBorderColor: '#cc0829',
-      inValidCodeBoundaryBorderWidth: 2,
-      inValidCodeBoundaryFillColor: '#cc0829',
-      showDocumentBoundaries: true,
-      documentBoundaryBorderColor: '#241616',
-      documentBoundaryFillColor: '#e3000080',
-      focusImageTintColor: '#ffffff',
-      focusImageHighlightedColor: '#e30000',
-    });
-    visionSdk?.current?.setObjectDetectionSettings({
-      isTextIndicationOn: true,
-      isBarCodeOrQRCodeIndicationOn: true,
-      isDocumentIndicationOn: true,
-      codeDetectionConfidence: 0.5,
-      documentDetectionConfidence: 0.5,
-      secondsToWaitBeforeDocumentCapture: 2.0,
-    });
-    visionSdk?.current?.setCameraSettings({
-      nthFrameToProcess: 10,
-    });
-    visionSdk?.current?.startRunningHandler();
-    setLoading(false);
-  }, []);
+  // useEffect(() => {
+
+
+
+  // }, []);
+
   useEffect(() => {
     if (modelDownloadingProgress.downloadStatus) {
       setLoading(false);
     }
   }, [modelDownloadingProgress]);
 
+  useEffect(() => {
+    if (['on-device', 'on_device'].includes(ocrConfig.mode)) {
+      handlePressOnDeviceOcr(ocrConfig.type, ocrConfig.size)
+    }
+  }, [ocrConfig])
+
   // Capture photo when the button is pressed
-  const onPressCapture = () => {
-    if (mode === 'ocr') {
-      visionSdk?.current?.cameraCaptureHandler();
-      return;
+  const handlePressCapture = useCallback(() => {
+    visionSdk?.current?.cameraCaptureHandler();
+  }, [])
+
+
+    const testReportError = (type: String) => {
+      switch(type){
+        case 'shipping_label':
+          visionSdk.current?.reportError({
+            reportText: 'respose is not correct',
+            type: 'shipping_label',
+            size: 'large',
+            response: {},
+            image: '',
+            errorFlags: {
+              trackingNo: true,
+              courierName:  false,
+              weight: true,
+              dimensions: false,
+              receiverName: true,
+              receiverAddress: true,
+              senderName: false,
+              senderAddres: false
+            }
+          })
+          break;
+
+          case 'item_label':
+            visionSdk.current?.reportError({
+              reportText: 'respose is not correct',
+              type: 'item_label',
+              size: 'large',
+              response: {},
+              image: '',
+              errorFlags: {
+                supplierName: true,
+                itemName: false,
+                itemSKU: true,
+                weight: true,
+                quantity: true,
+                dimensions: true,
+                productionDate: false,
+                supplierAddress: true
+              }
+            })
+            break;
+
+            case 'BOL':
+              visionSdk.current?.reportError({
+                reportText: 'respose is not correct',
+                type: 'bill_of_lading',
+                size: 'large',
+                response: {},
+                image: '',
+                errorFlags: {
+                  referenceNo: true,
+                  loadNumber: false,
+                  purchaseOrderNumber: true,
+                  invoiceNumber: true,
+                  customerPurchaseOrderNumber: false,
+                  orderNumber: true,
+                  billOfLading: false,
+                  masterBillOfLading: false,
+                  lineBillOfLading: false,
+                  houseBillOfLading: true,
+                  shippingId: false,
+                  shippingDate: true,
+                  date: false
+                }
+              })
+              break;
+
+              case 'DC':
+              visionSdk.current?.reportError({
+                reportText: 'respose is not correct',
+                type: 'document_classification',
+                size: 'large',
+                response: {},
+                image: '',
+                errorFlags: {
+                  documentClass: true
+                }
+              });
+              break;
+              default:
+                break;
+      }
     }
 
-    visionSdk.current?.restartScanningHandler();
 
-    visionSdk?.current?.cameraCaptureHandler();
-  };
+
+
   // Toggle flash functionality
   const toggleFlash = (val: boolean) => {
     setFlash(val);
   };
   // Function to configure on-device OCR
-  const onPressOnDeviceOcr = (
-    type: ModuleType = 'shipping_label',
-    size: ModuleSize = 'large'
-  ) => {
+  const handlePressOnDeviceOcr = useCallback((type: ModuleType = 'shipping_label',
+    size: ModuleSize = 'large') => {
     visionSdk?.current?.stopRunningHandler();
     setLoading(true);
     visionSdk?.current?.configureOnDeviceModel({
       type,
       size,
     });
-  };
-  const onReportError = (response) => {
+  }, [])
+
+  const onReportError = useCallback((response) => {
     visionSdk.current?.reportError({
       reportText: 'respose is not correct',
       type: 'document_classification',
       size: 'large',
       response: response,
-      image: response?.image_url ?? '',
+      image: response?.image_url ?? ''
     });
-  };
+  }, [])
+
+
+  const handleError = useCallback((error) => {
+    console.log('onError', error);
+    Alert.alert('ERROR', error?.message);
+    setLoading(false);
+    visionSdk.current?.restartScanningHandler();
+  }, [])
+
+  const handleDetected = useCallback((event) => {
+    // console.log('onDetected', event);
+    setDetectedData(event);
+  }, [])
+
+  const handleBarcodeScan = useCallback((event) => {
+    console.log("=======================")
+    console.log('onBarcodeScan', JSON.stringify(event));
+    console.log("=======================")
+    setLoading(false);
+    visionSdk.current?.restartScanningHandler();
+  }, [])
+
+  const handleOcrScan = useCallback((event) => {
+    setLoading(false);
+    setResult(event.data);
+    // onReportError(event.data);
+    Vibration.vibrate(100);
+    visionSdk.current?.restartScanningHandler();
+  }, [])
+
+  const handleImageCaptured = useCallback((event) => {
+    console.log('onImageCaptured', event);
+    visionSdk.current?.restartScanningHandler();
+  }, [])
+
+  const handleModelDownloadProgress = useCallback((event) => {
+    setModelDownloadingProgress(event);
+    if (event.downloadStatus) {
+      visionSdk.current?.startRunningHandler();
+      setLoading(false);
+    }
+  }, [])
 
   return (
     <View style={styles.mainContainer}>
       <VisionSdkView
+        environment='staging'
         ref={visionSdk}
-        ocrMode={ocrMode}
+        ocrMode={ocrConfig.mode}
+        ocrType={ocrConfig.type}
         captureMode={captureMode}
         isMultipleScanEnabled={true}
         mode={mode}
-        options={sdkOptions}
+        options={{}}
         isEnableAutoOcrResponseWithImage={true}
         locationId=""
         token=""
-        apiKey=""
+        apiKey="key_00203c5642F9SYnJkKyi9dRw1eeteeUwXhbEfGuPZ4NML8l2bAfysni4ZpcZEBKn0gnbcOZYwIaJnOyp"
         flash={flash}
         zoomLevel={zoomLevel}
-        onDetected={(event) => {
-          console.log('onDetected', event);
-          setDetectedData(event);
-        }}
-        onBarcodeScan={(event) => {
-          console.log('onBarcodeScan', event);
-          setLoading(false);
-          visionSdk.current?.restartScanningHandler();
-        }}
+        onDetected={handleDetected}
+        onBarcodeScan={handleBarcodeScan}
         onCreateTemplate={(event) => console.log(event)}
-        onOCRScan={(event) => {
-          setLoading(false);
-          setResult(event.data);
-          onReportError(event.data);
-          Vibration.vibrate(100);
-          visionSdk.current?.restartScanningHandler();
-        }}
-        onImageCaptured={(event) => {
-          visionSdk.current?.restartScanningHandler();
-        }}
-        onModelDownloadProgress={(event) => {
-          setModelDownloadingProgress(event);
-          if (event.downloadStatus) {
-            visionSdk.current?.startRunningHandler();
-            setLoading(false);
-          }
-        }}
-        onError={(error) => {
-          console.log('onError', error);
-          Alert.alert('ERROR', error?.message);
-          setLoading(false);
-        }}
+        onOCRScan={handleOcrScan}
+        onImageCaptured={handleImageCaptured}
+        onModelDownloadProgress={handleModelDownloadProgress}
+        onError={handleError}
       />
       {mode == 'ocr' ? (
         <ResultViewOCR
-          mode={ocrMode}
+          mode={ocrConfig.mode}
           visible={!!result}
           result={result}
           setResult={setResult}
@@ -240,12 +360,10 @@ const App: React.FC = () => {
       <CameraFooterView
         setCaptureMode={setCaptureMode}
         captureMode={captureMode}
-        setOcrMode={setOcrMode}
-        ocrMode={ocrMode}
-        onPressCapture={onPressCapture}
-        onPressOnDeviceOcr={onPressOnDeviceOcr}
-        setModelSize={setModelSize}
-        modelSize={modelSize}
+        ocrConfig={ocrConfig}
+        setOcrConfig={setOcrConfig}
+        onPressCapture={handlePressCapture}
+        onPressOnDeviceOcr={handlePressOnDeviceOcr}
         mode={mode}
         zoomLevel={zoomLevel}
         setZoomLevel={setZoomLevel}

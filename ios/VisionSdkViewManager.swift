@@ -190,6 +190,7 @@ class VisionSdkViewManager: RCTViewManager {
     @objc func reportError (_ node: NSNumber, data: NSDictionary) {
         getComponent(node) { component in
             print("Parsed Data: \(data)")
+          
             let response = data["response"] as? Data
 
             // Handle image if provided and not an empty string
@@ -204,7 +205,8 @@ class VisionSdkViewManager: RCTViewManager {
                             reportText: data["reportText"] as? String ?? "",
                             response: response ?? nil,
                             modelType: data["type"] as? String ?? "shipping_label",
-                            modelSize: data["size"] as? String ?? "larg"
+                            modelSize: data["size"] as? String ?? "large",
+                            errorFlags: data["errorFlags"] as? [String:Bool]
                         )
                     }
                     return
@@ -215,7 +217,8 @@ class VisionSdkViewManager: RCTViewManager {
                 reportText: data["reportText"] as? String ?? "",
                 response: response ?? nil,
                 modelType: data["type"] as? String ?? "shipping_label",
-                modelSize: data["size"] as? String ?? "larg"
+                modelSize: data["size"] as? String ?? "large",
+                errorFlags: data["errorFlags"] as? [String:Bool]
             )
         }
     }
@@ -384,7 +387,7 @@ class VisionSdkViewManager: RCTViewManager {
                 }
             }
             
-            component?.codeScannerView?.focusSettings = updatedFocusSettings
+          component?.codeScannerView?.setFocusSettingsTo(updatedFocusSettings)
         }
     }
     
@@ -422,7 +425,7 @@ class VisionSdkViewManager: RCTViewManager {
             //                detectionSettings.selectedTemplateId = selectedTemplateId
             //            }
             
-            component?.codeScannerView?.objectDetectionConfiguration = detectionSettings
+          component?.codeScannerView?.setObjectDetectionConfigurationTo(detectionSettings)
         }
     }
     
@@ -436,7 +439,7 @@ class VisionSdkViewManager: RCTViewManager {
                 updatedCameraSettings.nthFrameToProcess = Int64(nthFrameToProcess)
             }
             
-            component?.codeScannerView?.cameraSettings = updatedCameraSettings
+          component?.codeScannerView?.setCameraSettingsTo(updatedCameraSettings)
         }
     }
     

@@ -1,8 +1,44 @@
 require_relative '../node_modules/react-native/scripts/react_native_pods'
-require_relative '../node_modules/@react-native-community/cli-platform-ios/native_modules'
+# require_relative '../node_modules/@react-native-community/cli-platform-ios/native_modules'
+
+ def node_require(script)
+   # Resolve script with node to allow for hoisting
+   require Pod::Executable.execute_command('node', ['-p',
+     "require.resolve(
+       '#{script}',
+       {paths: [process.argv[1]]},
+     )", __dir__]).strip
+ end
+
+# Use it to require both react-native's and this package's scripts:
+ node_require('react-native/scripts/react_native_pods.rb')
+ node_require('react-native-permissions/scripts/setup.rb')
 
 platform :ios, '16'
 install! 'cocoapods', :deterministic_uuids => false
+
+setup_permissions([
+  # 'AppTrackingTransparency',
+  # 'Bluetooth',
+  # 'Calendars',
+  # 'CalendarsWriteOnly',
+  'Camera',
+  # 'Contacts',
+  # 'FaceID',
+  # 'LocationAccuracy',
+  # 'LocationAlways',
+  # 'LocationWhenInUse',
+  # 'MediaLibrary',
+  # 'Microphone',
+  # 'Motion',
+  # 'Notifications',
+  # 'PhotoLibrary',
+  # 'PhotoLibraryAddOnly',
+  # 'Reminders',
+  # 'Siri',
+  # 'SpeechRecognition',
+  # 'StoreKit',
+])
 
 def __apply_Xcode_12_5_M1_post_install_workaround(installer)
   installer.pods_project.build_configurations.each do |config|
@@ -18,10 +54,12 @@ end
 
 target 'VisionSdkExample' do
   config = use_native_modules!
-pod 'VisionSDK', "1.5.9"
+  
+pod 'VisionSDK', "1.6.2"
+
   use_react_native!(
     :path => config[:reactNativePath],
- 
+
     # An absolute path to your application root.
     :app_path => "#{Pod::Config.instance.installation_root}/.."
   )
