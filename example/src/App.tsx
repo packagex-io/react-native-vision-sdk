@@ -304,7 +304,7 @@ const App: React.FC = () => {
 
   const handleModelDownloadProgress = useCallback((event) => {
     setModelDownloadingProgress(event);
-    if (event.downloadStatus) {
+    if (event.downloadStatus && event.isReady) {
       visionSdk.current?.startRunningHandler();
       setLoading(false);
     }

@@ -297,21 +297,24 @@ extension RNCodeScannerView {
                 // If the model is already downloaded, set progress to 100% and download status to true
                 if isModelAlreadyDownloaded {
                     self.onModelDownloadProgress!(["progress": (1),
-                                                   "downloadStatus": true]) // Indicate that the model is already downloaded
+                                                   "downloadStatus": true, // Indicate that the model is already downloaded
+                                                   "isReady": false])
                 } else {
                     // Progress tracking and debugging output
                     debugPrint(String(format: "Download progress: %.2f%%", (currentProgress / totalSize) * 100))
 
                     // Calling the download progress handler
                     self.onModelDownloadProgress!(["progress": ((currentProgress / totalSize)),
-                                                   "downloadStatus": false]) // Update download status to false during download
+                                                   "downloadStatus": false,// Update download status to false during download
+                                                   "isReady": false])
                 }
             } withCompletion: { error in
                 // Handling download completion
                 if error == nil {
                     // If no error, set progress to 100% and download status to true
                     self.onModelDownloadProgress!(["progress": (1),
-                                                   "downloadStatus": true]) // Indicating successful download completion
+                                                   "downloadStatus": true, // Indicating successful download completion
+                                                   "isReady": true])
                     completion() // Call completion to indicate success
                 } else {
                     self.callForOCRWithImageFailedWithMessage(message: error?.localizedDescription ?? "We got On-Device OCR error!")
@@ -326,21 +329,24 @@ extension RNCodeScannerView {
                 // If the model is already downloaded, set progress to 100% and download status to true
                 if isModelAlreadyDownloaded {
                     self.onModelDownloadProgress!(["progress": (1),
-                                                   "downloadStatus": true]) // Indicate that the model is already downloaded
+                                                   "downloadStatus": true,// Indicate that the model is already downloaded
+                                                   "isReady": false])
                 } else {
                     // Progress tracking and debugging output
                     debugPrint(String(format: "Download progress: %.2f%%", (currentProgress / totalSize) * 100))
 
                     // Calling the download progress handler
                     self.onModelDownloadProgress!(["progress": ((currentProgress / totalSize)),
-                                                   "downloadStatus": false]) // Update download status to false during download
+                                                   "downloadStatus": false,// Update download status to false during download
+                                                   "isReady": false])
                 }
             } withCompletion: { error in
                 // Handling download completion
                 if error == nil {
                     // If no error, set progress to 100% and download status to true
                     self.onModelDownloadProgress!(["progress": (1),
-                                                   "downloadStatus": true]) // Indicating successful download completion
+                                                   "downloadStatus": true, // Indicating successful download completion
+                                                   "isReady": true]) // indicates that the model is successfully initialized after downloaidng
                     completion() // Call completion to indicate success
                 } else {
                     self.callForOCRWithImageFailedWithMessage(message: error?.localizedDescription ?? "We got On-Device OCR error!")
@@ -564,16 +570,16 @@ extension RNCodeScannerView {
         modelSize: String,
         errorFlags: [String: Bool]? = nil
     ) {
-      
+
       let tokenValue = token?.isEmpty == false ? token : nil
       let apiKey = VSDKConstants.apiKey.isEmpty ? nil : VSDKConstants.apiKey
-      
+
       var parentReportModel: VisionSDK.VSDKAnalyticsReportModel?
-      
-      
+
+
       guard let errorFlags = errorFlags else { return }
       let modelClass = getModelType(modelType)
-      
+
       switch(modelClass){
       case .shippingLabel:
           let slModelToReport = VisionSDK.SLReportModel()
@@ -586,7 +592,7 @@ extension RNCodeScannerView {
           slModelToReport.isTrackingNoWrong = errorFlags["trackingNo"] ?? false
           slModelToReport.isWeightWrong = errorFlags["weight"] ?? false
           parentReportModel = slModelToReport
-        
+
       case .billOfLading:
           let bolModelToReport = VisionSDK.BOLReportModel()
           bolModelToReport.isReferenceNoWrong = errorFlags["referenceNo"] ?? false
@@ -603,7 +609,7 @@ extension RNCodeScannerView {
           bolModelToReport.isShippingDateWrong = errorFlags["shippingDate"] ?? false
           bolModelToReport.isDateWrong = errorFlags["date"] ?? false
           parentReportModel = bolModelToReport
-        
+
       case .itemLabel:
           let ilModelToReport = VisionSDK.ILReportModel()
           ilModelToReport.isSupplierNameWrong = errorFlags["supplierName"] ?? false
@@ -615,19 +621,19 @@ extension RNCodeScannerView {
           ilModelToReport.isProductionDateWrong = errorFlags["productionDate"] ?? false
           ilModelToReport.isSupplierAddressWrong = errorFlags["supplierAddress"] ?? false
           parentReportModel = ilModelToReport
-         
-        
+
+
       case .documentClassification:
           let dcModelToReport = VisionSDK.DCReportModel()
           dcModelToReport.isDocumentClassWrong = errorFlags["documentClass"] ?? false
           parentReportModel = dcModelToReport
-        
+
       @unknown default:
         print("⚠️ Unknown modelClass encountered: \(modelClass)")
-        
+
       }
-      
-      
+
+
         // Call the `reportErrorWith` function of the OnDeviceOCRManager
         OnDeviceOCRManager.shared.reportErrorWith(
             apiKey,

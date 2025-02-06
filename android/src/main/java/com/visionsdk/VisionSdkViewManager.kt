@@ -1016,6 +1016,7 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
               val event = Arguments.createMap().apply {
                 putDouble("progress", lastProgress)
                 putBoolean("downloadStatus", false)
+                putBoolean("isReady", false)
               }
               appContext
                 .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
@@ -1033,6 +1034,7 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
         val event = Arguments.createMap().apply {
           putDouble("progress", 1.00)
           putBoolean("downloadStatus", true)
+          putBoolean("isReady", true)
         }
         appContext
           .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
