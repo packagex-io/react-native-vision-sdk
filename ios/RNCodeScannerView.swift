@@ -644,6 +644,7 @@ extension RNCodeScannerView {
             reportText: reportText,
             response: response,
             reportModel: parentReportModel
+
         ) { responseCode in
             print("Full JSON Response reportError:", responseCode)
             // Update the UI after processing
