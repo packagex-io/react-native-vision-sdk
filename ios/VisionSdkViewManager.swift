@@ -2,6 +2,7 @@ import VisionSDK
 
 @available(iOS 15.0, *)
 @objc(VisionSdkViewManager)
+
 class VisionSdkViewManager: RCTViewManager {
     
     @objc func getComponent(_ node: NSNumber, completion: @escaping (RNCodeScannerView?) -> Void) {
@@ -137,7 +138,7 @@ class VisionSdkViewManager: RCTViewManager {
             }
         }
     }
-    @objc func getPredictionBillOfLadingCloud(_ node: NSNumber, image: String, barcode: [String], withImageResizing:Bool) {
+    @objc func getPredictionBillOfLadingCloud(_ node: NSNumber, image: String, barcode: [String]) {
         getComponent(node) { component in
             // Load the image (either from a local URI or URL)
             print("Image Path: \(image)")
@@ -149,11 +150,11 @@ class VisionSdkViewManager: RCTViewManager {
                 }
                 print("Loaded Image: \(finalImage)")
                 // Call onDeviceFlow with the UIImage and barcodes
-                component?.getPredictionBillOfLadingCloud(withImage: finalImage, andBarcodes: barcode, withImageResizing:withImageResizing, imagePath:image)
+                component?.getPredictionBillOfLadingCloud(withImage: finalImage, andBarcodes: barcode,  imagePath:image)
             }
         }
     }
-    @objc func getPredictionItemLabelCloud(_ node: NSNumber, image: String, withImageResizing:Bool) {
+    @objc func getPredictionItemLabelCloud(_ node: NSNumber, image: String) {
         getComponent(node) { component in
             // Load the image (either from a local URI or URL)
             print("Image Path: \(image)")
@@ -165,7 +166,7 @@ class VisionSdkViewManager: RCTViewManager {
                 }
                 print("Loaded Image: \(finalImage)")
                 // Call onDeviceFlow with the UIImage and barcodes
-                component?.getPredictionItemLabelCloud(withImage: finalImage, withImageResizing:withImageResizing, imagePath:image)
+                component?.getPredictionItemLabelCloud(withImage: finalImage, imagePath:image)
             }
         }
     }

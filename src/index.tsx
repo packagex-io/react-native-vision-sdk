@@ -56,6 +56,7 @@ const Camera = forwardRef<VisionSdkRefProps, VisionSdkProps>(
       onGetTemplates = () => { },
       onDeleteTemplateById = () => { },
       onDeleteTemplates = () => { },
+      shouldResizeImage = true
     },
     ref
   ) => {
@@ -333,6 +334,7 @@ const Camera = forwardRef<VisionSdkRefProps, VisionSdkProps>(
         captureMode={captureMode}
         ocrMode={ocrMode}
         ocrType={ocrType}
+        shouldResizeImage={shouldResizeImage}
         token={token}
         locationId={locationId}
         options={options} // ideally this should be passed from variable, that is receiving data from ScannerContainer
