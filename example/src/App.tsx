@@ -50,6 +50,7 @@ interface DetectedDataProps {
 const App: React.FC = () => {
   const visionSdk = useRef<VisionSdkRefProps>(null);
   const [captureMode, setCaptureMode] = useState<'manual' | 'auto'>('manual');
+  const [shouldResizeImage, setShouldResizeImage] = useState(false)
   const [ocrConfig, setOcrConfig] = useState<OCRConfig>({
     mode: 'cloud',
     type: 'shipping-label',
@@ -250,7 +251,7 @@ const App: React.FC = () => {
   // Function to configure on-device OCR
   const handlePressOnDeviceOcr = useCallback((type: ModuleType = 'shipping_label',
     size: ModuleSize = 'large') => {
-    visionSdk?.current?.stopRunningHandler();
+    // visionSdk?.current?.stopRunningHandler();
     setLoading(true);
     visionSdk?.current?.configureOnDeviceModel({
       type,
@@ -305,10 +306,21 @@ const App: React.FC = () => {
   const handleModelDownloadProgress = useCallback((event) => {
     setModelDownloadingProgress(event);
     if (event.downloadStatus && event.isReady) {
-      visionSdk.current?.startRunningHandler();
+      // visionSdk.current?.startRunningHandler();
       setLoading(false);
     }
   }, [])
+
+  const handleSetOcrConfig = useCallback((ocrConfig: OCRConfig) => {
+    //the following if else block is just to check if shouldResizeImage prop is actually getting set or not
+    if(ocrConfig.type === 'bill-of-lading' && ocrConfig.mode === 'cloud'){
+      setShouldResizeImage(true)
+    } else {
+      setShouldResizeImage(false)
+    }
+    setOcrConfig(ocrConfig);
+  }, [])
+
 
   return (
     <View style={styles.mainContainer}>
@@ -317,6 +329,7 @@ const App: React.FC = () => {
         ref={visionSdk}
         ocrMode={ocrConfig.mode}
         ocrType={ocrConfig.type}
+        shouldResizeImage={shouldResizeImage}
         captureMode={captureMode}
         isMultipleScanEnabled={true}
         mode={mode}
@@ -361,7 +374,7 @@ const App: React.FC = () => {
         setCaptureMode={setCaptureMode}
         captureMode={captureMode}
         ocrConfig={ocrConfig}
-        setOcrConfig={setOcrConfig}
+        setOcrConfig={handleSetOcrConfig}
         onPressCapture={handlePressCapture}
         onPressOnDeviceOcr={handlePressOnDeviceOcr}
         mode={mode}

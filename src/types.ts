@@ -50,7 +50,7 @@ export type OCRMode =
 
 
 
-  export type OCRType =
+export type OCRType =
   | 'shipping_label'
   | 'bill_of_lading'
   | 'item_label'
@@ -63,11 +63,11 @@ export type OCRMode =
   | 'on-device-with-translation'
 
 
-  export interface OCRConfig {
-    type: OCRType;
-    mode: OCRMode;
-    size: ModuleSize;
-  }
+export interface OCRConfig {
+  type: OCRType;
+  mode: OCRMode;
+  size: ModuleSize;
+}
 
 /**
  * Environments for the Vision SDK operation.
@@ -218,11 +218,21 @@ export interface VisionSdkViewProps {
    */
   ocrMode?: string;
 
-    /**
-   * @type {string}
-   * Optional OCR type (e.g., shipping_label or item_label).
-   */
-    ocrType?: string;
+  /**
+ * @type {string}
+ * Optional OCR type (e.g., shipping_label or item_label).
+ */
+  ocrType?: string;
+
+
+  /**
+ * @type {boolean}
+ * Optional flag to enable image resizing.
+ */
+  shouldResizeImage?: boolean;
+
+
+
 
   /**
    * @type {boolean}
@@ -547,7 +557,7 @@ export interface BillOfLadingErrorFlags {
 }
 
 export interface DocumentClassificationErrorFlags {
-   documentClass?: boolean;
+  documentClass?: boolean;
 }
 
 /**
@@ -944,14 +954,25 @@ export interface VisionSdkProps {
    */
   ocrMode?: OCRMode;
 
-    /**
-   * @optional
-   * @type {OCRType| undefined}
-   * @description Optional OCR type (e.g., shipping_label, item_label, bill_of_lading, document_classification).
-   * Define whether the OCR operation should happen in the cloud or on-device.
-   * @example 'shipping_label'
-   */
+  /**
+ * @optional
+ * @type {OCRType| undefined}
+ * @description Optional OCR type (e.g., shipping_label, item_label, bill_of_lading, document_classification).
+ * Define whether the OCR operation should happen in the cloud or on-device.
+ * @example 'shipping_label'
+ */
   ocrType?: OCRType;
+
+
+  /**
+* @optional
+* @type {boolean}
+* @description Optional shouldResizeImage (true, false).
+* Defines whether to resize image before sending it to the api.
+* @example 'shipping_label'
+*/
+  shouldResizeImage?: boolean;
+
 
   /**
    * @optional
