@@ -115,6 +115,7 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
 
   private var shouldStartScanning = true // Flag to determine if scanning should start automatically
 
+  private var shouldResizeImage = true
 //  private var authentication: Authentication? = null // Authentication instance for Vision SDK login
 
   private var onDeviceOCRManager: OnDeviceOCRManager? = null // OCR manager for on-device OCR processing
@@ -706,7 +707,8 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
       metadata = metaData ?: emptyMap(),
       recipient = recipient ?: emptyMap(),
       sender = sender ?: emptyMap(),
-      onScanResult = this
+      onScanResult = this,
+      shouldResizeImage = shouldResizeImage
     )
   }
 
@@ -724,7 +726,8 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
       options = options ?: emptyMap(),
       bitmap = bitmap,
       barcodeList = list,
-      onScanResult = this
+      onScanResult = this,
+      shouldResizeImage = shouldResizeImage
     )
   }
 
@@ -738,7 +741,8 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
       apiKey = apiKey,
       token = token,
       bitmap = bitmap,
-      onScanResult = this
+      onScanResult = this,
+      shouldResizeImage = shouldResizeImage
     )
   }
 
@@ -752,7 +756,8 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
       apiKey = apiKey,
       token = token,
       bitmap = bitmap,
-      onScanResult = this
+      onScanResult = this,
+      shouldResizeImage = shouldResizeImage
     )
   }
 
@@ -808,7 +813,8 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
           metadata = metaData ?: emptyMap(),
           recipient = recipient ?: emptyMap(),
           sender = sender ?: emptyMap(),
-          onDeviceResponse = onDeviceResponse
+          onDeviceResponse = onDeviceResponse,
+          shouldResizeImage = shouldResizeImage
         )
         withContextMain {
           onOCRResponse(result)
@@ -1171,6 +1177,12 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
     Log.d(TAG, "flash: $flash")
     this.flash = flash
     this.visionCameraView?.setFlashTurnedOn(flash)
+  }
+
+  @ReactProp(name = "shouldResizeImage")
+  fun setShouldResizeImage(view: View, shouldResizeImage: Boolean = true){
+    Log.d(TAG, "should resize image: $shouldResizeImage")
+    this.shouldResizeImage = shouldResizeImage
   }
 
   // React Native property to enable or disable the isMultipleScanEnabled

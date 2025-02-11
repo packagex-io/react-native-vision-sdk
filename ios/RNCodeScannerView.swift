@@ -42,6 +42,7 @@ class RNCodeScannerView: UIView {
     //MARK: - On-Device OCR Specific Variables
     var ocrMode: String = "cloud" // Dynamic Prop | Optional:
     var ocrType: String = "shipping-label" // Dynamic Prop | Optional:
+    var shouldResizeImage: Bool = true // Dynamic Prop | Optional:
     var onDeviceModelType: VSDKModelExternalClass = VSDKModelExternalClass.shippingLabel // Dynamic Prop | Optional:
     var onDeviceModelSize: VSDKModelExternalSize = VSDKModelExternalSize.large // Dynamic Prop | Optional:
 
@@ -240,9 +241,9 @@ extension RNCodeScannerView: CodeScannerViewDelegate {
               case "shipping_label", "shipping-label":
                   self.getPredictionShippingLabelCloud(withImage: image, andBarcodes: barcodes, imagePath: imagePath)
               case "item_label", "item-label":
-                  self.getPredictionItemLabelCloud(withImage: image, withImageResizing: true, imagePath: imagePath)
+                self.getPredictionItemLabelCloud(withImage: image, imagePath: imagePath)
               case "bill_of_lading", "bill-of-lading":
-                  self.getPredictionBillOfLadingCloud(withImage: image, andBarcodes: barcodes, withImageResizing: true, imagePath: imagePath)
+                self.getPredictionBillOfLadingCloud(withImage: image, andBarcodes: barcodes, imagePath:imagePath)
               case "document_classification", "document-classification":
                   self.getPredictionDocumentClassificationCloud(withImage: image, imagePath: imagePath)
               default:
@@ -282,6 +283,8 @@ extension RNCodeScannerView {
     /// This method downloads and prepares offline / On Device OCR for use in the app.
     /// - Parameter completion: completionHandler
     func setupDownloadOnDeviceOCR(modelType: String, modelSize: String? ,completion: @escaping () -> Void) {
+        debugPrint("setupDownloadOnDevice", modelType)
+        debugPrint(modelSize)
         var tokenValue: String? = nil
         if let token = token, !token.isEmpty {
             tokenValue = token
@@ -361,6 +364,7 @@ extension RNCodeScannerView {
     ///   - uiImage: uiImage of label that is going to be detected
     ///   - barcodes: barcodes that are detected by SDK within the label
     func getPrediction(withImage uiImage: UIImage, andBarcodes barcodes: [String], imagePath: String?) {
+      debugPrint("GET PREDICTION METHOD")
         guard let ciImage = convertToCIImage(from: uiImage) else {
             callForOCRWithImageFailedWithMessage(message: "Failed to convert UIImage to CIImage.")
             return
@@ -444,7 +448,7 @@ extension RNCodeScannerView {
             tokenValue = token
         }
 
-        VisionAPIManager.shared.callScanAPIWith(image, andBarcodes: barcodes, andApiKey: !VSDKConstants.apiKey.isEmpty ? VSDKConstants.apiKey : nil, andToken: tokenValue, andLocationId: locationId ?? "", andOptions: options ?? [:], andMetaData: metaData ?? [:], andRecipient: recipient ?? [:], andSender: sender ?? [:]
+      VisionAPIManager.shared.callScanAPIWith(image, andBarcodes: barcodes, andApiKey: !VSDKConstants.apiKey.isEmpty ? VSDKConstants.apiKey : nil, andToken: tokenValue, andLocationId: locationId ?? "", andOptions: options ?? [:], andMetaData: metaData ?? [:], andRecipient: recipient ?? [:], andSender: sender ?? [:], withImageResizing: shouldResizeImage
         ) {
             [weak self] data, error in
             guard let self = self else { return }
@@ -461,7 +465,6 @@ extension RNCodeScannerView {
      func getPredictionBillOfLadingCloud(
         withImage image: UIImage,
         andBarcodes barcodes: [String],
-        withImageResizing: Bool,
         imagePath: String?
     ) {
         let tokenValue = token?.isEmpty == false ? token : nil
@@ -476,7 +479,7 @@ extension RNCodeScannerView {
                 andToken: tokenValue,
                 andLocationId: validLocationId,
                 andOptions: options ?? [:],
-                withImageResizing: withImageResizing
+                withImageResizing: shouldResizeImage
             ) { [weak self] data, error in
                 guard let self = self else { return }
                 self.handleAPIResponse(error: error, data: data, imagePath: imagePath)
@@ -488,7 +491,7 @@ extension RNCodeScannerView {
                 andApiKey: apiKey,
                 andToken: tokenValue,
                 andOptions: options ?? [:],
-                withImageResizing: withImageResizing
+                withImageResizing: shouldResizeImage
             ) { [weak self] data, error in
                 guard let self = self else { return }
                 self.handleAPIResponse(error: error, data: data, imagePath: imagePath)
@@ -500,12 +503,13 @@ extension RNCodeScannerView {
     /// - Parameters:
     ///   - image: Captured image from VisionSDK to pass into API
     ///   - withImageResizing: Resizing
-    func getPredictionItemLabelCloud(withImage image: UIImage, withImageResizing: Bool = true,imagePath:String?) {
+  func getPredictionItemLabelCloud(withImage image: UIImage, imagePath:String?) {
         let tokenValue = token?.isEmpty == false ? token : nil
         let apiKey = VSDKConstants.apiKey.isEmpty ? nil : VSDKConstants.apiKey
         print("getPredictionItemLabelCloud", apiKey ?? "")
         print("getPredictionItemLabelCloud", tokenValue ?? "")
-        VisionAPIManager.shared.callItemLabelsAPIWith(image ,andApiKey: apiKey, andToken: tokenValue, withImageResizing: withImageResizing) {
+
+    VisionAPIManager.shared.callItemLabelsAPIWith(image ,andApiKey: apiKey, andToken: tokenValue, withImageResizing: shouldResizeImage) {
             [weak self] data, error in
 
             // Early exit if self is deallocated.
@@ -524,7 +528,8 @@ extension RNCodeScannerView {
         let apiKey = VSDKConstants.apiKey.isEmpty ? nil : VSDKConstants.apiKey
         print("getPredictionDocumentClassificationCloud", apiKey ?? "")
         print("getPredictionDocumentClassificationCloud", tokenValue ?? "")
-        VisionAPIManager.shared.callDocumentClassificationAPIWith(image ,andApiKey: apiKey, andToken: tokenValue) {
+
+      VisionAPIManager.shared.callDocumentClassificationAPIWith(image ,andApiKey: apiKey, andToken: tokenValue, withImageResizing: shouldResizeImage) {
             [weak self] data, error in
 
             // Early exit if self is deallocated.
@@ -540,13 +545,12 @@ extension RNCodeScannerView {
     ///   - barcodes: Detected barcodes from VisionSDK to pass into API
     ///   - responseData: response data received from On-Device model and needs to be translated into another format.
     func callMatchingAPIWithImage(usingImage uiImage: UIImage, withbarCodes barcodes: [String], responseData: Data, imagePath:String?) {
-
         var tokenValue: String? = nil
         if let token = self.token, !token.isEmpty {
             tokenValue = token
         }
 
-        VisionAPIManager.shared.callMatchingAPIWith(uiImage, andBarcodes: barcodes, andApiKey: !VSDKConstants.apiKey.isEmpty ? VSDKConstants.apiKey : nil, andToken: tokenValue, withResponseData: responseData, andLocationId: (locationId ?? "").isEmpty ? nil : locationId, andOptions: options ?? [:], andMetaData: metaData ?? [:], andRecipient: recipient ?? [:], andSender: sender ?? [:]) { [weak self] data, error in
+      VisionAPIManager.shared.callMatchingAPIWith(uiImage, andBarcodes: barcodes, andApiKey: !VSDKConstants.apiKey.isEmpty ? VSDKConstants.apiKey : nil, andToken: tokenValue, withResponseData: responseData, andLocationId: (locationId ?? "").isEmpty ? nil : locationId, andOptions: options ?? [:], andMetaData: metaData ?? [:], andRecipient: recipient ?? [:], andSender: sender ?? [:], withImageResizing: shouldResizeImage) { [weak self] data, error in
 
             guard let self = self else { return }
 
@@ -899,14 +903,22 @@ extension RNCodeScannerView {
     @objc func setOcrMode(_ ocrMode: NSString) {
         self.ocrMode = ocrMode as String
     }
+  
+  
+  @objc func setShouldResizeImage(_ shouldResizeImage: Bool){
+    self.shouldResizeImage = shouldResizeImage as Bool
+  }
 
 
-        /// Sets the ocrType, i.e. is user scanning in On Device OCR mode, Cloud or On Device with Api
     /// - Parameter ocrMode: possible values - > 'on-device-with-translation' | 'shipping_label' | 'bill_of_lading' | 'item_label' | 'document_classification'
     @objc func setOcrType(_ ocrType: NSString) {
         self.ocrType = ocrType as String
     }
+  
+  
 
+  
+  
     /// Gets the ModelType for On Device, i.e., returns the model class type based on the provided model size string.
     /// - Parameter modelType: parameter describes the Model Class type
     ///  Parameter : possible values
