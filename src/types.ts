@@ -685,7 +685,14 @@ export interface VisionSdkRefProps {
   getPredictionShippingLabelCloud: (
     image: any,
     barcode: string[],
-    withImageResizing?: boolean
+    token?: string,
+    apiKey?: string,
+    locationId?: string,
+    options?: Record<string, any>,
+    metadata?: any,
+    recipient?: any,
+    sender?: any,
+    shouldResizeImage?: boolean
   ) => void;
 
   /**

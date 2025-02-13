@@ -627,24 +627,6 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
 
       else -> Log.w(TAG, "Unsupported OCR mode: $ocrMode")
     }
-//    when (ocrMode to ocrType) {
-//      "cloud" to "shipping_label", "cloud" to "shipping-label" -> getPredictionShippingLabelCloud(bitmap, value)
-//      "cloud" to "item_label", "cloud" to "item-label" -> getPredictionItemLabelCloud(bitmap)
-//      "cloud" to "bill_of_lading", "cloud" to "bill-of-lading" -> getPredictionBillOfLadingCloud(bitmap, value)
-//      "cloud" to "document_classification", "cloud" to "document-classification" -> getPredictionDocumentClassificationCloud(bitmap)
-//      "on-device" to _ , "on_device" to _ -> getPrediction(bitmap, value)
-//      else -> Log.w(TAG, "Unsupported OCR config: $ocrMode")
-
-
-
-//     "on-device", "on_device" -> getPrediction(bitmap, value)
-//     "on-device-with-translation", "on_device_with_translation" -> getPredictionWithCloudTransformations(bitmap, value)
-//     "cloud", "shipping_label", "shipping-label" -> getPredictionShippingLabelCloud(bitmap, value)
-//     "bill-of-lading", "bill_of_lading" -> getPredictionBillOfLadingCloud(bitmap, value)
-//     "item-label", "item_label" -> getPredictionItemLabelCloud(bitmap)
-//     "document-classification", "document_classification" -> getPredictionDocumentClassificationCloud(bitmap)
-//      else -> Log.w(TAG, "Unsupported OCR mode: $ocrMode")
-//    }
   }
 
   /**
@@ -695,20 +677,44 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
    * @param bitmap - The image to be sent for prediction
    * @param list - List of barcode data to include in the API request
    */
-  private fun getPredictionShippingLabelCloud(bitmap: Bitmap, list: List<String>) {
+  private fun getPredictionShippingLabelCloud(
+    bitmap: Bitmap,
+    list: List<String>,
+    token: String? = null,
+    apiKey: String? = null,
+    locationId: String? = null,
+    options: Map<String, Any>? = null,
+    metadata: Map<String, Any>? = null,
+    recipient: Map<String, Any>? = null,
+    sender: Map<String, Any>? = null,
+    shouldResizeImage: Boolean? = null
+  ) {
     val apiManager = ApiManager()
+    val resolvedToken = token ?: this.token
+    val resolvedApiKey = apiKey ?: this.apiKey
+
+    val resolvedLocationId = locationId ?: this.locationId ?: ""
+    val resolvedOptions = options ?: this.options ?: emptyMap()
+    val resolvedMetadata = metadata ?: this.metaData ?: emptyMap()
+    val resolvedRecipient = recipient ?: this.recipient ?: emptyMap()
+    val resolvedSender = sender ?: this.sender ?: emptyMap()
+    val resolvedShouldResizeImage = shouldResizeImage ?: this.shouldResizeImage
+
+    Log.d("INTELLIJUST", "get prediction shipping label cloud $resolvedToken, $resolvedApiKey, $resolvedLocationId")
+    Log.d("INTELLIJUST", "$resolvedOptions, $resolvedMetadata, $resolvedRecipient, $resolvedSender, $resolvedShouldResizeImage")
+
     apiManager.shippingLabelApiCallAsync(
-      apiKey = apiKey,
-      token = token,
+      apiKey = resolvedApiKey,
+      token = resolvedToken,
       bitmap = bitmap,
       barcodeList = list,
-      locationId = locationId ?: "",
-      options = options ?: emptyMap(),
-      metadata = metaData ?: emptyMap(),
-      recipient = recipient ?: emptyMap(),
-      sender = sender ?: emptyMap(),
+      locationId = resolvedLocationId,
+      options = resolvedOptions,
+      metadata = resolvedMetadata,
+      recipient = resolvedRecipient,
+      sender = resolvedSender,
       onScanResult = this,
-      shouldResizeImage = shouldResizeImage
+      shouldResizeImage = resolvedShouldResizeImage
     )
   }
 
@@ -1100,9 +1106,34 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
     this.imagePath = image
     val barcodeArray = args?.getArray(1)
     val barcodeList = barcodeArray?.toArrayList()?.map { it.toString() } ?: emptyList()
+    val token = args?.getString(2)  // Retrieve token from the third element of the array
+    val apiKey = args?.getString(3) // Retrieve API key from the fourth element
+    val locationId = args?.getString(4) // Retrieve location ID from the fifth element
+
+    // Extract Maps safely
+    val options = args?.getMap(5)?.toHashMap()?.mapValues { it.value ?: "" } ?: emptyMap()
+    val metadata = args?.getMap(6)?.toHashMap()?.mapValues { it.value ?: "" } ?: emptyMap()
+    val recipient = args?.getMap(7)?.toHashMap()?.mapValues { it.value ?: "" } ?: emptyMap()
+    val sender = args?.getMap(8)?.toHashMap()?.mapValues { it.value ?: "" } ?: emptyMap()
+
+    val shouldResizeImage = args?.getBoolean(9) // Retrieve resize flag (10th element)
+    Log.d("INTELLIJUST", "$image, $barcodeArray, $barcodeList, $token, $apiKey, $locationId, $options, $metadata, $recipient, $sender")
+
     uriToBitmap(context!!, Uri.parse(image)) { bitmap ->
       bitmap?.let {
-        getPredictionShippingLabelCloud(it, barcodeList)  // Process shipping label prediction.
+        Log.d("INTELLIJUST", "handle cloud prediction")
+        getPredictionShippingLabelCloud(
+          it,
+          barcodeList,
+          token,
+          apiKey,
+          locationId,
+          options,
+          metadata,
+          recipient,
+          sender,
+          shouldResizeImage
+        )  // Process shipping label prediction.
       }
     }
   }

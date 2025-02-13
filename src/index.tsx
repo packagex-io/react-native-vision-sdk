@@ -175,8 +175,31 @@ const Camera = forwardRef<VisionSdkRefProps, VisionSdkProps>(
         ]),
 
       // 13: Retrieves prediction for shipping label cloud using the 'getPredictionShippingLabelCloud' command
-      getPredictionShippingLabelCloud: (image: string, barcode: string[]) =>
-        dispatchCommand('getPredictionShippingLabelCloud', [image, barcode]),
+      getPredictionShippingLabelCloud: (
+        image: any,
+        barcode: string[],
+        token?: string,
+        apiKey?: string,
+        locationId?: string,
+        options?: any,
+        metadata?: any,
+        recipient?: any,
+        sender?: any,
+        shouldResizeImage?: boolean
+
+      ) =>
+        dispatchCommand('getPredictionShippingLabelCloud', [
+          image,
+          barcode,
+          token,
+          apiKey,
+          locationId,
+          options,
+          metadata,
+          recipient,
+          sender,
+          shouldResizeImage
+        ]),
 
       // 14: Retrieves prediction for Bill of Lading cloud using the 'getPredictionBillOfLadingCloud' command
       getPredictionBillOfLadingCloud: (

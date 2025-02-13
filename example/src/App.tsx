@@ -13,6 +13,8 @@ import LoaderView from './Components/LoaderView';
 import { PERMISSIONS, RESULTS, request } from 'react-native-permissions';
 import ResultViewOCR from './Components/ResultViewOCR';
 
+const apiKey =  "key_00203c5642F9SYnJkKyi9dRw1eeteeUwXhbEfGuPZ4NML8l2bAfysni4ZpcZEBKn0gnbcOZYwIaJnOyp"
+
 // Define interfaces for the state types
 interface DownloadingProgress {
   downloadStatus: boolean;
@@ -300,6 +302,13 @@ const App: React.FC = () => {
 
   const handleImageCaptured = useCallback((event) => {
     console.log('onImageCaptured', event);
+    console.log("GETTING PREDICTION SHIPPING LABEL CLOUD")
+    visionSdk.current?.getPredictionShippingLabelCloud(
+      event.image,
+      event.barcodes,
+      "",
+      apiKey
+    )
     visionSdk.current?.restartScanningHandler();
   }, [])
 
@@ -337,7 +346,7 @@ const App: React.FC = () => {
         isEnableAutoOcrResponseWithImage={true}
         locationId=""
         token=""
-        apiKey="key_00203c5642F9SYnJkKyi9dRw1eeteeUwXhbEfGuPZ4NML8l2bAfysni4ZpcZEBKn0gnbcOZYwIaJnOyp"
+        apiKey={apiKey}
         flash={flash}
         zoomLevel={zoomLevel}
         onDetected={handleDetected}
