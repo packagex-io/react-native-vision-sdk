@@ -13,7 +13,7 @@ import LoaderView from './Components/LoaderView';
 import { PERMISSIONS, RESULTS, request } from 'react-native-permissions';
 import ResultViewOCR from './Components/ResultViewOCR';
 
-const apiKey =  "key_00203c5642F9SYnJkKyi9dRw1eeteeUwXhbEfGuPZ4NML8l2bAfysni4ZpcZEBKn0gnbcOZYwIaJnOyp"
+const apiKey = "key_00203c5642F9SYnJkKyi9dRw1eeteeUwXhbEfGuPZ4NML8l2bAfysni4ZpcZEBKn0gnbcOZYwIaJnOyp"
 
 // Define interfaces for the state types
 interface DownloadingProgress {
@@ -80,6 +80,7 @@ const App: React.FC = () => {
 
   // Request camera permission on component mount (for Android)
   useEffect(() => {
+    console.log("I AM COMPONENT DID MOUNT")
     const requestCameraPermission = async () => {
       const cameraPermission =
         Platform.OS === 'ios'
@@ -120,7 +121,13 @@ const App: React.FC = () => {
         visionSdk?.current?.setCameraSettings({
           nthFrameToProcess: 10,
         });
-        visionSdk?.current?.startRunningHandler();
+        // setTimeout(() => {})
+        console.log("STARTING RUNNING HANDLER")
+        setTimeout(() => {
+          console.log("HERE GOES")
+          visionSdk?.current?.startRunningHandler();
+        }, 0)
+
         setLoading(false);
       }
     };
@@ -159,89 +166,89 @@ const App: React.FC = () => {
   }, [])
 
 
-    const testReportError = (type: String) => {
-      switch(type){
-        case 'shipping_label':
-          visionSdk.current?.reportError({
-            reportText: 'respose is not correct',
-            type: 'shipping_label',
-            size: 'large',
-            response: {},
-            image: '',
-            errorFlags: {
-              trackingNo: true,
-              courierName:  false,
-              weight: true,
-              dimensions: false,
-              receiverName: true,
-              receiverAddress: true,
-              senderName: false,
-              senderAddres: false
-            }
-          })
-          break;
+  const testReportError = (type: String) => {
+    switch (type) {
+      case 'shipping_label':
+        visionSdk.current?.reportError({
+          reportText: 'respose is not correct',
+          type: 'shipping_label',
+          size: 'large',
+          response: {},
+          image: '',
+          errorFlags: {
+            trackingNo: true,
+            courierName: false,
+            weight: true,
+            dimensions: false,
+            receiverName: true,
+            receiverAddress: true,
+            senderName: false,
+            senderAddres: false
+          }
+        })
+        break;
 
-          case 'item_label':
-            visionSdk.current?.reportError({
-              reportText: 'respose is not correct',
-              type: 'item_label',
-              size: 'large',
-              response: {},
-              image: '',
-              errorFlags: {
-                supplierName: true,
-                itemName: false,
-                itemSKU: true,
-                weight: true,
-                quantity: true,
-                dimensions: true,
-                productionDate: false,
-                supplierAddress: true
-              }
-            })
-            break;
+      case 'item_label':
+        visionSdk.current?.reportError({
+          reportText: 'respose is not correct',
+          type: 'item_label',
+          size: 'large',
+          response: {},
+          image: '',
+          errorFlags: {
+            supplierName: true,
+            itemName: false,
+            itemSKU: true,
+            weight: true,
+            quantity: true,
+            dimensions: true,
+            productionDate: false,
+            supplierAddress: true
+          }
+        })
+        break;
 
-            case 'BOL':
-              visionSdk.current?.reportError({
-                reportText: 'respose is not correct',
-                type: 'bill_of_lading',
-                size: 'large',
-                response: {},
-                image: '',
-                errorFlags: {
-                  referenceNo: true,
-                  loadNumber: false,
-                  purchaseOrderNumber: true,
-                  invoiceNumber: true,
-                  customerPurchaseOrderNumber: false,
-                  orderNumber: true,
-                  billOfLading: false,
-                  masterBillOfLading: false,
-                  lineBillOfLading: false,
-                  houseBillOfLading: true,
-                  shippingId: false,
-                  shippingDate: true,
-                  date: false
-                }
-              })
-              break;
+      case 'BOL':
+        visionSdk.current?.reportError({
+          reportText: 'respose is not correct',
+          type: 'bill_of_lading',
+          size: 'large',
+          response: {},
+          image: '',
+          errorFlags: {
+            referenceNo: true,
+            loadNumber: false,
+            purchaseOrderNumber: true,
+            invoiceNumber: true,
+            customerPurchaseOrderNumber: false,
+            orderNumber: true,
+            billOfLading: false,
+            masterBillOfLading: false,
+            lineBillOfLading: false,
+            houseBillOfLading: true,
+            shippingId: false,
+            shippingDate: true,
+            date: false
+          }
+        })
+        break;
 
-              case 'DC':
-              visionSdk.current?.reportError({
-                reportText: 'respose is not correct',
-                type: 'document_classification',
-                size: 'large',
-                response: {},
-                image: '',
-                errorFlags: {
-                  documentClass: true
-                }
-              });
-              break;
-              default:
-                break;
-      }
+      case 'DC':
+        visionSdk.current?.reportError({
+          reportText: 'respose is not correct',
+          type: 'document_classification',
+          size: 'large',
+          response: {},
+          image: '',
+          errorFlags: {
+            documentClass: true
+          }
+        });
+        break;
+      default:
+        break;
     }
+  }
 
 
 
@@ -294,6 +301,8 @@ const App: React.FC = () => {
   }, [])
 
   const handleOcrScan = useCallback((event) => {
+    console.log("INSIDE HANDLE OCR SCAN")
+    console.log(JSON.stringify(event.data))
     setLoading(false);
     setResult(event.data);
     // onReportError(event.data);
@@ -303,13 +312,14 @@ const App: React.FC = () => {
 
   const handleImageCaptured = useCallback((event) => {
     console.log('onImageCaptured', event);
-    console.log("GETTING PREDICTION SHIPPING LABEL CLOUD")
-    visionSdk.current?.getPredictionShippingLabelCloud(
-      event.image,
-      event.barcodes,
-      "",
-      apiKey
-    )
+    console.log("GETTING PREDICTION bill of lading")
+    visionSdk.current?.getPredictionDocumentClassificationCloud(event.image, "", apiKey, false)
+    // visionSdk.current?.getPredictionBillOfLadingCloud(
+    //   event.image,
+    //   event.barcodes,
+    //   "",
+    //   apiKey
+    // )
     visionSdk.current?.restartScanningHandler();
   }, [])
 
@@ -323,7 +333,7 @@ const App: React.FC = () => {
 
   const handleSetOcrConfig = useCallback((ocrConfig: OCRConfig) => {
     //the following if else block is just to check if shouldResizeImage prop is actually getting set or not
-    if(ocrConfig.type === 'bill-of-lading' && ocrConfig.mode === 'cloud'){
+    if (ocrConfig.type === 'bill-of-lading' && ocrConfig.mode === 'cloud') {
       setShouldResizeImage(true)
     } else {
       setShouldResizeImage(false)
@@ -358,7 +368,7 @@ const App: React.FC = () => {
         onModelDownloadProgress={handleModelDownloadProgress}
         onError={handleError}
       />
-      {mode == 'ocr' ? (
+      {['ocr', 'photo'].includes(mode) ? (
         <ResultViewOCR
           mode={ocrConfig.mode}
           visible={!!result}

@@ -205,29 +205,49 @@ const Camera = forwardRef<VisionSdkRefProps, VisionSdkProps>(
       getPredictionBillOfLadingCloud: (
         image: string,
         barcode: string[],
-        withImageResizing: boolean = true
+        token?: string,
+        apiKey?: string,
+        locationId?: string,
+        options?:  any,
+        shouldResizeImage?: boolean
       ) =>
         dispatchCommand('getPredictionBillOfLadingCloud', [
           image,
           barcode,
-          withImageResizing,
+          token,
+          apiKey,
+          locationId,
+          options,
+          shouldResizeImage,
         ]),
 
       // 15: Retrieves prediction for item label cloud using the 'getPredictionItemLabelCloud' command
       getPredictionItemLabelCloud: (
         image: string,
-        barcode?: string[],
-        withImageResizing: boolean = true
+        token?: string,
+        apiKey?: string,
+        shouldResizeImage?: boolean
       ) =>
         dispatchCommand('getPredictionItemLabelCloud', [
           image,
-          withImageResizing,
-          barcode,
+          token,
+          apiKey,
+          shouldResizeImage
         ]),
 
       // 16: Retrieves prediction for document classification cloud using the 'getPredictionDocumentClassificationCloud' command
-      getPredictionDocumentClassificationCloud: (image: string) =>
-        dispatchCommand('getPredictionDocumentClassificationCloud', [image]),
+      getPredictionDocumentClassificationCloud: (
+        image: string,
+        token?: string,
+        apiKey?: string,
+        shouldResizeImage?: boolean
+      ) =>
+        dispatchCommand('getPredictionDocumentClassificationCloud', [
+          image,
+          token,
+          apiKey,
+          shouldResizeImage
+        ]),
 
       // 17: Reports errors for on-device issues using the 'reportError' command
       reportError: (param: ReportErrorType) =>

@@ -708,7 +708,11 @@ export interface VisionSdkRefProps {
   getPredictionBillOfLadingCloud: (
     image: any,
     barcode: string[],
-    withImageResizing?: boolean
+    token?: string,
+    apiKey?: string,
+    locationId?: string,
+    options?: Record<string, any>,
+    shouldResizeImage?: boolean
   ) => void;
 
   /**
@@ -722,9 +726,10 @@ export interface VisionSdkRefProps {
    * @return {void}
    */
   getPredictionItemLabelCloud: (
-    image: any,
-    barcode?: string[],
-    withImageResizing?: boolean
+    image: string,
+    token?: string,
+    apiKey?: string,
+    shouldResizeImage?: boolean
   ) => void;
 
   /**
@@ -738,9 +743,10 @@ export interface VisionSdkRefProps {
    * @return {void}
    */
   getPredictionDocumentClassificationCloud: (
-    image: any,
-    barcode?: string[],
-    withImageResizing?: boolean
+    image: string,
+    token?: string,
+    apiKey?: string,
+    shouldResizeImage?: boolean
   ) => void;
 
   /**

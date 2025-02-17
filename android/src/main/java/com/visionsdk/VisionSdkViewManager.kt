@@ -544,10 +544,10 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
   }
 
   override fun onScanResult(barcodeList: List<ScannedCodeResult>) {
-    Log.d(TAG, "onScanResult called with barcodeList: $barcodeList")
+    Log.d("INTELLIJUST", "onScanResult called with barcodeList: $barcodeList")
 
     if (barcodeList.isEmpty()) {
-      Log.e(TAG, "barcodeList is empty, skipping event emission")
+      Log.e("INTELLIJUST", "barcodeList is empty, skipping event emission")
       return
     }
 
@@ -584,7 +584,7 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
         .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
         .emit("onBarcodeScan", event)
     } catch (e: Exception) {
-      Log.e(TAG, "Error in onScanResult: ${e.message}", e)
+      Log.e("INTELLIJUST", "Error in onScanResult: ${e.message}", e)
     }
   }
 
@@ -723,17 +723,31 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
    * @param bitmap - The image to be sent for prediction
    * @param list - List of barcode data to include in the API request
    */
-  private fun getPredictionBillOfLadingCloud(bitmap: Bitmap, list: List<String>) {
+  private fun getPredictionBillOfLadingCloud(
+    bitmap: Bitmap,
+    list: List<String>,
+    token: String? = null,
+    apiKey: String? = null,
+    locationId: String? = null,
+    options: Map<String, Any>? = null,
+    shouldResizeImage: Boolean? = null
+    ) {
     val apiManager = ApiManager()
+    val resolvedToken = token ?: this.token
+    val resolvedApiKey = apiKey ?: this.apiKey
+    val resolvedLocationId = locationId ?: this.locationId ?: ""
+    val resolvedOptions = options ?: this.options ?: emptyMap()
+    val resolvedShouldResizeImage = shouldResizeImage ?: this.shouldResizeImage
+
     apiManager.billOfLadingApiCallAsync(
-      apiKey = apiKey,
-      token = token,
-      locationId =  locationId?.takeIf { it.isNotEmpty() },
-      options = options ?: emptyMap(),
+      apiKey = resolvedApiKey,
+      token = resolvedToken,
+      locationId =  resolvedLocationId?.takeIf { it.isNotEmpty() },
+      options = resolvedOptions,
       bitmap = bitmap,
       barcodeList = list,
       onScanResult = this,
-      shouldResizeImage = shouldResizeImage
+      shouldResizeImage = resolvedShouldResizeImage
     )
   }
 
@@ -741,14 +755,23 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
    * Sends a item label prediction request to the cloud API using an image bitmap and barcode list.
    * @param bitmap - The image to be sent for prediction
    */
-  private fun getPredictionItemLabelCloud(bitmap: Bitmap) {
+  private fun getPredictionItemLabelCloud(
+     bitmap: Bitmap,
+     token: String? = null,
+     apiKey: String? = null,
+     shouldResizeImage: Boolean? = null
+     ) {
     val apiManager = ApiManager()
+     val resolvedToken = token ?: this.token
+     val resolvedApiKey = apiKey ?: this.apiKey
+     val resolvedShouldResizeImage = shouldResizeImage ?: this.shouldResizeImage
+
     apiManager.itemLabelApiCallAsync(
-      apiKey = apiKey,
-      token = token,
+      apiKey = resolvedApiKey,
+      token = resolvedToken,
       bitmap = bitmap,
-      onScanResult = this,
-      shouldResizeImage = shouldResizeImage
+      shouldResizeImage = resolvedShouldResizeImage,
+      onScanResult = this
     )
   }
 
@@ -756,14 +779,23 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
    * Sends a item label prediction request to the cloud API using an image bitmap and barcode list.
    * @param bitmap - The image to be sent for prediction
    */
-  private fun getPredictionDocumentClassificationCloud(bitmap: Bitmap) {
+  private fun getPredictionDocumentClassificationCloud(
+     bitmap: Bitmap,
+     token: String? = null,
+     apiKey: String? = null,
+     shouldResizeImage: Boolean? = null
+     ) {
     val apiManager = ApiManager()
+     val resolvedToken = token ?: this.token
+     val resolvedApiKey = apiKey ?: this.apiKey
+     val resolvedShouldResizeImage = shouldResizeImage ?: this.shouldResizeImage
+
     apiManager.documentClassificationApiCallAsync(
-      apiKey = apiKey,
-      token = token,
+      apiKey = resolvedApiKey,
+      token = resolvedToken,
       bitmap = bitmap,
       onScanResult = this,
-      shouldResizeImage = shouldResizeImage
+      shouldResizeImage = resolvedShouldResizeImage
     )
   }
 
@@ -877,6 +909,8 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
     args: ReadableArray?
   ) {
 //    Log.d(TAG, "receiveCommand: $commandType")
+    Log.d("INTELLIJUST", "🔄 receiveCommand called with type: $commandType and args: $args")
+
     Assertions.assertNotNull(view)
     Assertions.assertNotNull(args)
     // Handle each command type based on the provided `commandType`.
@@ -894,7 +928,10 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
       10 -> setCameraSettings(args?.getMap(0).toString())  // Command to configure camera settings.
       11 -> handleDevicePrediction(args)  // Command to handle image prediction.
       12 -> handleDevicePredictionWithCloudTransformations(args)  // Command to handle cloud-based prediction.
-      13 -> handleCloudPrediction(args)  // Command for shipping label prediction.
+      13 ->  {
+        Log.d("INTELLIJUST", "✅ handleCloudPrediction() is being invoked with args: $args")
+        handleCloudPrediction(args)
+      }  // Command for shipping label prediction. }
       14 -> handlePredictionBillOfLadingCloud(args)  // Command for bill of lading prediction.
       15 -> handlePredictionItemLabelCloud(args)  // Command for item label prediction.
       16 -> handlePredictionDocumentClassificationCloud(args)  // Command for document classification prediction.
@@ -1102,80 +1139,148 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
 
   // This method handles cloud-based shipping label prediction.
   private fun handleCloudPrediction(args: ReadableArray?) {
-    val image = args?.getString(0)
-    this.imagePath = image
-    val barcodeArray = args?.getArray(1)
-    val barcodeList = barcodeArray?.toArrayList()?.map { it.toString() } ?: emptyList()
-    val token = args?.getString(2)  // Retrieve token from the third element of the array
-    val apiKey = args?.getString(3) // Retrieve API key from the fourth element
-    val locationId = args?.getString(4) // Retrieve location ID from the fifth element
 
-    // Extract Maps safely
-    val options = args?.getMap(5)?.toHashMap()?.mapValues { it.value ?: "" } ?: emptyMap()
-    val metadata = args?.getMap(6)?.toHashMap()?.mapValues { it.value ?: "" } ?: emptyMap()
-    val recipient = args?.getMap(7)?.toHashMap()?.mapValues { it.value ?: "" } ?: emptyMap()
-    val sender = args?.getMap(8)?.toHashMap()?.mapValues { it.value ?: "" } ?: emptyMap()
+    try {
+      val image = args?.getString(0)
+      this.imagePath = image
+      val barcodeArray = args?.getArray(1)
+      val barcodeList = barcodeArray?.toArrayList()?.map { it.toString() } ?: emptyList()
+      val token = args?.getString(2)  // Retrieve token from the third element of the array
+      val apiKey = args?.getString(3) // Retrieve API key from the fourth element
+      val locationId = args?.getString(4) // Retrieve location ID from the fifth element
+      // Extract Maps safely
+      val options = args?.getMap(5)?.toHashMap()?.mapValues { it.value ?: "" } ?: emptyMap()
+      val metadata = args?.getMap(6)?.toHashMap()?.mapValues { it.value ?: "" } ?: emptyMap()
+      val recipient = args?.getMap(7)?.toHashMap()?.mapValues { it.value ?: "" } ?: emptyMap()
+      val sender = args?.getMap(8)?.toHashMap()?.mapValues { it.value ?: "" } ?: emptyMap()
 
-    val shouldResizeImage = args?.getBoolean(9) // Retrieve resize flag (10th element)
-    Log.d("INTELLIJUST", "$image, $barcodeArray, $barcodeList, $token, $apiKey, $locationId, $options, $metadata, $recipient, $sender")
-
-    uriToBitmap(context!!, Uri.parse(image)) { bitmap ->
-      bitmap?.let {
-        Log.d("INTELLIJUST", "handle cloud prediction")
-        getPredictionShippingLabelCloud(
-          it,
-          barcodeList,
-          token,
-          apiKey,
-          locationId,
-          options,
-          metadata,
-          recipient,
-          sender,
-          shouldResizeImage
-        )  // Process shipping label prediction.
+      val shouldResizeImage = if (args != null && args.size() > 9 && !args.isNull(9)) {
+        args.getBoolean(9)
+      } else {
+        true // Default value if null
       }
+
+
+
+      uriToBitmap(context!!, Uri.parse(image)) { bitmap ->
+        bitmap?.let {
+          Log.d("INTELLIJUST", "handle cloud prediction")
+          getPredictionShippingLabelCloud(
+            it,
+            barcodeList,
+            token,
+            apiKey,
+            locationId,
+            options,
+            metadata,
+            recipient,
+            sender,
+            shouldResizeImage
+          )  // Process shipping label prediction.
+        }
+      }
+    } catch (e: Exception){
+      Log.e(TAG, "❌ Exception in handleCloudPrediction: ${e.message}", e)
     }
   }
 
+
+
+
+
   // This method handles cloud-based bill of lading prediction.
   private fun handlePredictionBillOfLadingCloud(args: ReadableArray?) {
+    try {
+      val image = args?.getString(0)
+      this.imagePath = image
+      val barcodeArray = args?.getArray(1)
+      val barcodeList = barcodeArray?.toArrayList()?.map { it.toString() } ?: emptyList()
+      val token = args?.getString(2)  // Retrieve token from the third element of the array
+      val apiKey = args?.getString(3) // Retrieve API key from the fourth element
+      val locationId = args?.getString(4) // Retrieve location ID from the fifth element
+      val options = args?.getMap(5)?.toHashMap()?.mapValues { it.value ?: "" } ?: emptyMap()
 
-    val image = args?.getString(0)
-    this.imagePath = image
-    val barcodeArray = args?.getArray(1)
-    val barcodeList = barcodeArray?.toArrayList()?.map { it.toString() } ?: emptyList()
-    uriToBitmap(context!!, Uri.parse(image)) { bitmap ->
-      bitmap?.let {
-        getPredictionBillOfLadingCloud(it, barcodeList)  // Process bill of lading prediction.
+
+      val shouldResizeImage = if (args != null && args.size() > 9 && !args.isNull(9)) {
+        args.getBoolean(6)
+      } else {
+        true // Default value if null
       }
+
+      uriToBitmap(context!!, Uri.parse(image)) { bitmap ->
+        bitmap?.let {
+          getPredictionBillOfLadingCloud(
+            it,
+            barcodeList,
+            token,
+            apiKey,
+            locationId,
+            options,
+            shouldResizeImage
+          )  // Process bill of lading prediction.
+        }
+      }
+    } catch(e: Exception){
+      Log.e(TAG, "❌ Exception in handlePredictionBillOfLadingCloud: ${e.message}", e)
     }
   }
 
   // This method handles cloud-based item label prediction.
   private fun handlePredictionItemLabelCloud(args: ReadableArray?) {
-    val image = args?.getString(0)
-    this.imagePath = image
-    val withImageResizing = args?.getBoolean(1)
-    print(image)
-    print(withImageResizing)
-    uriToBitmap(context!!, Uri.parse(image)) { bitmap ->
-      bitmap?.let {
-        getPredictionItemLabelCloud(it)  // Process item label prediction.
+    try {
+      val image = args?.getString(0)
+      this.imagePath = image
+      val token = args?.getString(1)  // Retrieve token from the third element of the array
+      val apiKey = args?.getString(2) // Retrieve API key from the fourth element
+      val shouldResizeImage = if (args != null && args.size() > 9 && !args.isNull(9)) {
+        args.getBoolean(3)
+      } else {
+        true // Default value if null
       }
+      uriToBitmap(context!!, Uri.parse(image)) { bitmap ->
+        bitmap?.let {
+          getPredictionItemLabelCloud(
+            it,
+            token,
+            apiKey,
+            shouldResizeImage
+          )  // Process item label prediction.
+        }
+      }
+    } catch(e: Exception){
+      Log.e(TAG, "❌ Exception in handlePredictionItemLabelCloud: ${e.message}", e)
     }
+
   }
 
   // This method handles cloud-based document classification prediction.
   private fun handlePredictionDocumentClassificationCloud(args: ReadableArray?) {
-    val image = args?.getString(0)
-    this.imagePath = image
-    print(image)
-    uriToBitmap(context!!, Uri.parse(image)) { bitmap ->
-      bitmap?.let {
-        getPredictionDocumentClassificationCloud(it)  // Process document classification prediction.
+
+    try  {
+      val image = args?.getString(0)
+      this.imagePath = image
+      val token = args?.getString(1)  // Retrieve token from the third element of the array
+      val apiKey = args?.getString(2) // Retrieve API key from the fourth element
+      val shouldResizeImage = if (args != null && args.size() > 9 && !args.isNull(9)) {
+        args.getBoolean(3)
+      } else {
+        true // Default value if null
       }
+
+      uriToBitmap(context!!, Uri.parse(image)) { bitmap ->
+        bitmap?.let {
+          getPredictionDocumentClassificationCloud(
+            it,
+            token,
+            apiKey,
+            shouldResizeImage
+          )  // Process document classification prediction.
+        }
+      }
+    } catch (e: Exception){
+      Log.e(TAG, "❌ Exception in handlePredictionDocumentClassificationCloud: ${e.message}", e)
     }
+
   }
 
   // This method is used to create a new template for use in cloud predictions.
