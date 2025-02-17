@@ -289,6 +289,7 @@ const App: React.FC = () => {
     console.log('onBarcodeScan', JSON.stringify(event));
     console.log("=======================")
     setLoading(false);
+
     visionSdk.current?.restartScanningHandler();
   }, [])
 
