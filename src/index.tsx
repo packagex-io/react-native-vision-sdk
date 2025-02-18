@@ -138,16 +138,20 @@ const Camera = forwardRef<VisionSdkRefProps, VisionSdkProps>(
       startRunningHandler: () => dispatchCommand('startRunning'),
 
       // 3: Sets metadata using the 'setMetaData' command
-      setMetadata: (param: any) => dispatchCommand('setMetaData', [param]),
+      setMetadata: (param: any) => dispatchCommand('setMetaData', [param]), //relevant to only shipping label and matching api
 
       // 4: Sets the recipient information using the 'setRecipient' command
-      setRecipient: (param: any) => dispatchCommand('setRecipient', [param]),
+      setRecipient: (param: any) => dispatchCommand('setRecipient', [param]),//relevant to only shipping label and matching api
 
       // 5: Sets the sender information using the 'setSender' command
-      setSender: (param: any) => dispatchCommand('setSender', [param]),
+      setSender: (param: any) => dispatchCommand('setSender', [param]), //relevant to only shipping label and matching api
 
       // 6: Configures on-device model using the 'configureOnDeviceModel' command
-      configureOnDeviceModel: (param: any) => dispatchCommand('configureOnDeviceModel', [param]),
+      configureOnDeviceModel: (
+        param: any,
+        token: string | undefined | null,
+        apiKey: string | undefined | null
+      ) => dispatchCommand('configureOnDeviceModel', [param, token, apiKey]),
 
       // 7: Restarts the scanning process using the 'restartScanning' command
       restartScanningHandler: () => dispatchCommand('restartScanning'),
@@ -164,14 +168,41 @@ const Camera = forwardRef<VisionSdkRefProps, VisionSdkProps>(
       // 11: Retrieves prediction using the 'getPrediction' command with image and barcode parameters
       getPrediction: (image: string, barcode: string[]) => dispatchCommand('getPrediction', [image, barcode]),
 
+      // bitmap = bitmap,
+      // barcodeList = list,
+      // locationId = locationId?.takeIf { it.isNotEmpty() },
+      // options = options ?: emptyMap(),
+      // metadata = metaData ?: emptyMap(),
+      // recipient = recipient ?: emptyMap(),
+      // sender = sender ?: emptyMap(),
+      // onDeviceResponse = onDeviceResponse,
+      // shouldResizeImage = shouldResizeImage
+
       // 12: Retrieves prediction with cloud transformations using the 'getPredictionWithCloudTransformations' command
       getPredictionWithCloudTransformations: (
         image: string,
-        barcode: string[]
+        barcode: string[],
+        token?: string,
+        apiKey?: string,
+        locationId?: string,
+        options?: any,
+        metadata?: any,
+        recipient?: any,
+        sender?: any,
+        shouldResizeImage?: boolean
+
       ) =>
         dispatchCommand('getPredictionWithCloudTransformations', [
           image,
           barcode,
+          token,
+          apiKey,
+          locationId,
+          options,
+          metadata,
+          recipient,
+          sender,
+          shouldResizeImage
         ]),
 
       // 13: Retrieves prediction for shipping label cloud using the 'getPredictionShippingLabelCloud' command
@@ -208,7 +239,7 @@ const Camera = forwardRef<VisionSdkRefProps, VisionSdkProps>(
         token?: string,
         apiKey?: string,
         locationId?: string,
-        options?:  any,
+        options?: any,
         shouldResizeImage?: boolean
       ) =>
         dispatchCommand('getPredictionBillOfLadingCloud', [
@@ -250,21 +281,21 @@ const Camera = forwardRef<VisionSdkRefProps, VisionSdkProps>(
         ]),
 
       // 17: Reports errors for on-device issues using the 'reportError' command
-      reportError: (param: ReportErrorType) =>
-        dispatchCommand('reportError', [param]),
+      reportError: (param: ReportErrorType, token?: string, apiKey?: string) =>
+        dispatchCommand('reportError', [param, token, apiKey]), //check with the team, add token and apiKey
 
       // 18: Creates a new template using the 'createTemplate' command
-      createTemplate: () => dispatchCommand('createTemplate'),
+      createTemplate: () => dispatchCommand('createTemplate'), //no implementation found in android wrapper for this
 
       // 19: Get all saved templates using the 'getAllTemplates' command
-      getAllTemplates: () => dispatchCommand('getAllTemplates'),
+      getAllTemplates: () => dispatchCommand('getAllTemplates'), //no implementation found in android wrapper for this
 
       // 20: Deletes a specific template by its ID using the 'deleteTemplateWithId' command
       deleteTemplateWithId: (id: string) =>
-        dispatchCommand('deleteTemplateWithId', [id]),
+        dispatchCommand('deleteTemplateWithId', [id]),  //no implementation found in android wrapper for this
 
       // 21: Deletes all templates from storage using the 'deleteAllTemplates' command
-      deleteAllTemplates: () => dispatchCommand('deleteAllTemplates'),
+      deleteAllTemplates: () => dispatchCommand('deleteAllTemplates'),  //no implementation found in android wrapper for this
       // onCreateTemplate: () => dispatchCommand('deleteAllTemplates'),
     }), [dispatchCommand]);
 

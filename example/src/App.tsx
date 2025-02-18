@@ -78,9 +78,9 @@ const App: React.FC = () => {
       progress: 1,
     });
 
+
   // Request camera permission on component mount (for Android)
   useEffect(() => {
-    console.log("I AM COMPONENT DID MOUNT")
     const requestCameraPermission = async () => {
       const cameraPermission =
         Platform.OS === 'ios'
@@ -163,6 +163,8 @@ const App: React.FC = () => {
   // Capture photo when the button is pressed
   const handlePressCapture = useCallback(() => {
     visionSdk?.current?.cameraCaptureHandler();
+    // console.log("GOING TO CONFIGURE ON DEVICE MODEL FOR SHIPPING LABEL")
+    // visionSdk?.current?.configureOnDeviceModel({type: 'shipping-label', size: 'large'}, null, apiKey)
   }, [])
 
 
@@ -185,7 +187,7 @@ const App: React.FC = () => {
             senderName: false,
             senderAddres: false
           }
-        })
+        }, "", apiKey)
         break;
 
       case 'item_label':
@@ -205,7 +207,7 @@ const App: React.FC = () => {
             productionDate: false,
             supplierAddress: true
           }
-        })
+        }, "", apiKey)
         break;
 
       case 'BOL':
@@ -230,7 +232,7 @@ const App: React.FC = () => {
             shippingDate: true,
             date: false
           }
-        })
+        }, "", apiKey)
         break;
 
       case 'DC':
@@ -243,7 +245,7 @@ const App: React.FC = () => {
           errorFlags: {
             documentClass: true
           }
-        });
+        }, "", apiKey);
         break;
       default:
         break;
@@ -312,8 +314,9 @@ const App: React.FC = () => {
 
   const handleImageCaptured = useCallback((event) => {
     console.log('onImageCaptured', event);
-    console.log("GETTING PREDICTION bill of lading")
-    visionSdk.current?.getPredictionDocumentClassificationCloud(event.image, "", apiKey, false)
+    // visionSdk.current?.getPredictionShippingLabelCloud(event.image, event.barcodes, "", apiKey)
+    // visionSdk.current?.getPredictionWithCloudTransformations(event.image, event.barcodes, "", apiKey)
+    // visionSdk.current?.getPredictionDocumentClassificationCloud(event.image, "", apiKey, false)
     // visionSdk.current?.getPredictionBillOfLadingCloud(
     //   event.image,
     //   event.barcodes,
@@ -324,6 +327,7 @@ const App: React.FC = () => {
   }, [])
 
   const handleModelDownloadProgress = useCallback((event) => {
+    console.log("MODEL DOWNLOAD PROGRESS: ", event)
     setModelDownloadingProgress(event);
     if (event.downloadStatus && event.isReady) {
       // visionSdk.current?.startRunningHandler();
@@ -357,7 +361,7 @@ const App: React.FC = () => {
         isEnableAutoOcrResponseWithImage={true}
         locationId=""
         token=""
-        apiKey={apiKey}
+        apiKey={""}
         flash={flash}
         zoomLevel={zoomLevel}
         onDetected={handleDetected}
