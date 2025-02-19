@@ -263,7 +263,7 @@ const Camera = forwardRef<VisionSdkRefProps, VisionSdkProps>(
           image,
           token,
           apiKey,
-          shouldResizeImage
+          shouldResizeImage ?? true
         ]),
 
       // 16: Retrieves prediction for document classification cloud using the 'getPredictionDocumentClassificationCloud' command
@@ -277,7 +277,7 @@ const Camera = forwardRef<VisionSdkRefProps, VisionSdkProps>(
           image,
           token,
           apiKey,
-          shouldResizeImage
+          shouldResizeImage ?? true
         ]),
 
       // 17: Reports errors for on-device issues using the 'reportError' command

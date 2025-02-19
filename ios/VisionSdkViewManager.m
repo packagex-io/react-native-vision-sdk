@@ -1,5 +1,5 @@
 #import "React/RCTViewManager.h"
-#import <React/RCTViewManager.h>
+
 @interface RCT_EXTERN_MODULE(VisionSdkViewManager, RCTViewManager)
 
 RCT_EXPORT_VIEW_PROPERTY(onBarcodeScan, RCTDirectEventBlock)
@@ -64,9 +64,14 @@ RCT_EXTERN_METHOD(getPredictionBillOfLadingCloud:(nonnull NSNumber *)node
                   shouldResizeImage:(nonnull NSNumber *)shouldResizeImage)
 RCT_EXTERN_METHOD(getPredictionItemLabelCloud:(nonnull NSNumber *)node
                   image:(nonnull NSString *)image
-                  withImageResizing:(nonnull BOOL *)withImageResizing)
+                  token:(nullable NSString *)token
+                  apiKey:(nullable NSString *)apiKey
+                  shouldResizeImage:(nonnull NSNumber *)shouldResizeImage)
 RCT_EXTERN_METHOD(getPredictionDocumentClassificationCloud:(nonnull NSNumber *)node
-                  image:(nonnull NSString *)image)
+                  image:(nonnull NSString *)image
+                  token:(nullable NSString *)token
+                  apiKey:(nullable NSString *)apiKey
+                  shouldResizeImage:(nonnull NSNumber *)shouldResizeImage)
 RCT_EXTERN_METHOD(reportError:(nonnull NSNumber *)node data:(nonnull NSDictionary *)data)
 RCT_EXTERN_METHOD(createTemplate:(nonnull NSNumber *)node)
 RCT_EXTERN_METHOD(getAllTemplates:(nonnull NSNumber *)node)

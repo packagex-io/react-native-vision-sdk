@@ -253,7 +253,13 @@ extension RNCodeScannerView: CodeScannerViewDelegate {
                     shouldResizeImage: self.shouldResizeImage
                     )
               case "item_label", "item-label":
-                self.getPredictionItemLabelCloud(withImage: image, imagePath: imagePath)
+                self.getPredictionItemLabelCloud(
+                    withImage: image,
+                    imagePath: imagePath,
+                    token: self.token,
+                    apiKey: VSDKConstants.apiKey,
+                    shouldResizeImage: self.shouldResizeImage
+                  )
               case "bill_of_lading", "bill-of-lading":
                 self.getPredictionBillOfLadingCloud(
                     withImage: image,
@@ -266,7 +272,13 @@ extension RNCodeScannerView: CodeScannerViewDelegate {
                     shouldResizeImage: self.shouldResizeImage
                   )
               case "document_classification", "document-classification":
-                  self.getPredictionDocumentClassificationCloud(withImage: image, imagePath: imagePath)
+                  self.getPredictionDocumentClassificationCloud(
+                    withImage: image,
+                    imagePath: imagePath,
+                    token: self.token,
+                    apiKey: VSDKConstants.apiKey,
+                    shouldResizeImage: self.shouldResizeImage
+                  )
               default:
                   print("Unsupported OCR type for cloud mode: \(ocrType)")
               }
@@ -542,13 +554,25 @@ extension RNCodeScannerView {
     /// - Parameters:
     ///   - image: Captured image from VisionSDK to pass into API
     ///   - withImageResizing: Resizing
-  func getPredictionItemLabelCloud(withImage image: UIImage, imagePath:String?) {
+  func getPredictionItemLabelCloud(
+      withImage image: UIImage,
+      imagePath:String?,
+      token: String?,
+      apiKey: String?,
+      shouldResizeImage: Bool
+    ) {
         let tokenValue = token?.isEmpty == false ? token : nil
-        let apiKey = VSDKConstants.apiKey.isEmpty ? nil : VSDKConstants.apiKey
+        let apiKey = apiKey?.isEmpty == false ? apiKey : nil
+
         print("getPredictionItemLabelCloud", apiKey ?? "")
         print("getPredictionItemLabelCloud", tokenValue ?? "")
 
-    VisionAPIManager.shared.callItemLabelsAPIWith(image ,andApiKey: apiKey, andToken: tokenValue, withImageResizing: shouldResizeImage) {
+    VisionAPIManager.shared.callItemLabelsAPIWith(
+        image ,
+        andApiKey: apiKey,
+        andToken: tokenValue,
+        withImageResizing: shouldResizeImage
+      ) {
             [weak self] data, error in
 
             // Early exit if self is deallocated.
@@ -562,13 +586,25 @@ extension RNCodeScannerView {
     /// - Parameters:
     ///   - image: Captured image from VisionSDK to pass into API
 
-    func getPredictionDocumentClassificationCloud(withImage image: UIImage, imagePath:String?) {
+    func getPredictionDocumentClassificationCloud(
+        withImage image: UIImage,
+        imagePath:String?,
+        token: String?,
+        apiKey: String?,
+        shouldResizeImage: Bool
+      ) {
         let tokenValue = token?.isEmpty == false ? token : nil
-        let apiKey = VSDKConstants.apiKey.isEmpty ? nil : VSDKConstants.apiKey
+        let apiKey = apiKey?.isEmpty == false ? apiKey : nil
+
         print("getPredictionDocumentClassificationCloud", apiKey ?? "")
         print("getPredictionDocumentClassificationCloud", tokenValue ?? "")
 
-      VisionAPIManager.shared.callDocumentClassificationAPIWith(image ,andApiKey: apiKey, andToken: tokenValue, withImageResizing: shouldResizeImage) {
+      VisionAPIManager.shared.callDocumentClassificationAPIWith(
+          image ,
+          andApiKey: apiKey,
+          andToken: tokenValue,
+          withImageResizing: shouldResizeImage
+        ) {
             [weak self] data, error in
 
             // Early exit if self is deallocated.

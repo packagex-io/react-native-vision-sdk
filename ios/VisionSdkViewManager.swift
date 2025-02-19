@@ -215,7 +215,13 @@ class VisionSdkViewManager: RCTViewManager {
             }
         }
     }
-    @objc func getPredictionItemLabelCloud(_ node: NSNumber, image: String) {
+    @objc func getPredictionItemLabelCloud(
+      _ node: NSNumber,
+      image: String,
+      token: NSString?,
+      apiKey: NSString?,
+      shouldResizeImage: NSNumber?
+      ) {
         getComponent(node) { component in
             // Load the image (either from a local URI or URL)
             print("Image Path: \(image)")
@@ -227,12 +233,29 @@ class VisionSdkViewManager: RCTViewManager {
                 }
                 print("Loaded Image: \(finalImage)")
                 // Call onDeviceFlow with the UIImage and barcodes
-                component?.getPredictionItemLabelCloud(withImage: finalImage, imagePath:image)
+
+                let tokenValue = token as String? ?? component?.token
+                let apiKeyValue = apiKey as String? ?? VSDKConstants.apiKey
+                let shouldResize = shouldResizeImage?.boolValue ?? component?.shouldResizeImage ?? true
+
+                component?.getPredictionItemLabelCloud(
+                  withImage: finalImage,
+                  imagePath:image,
+                  token: tokenValue,
+                  apiKey: apiKeyValue,
+                  shouldResizeImage: shouldResize
+                )
             }
         }
     }
 
-    @objc func getPredictionDocumentClassificationCloud(_ node: NSNumber, image: String) {
+    @objc func getPredictionDocumentClassificationCloud(
+        _ node: NSNumber,
+        image: String,
+        token: NSString?,
+        apiKey: NSString?,
+        shouldResizeImage: NSNumber?
+      ) {
         getComponent(node) { component in
             // Load the image (either from a local URI or URL)
             print("Image Path: \(image)")
@@ -244,7 +267,18 @@ class VisionSdkViewManager: RCTViewManager {
                 }
                 print("Loaded Image: \(finalImage)")
                 // Call onDeviceFlow with the UIImage and barcodes
-                component?.getPredictionDocumentClassificationCloud(withImage: finalImage, imagePath:image)
+
+                let tokenValue = token as String? ?? component?.token
+                let apiKeyValue = apiKey as String? ?? VSDKConstants.apiKey
+                let shouldResize = shouldResizeImage?.boolValue ?? component?.shouldResizeImage ?? true
+
+                component?.getPredictionDocumentClassificationCloud(
+                  withImage: finalImage,
+                  imagePath:image,
+                  token: tokenValue,
+                  apiKey: apiKeyValue,
+                  shouldResizeImage: shouldResize
+                )
             }
         }
     }
