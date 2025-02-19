@@ -249,7 +249,7 @@ const Camera = forwardRef<VisionSdkRefProps, VisionSdkProps>(
           apiKey,
           locationId,
           options,
-          shouldResizeImage,
+          shouldResizeImage ?? true,
         ]),
 
       // 15: Retrieves prediction for item label cloud using the 'getPredictionItemLabelCloud' command

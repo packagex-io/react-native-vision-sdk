@@ -255,7 +255,16 @@ extension RNCodeScannerView: CodeScannerViewDelegate {
               case "item_label", "item-label":
                 self.getPredictionItemLabelCloud(withImage: image, imagePath: imagePath)
               case "bill_of_lading", "bill-of-lading":
-                self.getPredictionBillOfLadingCloud(withImage: image, andBarcodes: barcodes, imagePath:imagePath)
+                self.getPredictionBillOfLadingCloud(
+                    withImage: image,
+                    andBarcodes: barcodes,
+                    imagePath:imagePath,
+                    token: self.token,
+                    apiKey: VSDKConstants.apiKey,
+                    locationId: self.locationId,
+                    options: self.options ?? [:],
+                    shouldResizeImage: self.shouldResizeImage
+                  )
               case "document_classification", "document-classification":
                   self.getPredictionDocumentClassificationCloud(withImage: image, imagePath: imagePath)
               default:
@@ -466,7 +475,6 @@ extension RNCodeScannerView {
       sender: [String: Any]?,
       shouldResizeImage: Bool
     ) {
-
       VisionAPIManager.shared.callScanAPIWith(
           image,
           andBarcodes: barcodes,
@@ -494,19 +502,21 @@ extension RNCodeScannerView {
      func getPredictionBillOfLadingCloud(
         withImage image: UIImage,
         andBarcodes barcodes: [String],
-        imagePath: String?
+        imagePath: String?,
+        token: String?,
+        apiKey: String?,
+        locationId: String?,
+        options: [String: Any]?,
+        shouldResizeImage: Bool
     ) {
-        let tokenValue = token?.isEmpty == false ? token : nil
-        let apiKey = VSDKConstants.apiKey.isEmpty ? nil : VSDKConstants.apiKey
-
         // Construct the API call
         if let validLocationId = locationId, !validLocationId.isEmpty {
             VisionAPIManager.shared.getPredictionBillOfLadingCloud(
                 image,
                 andBarcodes: barcodes,
-                andApiKey: apiKey,
-                andToken: tokenValue,
-                andLocationId: validLocationId,
+                andApiKey: apiKey?.isEmpty == false ? apiKey : nil,
+                andToken:  token?.isEmpty == false ? token : nil,
+                andLocationId: locationId ?? "",
                 andOptions: options ?? [:],
                 withImageResizing: shouldResizeImage
             ) { [weak self] data, error in
@@ -517,8 +527,8 @@ extension RNCodeScannerView {
             VisionAPIManager.shared.getPredictionBillOfLadingCloud(
                 image,
                 andBarcodes: barcodes,
-                andApiKey: apiKey,
-                andToken: tokenValue,
+                andApiKey: apiKey?.isEmpty == false ? apiKey : nil,
+                andToken: token?.isEmpty == false ? token : nil,
                 andOptions: options ?? [:],
                 withImageResizing: shouldResizeImage
             ) { [weak self] data, error in

@@ -314,7 +314,7 @@ const App: React.FC = () => {
 
   const handleImageCaptured = useCallback((event) => {
     console.log('onImageCaptured', event);
-    // console.log("CALLING GET PREDICTION SHIPPING LABEL CLOUD ")
+    console.log("CALLING GET BOL CLOUD ")
     // visionSdk.current?.getPredictionShippingLabelCloud(event.image, event.barcodes, "", apiKey)
     // visionSdk.current?.getPredictionWithCloudTransformations(event.image, event.barcodes, "", apiKey)
     // visionSdk.current?.getPredictionDocumentClassificationCloud(event.image, "", apiKey, false)

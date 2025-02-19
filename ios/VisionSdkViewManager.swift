@@ -173,7 +173,16 @@ class VisionSdkViewManager: RCTViewManager {
             }
         }
     }
-    @objc func getPredictionBillOfLadingCloud(_ node: NSNumber, image: String, barcode: [String]) {
+    @objc func getPredictionBillOfLadingCloud(
+      _ node: NSNumber,
+      image: String,
+      barcode: [String],
+      token: NSString?,
+      apiKey: NSString?,
+      locationId: NSString?,
+      options: NSDictionary?,
+      shouldResizeImage: NSNumber?
+      ) {
         getComponent(node) { component in
             // Load the image (either from a local URI or URL)
             print("Image Path: \(image)")
@@ -185,7 +194,24 @@ class VisionSdkViewManager: RCTViewManager {
                 }
                 print("Loaded Image: \(finalImage)")
                 // Call onDeviceFlow with the UIImage and barcodes
-                component?.getPredictionBillOfLadingCloud(withImage: finalImage, andBarcodes: barcode,  imagePath:image)
+                let tokenValue = token as String? ?? component?.token
+                let apiKeyValue = apiKey as String? ?? VSDKConstants.apiKey
+                let locationIdValue = locationId as String? ?? component?.locationId
+                let optionsDict = options as? [String: Any] ?? component?.options ?? [:]
+                let shouldResize = shouldResizeImage?.boolValue ?? component?.shouldResizeImage ?? true
+
+
+
+                component?.getPredictionBillOfLadingCloud(
+                  withImage: finalImage,
+                  andBarcodes: barcode,
+                  imagePath:image,
+                  token: tokenValue,
+                  apiKey: apiKeyValue,
+                  locationId: locationIdValue,
+                  options: optionsDict,
+                  shouldResizeImage: shouldResize
+                )
             }
         }
     }

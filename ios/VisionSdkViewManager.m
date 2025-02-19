@@ -57,7 +57,11 @@ RCT_EXTERN_METHOD(getPredictionShippingLabelCloud:(nonnull NSNumber *)node
 RCT_EXTERN_METHOD(getPredictionBillOfLadingCloud:(nonnull NSNumber *)node
                   image:(nonnull NSString *)image
                   barcode:(nonnull NSArray<NSString *> *)barcode
-                  withImageResizing:(nonnull BOOL *)withImageResizing)
+                  token:(nullable NSString *)token
+                  apiKey:(nullable NSString *)apiKey
+                  locationId:(nullable NSString *)locationId
+                  options:(nullable NSDictionary *)options
+                  shouldResizeImage:(nonnull NSNumber *)shouldResizeImage)
 RCT_EXTERN_METHOD(getPredictionItemLabelCloud:(nonnull NSNumber *)node
                   image:(nonnull NSString *)image
                   withImageResizing:(nonnull BOOL *)withImageResizing)
