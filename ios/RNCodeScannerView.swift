@@ -239,7 +239,19 @@ extension RNCodeScannerView: CodeScannerViewDelegate {
           case "cloud":
               switch ocrType {
               case "shipping_label", "shipping-label":
-                  self.getPredictionShippingLabelCloud(withImage: image, andBarcodes: barcodes, imagePath: imagePath)
+                  self.getPredictionShippingLabelCloud(
+                    withImage: image,
+                    andBarcodes: barcodes,
+                    imagePath: imagePath,
+                    token: self.token,
+                    apiKey: VSDKConstants.apiKey,
+                    locationId: self.locationId,
+                    options: self.options ?? [:],
+                    metadata: self.metaData ?? [:],
+                    recipient: self.recipient ?? [:],
+                    sender: self.sender ?? [:],
+                    shouldResizeImage: self.shouldResizeImage
+                    )
               case "item_label", "item-label":
                 self.getPredictionItemLabelCloud(withImage: image, imagePath: imagePath)
               case "bill_of_lading", "bill-of-lading":
@@ -441,14 +453,31 @@ extension RNCodeScannerView {
     /// - Parameters:
     ///   - image: Captured image from VisionSDK to pass into API
     ///   - barcodes: Detected barcodes from VisionSDK to pass into API
-    func getPredictionShippingLabelCloud(withImage image: UIImage, andBarcodes barcodes: [String], imagePath:String?) {
+    func getPredictionShippingLabelCloud(
+      withImage image: UIImage,
+      andBarcodes barcodes: [String],
+      imagePath:String?,
+      token: String?,
+      apiKey: String?,
+      locationId: String?,
+      options: [String: Any]?,
+      metadata: [String: Any]?,
+      recipient: [String: Any]?,
+      sender: [String: Any]?,
+      shouldResizeImage: Bool
+    ) {
 
-        var tokenValue: String? = nil
-        if let token = token, !token.isEmpty {
-            tokenValue = token
-        }
-
-      VisionAPIManager.shared.callScanAPIWith(image, andBarcodes: barcodes, andApiKey: !VSDKConstants.apiKey.isEmpty ? VSDKConstants.apiKey : nil, andToken: tokenValue, andLocationId: locationId ?? "", andOptions: options ?? [:], andMetaData: metaData ?? [:], andRecipient: recipient ?? [:], andSender: sender ?? [:], withImageResizing: shouldResizeImage
+      VisionAPIManager.shared.callScanAPIWith(
+          image,
+          andBarcodes: barcodes,
+          andApiKey: apiKey?.isEmpty == false ? apiKey : nil, //!VSDKConstants.apiKey.isEmpty ? VSDKConstants.apiKey : nil,
+          andToken: token?.isEmpty == false ? token : nil,
+          andLocationId: locationId ?? "",
+          andOptions: options ?? [:],
+          andMetaData: metaData ?? [:],
+          andRecipient: recipient ?? [:],
+          andSender: sender ?? [:],
+          withImageResizing: shouldResizeImage
         ) {
             [weak self] data, error in
             guard let self = self else { return }
@@ -903,8 +932,8 @@ extension RNCodeScannerView {
     @objc func setOcrMode(_ ocrMode: NSString) {
         self.ocrMode = ocrMode as String
     }
-  
-  
+
+
   @objc func setShouldResizeImage(_ shouldResizeImage: Bool){
     self.shouldResizeImage = shouldResizeImage as Bool
   }
@@ -914,11 +943,11 @@ extension RNCodeScannerView {
     @objc func setOcrType(_ ocrType: NSString) {
         self.ocrType = ocrType as String
     }
-  
-  
 
-  
-  
+
+
+
+
     /// Gets the ModelType for On Device, i.e., returns the model class type based on the provided model size string.
     /// - Parameter modelType: parameter describes the Model Class type
     ///  Parameter : possible values

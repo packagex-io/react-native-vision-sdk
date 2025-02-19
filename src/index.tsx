@@ -229,7 +229,7 @@ const Camera = forwardRef<VisionSdkRefProps, VisionSdkProps>(
           metadata,
           recipient,
           sender,
-          shouldResizeImage
+          shouldResizeImage ?? true
         ]),
 
       // 14: Retrieves prediction for Bill of Lading cloud using the 'getPredictionBillOfLadingCloud' command

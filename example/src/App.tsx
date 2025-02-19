@@ -314,6 +314,7 @@ const App: React.FC = () => {
 
   const handleImageCaptured = useCallback((event) => {
     console.log('onImageCaptured', event);
+    // console.log("CALLING GET PREDICTION SHIPPING LABEL CLOUD ")
     // visionSdk.current?.getPredictionShippingLabelCloud(event.image, event.barcodes, "", apiKey)
     // visionSdk.current?.getPredictionWithCloudTransformations(event.image, event.barcodes, "", apiKey)
     // visionSdk.current?.getPredictionDocumentClassificationCloud(event.image, "", apiKey, false)
@@ -327,7 +328,6 @@ const App: React.FC = () => {
   }, [])
 
   const handleModelDownloadProgress = useCallback((event) => {
-    console.log("MODEL DOWNLOAD PROGRESS: ", event)
     setModelDownloadingProgress(event);
     if (event.downloadStatus && event.isReady) {
       // visionSdk.current?.startRunningHandler();
@@ -361,7 +361,7 @@ const App: React.FC = () => {
         isEnableAutoOcrResponseWithImage={true}
         locationId=""
         token=""
-        apiKey={""}
+        apiKey={apiKey}
         flash={flash}
         zoomLevel={zoomLevel}
         onDetected={handleDetected}
