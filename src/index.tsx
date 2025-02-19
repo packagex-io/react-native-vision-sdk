@@ -202,7 +202,7 @@ const Camera = forwardRef<VisionSdkRefProps, VisionSdkProps>(
           metadata,
           recipient,
           sender,
-          shouldResizeImage
+          shouldResizeImage ?? true
         ]),
 
       // 13: Retrieves prediction for shipping label cloud using the 'getPredictionShippingLabelCloud' command

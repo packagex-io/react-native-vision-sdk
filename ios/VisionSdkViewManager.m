@@ -32,7 +32,10 @@ RCT_EXTERN_METHOD(startRunning:(nonnull NSNumber *)node)
 RCT_EXTERN_METHOD(setMetaData:(nonnull NSNumber *)node  metaData:(nonnull NSDictionary *)metaData)
 RCT_EXTERN_METHOD(setRecipient:(nonnull NSNumber *)node  recipient:(nonnull NSDictionary *)recipient)
 RCT_EXTERN_METHOD(setSender:(nonnull NSNumber *)node  sender:(nonnull NSDictionary *)sender)
-RCT_EXTERN_METHOD(configureOnDeviceModel:(nonnull NSNumber *)node onDeviceConfigs:(nonnull NSDictionary *)type)
+RCT_EXTERN_METHOD(configureOnDeviceModel:(nonnull NSNumber *)node
+                  onDeviceConfigs:(nonnull NSDictionary *)type
+                  token:(nullable NSString *)token
+                  apiKey:(nullable NSString *)apiKey)
 RCT_EXTERN_METHOD(restartScanning:(nonnull NSNumber *)node)
 RCT_EXTERN_METHOD(setFocusSettings:(nonnull NSNumber *)node focusSettings:(nonnull NSDictionary *)type)
 RCT_EXTERN_METHOD(setObjectDetectionSettings:(nonnull NSNumber *)node objectDetectionSettings:(nonnull NSDictionary *)type)
@@ -42,7 +45,15 @@ RCT_EXTERN_METHOD(getPrediction:(nonnull NSNumber *)node
                   barcode:(nonnull NSArray<NSString *> *)barcodeArray)
 RCT_EXTERN_METHOD(getPredictionWithCloudTransformations:(nonnull NSNumber *)node
                   image:(nonnull NSString *)image
-                  barcode:(nonnull NSArray<NSString *> *)barcode)
+                  barcode:(nonnull NSArray<NSString *> *)barcode
+                  token:(nullable NSString *)token
+                  apiKey:(nullable NSString *)apiKey
+                  locationId:(nullable NSString *)locationId
+                  options:(nullable NSDictionary *)options
+                  metadata:(nullable NSDictionary *)metadata
+                  recipient:(nullable NSDictionary *)recipient
+                  sender:(nullable NSDictionary *)sender
+                  shouldResizeImage:(nonnull NSNumber *)shouldResizeImage)
 RCT_EXTERN_METHOD(getPredictionShippingLabelCloud:(nonnull NSNumber *)node
                   image:(nonnull NSString *)image
                   barcode:(nonnull NSArray<NSString *> *)barcode
@@ -72,7 +83,10 @@ RCT_EXTERN_METHOD(getPredictionDocumentClassificationCloud:(nonnull NSNumber *)n
                   token:(nullable NSString *)token
                   apiKey:(nullable NSString *)apiKey
                   shouldResizeImage:(nonnull NSNumber *)shouldResizeImage)
-RCT_EXTERN_METHOD(reportError:(nonnull NSNumber *)node data:(nonnull NSDictionary *)data)
+RCT_EXTERN_METHOD(reportError:(nonnull NSNumber *)node
+                  data:(nonnull NSDictionary *)data
+                  token:(nullable NSString *)token
+                  apiKey:(nullable NSString *)apiKey)
 RCT_EXTERN_METHOD(createTemplate:(nonnull NSNumber *)node)
 RCT_EXTERN_METHOD(getAllTemplates:(nonnull NSNumber *)node)
 RCT_EXTERN_METHOD(deleteTemplateWithId:(nonnull NSNumber *)node id:(NSString *)id)

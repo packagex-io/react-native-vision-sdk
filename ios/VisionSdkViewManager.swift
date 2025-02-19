@@ -82,10 +82,23 @@ class VisionSdkViewManager: RCTViewManager {
         }
     }
 
-    @objc func configureOnDeviceModel(_ node: NSNumber, onDeviceConfigs: NSDictionary) {
+    @objc func configureOnDeviceModel(
+        _ node: NSNumber,
+        onDeviceConfigs: NSDictionary,
+        token: NSString?,
+        apiKey: NSString?,
+      ) {
         getComponent(node) { component in
             guard let modelType = (onDeviceConfigs["type"] as? String) else { return }
-            component?.configureOnDeviceModel(modelType: modelType , modelSize: onDeviceConfigs["size"] as? String)
+            let tokenValue = token as String? ?? component?.token
+            let apiKeyValue = apiKey as String? ?? VSDKConstants.apiKey
+
+            component?.configureOnDeviceModel(
+                modelType: modelType ,
+                modelSize: onDeviceConfigs["size"] as? String,
+                token: tokenValue,
+                apiKey: apiKeyValue
+              )
         }
     }
 
@@ -106,7 +119,19 @@ class VisionSdkViewManager: RCTViewManager {
             }
         }
     }
-    @objc func  getPredictionWithCloudTransformations (_ node: NSNumber, image: String, barcode: [String]) {
+    @objc func  getPredictionWithCloudTransformations (
+      _ node: NSNumber,
+        image: String,
+        barcode: [String],
+        token: NSString?,
+        apiKey: NSString?,
+        locationId: NSString?,
+        options: NSDictionary?,
+        metadata: NSDictionary?,
+        recipient: NSDictionary?,
+        sender: NSDictionary?,
+        shouldResizeImage: NSNumber?
+    ) {
         getComponent(node) { component in
             // Load the image (either from a local URI or URL)
             print("Image Path: \(image)")
@@ -118,7 +143,29 @@ class VisionSdkViewManager: RCTViewManager {
                 }
                 print("Loaded Image: \(finalImage)")
                 // Call onDeviceFlow with the UIImage and barcodes
-                component?.getPredictionWithCloudTransformations(withImage: finalImage, andBarcodes: barcode, imagePath:image)
+
+                let tokenValue = token as String? ?? component?.token
+                let apiKeyValue = apiKey as String? ?? VSDKConstants.apiKey
+                let locationIdValue = locationId as String? ?? component?.locationId
+                let optionsDict = options as? [String: Any] ?? component?.options ?? [:]
+                let metadataDict = metadata as? [String: Any] ?? component?.metaData ?? [:]
+                let recipientDict = recipient as? [String: Any] ?? component?.recipient ?? [:]
+                let senderDict = sender as? [String: Any] ?? component?.sender ?? [:]
+                let shouldResize = shouldResizeImage?.boolValue ?? component?.shouldResizeImage ?? true
+
+                component?.getPredictionWithCloudTransformations(
+                  withImage: finalImage,
+                  andBarcodes: barcode,
+                  imagePath:image,
+                  token: tokenValue,
+                  apiKey: apiKeyValue,
+                  locationId: locationIdValue,
+                  options: optionsDict,
+                  metadata: metadataDict,
+                  recipient: recipientDict,
+                  sender: senderDict,
+                  shouldResizeImage: shouldResize
+                )
             }
         }
     }
@@ -283,7 +330,12 @@ class VisionSdkViewManager: RCTViewManager {
         }
     }
 
-    @objc func reportError (_ node: NSNumber, data: NSDictionary) {
+    @objc func reportError (
+      _ node: NSNumber,
+      data: NSDictionary,
+      token: NSString?,
+      apiKey: NSString?
+    ) {
         getComponent(node) { component in
             print("Parsed Data: \(data)")
 
@@ -296,13 +348,19 @@ class VisionSdkViewManager: RCTViewManager {
                             print("Failed to load image.")
                             return
                         }
+
+                        let tokenValue = token as String? ?? component?.token
+                        let apiKeyValue = apiKey as String? ?? VSDKConstants.apiKey
+
                         component?.reportError(
                             uiImage: finalImage,
                             reportText: data["reportText"] as? String ?? "",
                             response: response ?? nil,
                             modelType: data["type"] as? String ?? "shipping_label",
                             modelSize: data["size"] as? String ?? "large",
-                            errorFlags: data["errorFlags"] as? [String:Bool]
+                            errorFlags: data["errorFlags"] as? [String:Bool],
+                            token: tokenValue,
+                            apiKey: apiKeyValue
                         )
                     }
                     return
