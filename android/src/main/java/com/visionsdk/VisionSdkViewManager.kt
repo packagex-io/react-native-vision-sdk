@@ -442,7 +442,7 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
         base64ImageToReportOn = base64Image,
         onComplete = { result ->
           // Handle completion result here
-          Log.d("INTELLIJUST", "Report completed with result: $result")
+          Log.d(TAG, "Report completed with result: $result")
         }
       )
 
@@ -561,10 +561,10 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
   }
 
   override fun onScanResult(barcodeList: List<ScannedCodeResult>) {
-    Log.d("INTELLIJUST", "onScanResult called with barcodeList: $barcodeList")
+    Log.d(TAG, "onScanResult called with barcodeList: $barcodeList")
 
     if (barcodeList.isEmpty()) {
-      Log.e("INTELLIJUST", "barcodeList is empty, skipping event emission")
+      Log.e(TAG, "barcodeList is empty, skipping event emission")
       return
     }
 
@@ -601,7 +601,7 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
         .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
         .emit("onBarcodeScan", event)
     } catch (e: Exception) {
-      Log.e("INTELLIJUST", "Error in onScanResult: ${e.message}", e)
+      Log.e(TAG, "Error in onScanResult: ${e.message}", e)
     }
   }
 
@@ -717,8 +717,8 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
     val resolvedSender = sender ?: this.sender ?: emptyMap()
     val resolvedShouldResizeImage = shouldResizeImage ?: this.shouldResizeImage
 
-    Log.d("INTELLIJUST", "get prediction shipping label cloud $resolvedToken, $resolvedApiKey, $resolvedLocationId")
-    Log.d("INTELLIJUST", "$resolvedOptions, $resolvedMetadata, $resolvedRecipient, $resolvedSender, $resolvedShouldResizeImage")
+    Log.d(TAG, "get prediction shipping label cloud $resolvedToken, $resolvedApiKey, $resolvedLocationId")
+    Log.d(TAG, "$resolvedOptions, $resolvedMetadata, $resolvedRecipient, $resolvedSender, $resolvedShouldResizeImage")
 
     apiManager.shippingLabelApiCallAsync(
       apiKey = resolvedApiKey,
@@ -893,13 +893,13 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
           onOCRResponse(result)
         }
       } catch (e: VisionSDKException) {
-        Log.e("INTELLIJUST", "X Error in matching api: ", e)
+        Log.e(TAG, "X Error in matching api: ", e)
         e.printStackTrace()
         withContextMain {
           onOCRResponseFailed(e)
         }
       } catch (e: Exception) {
-        Log.e("INTELLIJUST", "X Error in matching api: ", e)
+        Log.e(TAG, "X Error in matching api: ", e)
         e.printStackTrace()
         if (e is CancellationException) throw e
         withContextMain {
@@ -946,7 +946,7 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
     args: ReadableArray?
   ) {
 //    Log.d(TAG, "receiveCommand: $commandType")
-    Log.d("INTELLIJUST", "🔄 receiveCommand called with type: $commandType and args: $args")
+//    Log.d(TAG, "🔄 receiveCommand called with type: $commandType and args: $args")
 
     Assertions.assertNotNull(view)
     Assertions.assertNotNull(args)
