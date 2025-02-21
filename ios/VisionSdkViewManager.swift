@@ -86,7 +86,7 @@ class VisionSdkViewManager: RCTViewManager {
         _ node: NSNumber,
         onDeviceConfigs: NSDictionary,
         token: NSString?,
-        apiKey: NSString?,
+        apiKey: NSString?
       ) {
         getComponent(node) { component in
             guard let modelType = (onDeviceConfigs["type"] as? String) else { return }
@@ -340,6 +340,8 @@ class VisionSdkViewManager: RCTViewManager {
             print("Parsed Data: \(data)")
 
             let response = data["response"] as? Data
+            let tokenValue = token as String? ?? component?.token
+            let apiKeyValue = apiKey as String? ?? VSDKConstants.apiKey
 
             // Handle image if provided and not an empty string
                 if let imagePath = data["image"] as? String, !imagePath.isEmpty {
@@ -349,8 +351,7 @@ class VisionSdkViewManager: RCTViewManager {
                             return
                         }
 
-                        let tokenValue = token as String? ?? component?.token
-                        let apiKeyValue = apiKey as String? ?? VSDKConstants.apiKey
+                    
 
                         component?.reportError(
                             uiImage: finalImage,
@@ -372,7 +373,9 @@ class VisionSdkViewManager: RCTViewManager {
                 response: response ?? nil,
                 modelType: data["type"] as? String ?? "shipping_label",
                 modelSize: data["size"] as? String ?? "large",
-                errorFlags: data["errorFlags"] as? [String:Bool]
+                errorFlags: data["errorFlags"] as? [String:Bool],
+                token: tokenValue,
+                apiKey: apiKeyValue
             )
         }
     }

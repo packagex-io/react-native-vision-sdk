@@ -734,7 +734,7 @@ extension RNCodeScannerView {
     ) {
 
       let tokenValue = token?.isEmpty == false ? token : nil
-      let apiKey = apiKey?.isEmpty ? nil : apiKey
+      let apiKey = apiKey?.isEmpty == false ? apiKey : nil
 
       var parentReportModel: VisionSDK.VSDKAnalyticsReportModel?
 

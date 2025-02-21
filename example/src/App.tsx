@@ -149,6 +149,13 @@ const App: React.FC = () => {
   // }, []);
 
   useEffect(() => {
+    if(mode === 'photo'){
+      // console.log("CONFIGURING ON DEVICE MODEL: ")
+      // visionSdk?.current?.configureOnDeviceModel({type: 'shipping-label', size: 'large'}, "", apiKey)
+    }
+  }, [mode])
+
+  useEffect(() => {
     if (modelDownloadingProgress.downloadStatus) {
       setLoading(false);
     }
@@ -313,19 +320,16 @@ const App: React.FC = () => {
   }, [])
 
   const handleImageCaptured = useCallback((event) => {
+
     console.log('onImageCaptured', event);
-    console.log("CALLING GET PREDICTION ITEM LABEL CLOUD ")
-    visionSdk?.current?.getPredictionItemLabelCloud(event.image, "", apiKey)
-    // visionSdk?.current?.getPredictionDocumentClassificationCloud(event.image, "", apiKey)
+    // console.log("CALLING GET PREDICTION shiping label ")
     // visionSdk.current?.getPredictionShippingLabelCloud(event.image, event.barcodes, "", apiKey)
+    // visionSdk.current?.getPredictionBillOfLadingCloud(event.image,event.barcodes,"",apiKey)
+    // visionSdk?.current?.getPredictionItemLabelCloud(event.image, "", apiKey)
+    // visionSdk?.current?.getPredictionDocumentClassificationCloud(event.image, "", apiKey)
     // visionSdk.current?.getPredictionWithCloudTransformations(event.image, event.barcodes, "", apiKey)
-    // visionSdk.current?.getPredictionDocumentClassificationCloud(event.image, "", apiKey, false)
-    // visionSdk.current?.getPredictionBillOfLadingCloud(
-    //   event.image,
-    //   event.barcodes,
-    //   "",
-    //   apiKey
-    // )
+    // console.log("TESTING REPORT ERROR")
+    // testReportError('shipping_label')
     visionSdk.current?.restartScanningHandler();
   }, [])
 
@@ -363,7 +367,7 @@ const App: React.FC = () => {
         isEnableAutoOcrResponseWithImage={true}
         locationId=""
         token=""
-        apiKey={""}
+        apiKey={apiKey}
         flash={flash}
         zoomLevel={zoomLevel}
         onDetected={handleDetected}
