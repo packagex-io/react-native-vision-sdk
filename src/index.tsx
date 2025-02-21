@@ -96,7 +96,7 @@ const Camera = forwardRef<VisionSdkRefProps, VisionSdkProps>(
     ) => {
       try {
         // Log params for debugging
-        console.log(`Dispatching command: ${commandName} with params:`, params);
+        // console.log(`Dispatching command: ${commandName} with params:`, params);
         // Attempt to retrieve the command from the VisionSDKView's UIManager configuration. If not found, fall back to using the command from the Commands enum.
         const command =
           UIManager.getViewManagerConfig('VisionSDKView')?.Commands[
@@ -109,7 +109,7 @@ const Camera = forwardRef<VisionSdkRefProps, VisionSdkProps>(
           );
         }
 
-        console.log(`📡 Dispatching command: ${commandName}`, params);
+        // console.log(`📡 Dispatching command: ${commandName}`, params);
 
         // Dispatch the command with the provided parameters to the native module (VisionSDKView).
         const viewHandle = findNodeHandle(VisionSDKViewRef.current)
@@ -340,7 +340,7 @@ const Camera = forwardRef<VisionSdkRefProps, VisionSdkProps>(
     const onDeleteTemplateByIdHandler = useCallback((event: any) =>
       onDeleteTemplateById(parseNativeEvent<any>(event)), [onDeleteTemplateById])
 
-    const onDeleteTemplatesaHandler = useCallback((event: any) =>
+    const onDeleteTemplatesHandler = useCallback((event: any) =>
       onDeleteTemplates(parseNativeEvent<any>(event)), [onDeleteTemplates])
 
     const onOCRScanHandler = useCallback((event: any) => {
@@ -367,22 +367,65 @@ const Camera = forwardRef<VisionSdkRefProps, VisionSdkProps>(
       onOCRScan(ocrEvent);
     }, [onOCRScan]);
 
+    const eventHandlersRef = useRef({
+      onBarcodeScan: onBarcodeScanHandler,
+      onModelDownloadProgress: onModelDownloadProgressHandler,
+      onImageCaptured: onImageCapturedHandler,
+      onOCRScan: onOCRScanHandler,
+      onDetected: onDetectedHandler,
+      onError: onErrorHandler,
+      onCreateTemplate: onCreateTemplateHandler,
+      onGetTemplates: onGetTemplateHandler,
+      onDeleteTemplateById: onDeleteTemplateByIdHandler,
+      onDeleteTemplates: onDeleteTemplatesHandler
+    })
+
+    useEffect(() => {
+      eventHandlersRef.current.onBarcodeScan = onBarcodeScanHandler
+      eventHandlersRef.current.onModelDownloadProgress = onModelDownloadProgressHandler
+      eventHandlersRef.current.onImageCaptured = onImageCapturedHandler
+      eventHandlersRef.current.onOCRScan = onOCRScanHandler
+      eventHandlersRef.current.onDetected = onDetectedHandler
+      eventHandlersRef.current.onError = onErrorHandler
+      eventHandlersRef.current.onCreateTemplate = onCreateTemplate
+      eventHandlersRef.current.onGetTemplates = onGetTemplateHandler
+      eventHandlersRef.current.onDeleteTemplateById = onDeleteTemplateByIdHandler
+      eventHandlersRef.current.onDeleteTemplates = onDeleteTemplatesHandler
+    }, [
+      onBarcodeScan,
+      onModelDownloadProgress,
+      onImageCaptured,
+      onOCRScan,
+      onDetected,
+      onError,
+      onCreateTemplate,
+      onGetTemplates,
+      onDeleteTemplateById,
+      onDeleteTemplates
+    ])
 
     // Subscribe event listeners on mount, and cleanup on unmount
     useEffect(() => {
       // Event listener setup
+      // const onImageCapturedHandler = useCallback((event: any) =>
+      //   onImageCaptured(parseNativeEvent<ImageCaptureEvent>(event)), [onImageCaptured])
       const eventListeners = [
-        ['onModelDownloadProgress', onModelDownloadProgressHandler],
-        ['onBarcodeScan', onBarcodeScanHandler],
-        ['onImageCaptured', onImageCapturedHandler],
-        ['onOCRScan', onOCRScanHandler],
-        ['onDetected', onDetectedHandler],
-        ['onError', onErrorHandler],
-        ['onCreateTemplate', onCreateTemplateHandler],
-        ['onGetTemplates', onGetTemplateHandler],
-        ['onDeleteTemplateById', onDeleteTemplateByIdHandler],
-        ['onDeleteTemplates', onDeleteTemplatesaHandler],
+        ['onModelDownloadProgress', (event: any) => eventHandlersRef.current.onModelDownloadProgress(event)],
+        ['onBarcodeScan', (event: any) => eventHandlersRef.current.onBarcodeScan(event)],
+        ['onImageCaptured', (event: any) => eventHandlersRef.current.onImageCaptured(event)],
+        ['onOCRScan', (event: any) => eventHandlersRef.current.onOCRScan(event)],
+        ['onDetected', (event: any) => eventHandlersRef.current.onDetected(event)],
+        ['onError', (event: any) => eventHandlersRef.current.onError(event)],
+        ['onCreateTemplate', (event: any) => eventHandlersRef.current.onCreateTemplate(event)],
+        ['onGetTemplates', (event: any) => eventHandlersRef.current.onGetTemplates(event)],
+        ['onDeleteTemplateById', (event: any) => eventHandlersRef.current.onDeleteTemplateById(event)],
+        ['onDeleteTemplates', (event: any) => eventHandlersRef.current.onDeleteTemplates(event)],
       ];
+
+      // Ensure no duplicate listeners exist
+      eventListeners.forEach(([event]) => DeviceEventEmitter.removeAllListeners(event as string));
+
+
       // Add listeners
       const subscriptions = eventListeners.map(([event, handler]) =>
         DeviceEventEmitter.addListener(
@@ -427,7 +470,7 @@ const Camera = forwardRef<VisionSdkRefProps, VisionSdkProps>(
           onCreateTemplate={onCreateTemplateHandler}
           onGetTemplates={onGetTemplateHandler}
           onDeleteTemplateById={onDeleteTemplateByIdHandler}
-          onDeleteTemplates={onDeleteTemplatesaHandler}
+          onDeleteTemplates={onDeleteTemplatesHandler}
         >
           {children}
         </VisionSdkView>

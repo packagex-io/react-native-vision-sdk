@@ -122,9 +122,8 @@ const App: React.FC = () => {
           nthFrameToProcess: 10,
         });
         // setTimeout(() => {})
-        console.log("STARTING RUNNING HANDLER")
+
         setTimeout(() => {
-          console.log("HERE GOES")
           visionSdk?.current?.startRunningHandler();
         }, 0)
 
@@ -300,14 +299,14 @@ const App: React.FC = () => {
     setDetectedData(event);
   }, [])
 
-  const handleBarcodeScan = useCallback((event) => {
+  const handleBarcodeScan = (event) => {
     console.log("=======================")
     console.log('onBarcodeScan', JSON.stringify(event));
     console.log("=======================")
     setLoading(false);
 
     visionSdk.current?.restartScanningHandler();
-  }, [])
+  }
 
   const handleOcrScan = useCallback((event) => {
     console.log("INSIDE HANDLE OCR SCAN")
