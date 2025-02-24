@@ -643,7 +643,7 @@ export interface VisionSdkRefProps {
   configureOnDeviceModel: (payload: {
     type: ModuleType;
     size?: ModuleSize;
-  }) => void;
+  }, token?: string | undefined | null, apiKey?: string | undefined | null) => void;
 
   /**
    * Gets a prediction based on the provided image and barcode.
@@ -669,7 +669,14 @@ export interface VisionSdkRefProps {
   getPredictionWithCloudTransformations: (
     image: any,
     barcode: string[],
-    withImageResizing?: boolean
+    token?: string,
+    apiKey?: string,
+    locationId?: string,
+    options?: any,
+    metadata?: any,
+    recipient?: any,
+    sender?: any,
+    shouldResizeImage?: boolean
   ) => void;
 
   /**
@@ -685,7 +692,14 @@ export interface VisionSdkRefProps {
   getPredictionShippingLabelCloud: (
     image: any,
     barcode: string[],
-    withImageResizing?: boolean
+    token?: string,
+    apiKey?: string,
+    locationId?: string,
+    options?: Record<string, any>,
+    metadata?: any,
+    recipient?: any,
+    sender?: any,
+    shouldResizeImage?: boolean
   ) => void;
 
   /**
@@ -701,7 +715,11 @@ export interface VisionSdkRefProps {
   getPredictionBillOfLadingCloud: (
     image: any,
     barcode: string[],
-    withImageResizing?: boolean
+    token?: string,
+    apiKey?: string,
+    locationId?: string,
+    options?: Record<string, any>,
+    shouldResizeImage?: boolean
   ) => void;
 
   /**
@@ -715,9 +733,10 @@ export interface VisionSdkRefProps {
    * @return {void}
    */
   getPredictionItemLabelCloud: (
-    image: any,
-    barcode?: string[],
-    withImageResizing?: boolean
+    image: string,
+    token?: string,
+    apiKey?: string,
+    shouldResizeImage?: boolean
   ) => void;
 
   /**
@@ -731,9 +750,10 @@ export interface VisionSdkRefProps {
    * @return {void}
    */
   getPredictionDocumentClassificationCloud: (
-    image: any,
-    barcode?: string[],
-    withImageResizing?: boolean
+    image: string,
+    token?: string,
+    apiKey?: string,
+    shouldResizeImage?: boolean
   ) => void;
 
   /**
@@ -754,7 +774,7 @@ export interface VisionSdkRefProps {
    * });
    * @return {void}
    */
-  reportError: (payload: ReportErrorType) => void;
+  reportError: (payload: ReportErrorType, token?: string, apiKey?: string) => void;
 
   /**
    * Creates a new template.
