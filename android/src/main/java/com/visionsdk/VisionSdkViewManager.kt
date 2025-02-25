@@ -1087,7 +1087,7 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
       }
 
     // Destroy the existing OCR manager (if any) and create a new one with the updated settings
-    onDeviceOCRManager?.destroy()
+//    onDeviceOCRManager?.destroy()
     onDeviceOCRManager = OnDeviceOCRManager(
       context = context!!,
       platformType = PlatformType.ReactNative,
