@@ -5,6 +5,17 @@ const { VisionSdkModule } = NativeModules
 const eventEmitter = new NativeEventEmitter(VisionSdkModule)
 
 const VisionSdk = {
+
+  /**
+ * Sets environment and initializes sdk.
+ * @param {string} environment - environment.
+ */
+
+  setEnvironment: (environment: 'staging' | 'dev' | 'sandbox' | 'qa' | 'production') => {
+    VisionSdkModule.setEnvironment(environment)
+  },
+
+
   /**
  * Loads on-device models without requiring the camera view.
  * @param {string} token - Authentication token.
@@ -21,7 +32,6 @@ const VisionSdk = {
       console.error("Failed to load models:", error);
     }
   },
-
   /**
   * Subscribes to model download progress updates.
   */

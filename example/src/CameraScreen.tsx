@@ -49,19 +49,20 @@ interface DetectedDataProps {
   document: boolean;
 }
 
-const App: React.FC = () => {
+const App: React.FC<{ route: any }> = ({route}) => {
+  // console.log("CAMERA SCREEN ROUTE PARAMS: ", route?.params)
   const visionSdk = useRef<VisionSdkRefProps>(null);
   const [captureMode, setCaptureMode] = useState<'manual' | 'auto'>('manual');
   const [shouldResizeImage, setShouldResizeImage] = useState(false)
   const [ocrConfig, setOcrConfig] = useState<OCRConfig>({
-    mode: 'cloud',
-    type: 'shipping-label',
-    size: 'large'
+    mode:  route.params?.modelType ? 'on-device' : 'cloud',
+    type: route.params?.modelType || 'shipping-label',
+    size: route.params?.modelSize || 'large'
   });
   const [loading, setLoading] = useState<boolean>(false);
   const [result, setResult] = useState<any>(null);
   const [mode, setMode] = useState<'barcode' | 'qrcode' | 'ocr' | 'photo'>(
-    'barcode'
+    route?.params?.mode || 'barcode'
   );
   const [flash, setFlash] = useState<boolean>(false);
   const [zoomLevel, setZoomLevel] = useState<number>(1.8);
@@ -168,6 +169,7 @@ const App: React.FC = () => {
 
   // Capture photo when the button is pressed
   const handlePressCapture = useCallback(() => {
+    console.log("INSIDE HANDLE PRESSS CAPTURE")
     visionSdk?.current?.cameraCaptureHandler();
     // console.log("GOING TO CONFIGURE ON DEVICE MODEL FOR SHIPPING LABEL")
     // visionSdk?.current?.configureOnDeviceModel({type: 'shipping-label', size: 'large'}, null, apiKey)
