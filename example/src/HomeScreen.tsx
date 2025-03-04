@@ -72,7 +72,7 @@ const HomeScreen = ({ navigation }) => {
     try {
       await VisionCore.loadModel(
         null,
-        "key_00203c5642F9SYnJkKyi9dRw1eeteeUwXhbEfGuPZ4NML8l2bAfysni4ZpcZEBKn0gnbcOZYwIaJnOyp",
+        "",
         selectedModelType,
         selectedModelSize,
         // "staging"
