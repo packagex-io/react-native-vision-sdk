@@ -12,6 +12,7 @@ import CameraHeaderView from './Components/CameraHeaderView';
 import LoaderView from './Components/LoaderView';
 import { PERMISSIONS, RESULTS, request } from 'react-native-permissions';
 import ResultViewOCR from './Components/ResultViewOCR';
+import { useFocusEffect } from '@react-navigation/native';
 
 const apiKey = "key_00203c5642F9SYnJkKyi9dRw1eeteeUwXhbEfGuPZ4NML8l2bAfysni4ZpcZEBKn0gnbcOZYwIaJnOyp"
 
@@ -19,6 +20,7 @@ const apiKey = "key_00203c5642F9SYnJkKyi9dRw1eeteeUwXhbEfGuPZ4NML8l2bAfysni4ZpcZ
 interface DownloadingProgress {
   downloadStatus: boolean;
   progress: number;
+  isReady: boolean;
 }
 
 const sdkOptions = {
@@ -49,13 +51,12 @@ interface DetectedDataProps {
   document: boolean;
 }
 
-const App: React.FC<{ route: any }> = ({route}) => {
-  // console.log("CAMERA SCREEN ROUTE PARAMS: ", route?.params)
+const App: React.FC<{ route: any }> = ({ route }) => {
   const visionSdk = useRef<VisionSdkRefProps>(null);
   const [captureMode, setCaptureMode] = useState<'manual' | 'auto'>('manual');
   const [shouldResizeImage, setShouldResizeImage] = useState(false)
   const [ocrConfig, setOcrConfig] = useState<OCRConfig>({
-    mode:  route.params?.modelType ? 'on-device' : 'cloud',
+    mode: route.params?.modelType ? 'on-device' : 'cloud',
     type: route.params?.modelType || 'shipping-label',
     size: route.params?.modelSize || 'large'
   });
@@ -75,85 +76,69 @@ const App: React.FC<{ route: any }> = ({route}) => {
 
   const [modelDownloadingProgress, setModelDownloadingProgress] =
     useState<DownloadingProgress>({
-      downloadStatus: true,
-      progress: 1,
+      downloadStatus: false,
+      progress: 0,
+      isReady: false
     });
 
+  const requestCameraPermission = async () => {
+    const cameraPermission =
+      Platform.OS === 'ios'
+        ? PERMISSIONS.IOS.CAMERA
+        : PERMISSIONS.ANDROID.CAMERA;
 
-  // Request camera permission on component mount (for Android)
-  useEffect(() => {
-    const requestCameraPermission = async () => {
-      const cameraPermission =
-        Platform.OS === 'ios'
-          ? PERMISSIONS.IOS.CAMERA
-          : PERMISSIONS.ANDROID.CAMERA;
+    const result = await request(cameraPermission);
+    if (result !== RESULTS.GRANTED) {
+      Alert.alert(
+        'Camera Permission Error',
+        'App needs camera permission to take pictures. Please go to app settings and enable camera permission.'
+      );
+    } else {
+      visionSdk?.current?.setFocusSettings({
+        shouldDisplayFocusImage: true,
+        shouldScanInFocusImageRect: true,
+        showCodeBoundariesInMultipleScan: true,
+        validCodeBoundaryBorderColor: '#2abd51',
+        validCodeBoundaryBorderWidth: 2,
+        validCodeBoundaryFillColor: '#2abd51',
+        inValidCodeBoundaryBorderColor: '#cc0829',
+        inValidCodeBoundaryBorderWidth: 2,
+        inValidCodeBoundaryFillColor: '#cc0829',
+        showDocumentBoundaries: true,
+        documentBoundaryBorderColor: '#241616',
+        documentBoundaryFillColor: '#e3000080',
+        focusImageTintColor: '#ffffff',
+        focusImageHighlightedColor: '#e30000',
+      });
+      visionSdk?.current?.setObjectDetectionSettings({
+        isTextIndicationOn: true,
+        isBarCodeOrQRCodeIndicationOn: true,
+        isDocumentIndicationOn: true,
+        codeDetectionConfidence: 0.5,
+        documentDetectionConfidence: 0.5,
+        secondsToWaitBeforeDocumentCapture: 2.0,
+      });
+      visionSdk?.current?.setCameraSettings({
+        nthFrameToProcess: 10,
+      });
 
-      const result = await request(cameraPermission);
-      if (result !== RESULTS.GRANTED) {
-        Alert.alert(
-          'Camera Permission Error',
-          'App needs camera permission to take pictures. Please go to app settings and enable camera permission.'
-        );
-      } else {
-        visionSdk?.current?.setFocusSettings({
-          shouldDisplayFocusImage: true,
-          shouldScanInFocusImageRect: true,
-          showCodeBoundariesInMultipleScan: true,
-          validCodeBoundaryBorderColor: '#2abd51',
-          validCodeBoundaryBorderWidth: 2,
-          validCodeBoundaryFillColor: '#2abd51',
-          inValidCodeBoundaryBorderColor: '#cc0829',
-          inValidCodeBoundaryBorderWidth: 2,
-          inValidCodeBoundaryFillColor: '#cc0829',
-          showDocumentBoundaries: true,
-          documentBoundaryBorderColor: '#241616',
-          documentBoundaryFillColor: '#e3000080',
-          focusImageTintColor: '#ffffff',
-          focusImageHighlightedColor: '#e30000',
-        });
-        visionSdk?.current?.setObjectDetectionSettings({
-          isTextIndicationOn: true,
-          isBarCodeOrQRCodeIndicationOn: true,
-          isDocumentIndicationOn: true,
-          codeDetectionConfidence: 0.5,
-          documentDetectionConfidence: 0.5,
-          secondsToWaitBeforeDocumentCapture: 2.0,
-        });
-        visionSdk?.current?.setCameraSettings({
-          nthFrameToProcess: 10,
-        });
-        // setTimeout(() => {})
+      setTimeout(() => {
+        visionSdk?.current?.startRunningHandler();
+      }, 0)
 
-        setTimeout(() => {
-          visionSdk?.current?.startRunningHandler();
-        }, 0)
+      setLoading(false);
+    }
+  };
 
-        setLoading(false);
-      }
-    };
 
-    // if (Platform.OS === 'android') {
-    requestCameraPermission();
-    // }
 
+  useFocusEffect(useCallback(() => {
+    requestCameraPermission()
     return () => {
       visionSdk?.current?.stopRunningHandler();
-    };
-  }, []);
-
-  // Configure Vision SDK settings
-  // useEffect(() => {
-
-
-
-  // }, []);
-
-  useEffect(() => {
-    if(mode === 'photo'){
-      // console.log("CONFIGURING ON DEVICE MODEL: ")
-      // visionSdk?.current?.configureOnDeviceModel({type: 'shipping-label', size: 'large'}, "", apiKey)
     }
-  }, [mode])
+  }, []))
+
 
   useEffect(() => {
     if (modelDownloadingProgress.downloadStatus) {
@@ -169,10 +154,7 @@ const App: React.FC<{ route: any }> = ({route}) => {
 
   // Capture photo when the button is pressed
   const handlePressCapture = useCallback(() => {
-    console.log("INSIDE HANDLE PRESSS CAPTURE")
     visionSdk?.current?.cameraCaptureHandler();
-    // console.log("GOING TO CONFIGURE ON DEVICE MODEL FOR SHIPPING LABEL")
-    // visionSdk?.current?.configureOnDeviceModel({type: 'shipping-label', size: 'large'}, null, apiKey)
   }, [])
 
 
@@ -270,7 +252,6 @@ const App: React.FC<{ route: any }> = ({route}) => {
   // Function to configure on-device OCR
   const handlePressOnDeviceOcr = useCallback((type: ModuleType = 'shipping_label',
     size: ModuleSize = 'large') => {
-    // visionSdk?.current?.stopRunningHandler();
     setLoading(true);
     visionSdk?.current?.configureOnDeviceModel({
       type,
@@ -311,8 +292,6 @@ const App: React.FC<{ route: any }> = ({route}) => {
   }
 
   const handleOcrScan = useCallback((event) => {
-    console.log("INSIDE HANDLE OCR SCAN")
-    console.log(JSON.stringify(event.data))
     setLoading(false);
     setResult(event.data);
     // onReportError(event.data);
@@ -337,7 +316,6 @@ const App: React.FC<{ route: any }> = ({route}) => {
   const handleModelDownloadProgress = useCallback((event) => {
     setModelDownloadingProgress(event);
     if (event.downloadStatus && event.isReady) {
-      // visionSdk.current?.startRunningHandler();
       setLoading(false);
     }
   }, [])
@@ -390,7 +368,7 @@ const App: React.FC<{ route: any }> = ({route}) => {
           }}
         />
       ) : null}
-      <LoaderView visible={loading} />
+      {/* <LoaderView visible={loading} /> */}
       <CameraHeaderView
         detectedData={detectedData}
         toggleFlash={toggleFlash}
@@ -398,7 +376,7 @@ const App: React.FC<{ route: any }> = ({route}) => {
         setMode={setMode}
       />
       <DownloadingProgressView
-        visible={!modelDownloadingProgress.downloadStatus}
+        visible={loading && !modelDownloadingProgress.isReady}
         progress={modelDownloadingProgress?.progress}
       />
       <CameraFooterView

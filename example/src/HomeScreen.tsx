@@ -8,7 +8,7 @@ import {
   ActivityIndicator
 } from 'react-native';
 
-import VisionSdk from '../../src/VisionSdk';
+import { VisionCore } from '../../src/index';
 import { useFocusEffect } from '@react-navigation/native';
 
 const HomeScreen = ({ navigation }) => {
@@ -26,25 +26,27 @@ const HomeScreen = ({ navigation }) => {
   ];
 
   const modelSizes = [
-    { label: 'Large', value: 'large' },
+    { label: 'Nano', value: 'nano' },
     { label: 'Micro', value: 'micro' },
+    { label: 'Small', value: 'small' },
+    { label: 'Medium', value: 'medium' },
+    { label: 'Large', value: 'large' },
+
   ];
 
   useEffect(() => {
-    VisionSdk.setEnvironment('staging')
+    VisionCore.setEnvironment('staging')
   }, []);
 
 
   useFocusEffect(
     useCallback(() => {
-      console.log("SUBSCRIBING TO MODEL DOWNLOAD PROGRESS EVENTS")
-      const subscription = VisionSdk.onModelDownloadProgress((progress, downloadStatus, isReady) => {
+      const subscription = VisionCore.onModelDownloadProgress((progress, downloadStatus, isReady) => {
         setDownloadProgress(progress * 100);
         setIsModelReady(isReady);
       });
 
       return () => {
-        console.log("REMOVING SUBSCRIPTION")
         subscription.remove();
       };
     }, [])
@@ -59,13 +61,17 @@ const HomeScreen = ({ navigation }) => {
     setIsLoading(false)
   }, [selectedModelSize, selectedModelType])
 
+  useEffect(() => {
+    setSelectedModelSize('large')
+  }, [selectedModelType])
+
   const handleLoadModel = async () => {
     setIsLoading(true);
     setDownloadProgress(0);
 
     try {
-      await VisionSdk.loadModels(
-        "",
+      await VisionCore.loadModel(
+        null,
         "key_00203c5642F9SYnJkKyi9dRw1eeteeUwXhbEfGuPZ4NML8l2bAfysni4ZpcZEBKn0gnbcOZYwIaJnOyp",
         selectedModelType,
         selectedModelSize,
@@ -107,7 +113,7 @@ const HomeScreen = ({ navigation }) => {
       <Text style={styles.label}>Model Size:</Text>
       <View style={styles.chipContainer}>
         {modelSizes.map((size) => {
-          const isDisabled = selectedModelType !== 'shipping_label' && size.value !== 'large';
+          const isDisabled = (selectedModelType === 'shipping_label' && !['large', 'micro'].includes(size.value)) || (selectedModelType !== 'shipping_label' && size.value !== 'large');
           return (
             <TouchableOpacity
               key={size.value}
@@ -156,7 +162,8 @@ const HomeScreen = ({ navigation }) => {
 
       {/* Navigate to Camera Screen */}
       <TouchableOpacity
-        style={styles.secondaryButton}
+        style={[styles.secondaryButton, isLoading ? styles.disabledButton : null]}
+        disabled={isLoading}
         onPress={() => navigation.navigate("CameraScreen",
           isModelReady ? {
             modelSize: selectedModelSize,
@@ -164,7 +171,7 @@ const HomeScreen = ({ navigation }) => {
             mode: 'ocr'
           } : {})}
       >
-        <Text style={styles.secondaryButtonText}>Open VSDK Camera View</Text>
+        <Text style={[styles.secondaryButtonText]}>Open VSDK Camera View</Text>
       </TouchableOpacity>
     </View>
   );
