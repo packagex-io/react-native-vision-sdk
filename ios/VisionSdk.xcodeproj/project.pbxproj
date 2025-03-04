@@ -8,6 +8,8 @@
 
 /* Begin PBXBuildFile section */
 		4F1A692435136E9A19B19317 /* libPods-VisionSdk.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D9BC17DAA2D07EDD934E5EB3 /* libPods-VisionSdk.a */; };
+		9470847E2D70987B006D30B8 /* VisionSdkModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9470847D2D709878006D30B8 /* VisionSdkModule.swift */; };
+		947084802D70A657006D30B8 /* VisionSdkModule.m in Sources */ = {isa = PBXBuildFile; fileRef = 9470847F2D70A64F006D30B8 /* VisionSdkModule.m */; };
 		DF3F2BF2292F507000DD0EAC /* VisionSdkViewManager.m in Sources */ = {isa = PBXBuildFile; fileRef = DF3F2BF1292F507000DD0EAC /* VisionSdkViewManager.m */; };
 		DF3F2BF4292F507900DD0EAC /* VisionSdkViewManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF3F2BF3292F507900DD0EAC /* VisionSdkViewManager.swift */; };
 		DF3F2BF6292F50B500DD0EAC /* RNCodeScannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF3F2BF5292F50B500DD0EAC /* RNCodeScannerView.swift */; };
@@ -27,11 +29,12 @@
 
 /* Begin PBXFileReference section */
 		134814201AA4EA6300B7C361 /* libVisionSdk.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libVisionSdk.a; sourceTree = BUILT_PRODUCTS_DIR; };
+		9470847D2D709878006D30B8 /* VisionSdkModule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VisionSdkModule.swift; sourceTree = "<group>"; };
+		9470847F2D70A64F006D30B8 /* VisionSdkModule.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = VisionSdkModule.m; sourceTree = "<group>"; };
 		CA8858A9CFF0615EE4EF6360 /* Pods-VisionSdk.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-VisionSdk.release.xcconfig"; path = "Target Support Files/Pods-VisionSdk/Pods-VisionSdk.release.xcconfig"; sourceTree = "<group>"; };
 		D5E0B88B049D0F052514A169 /* Pods-VisionSdk.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-VisionSdk.debug.xcconfig"; path = "Target Support Files/Pods-VisionSdk/Pods-VisionSdk.debug.xcconfig"; sourceTree = "<group>"; };
 		D9BC17DAA2D07EDD934E5EB3 /* libPods-VisionSdk.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-VisionSdk.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		DF3F2BF1292F507000DD0EAC /* VisionSdkViewManager.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = VisionSdkViewManager.m; sourceTree = "<group>"; };
-		13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = PrivacyInfo.xcprivacy; path = RnDiffApp/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		DF3F2BF3292F507900DD0EAC /* VisionSdkViewManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = VisionSdkViewManager.swift; sourceTree = "<group>"; };
 		DF3F2BF5292F50B500DD0EAC /* RNCodeScannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RNCodeScannerView.swift; sourceTree = "<group>"; };
 		F4FF95D5245B92E700C19C63 /* VisionSdk-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "VisionSdk-Bridging-Header.h"; sourceTree = "<group>"; };
@@ -60,6 +63,8 @@
 		58B511D21A9E6C8500147676 = {
 			isa = PBXGroup;
 			children = (
+				9470847F2D70A64F006D30B8 /* VisionSdkModule.m */,
+				9470847D2D709878006D30B8 /* VisionSdkModule.swift */,
 				DF3F2BF5292F50B500DD0EAC /* RNCodeScannerView.swift */,
 				DF3F2BF3292F507900DD0EAC /* VisionSdkViewManager.swift */,
 				DF3F2BF1292F507000DD0EAC /* VisionSdkViewManager.m */,
@@ -76,7 +81,6 @@
 				D5E0B88B049D0F052514A169 /* Pods-VisionSdk.debug.xcconfig */,
 				CA8858A9CFF0615EE4EF6360 /* Pods-VisionSdk.release.xcconfig */,
 			);
-			name = Pods;
 			path = Pods;
 			sourceTree = "<group>";
 		};
@@ -171,7 +175,9 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				9470847E2D70987B006D30B8 /* VisionSdkModule.swift in Sources */,
 				DF3F2BF2292F507000DD0EAC /* VisionSdkViewManager.m in Sources */,
+				947084802D70A657006D30B8 /* VisionSdkModule.m in Sources */,
 				DF3F2BF6292F50B500DD0EAC /* RNCodeScannerView.swift in Sources */,
 				DF3F2BF4292F507900DD0EAC /* VisionSdkViewManager.swift in Sources */,
 			);
