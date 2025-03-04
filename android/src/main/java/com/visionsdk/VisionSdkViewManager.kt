@@ -41,7 +41,6 @@ import io.packagex.visionsdk.exceptions.VisionSDKException
 import io.packagex.visionsdk.interfaces.CameraLifecycleCallback
 import io.packagex.visionsdk.interfaces.OCRResult
 import io.packagex.visionsdk.interfaces.ScannerCallback
-import io.packagex.visionsdk.ocr.ml.core.OnDeviceOCRManager
 import io.packagex.visionsdk.ocr.ml.core.enums.ModelSize
 import io.packagex.visionsdk.ocr.ml.core.enums.PlatformType
 import io.packagex.visionsdk.ui.views.VisionCameraView
@@ -54,13 +53,9 @@ import java.io.File
 import java.util.Date
 import android.os.Handler
 import android.os.Looper
-import java.io.InputStream
 import java.net.HttpURLConnection
 import java.net.URL
-import io.packagex.visionsdk.ui.startCreateTemplateScreen
-import androidx.activity.ComponentActivity
-import androidx.fragment.app.FragmentActivity
-import androidx.fragment.app.FragmentManager
+import com.visionsdk.utils.EventUtils
 import io.packagex.visionsdk.dto.ScannedCodeResult
 import io.packagex.visionsdk.ocr.ml.core.enums.OCRModule
 import io.packagex.visionsdk.service.dto.BOLModelToReport
@@ -118,8 +113,6 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
   private var shouldResizeImage = true
 //  private var authentication: Authentication? = null // Authentication instance for Vision SDK login
 
-  private var onDeviceOCRManager: OnDeviceOCRManager? = null // OCR manager for on-device OCR processing
-
   private var modelSize: ModelSize? = ModelSize.Large // Model size for on-device OCR (Large/Small)
 
   private var imagePath: String? = "" // Image Path
@@ -133,7 +126,7 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
   private var objectDetectionConfiguration: ObjectDetectionConfiguration = ObjectDetectionConfiguration() // Object detection settings for identifying objects within the camera view
 
   companion object {
-    val TAG = "VisionCameraView" // Companion object to hold constants, like the TAG for logging
+    const val TAG = "VisionCameraView" // Companion object to hold constants, like the TAG for logging
   }
 
 
@@ -190,11 +183,8 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
    * @param environment - The environment settings (e.g., production, development) for the Vision SDK.
    */
   private fun initializeSdk() {
-    Log.d(TAG, "initializeSdk: ")
-    VisionSDK.getInstance().initialize(
-      context ?: return, // Ensure context is not null before initializing
-      environment // Pass the environment configuration
-    )
+    Log.d(TAG, "initializeSdk: $environment")
+    VisionSdkSingleton.initializeSdk(context ?: return, environment)
   }
 
   /**
@@ -916,8 +906,10 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
    * @return A String representing the OCR result or null if failed
    */
   private suspend fun getOnDeviceOCRResponse(bitmap: Bitmap, list: List<String>): String? {
+
     return try {
       // Use withContext(Dispatchers.IO) to execute in the IO thread
+      val onDeviceOCRManager = OnDeviceOCRManagerSingleton.getInstance(context!!, modelType)
       val result = withContext(Dispatchers.IO) {
         onDeviceOCRManager?.getPredictions(bitmap, list)
       }
@@ -1086,51 +1078,24 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
         }
       }
 
-    // Destroy the existing OCR manager (if any) and create a new one with the updated settings
-    onDeviceOCRManager?.destroy()
-    onDeviceOCRManager = OnDeviceOCRManager(
-      context = context!!,
-      platformType = PlatformType.ReactNative,
-      ocrModule = modelType,
-    )
+    val onDeviceOCRManager = OnDeviceOCRManagerSingleton.getInstance(context!!, modelType)
+
     // Configure the OCR manager asynchronously, with download progress tracking
     lifecycleOwner?.lifecycle?.coroutineScope?.launchOnIO {
       try {
-        if (onDeviceOCRManager?.isConfigured()?.not() == true) {
+        if (!OnDeviceOCRManagerSingleton.isModelConfigured(modelType)) {
           var lastProgress = 0.00
           onDeviceOCRManager?.configure(resolvedApiKey, resolvedToken) {
             val progressInt = (it).toDecimalPoints(2).toDouble()
             if (progressInt != lastProgress) {
               lastProgress = progressInt
               Log.d(TAG, "Install Progress: ${(it * 100).toInt()}")
-
-              // Emit download progress event to React Native
-              val event = Arguments.createMap().apply {
-                putDouble("progress", lastProgress)
-                putBoolean("downloadStatus", false)
-                putBoolean("isReady", false)
-              }
-              appContext
-                .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
-                .emit("onModelDownloadProgress", event)
-
-
-              if (onDeviceOCRManager?.isModelAlreadyDownloaded() == false) {
-                //here was the code moved above
-              }
+              EventUtils.sendModelDownloadProgressEvent(appContext, progress = lastProgress, downloadStatus = false, isReady = false)
             }
           }
         }
-
         // Emit success event when the model is downloaded
-        val event = Arguments.createMap().apply {
-          putDouble("progress", 1.00)
-          putBoolean("downloadStatus", true)
-          putBoolean("isReady", true)
-        }
-        appContext
-          .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
-          .emit("onModelDownloadProgress", event)
+        EventUtils.sendModelDownloadProgressEvent(appContext, progress = 1.0, downloadStatus = true, isReady = true)
 
       } catch (e: VisionSDKException) {
         e.printStackTrace()

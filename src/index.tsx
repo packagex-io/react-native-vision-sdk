@@ -26,6 +26,7 @@ import {
 } from './types';
 
 export * from './types';
+export * from './VisionCore';
 
 // Camera component
 const Camera = forwardRef<VisionSdkRefProps, VisionSdkProps>(
