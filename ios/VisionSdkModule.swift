@@ -1,11 +1,3 @@
-//
-//  VisionSdkModule.swift
-//  VisionSdk
-//
-//  Created by Intellijust on 27/02/2025.
-//  Copyright © 2025 Facebook. All rights reserved.
-//
-
 import Foundation
 import VisionSDK
 
