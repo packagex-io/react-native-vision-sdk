@@ -523,31 +523,11 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
   }
 
   /**
-   * Callback function triggered when barcodes are scanned.
-   * Sends a list of detected barcodes to JavaScript.
-   * @param barcodeList - List of detected barcode strings
-   */
-  override fun onCodesScanned(barcodeList: List<String>) {
-    //depreciated handler, definition moved to onScanResult
-  }
-
-  /**
    * Callback function triggered upon failure, passing the exception to the OCR response failure handler.
    * @param exception - Exception representing the failure cause
    */
   override fun onFailure(exception: VisionSDKException) {
     onOCRResponseFailed(exception)
-  }
-
-  /**
-   * Callback function triggered when an image is captured.
-   * Saves the image, sends a corresponding event to JavaScript,
-   * and processes the image based on detection and OCR modes.
-   * @param bitmap - Captured image as a Bitmap
-   * @param value - List of detected values (e.g., barcodes)
-   */
-  override fun onImageCaptured(bitmap: Bitmap, value: List<String>) {
-    //depreciated handler, definition moved to onImageCapturedUpdated
   }
 
   override fun onScanResult(barcodeList: List<ScannedCodeResult>) {
@@ -596,7 +576,7 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
   }
 
 
-  override fun onImageCapturedUpdated(bitmap: Bitmap, scannedCodeResults: List<ScannedCodeResult>) {
+  override fun onImageCaptured(bitmap: Bitmap, scannedCodeResults: List<ScannedCodeResult>) {
     Log.d(TAG, "onImageCaptured: ")
     this.imagePath = ""
     val image = saveBitmapAndSendEvent(bitmap, scannedCodeResults.map { it.scannedCode })
@@ -994,7 +974,7 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
   // Set metadata for scanning
   private fun setMetaData(metaData: ReadableMap?) {
     Log.d(TAG, "metaData: $metaData")
-    this.metaData = metaData?.toHashMap()
+    this.metaData = metaData?.toHashMap() as Map<String, Any>? // do not remove this typecase, required for latest AGP
   }
 
   // Set recipient information for scanning
@@ -1003,7 +983,7 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
     if (recipient == null) {
       this.recipient = emptyMap()
     } else {
-      this.recipient = recipient.toHashMap()
+      this.recipient = recipient.toHashMap() as Map<String, Any>? // do not remove this typecast, required for latest AGP
     }
   }
 
@@ -1013,7 +993,7 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
     if (sender == null) {
       this.sender = emptyMap()
     } else {
-      this.sender = sender.toHashMap()
+      this.sender = sender.toHashMap() as Map<String, Any>? //do not remove this typecast, required for latest AGP
     }
   }
 
@@ -1456,7 +1436,7 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
   @ReactProp(name = "options")
   fun setOptions(view: View, options: ReadableMap) {
     Log.d(TAG, "options: $options")
-    this.options = options.toHashMap()
+    this.options = options.toHashMap() as Map<String, Any>? // do not remove this hashMap, required for latest AGP
   }
 
   // Called when the camera starts, logs the max zoom level and sets focus settings
