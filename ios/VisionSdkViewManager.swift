@@ -454,7 +454,6 @@ class VisionSdkViewManager: RCTViewManager {
     }
 
     @objc func setFocusSettings(_ node: NSNumber, focusSettings: NSDictionary) {
-
         getComponent(node) { component in
             let updatedFocusSettings = VisionSDK.CodeScannerView.FocusSettings()
 
@@ -543,8 +542,9 @@ class VisionSdkViewManager: RCTViewManager {
                     updatedFocusSettings.focusImageHighlightedColor = color
                 }
             }
-
+          
           component?.codeScannerView?.setFocusSettingsTo(updatedFocusSettings)
+          component?.codeScannerView?.rescan()
         }
     }
 

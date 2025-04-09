@@ -94,7 +94,7 @@ const App: React.FC<{ route: any }> = ({ route }) => {
         'App needs camera permission to take pictures. Please go to app settings and enable camera permission.'
       );
     } else {
-      visionSdk?.current?.setFocusSettings({
+      const focusSettings = {
         shouldDisplayFocusImage: true,
         shouldScanInFocusImageRect: true,
         showCodeBoundariesInMultipleScan: true,
@@ -109,7 +109,8 @@ const App: React.FC<{ route: any }> = ({ route }) => {
         documentBoundaryFillColor: '#e3000080',
         focusImageTintColor: '#ffffff',
         focusImageHighlightedColor: '#e30000',
-      });
+      }
+      visionSdk?.current?.setFocusSettings(focusSettings);
       visionSdk?.current?.setObjectDetectionSettings({
         isTextIndicationOn: true,
         isBarCodeOrQRCodeIndicationOn: true,
@@ -340,7 +341,7 @@ const App: React.FC<{ route: any }> = ({ route }) => {
         ocrType={ocrConfig.type}
         shouldResizeImage={shouldResizeImage}
         captureMode={captureMode}
-        isMultipleScanEnabled={true}
+        isMultipleScanEnabled={false}
         mode={mode}
         options={{}}
         isEnableAutoOcrResponseWithImage={true}
