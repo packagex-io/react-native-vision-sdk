@@ -234,12 +234,20 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
             R.drawable.default_focus_frame
           ),
           focusImageRect = optJSONObject("focusImageRect")?.let {
-            RectF(
-              it.optDouble("x", 0.0).toFloat(),
-              it.optDouble("y", 0.0).toFloat(),
-              it.optDouble("x", 0.0).toFloat() + it.optDouble("width", 0.0).toFloat(),
-              it.optDouble("y", 0.0).toFloat() + it.optDouble("height", 0.0).toFloat()
-            )
+            val density = context?.resources?.displayMetrics?.density ?: 1.0f
+            // Extract dp values from JSON.
+            val xDip = it.optDouble("x", 0.0)
+            val yDip = it.optDouble("y", 0.0)
+            val widthDip = it.optDouble("width", 0.0)
+            val heightDip = it.optDouble("height", 0.0)
+
+            // Convert dp to pixels using your working approach.
+            val xPx = ((xDip * density.toDouble()).toFloat())
+            val yPx = ((yDip * density.toDouble()).toFloat())
+            val widthPx = ((widthDip * density.toDouble()).toFloat())
+            val heightPx = ((heightDip * density.toDouble()).toFloat())
+
+            RectF(xPx, yPx, xPx + widthPx, yPx + heightPx)
           } ?: RectF(0.0F, 0.0F, 0.0F, 0.0F),
           focusImageTintColor = optString("focusImageTintColor").ifNeitherNullNorEmptyNorBlank {
             hexColorToInt(it)

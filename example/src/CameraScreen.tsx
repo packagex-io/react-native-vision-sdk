@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { View, StyleSheet, Platform, Alert, Vibration } from 'react-native';
+import { View, StyleSheet, Platform, Alert, Vibration, useWindowDimensions } from 'react-native';
 import VisionSdkView, {
   VisionSdkRefProps,
   ModuleType,
@@ -74,6 +74,12 @@ const App: React.FC<{ route: any }> = ({ route }) => {
     document: false,
   });
 
+  const { width: screenWidth, height: screenHeight } = useWindowDimensions()
+const scannerWidth = screenWidth * 0.8;
+const scannerHeight = 160;
+const scannerX = (screenWidth - scannerWidth) / 2;
+const scannerY = (screenHeight - scannerHeight) / 2;
+
   const [modelDownloadingProgress, setModelDownloadingProgress] =
     useState<DownloadingProgress>({
       downloadStatus: false,
@@ -109,6 +115,8 @@ const App: React.FC<{ route: any }> = ({ route }) => {
         documentBoundaryFillColor: '#e3000080',
         focusImageTintColor: '#ffffff',
         focusImageHighlightedColor: '#e30000',
+        focusImageRect: { x: scannerX, y: scannerY, width: scannerWidth, height: scannerHeight },
+
       }
       visionSdk?.current?.setFocusSettings(focusSettings);
       visionSdk?.current?.setObjectDetectionSettings({
