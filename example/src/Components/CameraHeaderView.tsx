@@ -10,19 +10,32 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import ModeSelectionView from './ModeSelectionView';
+import TemplateSelectionView from './TemplateSelectionView';
 
-function CameraHeaderView({ detectedData, toggleFlash, mode, setMode }: any) {
+function CameraHeaderView({
+   detectedData,
+   toggleFlash,
+   mode,
+   setMode,
+   templates,
+   selectedTemplate,
+   setSelectedTemplate,
+   onPressCreateTemplate,
+   onPressDeleteTemplateById,
+   onPressDeleteAllTemplates
+  }: any) {
   const [isFlashOn, setIsFlashOn] = useState<boolean>(false);
   const [showModeTypes, setShowModeTypes] = useState<boolean>(false);
+  const [isTemplateSeletorVisible, setIfTemplateSelectorVisible]  = useState(false)
   const checkIconColor = (val: boolean) => {
     return val ? '#4FBF67' : 'white';
   };
-  const formatModeName = (mode: any) => 
+  const formatModeName = (mode: any) =>
     mode
         .replace(/([a-z])([A-Z])/g, '$1 $2')  // Insert space before uppercase letters
         .split(' ')                           // Split by space
         .map(word => word.charAt(0).toUpperCase() + word.slice(1))  // Capitalize each word
-        .join(' ');  
+        .join(' ');
   return (
     <View style={styles.mainContainer}>
       <View style={styles.leftIconContainer}>
@@ -83,6 +96,19 @@ function CameraHeaderView({ detectedData, toggleFlash, mode, setMode }: any) {
             color="white"
           />
         </TouchableOpacity>
+        <TouchableOpacity
+          onPress={() => {
+            setIfTemplateSelectorVisible(!isTemplateSeletorVisible);
+          }}
+          style={[styles.rightIconContainer, {marginTop: 12, backgroundColor: selectedTemplate?.name ? 'rgba(0, 239, 0, 0.8)' : styles.rightIconContainer.backgroundColor }]}
+        >
+          <Icon
+            name={'filter'}
+            size={20}
+            color="white"
+          />
+        </TouchableOpacity>
+
       </View>
 
       <ModeSelectionView
@@ -90,6 +116,16 @@ function CameraHeaderView({ detectedData, toggleFlash, mode, setMode }: any) {
         setShowModeTypes={setShowModeTypes}
         mode={mode}
         setMode={setMode}
+      />
+      <TemplateSelectionView
+        templates={templates}
+        selectedTemplate={selectedTemplate}
+        setSelectedTemplate={setSelectedTemplate}
+        isVisible={isTemplateSeletorVisible}
+        setIfVisible={setIfTemplateSelectorVisible}
+        onPressCreateTemplate={onPressCreateTemplate}
+        onPressDeleteTemplateById={onPressDeleteTemplateById}
+        onPressDeleteAllTemplates={onPressDeleteAllTemplates}
       />
     </View>
   );
@@ -137,4 +173,6 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
 });
-export default CameraHeaderView;
+export default CameraHeaderView
+
+

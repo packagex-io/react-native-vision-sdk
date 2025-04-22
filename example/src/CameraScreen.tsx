@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { View, StyleSheet, Platform, Alert, Vibration, useWindowDimensions } from 'react-native';
+import { StyleSheet, Platform, Alert, Vibration, useWindowDimensions, Text, View } from 'react-native';
+// import { GestureHandlerRootView } from 'react-native-gesture-handler'
 import VisionSdkView, {
   VisionSdkRefProps,
   ModuleType,
@@ -13,6 +14,7 @@ import LoaderView from './Components/LoaderView';
 import { PERMISSIONS, RESULTS, request } from 'react-native-permissions';
 import ResultViewOCR from './Components/ResultViewOCR';
 import { useFocusEffect } from '@react-navigation/native';
+
 
 const apiKey = ""
 
@@ -51,9 +53,18 @@ interface DetectedDataProps {
   document: boolean;
 }
 
+
 const App: React.FC<{ route: any }> = ({ route }) => {
   const visionSdk = useRef<VisionSdkRefProps>(null);
   const [captureMode, setCaptureMode] = useState<'manual' | 'auto'>('manual');
+  const [detectionSettings, setDetectionSettings] = useState({
+    isTextIndicationOn: true,
+    isBarCodeOrQRCodeIndicationOn: true,
+    isDocumentIndicationOn: true,
+    codeDetectionConfidence: 0.5,
+    documentDetectionConfidence: 0.5,
+    secondsToWaitBeforeDocumentCapture: 2.0,
+  })
   const [shouldResizeImage, setShouldResizeImage] = useState(false)
   const [ocrConfig, setOcrConfig] = useState<OCRConfig>({
     mode: route.params?.modelType ? 'on-device' : 'cloud',
@@ -67,6 +78,8 @@ const App: React.FC<{ route: any }> = ({ route }) => {
   );
   const [flash, setFlash] = useState<boolean>(false);
   const [zoomLevel, setZoomLevel] = useState<number>(1.8);
+  const [availableTemplates, setAvailableTemplates] = useState([])
+  const [selectedTemplate, setSelectedTemplate] = useState({})
   const [detectedData, setDetectedData] = useState<DetectedDataProps>({
     barcode: false,
     qrcode: false,
@@ -75,10 +88,10 @@ const App: React.FC<{ route: any }> = ({ route }) => {
   });
 
   const { width: screenWidth, height: screenHeight } = useWindowDimensions()
-const scannerWidth = screenWidth * 0.8;
-const scannerHeight = 160;
-const scannerX = (screenWidth - scannerWidth) / 2;
-const scannerY = (screenHeight - scannerHeight) / 2;
+  const scannerWidth = screenWidth * 0.8;
+  const scannerHeight = 160;
+  const scannerX = (screenWidth - scannerWidth) / 2;
+  const scannerY = (screenHeight - scannerHeight) / 2;
 
   const [modelDownloadingProgress, setModelDownloadingProgress] =
     useState<DownloadingProgress>({
@@ -119,20 +132,15 @@ const scannerY = (screenHeight - scannerHeight) / 2;
 
       }
       visionSdk?.current?.setFocusSettings(focusSettings);
-      visionSdk?.current?.setObjectDetectionSettings({
-        isTextIndicationOn: true,
-        isBarCodeOrQRCodeIndicationOn: true,
-        isDocumentIndicationOn: true,
-        codeDetectionConfidence: 0.5,
-        documentDetectionConfidence: 0.5,
-        secondsToWaitBeforeDocumentCapture: 2.0,
-      });
+      // console.log("SETTING DETECTION SETTING TO: ", detectionSettings)
+      visionSdk?.current?.setObjectDetectionSettings(detectionSettings);
       visionSdk?.current?.setCameraSettings({
         nthFrameToProcess: 10,
       });
 
       setTimeout(() => {
         visionSdk?.current?.startRunningHandler();
+        visionSdk?.current?.getAllTemplates()
       }, 0)
 
       setLoading(false);
@@ -161,10 +169,36 @@ const scannerY = (screenHeight - scannerHeight) / 2;
     }
   }, [ocrConfig])
 
+  useEffect(() => {
+    console.log("SELECTED TEMPLATE IS: ", selectedTemplate)
+    let updatedDetectionSettings = detectionSettings
+    if (selectedTemplate?.name) {
+      updatedDetectionSettings = {
+        ...detectionSettings,
+        selectedTemplateId: selectedTemplate.name
+      }
+    } else {
+      const { selectedTemplateId, ...rest } = detectionSettings
+      updatedDetectionSettings = rest
+    }
+    // const updatedDetectionSettings = selectedTemplate?.name ? { ...detectionSettings, selectedTemplateId: selectedTemplate.name } :
+    console.log("UPDATED DETECTION SETTINGS ARE", updatedDetectionSettings)
+    setDetectionSettings(updatedDetectionSettings)
+  }, [selectedTemplate])
+
+  useEffect(() => {
+    visionSdk.current?.setObjectDetectionSettings(detectionSettings);
+    visionSdk.current?.restartScanningHandler()
+  }, [detectionSettings])
+
+
   // Capture photo when the button is pressed
   const handlePressCapture = useCallback(() => {
     visionSdk?.current?.cameraCaptureHandler();
   }, [])
+
+
+
 
 
   const testReportError = (type: String) => {
@@ -339,6 +373,44 @@ const scannerY = (screenHeight - scannerHeight) / 2;
     setOcrConfig(ocrConfig);
   }, [])
 
+  const handleCreateTemplate = useCallback((event) => {
+    const templates = [...availableTemplates, { name: event.data }]
+    const uniqueTemplates = [...new Map(templates.map(item => [item.name, item])).values()]
+    setAvailableTemplates(uniqueTemplates)
+  }, [availableTemplates])
+
+  const onDeleteTemplateById = (event) => {
+    console.log("ON DELETE TEMPLATE BY ID: ", JSON.stringify(event))
+    const updatedTemplates = availableTemplates.filter((item) => item.name !== event.data)
+    setAvailableTemplates(updatedTemplates)
+  }
+
+
+  const onDeleteAllTemplates = (event) => {
+
+    setSelectedTemplate({})
+    setAvailableTemplates([])
+  }
+
+  const handleGetTemplates = useCallback((args) => {
+    setAvailableTemplates(args?.data?.map(item => ({ name: item })))
+  }, [])
+
+  const handlePressCreateTemplate = () => {
+    setTimeout(() => {
+      visionSdk.current?.createTemplate()
+    }, 0)
+  }
+
+  const handlePressDeleteTemplateById = (templateId) => {
+    visionSdk?.current?.deleteTemplateWithId(templateId)
+  }
+
+  const handlePressDeleteAllTemplates = () => {
+    console.log("DELETING ALL TEMPLATES")
+    visionSdk?.current?.deleteAllTemplates()
+  }
+
 
   return (
     <View style={styles.mainContainer}>
@@ -349,7 +421,7 @@ const scannerY = (screenHeight - scannerHeight) / 2;
         ocrType={ocrConfig.type}
         shouldResizeImage={shouldResizeImage}
         captureMode={captureMode}
-        isMultipleScanEnabled={false}
+        isMultipleScanEnabled={true}
         mode={mode}
         options={{}}
         isEnableAutoOcrResponseWithImage={true}
@@ -360,10 +432,13 @@ const scannerY = (screenHeight - scannerHeight) / 2;
         zoomLevel={zoomLevel}
         onDetected={handleDetected}
         onBarcodeScan={handleBarcodeScan}
-        onCreateTemplate={(event) => console.log(event)}
+        onCreateTemplate={handleCreateTemplate}
+        onDeleteTemplateById={onDeleteTemplateById}
+        onDeleteTemplates={onDeleteAllTemplates}
         onOCRScan={handleOcrScan}
         onImageCaptured={handleImageCaptured}
         onModelDownloadProgress={handleModelDownloadProgress}
+        onGetTemplates={handleGetTemplates}
         onError={handleError}
       />
       {['ocr', 'photo'].includes(mode) ? (
@@ -383,6 +458,12 @@ const scannerY = (screenHeight - scannerHeight) / 2;
         toggleFlash={toggleFlash}
         mode={mode}
         setMode={setMode}
+        templates={availableTemplates}
+        selectedTemplate={selectedTemplate}
+        setSelectedTemplate={setSelectedTemplate}
+        onPressCreateTemplate={handlePressCreateTemplate}
+        onPressDeleteTemplateById={handlePressDeleteTemplateById}
+        onPressDeleteAllTemplates={handlePressDeleteAllTemplates}
       />
       <DownloadingProgressView
         visible={loading && !modelDownloadingProgress.isReady}

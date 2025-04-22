@@ -351,7 +351,7 @@ class VisionSdkViewManager: RCTViewManager {
                             return
                         }
 
-                    
+
 
                         component?.reportError(
                             uiImage: finalImage,
@@ -542,7 +542,7 @@ class VisionSdkViewManager: RCTViewManager {
                     updatedFocusSettings.focusImageHighlightedColor = color
                 }
             }
-          
+
           component?.codeScannerView?.setFocusSettingsTo(updatedFocusSettings)
           component?.codeScannerView?.rescan()
         }
@@ -578,9 +578,9 @@ class VisionSdkViewManager: RCTViewManager {
                 detectionSettings.secondsToWaitBeforeDocumentCapture = secondsToWaitBeforeDocumentCapture
             }
 
-            //            if let selectedTemplateId = objectDetectionSettings["selectedTemplateId"] as? String {
-            //                detectionSettings.selectedTemplateId = selectedTemplateId
-            //            }
+            if let selectedTemplateId = objectDetectionSettings["selectedTemplateId"] as? String {
+                detectionSettings.selectedTemplateId = selectedTemplateId
+            }
 
           component?.codeScannerView?.setObjectDetectionConfigurationTo(detectionSettings)
         }
