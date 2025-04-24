@@ -811,7 +811,7 @@ export interface VisionSdkRefProps {
    * visionSdkRef.current.deleteAllTemplates();
    * @return {void}
    */
-  deleteAllTemplates: (id: string) => void;
+  deleteAllTemplates: () => void;
 
   /**
    * Sets the focus settings for the Vision SDK.
