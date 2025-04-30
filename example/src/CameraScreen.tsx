@@ -6,6 +6,7 @@ import VisionSdkView, {
   ModuleType,
   ModuleSize,
   OCRConfig,
+  BoundingBoxesDetectedResult
 } from '../../src/index';
 import CameraFooterView from './Components/CameraFooterView';
 import DownloadingProgressView from './Components/DownloadingProgressView';
@@ -64,6 +65,17 @@ const App: React.FC<{ route: any }> = ({ route }) => {
     codeDetectionConfidence: 0.5,
     documentDetectionConfidence: 0.5,
     secondsToWaitBeforeDocumentCapture: 2.0,
+    selectedTemplate: ''
+  })
+  const [detectedBoundingBoxes, setDetectedBoundingBoxes]  = useState<BoundingBoxesDetectedResult>({
+    barcodeBoundingBoxes: [],
+    qrCodeBoundingBoxes: [],
+    documentBoundingBox: {
+      x: 0,
+      y: 0,
+      width: 0,
+      height: 0
+    }
   })
   const [shouldResizeImage, setShouldResizeImage] = useState(false)
   const [ocrConfig, setOcrConfig] = useState<OCRConfig>({
@@ -116,7 +128,7 @@ const App: React.FC<{ route: any }> = ({ route }) => {
       const focusSettings = {
         shouldDisplayFocusImage: true,
         shouldScanInFocusImageRect: true,
-        showCodeBoundariesInMultipleScan: true,
+        showCodeBoundariesInMultipleScan: false,
         validCodeBoundaryBorderColor: '#2abd51',
         validCodeBoundaryBorderWidth: 2,
         validCodeBoundaryFillColor: '#2abd51',
@@ -140,6 +152,7 @@ const App: React.FC<{ route: any }> = ({ route }) => {
 
       setTimeout(() => {
         visionSdk?.current?.startRunningHandler();
+        console.log("GETTING ALL TEMPLATES")
         visionSdk?.current?.getAllTemplates()
       }, 0)
 
@@ -170,7 +183,6 @@ const App: React.FC<{ route: any }> = ({ route }) => {
   }, [ocrConfig])
 
   useEffect(() => {
-    console.log("SELECTED TEMPLATE IS: ", selectedTemplate)
     let updatedDetectionSettings = detectionSettings
     if (selectedTemplate?.name) {
       updatedDetectionSettings = {
@@ -181,16 +193,12 @@ const App: React.FC<{ route: any }> = ({ route }) => {
       const { selectedTemplateId, ...rest } = detectionSettings
       updatedDetectionSettings = rest
     }
-    // const updatedDetectionSettings = selectedTemplate?.name ? { ...detectionSettings, selectedTemplateId: selectedTemplate.name } :
-    console.log("UPDATED DETECTION SETTINGS ARE", updatedDetectionSettings)
     setDetectionSettings(updatedDetectionSettings)
   }, [selectedTemplate])
 
   useEffect(() => {
     visionSdk.current?.setObjectDetectionSettings(detectionSettings);
-    visionSdk.current?.restartScanningHandler()
   }, [detectionSettings])
-
 
   // Capture photo when the button is pressed
   const handlePressCapture = useCallback(() => {
@@ -315,7 +323,7 @@ const App: React.FC<{ route: any }> = ({ route }) => {
 
   const handleError = useCallback((error) => {
     console.log('onError', error);
-    Alert.alert('ERROR', error?.message);
+    // Alert.alert('ERROR', error?.message);
     setLoading(false);
     visionSdk.current?.restartScanningHandler();
   }, [])
@@ -374,15 +382,19 @@ const App: React.FC<{ route: any }> = ({ route }) => {
   }, [])
 
   const handleCreateTemplate = useCallback((event) => {
+    console.log("HANDLE CREATE TEMPLATE: ", JSON.stringify(event))
     const templates = [...availableTemplates, { name: event.data }]
     const uniqueTemplates = [...new Map(templates.map(item => [item.name, item])).values()]
     setAvailableTemplates(uniqueTemplates)
+
   }, [availableTemplates])
 
   const onDeleteTemplateById = (event) => {
     console.log("ON DELETE TEMPLATE BY ID: ", JSON.stringify(event))
     const updatedTemplates = availableTemplates.filter((item) => item.name !== event.data)
     setAvailableTemplates(updatedTemplates)
+    // visionSdk.current?.stopRunningHandler()
+    // visionSdk.current?.startRunningHandler()
   }
 
 
@@ -397,9 +409,7 @@ const App: React.FC<{ route: any }> = ({ route }) => {
   }, [])
 
   const handlePressCreateTemplate = () => {
-    setTimeout(() => {
-      visionSdk.current?.createTemplate()
-    }, 0)
+    visionSdk.current?.createTemplate()
   }
 
   const handlePressDeleteTemplateById = (templateId) => {
@@ -407,8 +417,12 @@ const App: React.FC<{ route: any }> = ({ route }) => {
   }
 
   const handlePressDeleteAllTemplates = () => {
-    console.log("DELETING ALL TEMPLATES")
     visionSdk?.current?.deleteAllTemplates()
+  }
+
+  const handleBoundingBoxesDetected = (args) => {
+    // console.log("BOUNDING BOXES DETECTED: ", args)
+    setDetectedBoundingBoxes(args)
   }
 
 
@@ -439,6 +453,7 @@ const App: React.FC<{ route: any }> = ({ route }) => {
         onImageCaptured={handleImageCaptured}
         onModelDownloadProgress={handleModelDownloadProgress}
         onGetTemplates={handleGetTemplates}
+        onBoundingBoxesDetected={handleBoundingBoxesDetected}
         onError={handleError}
       />
       {['ocr', 'photo'].includes(mode) ? (
@@ -480,12 +495,48 @@ const App: React.FC<{ route: any }> = ({ route }) => {
         zoomLevel={zoomLevel}
         setZoomLevel={setZoomLevel}
       />
+      {detectedBoundingBoxes.barcodeBoundingBoxes.length > 0 ?
+      <>
+        {detectedBoundingBoxes.barcodeBoundingBoxes.map((item, index) => (
+          <View
+            key={index}
+            style={{
+              position: 'absolute',
+              left: item.x,
+              top: item.y,
+              width: item.width,
+              height: item.height,
+              borderColor: '#00ff00',
+              borderWidth: 2,
+            }}
+          />
+        ))}
+      </> : null}
+
+      {detectedBoundingBoxes.qrCodeBoundingBoxes.length > 0 ?
+      <>
+        {detectedBoundingBoxes.qrCodeBoundingBoxes.map((item, index) => (
+          <View
+            key={index}
+            style={{
+              position: 'absolute',
+              left: item.x,
+              top: item.y,
+              width: item.width,
+              height: item.height,
+              borderColor: '#00ff00',
+              borderWidth: 2,
+            }}
+          />
+        ))}
+      </> : null}
     </View>
   );
 };
 const styles = StyleSheet.create({
   mainContainer: {
     flex: 1,
+    position: 'relative'
   },
 });
 export default App;

@@ -23,6 +23,7 @@ import {
   DetectionResult,
   ErrorResult,
   ReportErrorType,
+  BoundingBoxesDetectedResult,
 } from './types';
 
 export * from './types';
@@ -52,6 +53,7 @@ const Camera = forwardRef<VisionSdkRefProps, VisionSdkProps>(
       onImageCaptured = () => { },
       onOCRScan = () => { },
       onDetected = () => { },
+      onBoundingBoxesDetected = () => { },
       onError = () => { },
       onCreateTemplate = () => { },
       onGetTemplates = () => { },
@@ -328,6 +330,10 @@ const Camera = forwardRef<VisionSdkRefProps, VisionSdkProps>(
       [onDetected]
     );
 
+    const onBoundingBoxesDetectedHandler = useCallback((event: BoundingBoxesDetectedResult) => onBoundingBoxesDetected(event), [
+      onBoundingBoxesDetected
+    ])
+
     const onErrorHandler = useCallback((event: any) =>
       onError(parseNativeEvent<ErrorResult>(event)), [onError])
 
@@ -374,6 +380,7 @@ const Camera = forwardRef<VisionSdkRefProps, VisionSdkProps>(
       onImageCaptured: onImageCapturedHandler,
       onOCRScan: onOCRScanHandler,
       onDetected: onDetectedHandler,
+      onBoundingBoxesDetected: onBoundingBoxesDetectedHandler,
       onError: onErrorHandler,
       onCreateTemplate: onCreateTemplateHandler,
       onGetTemplates: onGetTemplateHandler,
@@ -392,12 +399,14 @@ const Camera = forwardRef<VisionSdkRefProps, VisionSdkProps>(
       eventHandlersRef.current.onGetTemplates = onGetTemplateHandler
       eventHandlersRef.current.onDeleteTemplateById = onDeleteTemplateByIdHandler
       eventHandlersRef.current.onDeleteTemplates = onDeleteTemplatesHandler
+      eventHandlersRef.current.onBoundingBoxesDetected = onBoundingBoxesDetectedHandler
     }, [
       onBarcodeScan,
       onModelDownloadProgress,
       onImageCaptured,
       onOCRScan,
       onDetected,
+      onBoundingBoxesDetected,
       onError,
       onCreateTemplate,
       onGetTemplates,
@@ -416,6 +425,7 @@ const Camera = forwardRef<VisionSdkRefProps, VisionSdkProps>(
         ['onImageCaptured', (event: any) => eventHandlersRef.current.onImageCaptured(event)],
         ['onOCRScan', (event: any) => eventHandlersRef.current.onOCRScan(event)],
         ['onDetected', (event: any) => eventHandlersRef.current.onDetected(event)],
+        ['onBoundingBoxesDetected', (event: BoundingBoxesDetectedResult) => eventHandlersRef.current.onBoundingBoxesDetected(event)],
         ['onError', (event: any) => eventHandlersRef.current.onError(event)],
         ['onCreateTemplate', (event: any) => eventHandlersRef.current.onCreateTemplate(event)],
         ['onGetTemplates', (event: any) => eventHandlersRef.current.onGetTemplates(event)],
@@ -467,6 +477,7 @@ const Camera = forwardRef<VisionSdkRefProps, VisionSdkProps>(
           onImageCaptured={onImageCapturedHandler}
           onOCRScan={onOCRScanHandler}
           onDetected={onDetectedHandler}
+          onBoundingBoxesDetected={onBoundingBoxesDetectedHandler}
           onError={onErrorHandler}
           onCreateTemplate={onCreateTemplateHandler}
           onGetTemplates={onGetTemplateHandler}
