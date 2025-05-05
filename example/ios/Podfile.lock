@@ -1824,7 +1824,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - Yoga
   - SocketRocket (0.7.1)
-  - VisionSDK (1.7.7)
+  - VisionSDK (1.8.0)
   - Yoga (0.0.0)
 
 DEPENDENCIES:
@@ -2126,7 +2126,7 @@ SPEC CHECKSUMS:
   RNSVG: c50d29abf38abbf48ebfc50b6258f81099aeabae
   RNVectorIcons: a24016b773380b1aa37fca501ec6b94a951890a0
   SocketRocket: d4aabe649be1e368d1318fdf28a022d714d65748
-  VisionSDK: 99024c9979012dae0ee015cc7f5c4c4d7aaa6178
+  VisionSDK: 44d78e0051ca7f39ff3596c781483bd3d526f021
   Yoga: be6f55a028e86c83ae066f018e9b5d24ffc45436
 
 PODFILE CHECKSUM: dc33509ec6a3d304fce4a84c03d57986d6a7860e

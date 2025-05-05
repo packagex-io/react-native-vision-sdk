@@ -14,6 +14,7 @@ class RNCodeScannerView: UIView {
     @objc var onOCRScan: RCTDirectEventBlock?
     @objc var onDetected: RCTDirectEventBlock?
     @objc var onError: RCTDirectEventBlock?
+    @objc var onBoundingBoxesDetected: RCTDirectEventBlock?
     @objc var onCreateTemplate: RCTDirectEventBlock?
     @objc var onGetTemplates: RCTDirectEventBlock?
     @objc var onDeleteTemplateById: RCTDirectEventBlock?
@@ -90,21 +91,25 @@ class RNCodeScannerView: UIView {
     // Open the template creation controller
     @available(iOS 15.0, *)
     @objc func createTemplate() {
-        let scanController = GenerateTemplateController.instantiate()
-        scanController.delegate = self
+      // Defer to the next run-loop on the main thread
+      DispatchQueue.main.asyncAfter(deadline: .now() + .milliseconds(25)) { [weak self] in
+          guard let self = self else { return }
 
-        if let sheet = scanController.sheetPresentationController {
-            sheet.prefersGrabberVisible = true
-        }
+          let scanController = GenerateTemplateController.instantiate()
+          scanController.delegate = self
 
-        // Find the parent UIViewController and present the scan controller
-        if let parentViewController = self.findViewController() {
-            parentViewController.present(scanController, animated: true) {
-            print("Template controller is now presented.")
-            }
-        } else {
-            print("No UIViewController found to present from.")
-        }
+          if let sheet = scanController.sheetPresentationController {
+              sheet.prefersGrabberVisible = true
+          }
+
+          if let parent = self.findViewController() {
+              parent.present(scanController, animated: true) {
+                  print("Template controller is now presented.")
+              }
+          } else {
+              print("❌ No UIViewController found to present from.")
+          }
+      }
     }
 
     // Fetch saved templates
@@ -203,6 +208,31 @@ extension RNCodeScannerView: CodeScannerViewDelegate {
         if onDetected != nil {
             onDetected!(["text": text, "barcode": barCode, "qrcode": qrCode, "document": document])
         }
+    }
+
+    func codeScannerViewDidDetectBoxes(_ text: Bool, barCode: [CGRect], qrCode: [CGRect], document: CGRect) {
+      guard let callback = onBoundingBoxesDetected else { return }
+
+      // Helper to convert a single CGRect -> [String: CGFloat]
+      func dict(from rect: CGRect) -> [String: CGFloat] {
+        return [
+          "x":      rect.origin.x,
+          "y":      rect.origin.y,
+          "width":  rect.size.width,
+          "height": rect.size.height
+        ]
+      }
+
+      // Convert arrays of CGRects
+      let barcodeBoundingBoxes = barCode.map { dict(from: $0) }
+      let qrCodeBoundingBoxes  = qrCode.map { dict(from: $0) }
+      let documentBoundingBox  = dict(from: document)
+
+      callback([
+        "barcodeBoundingBoxes": barcodeBoundingBoxes,
+        "qrCodeBoundingBoxes":  qrCodeBoundingBoxes,
+        "documentBoundingBox":  documentBoundingBox
+      ])
     }
 
     func codeScannerView(_ scannerView: CodeScannerView, didCaptureOCRImage image: UIImage, withCroppedImge croppedImage: UIImage?, withbarCodes barcodes: [String]) {

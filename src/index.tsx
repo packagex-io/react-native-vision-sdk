@@ -330,7 +330,7 @@ const Camera = forwardRef<VisionSdkRefProps, VisionSdkProps>(
       [onDetected]
     );
 
-    const onBoundingBoxesDetectedHandler = useCallback((event: BoundingBoxesDetectedResult) => onBoundingBoxesDetected(event), [
+    const onBoundingBoxesDetectedHandler = useCallback((event: BoundingBoxesDetectedResult) => onBoundingBoxesDetected(parseNativeEvent<BoundingBoxesDetectedResult>(event)), [
       onBoundingBoxesDetected
     ])
 

@@ -67,7 +67,7 @@ const App: React.FC<{ route: any }> = ({ route }) => {
     secondsToWaitBeforeDocumentCapture: 2.0,
     selectedTemplate: ''
   })
-  const [detectedBoundingBoxes, setDetectedBoundingBoxes]  = useState<BoundingBoxesDetectedResult>({
+  const [detectedBoundingBoxes, setDetectedBoundingBoxes] = useState<BoundingBoxesDetectedResult>({
     barcodeBoundingBoxes: [],
     qrCodeBoundingBoxes: [],
     documentBoundingBox: {
@@ -409,7 +409,9 @@ const App: React.FC<{ route: any }> = ({ route }) => {
   }, [])
 
   const handlePressCreateTemplate = () => {
-    visionSdk.current?.createTemplate()
+
+      visionSdk.current?.createTemplate()
+
   }
 
   const handlePressDeleteTemplateById = (templateId) => {
@@ -421,7 +423,7 @@ const App: React.FC<{ route: any }> = ({ route }) => {
   }
 
   const handleBoundingBoxesDetected = (args) => {
-    // console.log("BOUNDING BOXES DETECTED: ", args)
+    console.log("BOUNDING BOXES DETECTED: ", args)
     setDetectedBoundingBoxes(args)
   }
 
@@ -495,41 +497,41 @@ const App: React.FC<{ route: any }> = ({ route }) => {
         zoomLevel={zoomLevel}
         setZoomLevel={setZoomLevel}
       />
-      {detectedBoundingBoxes.barcodeBoundingBoxes.length > 0 ?
-      <>
-        {detectedBoundingBoxes.barcodeBoundingBoxes.map((item, index) => (
-          <View
-            key={index}
-            style={{
-              position: 'absolute',
-              left: item.x,
-              top: item.y,
-              width: item.width,
-              height: item.height,
-              borderColor: '#00ff00',
-              borderWidth: 2,
-            }}
-          />
-        ))}
-      </> : null}
+      {detectedBoundingBoxes.barcodeBoundingBoxes?.length > 0 ?
+        <>
+          {detectedBoundingBoxes.barcodeBoundingBoxes.map((item, index) => (
+            <View
+              key={index}
+              style={{
+                position: 'absolute',
+                left: item.x,
+                top: item.y,
+                width: item.width,
+                height: item.height,
+                borderColor: '#00ff00',
+                borderWidth: 2,
+              }}
+            />
+          ))}
+        </> : null}
 
-      {detectedBoundingBoxes.qrCodeBoundingBoxes.length > 0 ?
-      <>
-        {detectedBoundingBoxes.qrCodeBoundingBoxes.map((item, index) => (
-          <View
-            key={index}
-            style={{
-              position: 'absolute',
-              left: item.x,
-              top: item.y,
-              width: item.width,
-              height: item.height,
-              borderColor: '#00ff00',
-              borderWidth: 2,
-            }}
-          />
-        ))}
-      </> : null}
+      {detectedBoundingBoxes.qrCodeBoundingBoxes?.length > 0 ?
+        <>
+          {detectedBoundingBoxes.qrCodeBoundingBoxes.map((item, index) => (
+            <View
+              key={index}
+              style={{
+                position: 'absolute',
+                left: item.x,
+                top: item.y,
+                width: item.width,
+                height: item.height,
+                borderColor: '#00ff00',
+                borderWidth: 2,
+              }}
+            />
+          ))}
+        </> : null}
     </View>
   );
 };
