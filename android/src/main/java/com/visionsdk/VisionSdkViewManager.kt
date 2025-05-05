@@ -1,10 +1,12 @@
 package com.visionsdk
 
+import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Color
+import android.graphics.Rect
 import android.graphics.RectF
 import android.util.Base64
 import android.util.Log
@@ -53,15 +55,20 @@ import java.io.File
 import java.util.Date
 import android.os.Handler
 import android.os.Looper
+import androidx.fragment.app.FragmentActivity
 import java.net.HttpURLConnection
 import java.net.URL
 import com.visionsdk.utils.EventUtils
+import io.packagex.visionsdk.core.TemplateManager
+import io.packagex.visionsdk.core.pricetag.PriceTagData
 import io.packagex.visionsdk.dto.ScannedCodeResult
 import io.packagex.visionsdk.ocr.ml.core.enums.OCRModule
 import io.packagex.visionsdk.service.dto.BOLModelToReport
 import io.packagex.visionsdk.service.dto.DCModelToReport
 import io.packagex.visionsdk.service.dto.ILModelToReport
 import io.packagex.visionsdk.service.dto.SLModelToReport
+import io.packagex.visionsdk.ui.startCreateTemplateScreen
+import org.json.JSONArray
 import java.io.FileInputStream
 
 // VisionSdkViewManager is a class responsible for managing the Vision SDK view component within
@@ -293,8 +300,28 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
           isBarcodeOrQRCodeIndicationOn = optBoolean("isBarcodeOrQRCodeIndicationOn", true) // Show barcode indication
         )
       }
+
+
     }
     visionCameraView?.setObjectDetectionConfiguration(objectDetectionConfiguration) // Apply detection config to view
+
+    if(objectDetectionSettings != null){
+      var selectedTemplateId = ""
+      JSONObject(objectDetectionSettings).apply {
+        selectedTemplateId = optString("selectedTemplateId", "")
+      }
+
+      if(selectedTemplateId != ""){
+        val templates = TemplateManager().getAllBarcodeTemplates()
+        val templateToApply = templates.firstOrNull { template -> template.name == selectedTemplateId }
+        if(templateToApply != null){
+          visionCameraView?.applyBarcodeTemplate(templateToApply)
+        }
+      } else {
+        visionCameraView?.removeBarcodeTemplate()
+      }
+
+    }
   }
 
   /**
@@ -530,6 +557,74 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
       .emit("onDetected", event)
   }
 
+  override fun onIndicationsBoundingBoxes(
+    barcodeBoundingBoxes: List<Rect>,
+    qrCodeBoundingBoxes: List<Rect>,
+    documentBoundingBox: Rect?
+  ) {
+    try {
+
+      val density = appContext.resources.displayMetrics.density
+
+      fun Int.toDp(): Int = (this / density + 0.5f).toInt()
+
+
+      val event = Arguments.createMap().apply {
+        val barcodeRectsArray = Arguments.createArray()
+        val qrCodeRectsArray = Arguments.createArray()
+        val documentsRect = Arguments.createMap()
+
+        if(barcodeBoundingBoxes.isNotEmpty()){
+          barcodeBoundingBoxes.forEach {
+            boundingBox -> barcodeRectsArray.pushMap(Arguments.createMap().apply {
+                putInt("x", boundingBox.left.toDp())
+                putInt("y", boundingBox.top.toDp())
+                putInt("width", boundingBox.width().toDp())
+                putInt("height", boundingBox.height().toDp())
+            })
+          }
+        }
+
+        if(qrCodeBoundingBoxes.isNotEmpty()){
+          qrCodeBoundingBoxes.forEach{
+            boundingBox -> qrCodeRectsArray.pushMap(Arguments.createMap().apply {
+                putInt("x", boundingBox.left.toDp())
+                putInt("y", boundingBox.top.toDp())
+                putInt("width", boundingBox.width().toDp())
+                putInt("height", boundingBox.height().toDp())
+            })
+          }
+        }
+
+        if(documentBoundingBox != null){
+          documentsRect.putInt("x", documentBoundingBox.left.toDp())
+          documentsRect.putInt("y", documentBoundingBox.top.toDp())
+          documentsRect.putInt("width", documentBoundingBox.width().toDp())
+          documentsRect.putInt("height", documentBoundingBox.height().toDp())
+        }
+
+        putArray("barcodeBoundingBoxes", barcodeRectsArray)
+        putArray("qrCodeBoundingBoxes", qrCodeRectsArray)
+        putMap("documentBoundingBox", documentsRect)
+      }
+
+      appContext
+        .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
+        .emit("onBoundingBoxesDetected", event)
+
+    } catch (e:Exception){
+      Log.d(TAG, "error ${e.message}")
+    }
+  }
+
+  override fun onItemRetrievalResult(scannedCodeResults: ScannedCodeResult) {
+    Log.d("IJS", "on item retrieval results")
+  }
+
+  override fun onPriceTagResult(priceTagData: PriceTagData) {
+    Log.d("IJS", "on price tag result")
+  }
+
   /**
    * Callback function triggered upon failure, passing the exception to the OCR response failure handler.
    * @param exception - Exception representing the failure cause
@@ -543,6 +638,7 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
 
     if (barcodeList.isEmpty()) {
       Log.e(TAG, "barcodeList is empty, skipping event emission")
+
       return
     }
 
@@ -977,6 +1073,7 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
     if (visionCameraView?.isCameraStarted() == true)
       visionCameraView?.stopCamera()
     visionCameraView?.startCamera()
+
   }
 
   // Set metadata for scanning
@@ -1306,23 +1403,87 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
   // This method is used to create a new template for use in cloud predictions.
 
   private fun createTemplate() {
-    // appContext.currentActivity?.startActivity(
-    //   Intent(appContext, RNTemplateActivity::class.java)
-    // )
+    stopScanning()
+    val activity = appContext.currentActivity as? FragmentActivity ?: return
+
+    val onTemplateCreated: (String) -> Unit = { newCreatedTemplateId: String ->
+
+      val event = Arguments.createMap().apply {
+        putString("data", newCreatedTemplateId)
+      }
+      // Emit the event to JavaScript listeners for onCreateTemplate
+      appContext
+        .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
+        .emit("onCreateTemplate", event)
+
+      startCamera()
+    }
+
+
+
+    startCreateTemplateScreen(
+      fragmentManager = activity.supportFragmentManager,
+      onTemplateCreated = onTemplateCreated,
+      onCancelled = {
+        startCamera()
+      }
+    )
   }
   // This method is used to get all saved templates.
   private fun getAllTemplates() {
+    val templateManager = TemplateManager()
+    // build a WritableArray of strings
+
+
+    val templates =  templateManager.getAllBarcodeTemplates()
+
+    val arr = Arguments.createArray().apply {
+      templates.forEach { pushString(it.name) }
+    }
+
+    val event = Arguments.createMap().apply {
+      putArray("data", arr)
+    }
+    appContext
+      .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
+      .emit("onGetTemplates", event)
+
 
   }
 
   // This method is used to delete a specific template by its ID.
   private fun deleteTemplateWithId(args: ReadableArray?) {
+    val templateManager = TemplateManager()
     val id = args?.getString(0)
-
+    val allTemplates = templateManager.getAllBarcodeTemplates()
+    val templateToDelete = allTemplates.firstOrNull { template -> template.name == id }
+    if(templateToDelete != null){
+      templateManager.deleteBarcodeTemplate(templateToDelete)
+      val event = Arguments.createMap().apply {
+        putString("data", id)
+      }
+      appContext
+        .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
+        .emit("onDeleteTemplateById", event)
+    }
   }
+
 
    // This method is used to delete all templates from storage.
   private fun deleteAllTemplates() {
+    val templateManager = TemplateManager()
+     val allTemplates = templateManager.getAllBarcodeTemplates()
+     allTemplates.forEach{
+       template -> templateManager.deleteBarcodeTemplate(template)
+     }
+
+     val event = Arguments.createMap().apply {
+       putBoolean("success", true)
+     }
+     appContext
+       .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
+       .emit("onDeleteTemplates", event)
+
 
   }
 
