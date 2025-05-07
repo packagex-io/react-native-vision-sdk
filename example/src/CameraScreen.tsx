@@ -17,7 +17,7 @@ import ResultViewOCR from './Components/ResultViewOCR';
 import { useFocusEffect } from '@react-navigation/native';
 
 
-const apiKey = ""
+const apiKey = "key_00203c5642F9SYnJkKyi9dRw1eeteeUwXhbEfGuPZ4NML8l2bAfysni4ZpcZEBKn0gnbcOZYwIaJnOyp"
 
 // Define interfaces for the state types
 interface DownloadingProgress {
@@ -58,6 +58,7 @@ interface DetectedDataProps {
 const App: React.FC<{ route: any }> = ({ route }) => {
   const visionSdk = useRef<VisionSdkRefProps>(null);
   const [captureMode, setCaptureMode] = useState<'manual' | 'auto'>('manual');
+  const timeoutRef = useRef<any>(null)
   const [detectionSettings, setDetectionSettings] = useState({
     isTextIndicationOn: true,
     isBarCodeOrQRCodeIndicationOn: true,
@@ -77,6 +78,20 @@ const App: React.FC<{ route: any }> = ({ route }) => {
       height: 0
     }
   })
+
+  const [detectedPriceTag, setDetectedPriceTag] = useState({
+    price: "",
+    sku: "",
+    boundingBox: {
+      x: 0,
+      y: 0,
+      width: 0,
+      height: 0
+    }
+  })
+
+  const [isPriceTagBoundingBoxVisible, setIsPriceTagBoundingBoxVisible] = useState(false)
+
   const [shouldResizeImage, setShouldResizeImage] = useState(false)
   const [ocrConfig, setOcrConfig] = useState<OCRConfig>({
     mode: route.params?.modelType ? 'on-device' : 'cloud',
@@ -85,9 +100,10 @@ const App: React.FC<{ route: any }> = ({ route }) => {
   });
   const [loading, setLoading] = useState<boolean>(false);
   const [result, setResult] = useState<any>(null);
-  const [mode, setMode] = useState<'barcode' | 'qrcode' | 'ocr' | 'photo'>(
+  const [mode, setMode] = useState<'barcode' | 'qrcode' | 'ocr' | 'photo' | 'barCodeOrQRCode'>(
     route?.params?.mode || 'barcode'
   );
+
   const [flash, setFlash] = useState<boolean>(false);
   const [zoomLevel, setZoomLevel] = useState<number>(1.8);
   const [availableTemplates, setAvailableTemplates] = useState([])
@@ -166,6 +182,9 @@ const App: React.FC<{ route: any }> = ({ route }) => {
     requestCameraPermission()
     return () => {
       visionSdk?.current?.stopRunningHandler();
+      if(timeoutRef.current){
+        clearTimeout(timeoutRef.current)
+      }
     }
   }, []))
 
@@ -323,7 +342,7 @@ const App: React.FC<{ route: any }> = ({ route }) => {
 
   const handleError = useCallback((error) => {
     console.log('onError', error);
-    // Alert.alert('ERROR', error?.message);
+    Alert.alert('ERROR', error?.message);
     setLoading(false);
     visionSdk.current?.restartScanningHandler();
   }, [])
@@ -333,14 +352,14 @@ const App: React.FC<{ route: any }> = ({ route }) => {
     setDetectedData(event);
   }, [])
 
-  const handleBarcodeScan = (event) => {
+  const handleBarcodeScan = useCallback( (event) => {
     console.log("=======================")
     console.log('onBarcodeScan', JSON.stringify(event));
     console.log("=======================")
     setLoading(false);
 
     visionSdk.current?.restartScanningHandler();
-  }
+  }, [])
 
   const handleOcrScan = useCallback((event) => {
     setLoading(false);
@@ -351,16 +370,7 @@ const App: React.FC<{ route: any }> = ({ route }) => {
   }, [])
 
   const handleImageCaptured = useCallback((event) => {
-
     console.log('onImageCaptured', event);
-    // console.log("CALLING GET PREDICTION shiping label ")
-    // visionSdk.current?.getPredictionShippingLabelCloud(event.image, event.barcodes, "", apiKey)
-    // visionSdk.current?.getPredictionBillOfLadingCloud(event.image,event.barcodes,"",apiKey)
-    // visionSdk?.current?.getPredictionItemLabelCloud(event.image, "", apiKey)
-    // visionSdk?.current?.getPredictionDocumentClassificationCloud(event.image, "", apiKey)
-    // visionSdk.current?.getPredictionWithCloudTransformations(event.image, event.barcodes, "", apiKey)
-    // console.log("TESTING REPORT ERROR")
-    // testReportError('shipping_label')
     visionSdk.current?.restartScanningHandler();
   }, [])
 
@@ -410,7 +420,7 @@ const App: React.FC<{ route: any }> = ({ route }) => {
 
   const handlePressCreateTemplate = () => {
 
-      visionSdk.current?.createTemplate()
+    visionSdk.current?.createTemplate()
 
   }
 
@@ -423,9 +433,27 @@ const App: React.FC<{ route: any }> = ({ route }) => {
   }
 
   const handleBoundingBoxesDetected = (args) => {
-    console.log("BOUNDING BOXES DETECTED: ", args)
+    // console.log("BOUNDING BOXES DETECTED: ", args)
     setDetectedBoundingBoxes(args)
   }
+
+  const handlePriceTagDetected = useCallback((args) => {
+    setDetectedPriceTag({
+      price: args.price,
+      sku: args.sku,
+      boundingBox: args.boundingBox
+    })
+
+    setIsPriceTagBoundingBoxVisible(true)
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current)
+    }
+    timeoutRef.current = setTimeout(() => {
+      setIsPriceTagBoundingBoxVisible(false)
+      timeoutRef.current = null
+    }, 1500)
+
+  }, [])
 
 
   return (
@@ -456,6 +484,7 @@ const App: React.FC<{ route: any }> = ({ route }) => {
         onModelDownloadProgress={handleModelDownloadProgress}
         onGetTemplates={handleGetTemplates}
         onBoundingBoxesDetected={handleBoundingBoxesDetected}
+        onPriceTagDetected={handlePriceTagDetected}
         onError={handleError}
       />
       {['ocr', 'photo'].includes(mode) ? (
@@ -497,7 +526,7 @@ const App: React.FC<{ route: any }> = ({ route }) => {
         zoomLevel={zoomLevel}
         setZoomLevel={setZoomLevel}
       />
-      {detectedBoundingBoxes.barcodeBoundingBoxes?.length > 0 ?
+      { ['barcode', 'barCodeOrQRCode'].includes(mode) &&  detectedBoundingBoxes.barcodeBoundingBoxes?.length > 0 ?
         <>
           {detectedBoundingBoxes.barcodeBoundingBoxes.map((item, index) => (
             <View
@@ -515,7 +544,7 @@ const App: React.FC<{ route: any }> = ({ route }) => {
           ))}
         </> : null}
 
-      {detectedBoundingBoxes.qrCodeBoundingBoxes?.length > 0 ?
+      {['qrcode', 'barCodeOrQRCode'].includes(mode) &&  detectedBoundingBoxes.qrCodeBoundingBoxes?.length > 0 ?
         <>
           {detectedBoundingBoxes.qrCodeBoundingBoxes.map((item, index) => (
             <View
@@ -532,6 +561,27 @@ const App: React.FC<{ route: any }> = ({ route }) => {
             />
           ))}
         </> : null}
+
+
+      {isPriceTagBoundingBoxVisible && detectedPriceTag.boundingBox.width > 0 ?
+        <>
+
+          <View
+
+            style={{
+              position: 'absolute',
+              left: detectedPriceTag.boundingBox.x,
+              top: detectedPriceTag.boundingBox.y,
+              width: detectedPriceTag.boundingBox.width,
+              height: detectedPriceTag.boundingBox.height,
+              borderColor: 'green',
+              borderWidth: 2,
+            }}
+          />
+
+        </> : null}
+
+
     </View>
   );
 };

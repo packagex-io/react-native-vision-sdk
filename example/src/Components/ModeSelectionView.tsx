@@ -88,6 +88,19 @@ function ModeSelectionView({
               <MaterialIcons name="done" size={20} color="white" />
             )}
           </TouchableOpacity>
+          <View style={styles.horizontalLine} />
+          <TouchableOpacity
+            onPress={() => {
+              setMode('priceTag');
+              closeModal();
+            }}
+            style={styles.rowStyle}
+          >
+            <Text style={styles.textStyle}>Price Tag</Text>
+            {mode == 'priceTag' && (
+              <MaterialIcons name="done" size={20} color="white" />
+            )}
+          </TouchableOpacity>
         </View>
       </TouchableOpacity>
     </Modal>

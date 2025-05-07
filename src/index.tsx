@@ -51,6 +51,7 @@ const Camera = forwardRef<VisionSdkRefProps, VisionSdkProps>(
       onModelDownloadProgress = () => { },
       onBarcodeScan = () => { },
       onImageCaptured = () => { },
+      onPriceTagDetected = () => {},
       onOCRScan = () => { },
       onDetected = () => { },
       onBoundingBoxesDetected = () => { },
@@ -318,12 +319,14 @@ const Camera = forwardRef<VisionSdkRefProps, VisionSdkProps>(
       onBarcodeScan(parseNativeEvent<BarcodeScanResult>(event)),
       [onBarcodeScan])
 
-    // const onImageCaptured = useCallback((event) =>  console.log('Image Captured:', event), []);
     const onModelDownloadProgressHandler = useCallback((event: any) =>
       onModelDownloadProgress(parseNativeEvent<ModelDownloadProgress>(event)), [onModelDownloadProgress]);
 
     const onImageCapturedHandler = useCallback((event: any) =>
       onImageCaptured(parseNativeEvent<ImageCaptureEvent>(event)), [onImageCaptured])
+
+
+    const onPriceTagDetectedHandler = useCallback((event: any) => onPriceTagDetected(parseNativeEvent(event)), [onPriceTagDetected])
 
     const onDetectedHandler = useCallback(
       (event: any) => onDetected(parseNativeEvent<DetectionResult>(event)),
@@ -378,6 +381,7 @@ const Camera = forwardRef<VisionSdkRefProps, VisionSdkProps>(
       onBarcodeScan: onBarcodeScanHandler,
       onModelDownloadProgress: onModelDownloadProgressHandler,
       onImageCaptured: onImageCapturedHandler,
+      onPriceTagDetected: onPriceTagDetectedHandler,
       onOCRScan: onOCRScanHandler,
       onDetected: onDetectedHandler,
       onBoundingBoxesDetected: onBoundingBoxesDetectedHandler,
@@ -392,6 +396,7 @@ const Camera = forwardRef<VisionSdkRefProps, VisionSdkProps>(
       eventHandlersRef.current.onBarcodeScan = onBarcodeScanHandler
       eventHandlersRef.current.onModelDownloadProgress = onModelDownloadProgressHandler
       eventHandlersRef.current.onImageCaptured = onImageCapturedHandler
+      eventHandlersRef.current.onPriceTagDetected = onPriceTagDetectedHandler
       eventHandlersRef.current.onOCRScan = onOCRScanHandler
       eventHandlersRef.current.onDetected = onDetectedHandler
       eventHandlersRef.current.onError = onErrorHandler
@@ -404,6 +409,7 @@ const Camera = forwardRef<VisionSdkRefProps, VisionSdkProps>(
       onBarcodeScan,
       onModelDownloadProgress,
       onImageCaptured,
+      onPriceTagDetected,
       onOCRScan,
       onDetected,
       onBoundingBoxesDetected,
@@ -417,12 +423,12 @@ const Camera = forwardRef<VisionSdkRefProps, VisionSdkProps>(
     // Subscribe event listeners on mount, and cleanup on unmount
     useEffect(() => {
       // Event listener setup
-      // const onImageCapturedHandler = useCallback((event: any) =>
-      //   onImageCaptured(parseNativeEvent<ImageCaptureEvent>(event)), [onImageCaptured])
+
       const eventListeners = [
         ['onModelDownloadProgress', (event: any) => eventHandlersRef.current.onModelDownloadProgress(event)],
         ['onBarcodeScan', (event: any) => eventHandlersRef.current.onBarcodeScan(event)],
         ['onImageCaptured', (event: any) => eventHandlersRef.current.onImageCaptured(event)],
+        ['onPriceTagDetected', (event: any) => eventHandlersRef.current.onPriceTagDetected(event)],
         ['onOCRScan', (event: any) => eventHandlersRef.current.onOCRScan(event)],
         ['onDetected', (event: any) => eventHandlersRef.current.onDetected(event)],
         ['onBoundingBoxesDetected', (event: BoundingBoxesDetectedResult) => eventHandlersRef.current.onBoundingBoxesDetected(event)],
@@ -475,6 +481,7 @@ const Camera = forwardRef<VisionSdkRefProps, VisionSdkProps>(
           onBarcodeScan={onBarcodeScanHandler}
           onModelDownloadProgress={onModelDownloadProgressHandler}
           onImageCaptured={onImageCapturedHandler}
+          onPriceTagDetected={onPriceTagDetectedHandler}
           onOCRScan={onOCRScanHandler}
           onDetected={onDetectedHandler}
           onBoundingBoxesDetected={onBoundingBoxesDetectedHandler}

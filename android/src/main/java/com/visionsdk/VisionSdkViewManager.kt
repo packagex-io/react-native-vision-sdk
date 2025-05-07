@@ -56,6 +56,7 @@ import java.util.Date
 import android.os.Handler
 import android.os.Looper
 import androidx.fragment.app.FragmentActivity
+import com.asadullah.handyutils.launchOnDefault
 import java.net.HttpURLConnection
 import java.net.URL
 import com.visionsdk.utils.EventUtils
@@ -68,14 +69,19 @@ import io.packagex.visionsdk.service.dto.DCModelToReport
 import io.packagex.visionsdk.service.dto.ILModelToReport
 import io.packagex.visionsdk.service.dto.SLModelToReport
 import io.packagex.visionsdk.ui.startCreateTemplateScreen
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 import org.json.JSONArray
 import java.io.FileInputStream
+import kotlin.coroutines.CoroutineContext
 
 // VisionSdkViewManager is a class responsible for managing the Vision SDK view component within
 // a React Native application. It connects native Vision SDK functionality with React Native through a bridge.
 // This includes handling camera operations, configuring OCR settings, and processing scanned data.
 class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
   ViewGroupManager<VisionCameraView>(), ScannerCallback, CameraLifecycleCallback, OCRResult {
+    private lateinit var coroutineScope: CoroutineScope
 
   private var context: Context? = null // The context of the current application
 
@@ -153,6 +159,9 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
     configureCamera() // Configure camera settings
     visionCameraView?.setCameraLifecycleCallback(this) // Set lifecycle callback
     visionCameraView?.setScannerCallback(this) // Set scanner callback
+
+    coroutineScope = CoroutineScope(Dispatchers.Default)
+
     return visionCameraView!!
   }
 
@@ -179,6 +188,7 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
   override fun onDropViewInstance(view: VisionCameraView) {
     super.onDropViewInstance(view)
     Log.d(TAG, "onDropViewInstance: ")
+    coroutineScope.cancel()
     shouldStartScanning = true // Reset scanning flag
     visionCameraView?.stopCamera() // Stop the camera to release resources
   }
@@ -472,7 +482,7 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
       )
 
     } catch(e: Exception){
-        Log.e("INTELLIJUST: ", "ERROR REPORTING ERROR: ", e)
+        Log.e(TAG, "ERROR REPORTING ERROR: ", e)
     }
 
 
@@ -522,6 +532,10 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
     }
   }
 
+  private val density = appContext.resources.displayMetrics.density
+  fun Int.toDp(): Int = (this / density + 0.5f).toInt()
+
+
   /**
    * Sets focus settings for the camera if the camera is started, using the focus region manager.
    */
@@ -564,9 +578,6 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
   ) {
     try {
 
-      val density = appContext.resources.displayMetrics.density
-
-      fun Int.toDp(): Int = (this / density + 0.5f).toInt()
 
 
       val event = Arguments.createMap().apply {
@@ -622,7 +633,23 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
   }
 
   override fun onPriceTagResult(priceTagData: PriceTagData) {
-    Log.d("IJS", "on price tag result")
+    val boundingBoxMap = Arguments.createMap().apply {
+      putInt("x", priceTagData.boundingBox.left.toDp())
+      putInt("y", priceTagData.boundingBox.top.toDp())
+      putInt("width", priceTagData.boundingBox.width().toDp())
+      putInt("height", priceTagData.boundingBox.height().toDp())
+    }
+
+    val event = Arguments.createMap().apply {
+      putString("sku", priceTagData.productSKU)
+      putString("price", priceTagData.productPrice)
+      putMap("boundingBox", boundingBoxMap)
+    }
+
+    Log.d(TAG, "Emitting event: onPriceTagDetected: $event")
+    appContext
+      .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
+      .emit("onPriceTagDetected", event)
   }
 
   /**
@@ -1281,7 +1308,6 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
 
       uriToBitmap(context!!, Uri.parse(image)) { bitmap ->
         bitmap?.let {
-          Log.d("INTELLIJUST", "handle cloud prediction")
           getPredictionShippingLabelCloud(
             it,
             barcodeList,
@@ -1569,15 +1595,40 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
   @ReactProp(name = "mode")
   fun setMode(view: View, mode: String = "") {
     Log.d(TAG, "mode: $mode")
-    detectionMode = when (mode.lowercase()) {
-      "ocr" -> DetectionMode.OCR
-      "barcode" -> DetectionMode.Barcode
-      "qrcode" -> DetectionMode.QRCode
-      "photo" -> DetectionMode.Photo
-      "barcodeorqrcode" -> DetectionMode.BarcodeOrQRCode
-      else -> DetectionMode.Barcode
+    if(mode.lowercase() != "pricetag") {
+      detectionMode = when (mode.lowercase()) {
+        "ocr" -> DetectionMode.OCR
+        "barcode" -> DetectionMode.Barcode
+        "qrcode" -> DetectionMode.QRCode
+        "photo" -> DetectionMode.Photo
+        "barcodeorqrcode" -> DetectionMode.BarcodeOrQRCode
+        else -> DetectionMode.Barcode
+      }
+
+      visionCameraView?.setDetectionMode(detectionMode)
+    } else {
+      //mode = pricetag
+//      visionCameraView?.enablePriceTagMode(apiKey, token)
+
+      coroutineScope.launchOnDefault {
+        try {
+          visionCameraView?.enablePriceTagMode(apiKey, token)
+        } catch (e: Exception) {
+          if (e is CancellationException) throw e
+
+          Log.d(TAG, "$e.message")
+
+          val event = Arguments.createMap().apply {
+            putString("message", e.message)
+          }
+          Log.d(TAG, "${event}")
+          appContext
+            .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
+            .emit("onError", event)
+
+        }
+      }
     }
-    visionCameraView?.setDetectionMode(detectionMode)
   }
 
   // React Native property to define the OCR mode, e.g., cloud or on-device

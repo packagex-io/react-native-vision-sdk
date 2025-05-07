@@ -28,7 +28,8 @@ export type ScanMode =
   | 'qrcode'
   | 'ocr'
   | 'photo'
-  | 'barCodeOrQRCode';
+  | 'barCodeOrQRCode'
+  | 'priceTag'
 
 /**
  * OCR modes supported by the Vision SDK.
@@ -1058,6 +1059,19 @@ export interface VisionSdkProps {
    * @return {void}
    */
   onImageCaptured?: (event: ImageCaptureEvent) => void;
+
+
+    /**
+   * @type {(event: any) => void}
+   * @param {any} event - Event triggered when a price tag is detected.
+   * @description Optional event handler that triggers when a price tag is detected.
+   * This callback receives the detected price tag details.
+   * @example
+   * onPriceTagDetected: (event) => console.log('Price Tag Detected:', event)
+   */
+    onPriceTagDetected?: (
+      event: any
+    ) => void;
 
   /**
    * @optional
