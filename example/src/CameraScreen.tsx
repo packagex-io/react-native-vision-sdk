@@ -17,7 +17,7 @@ import ResultViewOCR from './Components/ResultViewOCR';
 import { useFocusEffect } from '@react-navigation/native';
 
 
-const apiKey = "key_00203c5642F9SYnJkKyi9dRw1eeteeUwXhbEfGuPZ4NML8l2bAfysni4ZpcZEBKn0gnbcOZYwIaJnOyp"
+const apiKey = ""
 
 // Define interfaces for the state types
 interface DownloadingProgress {
