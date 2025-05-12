@@ -14,6 +14,8 @@ class RNCodeScannerView: UIView {
     @objc var onOCRScan: RCTDirectEventBlock?
     @objc var onDetected: RCTDirectEventBlock?
     @objc var onError: RCTDirectEventBlock?
+    @objc var onBoundingBoxesDetected: RCTDirectEventBlock?
+    @objc var onPriceTagDetected: RCTDirectEventBlock?
     @objc var onCreateTemplate: RCTDirectEventBlock?
     @objc var onGetTemplates: RCTDirectEventBlock?
     @objc var onDeleteTemplateById: RCTDirectEventBlock?
@@ -90,21 +92,25 @@ class RNCodeScannerView: UIView {
     // Open the template creation controller
     @available(iOS 15.0, *)
     @objc func createTemplate() {
-        let scanController = GenerateTemplateController.instantiate()
-        scanController.delegate = self
+      // Defer to the next run-loop on the main thread
+      DispatchQueue.main.asyncAfter(deadline: .now() + .milliseconds(25)) { [weak self] in
+          guard let self = self else { return }
 
-        if let sheet = scanController.sheetPresentationController {
-            sheet.prefersGrabberVisible = true
-        }
+          let scanController = GenerateTemplateController.instantiate()
+          scanController.delegate = self
 
-        // Find the parent UIViewController and present the scan controller
-        if let parentViewController = self.findViewController() {
-            parentViewController.present(scanController, animated: true) {
-            print("Template controller is now presented.")
-            }
-        } else {
-            print("No UIViewController found to present from.")
-        }
+          if let sheet = scanController.sheetPresentationController {
+              sheet.prefersGrabberVisible = true
+          }
+
+          if let parent = self.findViewController() {
+              parent.present(scanController, animated: true) {
+                  print("Template controller is now presented.")
+              }
+          } else {
+              print("❌ No UIViewController found to present from.")
+          }
+      }
     }
 
     // Fetch saved templates
@@ -204,6 +210,47 @@ extension RNCodeScannerView: CodeScannerViewDelegate {
             onDetected!(["text": text, "barcode": barCode, "qrcode": qrCode, "document": document])
         }
     }
+  
+    func dict(from rect: CGRect) -> [String: CGFloat] {
+      return [
+        "x":      rect.origin.x,
+        "y":      rect.origin.y,
+        "width":  rect.size.width,
+        "height": rect.size.height
+      ]
+    }
+
+    func codeScannerViewDidDetectBoxes(_ text: Bool, barCode: [CGRect], qrCode: [CGRect], document: CGRect) {
+      guard let callback = onBoundingBoxesDetected else { return }
+
+      // Helper to convert a single CGRect -> [String: CGFloat]
+
+
+      // Convert arrays of CGRects
+      let barcodeBoundingBoxes = barCode.map { dict(from: $0) }
+      let qrCodeBoundingBoxes  = qrCode.map { dict(from: $0) }
+      let documentBoundingBox  = dict(from: document)
+
+      callback([
+        "barcodeBoundingBoxes": barcodeBoundingBoxes,
+        "qrCodeBoundingBoxes":  qrCodeBoundingBoxes,
+        "documentBoundingBox":  documentBoundingBox
+      ])
+    }
+  
+  func codeScannerViewDidCapturePrice(_ price: String, withSKU sKU: String, withBoundingBox boundingBox: CGRect) -> Bool {
+    print("Price: \(price), SKU: \(sKU), Bounding Box: \(boundingBox)")
+    
+    if(onPriceTagDetected != nil){
+      onPriceTagDetected!([
+        "price": price,
+        "sku": sKU,
+        "boundingBox": dict(from: boundingBox)
+      ])
+    }
+    
+    return true
+  }
 
     func codeScannerView(_ scannerView: CodeScannerView, didCaptureOCRImage image: UIImage, withCroppedImge croppedImage: UIImage?, withbarCodes barcodes: [String]) {
 
@@ -952,42 +999,72 @@ extension RNCodeScannerView {
         self.locationId = locationId as String
     }
 
+  
     /// Sets the Camera Scanning Mode for the desired needs, i.e. what kind of scanning user needs.
     /// - Parameter mode: possible values
     ///  | ocr | Scans and Extract Label Information
     ///  | barcode | Scans only Barcode or QR codes and returns results
     ///  | photo | Captures only Photo and doesn't scans anything
-    @objc func setMode(_ mode: NSString) {
-
-        if codeScannerView == nil {
-            return
-        }
-
-        if mode.lowercased == "ocr" {
-            codeScannerView!.setScanModeTo(.ocr)
+  @objc public func setMode(_ mode: NSString) {
+      // 1️⃣ Early bail if we don’t have a scanner
+      guard let codeScannerView = codeScannerView else { return }
+      
+      // 2️⃣ Normalize
+      let lower = mode.lowercased
+      
+      // 3️⃣ Handle each mode
+      switch lower {
+        case "ocr":
+            codeScannerView.setScanModeTo(.ocr)
             scanMode = .ocr
-        }
-        else if mode.lowercased == "barcode" || mode == "barcodeSingleCapture" {
-            codeScannerView!.setScanModeTo(.barCode)
+            
+        case "barcode", "barcodesinglecapture":
+            codeScannerView.setScanModeTo(.barCode)
             scanMode = .barCode
-        }
-        else if mode.lowercased == "photo" {
-            codeScannerView!.setScanModeTo(.photo)
+            
+        case "photo":
+            codeScannerView.setScanModeTo(.photo)
             scanMode = .photo
-        }
-        else if mode.lowercased == "barcodeorqrcode" {
-            codeScannerView!.setScanModeTo(.autoBarCodeOrQRCode)
+            
+        case "barcodeorqrcode":
+            codeScannerView.setScanModeTo(.autoBarCodeOrQRCode)
             scanMode = .autoBarCodeOrQRCode
-        }
-        else if mode.lowercased == "qrcode" {
-            codeScannerView!.setScanModeTo(.qrCode)
+            
+        case "qrcode":
+            codeScannerView.setScanModeTo(.qrCode)
             scanMode = .qrCode
-        }
-        else {
-            codeScannerView!.setScanModeTo(.barCode)
+            
+        case "pricetag":
+            // Spawn an async context for the network/auth call
+            Task { [weak self] in
+                guard let self = self else { return }
+              let err = await VisionAPIManager.shared
+                .checkScanningFeatureAuthenticationWithKey(VSDKConstants.apiKey, andToken: (self.token ?? "").isEmpty ? nil : self.token)
+                
+                // UI updates must happen on the main actor
+                await MainActor.run {
+                    if err == nil {
+                        codeScannerView.setScanModeTo(.priceTag)
+                        self.scanMode = .priceTag
+                      let settings = VisionSDK.CodeScannerView.PriceTagDetectionSettings()
+                      settings.shouldDisplayOnScreenIndicators = false
+                      codeScannerView.setPriceTagDetectionSettingsTo(settings)
+                      
+                    } else {
+                        print("❌ AUTH FAILED: \(err!.localizedDescription)")
+                      self.onError?([
+                                "message": err!.localizedDescription
+                              ])
+                    }
+                }
+            }
+            
+        default:
+            codeScannerView.setScanModeTo(.barCode)
             scanMode = .barCode
-        }
-    }
+      }
+  }
+
 
     /// Sets the Camera Capture mode for the user desired setting.
     /// - Parameter captureMode: possible values

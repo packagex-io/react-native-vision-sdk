@@ -28,7 +28,8 @@ export type ScanMode =
   | 'qrcode'
   | 'ocr'
   | 'photo'
-  | 'barCodeOrQRCode';
+  | 'barCodeOrQRCode'
+  | 'priceTag'
 
 /**
  * OCR modes supported by the Vision SDK.
@@ -335,6 +336,28 @@ export interface VisionSdkViewProps {
     event: DetectionResult | { nativeEvent: DetectionResult }
   ) => void;
 
+
+  /**
+ * @type {(event: BoundingBoxesDetectedResult  }) => void}
+ * @param {BoundingBoxesDetectedResult  }} event Bounding boxes detection results.
+ * Optional event handler for detection results.
+ */
+  onBoundingBoxesDetected?: (
+    event: BoundingBoxesDetectedResult
+  ) => void;
+
+
+  /**
+* @type {(event: PriceTagDetectionResult  }) => void}
+* @param {PriceTagDetectionResult  }} event Price tag detection result.
+* Optional event handler for price tag detection results.
+*/
+  onPriceTagDetected?: (
+    event: PriceTagDetectionResult
+  ) => void;
+
+
+
   /**
    * @type {(event: ErrorResult | { nativeEvent: ErrorResult }) => void}
    * @param {ErrorResult | { nativeEvent: ErrorResult }} event Error details.
@@ -473,6 +496,25 @@ export interface ErrorResult {
    * @example 'Failed to initialize the Vision SDK.'
    */
   message: string;
+}
+
+export interface BoundingBox {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+export interface BoundingBoxesDetectedResult {
+  barcodeBoundingBoxes: Array<BoundingBox>;
+  qrCodeBoundingBoxes: Array<BoundingBox>;
+  documentBoundingBox: BoundingBox;
+}
+
+export interface PriceTagDetectionResult {
+  price: String;
+  sku: String;
+  boundingBox: BoundingBox
 }
 
 /**
@@ -811,7 +853,7 @@ export interface VisionSdkRefProps {
    * visionSdkRef.current.deleteAllTemplates();
    * @return {void}
    */
-  deleteAllTemplates: (id: string) => void;
+  deleteAllTemplates: () => void;
 
   /**
    * Sets the focus settings for the Vision SDK.
@@ -1036,6 +1078,19 @@ export interface VisionSdkProps {
    */
   onImageCaptured?: (event: ImageCaptureEvent) => void;
 
+
+  /**
+ * @type {(event: any) => void}
+ * @param {PriceTagDetectionResult} event - Event triggered when a price tag is detected.
+ * @description Optional event handler that triggers when a price tag is detected.
+ * This callback receives the detected price tag details.
+ * @example
+ * onPriceTagDetected: (event) => console.log('Price Tag Detected:', event)
+ */
+  onPriceTagDetected?: (
+    event: PriceTagDetectionResult
+  ) => void;
+
   /**
    * @optional
    * @param {OCRScanResult} event
@@ -1107,6 +1162,18 @@ export interface VisionSdkProps {
    */
   onDetected?: (event: DetectionResult) => void;
 
+
+  /**
+   * @optional
+   * @param {BoundingBoxesDetectedResult} event
+   * @type {(event: BoundingBoxesDetectedResult) => void | undefined}
+   * @description Event handler for getting bounding boxes coordinates on screen for (barcode, qrCode, logistics document).
+   * This callback is triggered when the presence of barcode/qrcode/logistic document is detected on screen.
+   * @example (event) => console.log(event)
+   * @return {void}
+   */
+  onBoundingBoxesDetected?: (event: BoundingBoxesDetectedResult) => void;
+
   /**
    * @optional
    * @param {ErrorResult} event
@@ -1117,4 +1184,6 @@ export interface VisionSdkProps {
    * @return {void}
    */
   onError?: (event: ErrorResult) => void;
+
+
 }

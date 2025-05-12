@@ -1,10 +1,12 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { View, StyleSheet, Platform, Alert, Vibration, useWindowDimensions } from 'react-native';
+import { StyleSheet, Platform, Alert, Vibration, useWindowDimensions, Text, View } from 'react-native';
+// import { GestureHandlerRootView } from 'react-native-gesture-handler'
 import VisionSdkView, {
   VisionSdkRefProps,
   ModuleType,
   ModuleSize,
   OCRConfig,
+  BoundingBoxesDetectedResult
 } from '../../src/index';
 import CameraFooterView from './Components/CameraFooterView';
 import DownloadingProgressView from './Components/DownloadingProgressView';
@@ -13,6 +15,7 @@ import LoaderView from './Components/LoaderView';
 import { PERMISSIONS, RESULTS, request } from 'react-native-permissions';
 import ResultViewOCR from './Components/ResultViewOCR';
 import { useFocusEffect } from '@react-navigation/native';
+
 
 const apiKey = ""
 
@@ -51,9 +54,44 @@ interface DetectedDataProps {
   document: boolean;
 }
 
+
 const App: React.FC<{ route: any }> = ({ route }) => {
   const visionSdk = useRef<VisionSdkRefProps>(null);
   const [captureMode, setCaptureMode] = useState<'manual' | 'auto'>('manual');
+  const timeoutRef = useRef<any>(null)
+  const [detectionSettings, setDetectionSettings] = useState({
+    isTextIndicationOn: true,
+    isBarCodeOrQRCodeIndicationOn: true,
+    isDocumentIndicationOn: true,
+    codeDetectionConfidence: 0.5,
+    documentDetectionConfidence: 0.5,
+    secondsToWaitBeforeDocumentCapture: 2.0,
+    selectedTemplate: ''
+  })
+  const [detectedBoundingBoxes, setDetectedBoundingBoxes] = useState<BoundingBoxesDetectedResult>({
+    barcodeBoundingBoxes: [],
+    qrCodeBoundingBoxes: [],
+    documentBoundingBox: {
+      x: 0,
+      y: 0,
+      width: 0,
+      height: 0
+    }
+  })
+
+  const [detectedPriceTag, setDetectedPriceTag] = useState({
+    price: "",
+    sku: "",
+    boundingBox: {
+      x: 0,
+      y: 0,
+      width: 0,
+      height: 0
+    }
+  })
+
+  const [isPriceTagBoundingBoxVisible, setIsPriceTagBoundingBoxVisible] = useState(false)
+
   const [shouldResizeImage, setShouldResizeImage] = useState(false)
   const [ocrConfig, setOcrConfig] = useState<OCRConfig>({
     mode: route.params?.modelType ? 'on-device' : 'cloud',
@@ -62,11 +100,14 @@ const App: React.FC<{ route: any }> = ({ route }) => {
   });
   const [loading, setLoading] = useState<boolean>(false);
   const [result, setResult] = useState<any>(null);
-  const [mode, setMode] = useState<'barcode' | 'qrcode' | 'ocr' | 'photo'>(
+  const [mode, setMode] = useState<'barcode' | 'qrcode' | 'ocr' | 'photo' | 'barCodeOrQRCode'>(
     route?.params?.mode || 'barcode'
   );
+
   const [flash, setFlash] = useState<boolean>(false);
   const [zoomLevel, setZoomLevel] = useState<number>(1.8);
+  const [availableTemplates, setAvailableTemplates] = useState([])
+  const [selectedTemplate, setSelectedTemplate] = useState({})
   const [detectedData, setDetectedData] = useState<DetectedDataProps>({
     barcode: false,
     qrcode: false,
@@ -75,10 +116,10 @@ const App: React.FC<{ route: any }> = ({ route }) => {
   });
 
   const { width: screenWidth, height: screenHeight } = useWindowDimensions()
-const scannerWidth = screenWidth * 0.8;
-const scannerHeight = 160;
-const scannerX = (screenWidth - scannerWidth) / 2;
-const scannerY = (screenHeight - scannerHeight) / 2;
+  const scannerWidth = screenWidth * 0.8;
+  const scannerHeight = 160;
+  const scannerX = (screenWidth - scannerWidth) / 2;
+  const scannerY = (screenHeight - scannerHeight) / 2;
 
   const [modelDownloadingProgress, setModelDownloadingProgress] =
     useState<DownloadingProgress>({
@@ -103,7 +144,7 @@ const scannerY = (screenHeight - scannerHeight) / 2;
       const focusSettings = {
         shouldDisplayFocusImage: true,
         shouldScanInFocusImageRect: true,
-        showCodeBoundariesInMultipleScan: true,
+        showCodeBoundariesInMultipleScan: false,
         validCodeBoundaryBorderColor: '#2abd51',
         validCodeBoundaryBorderWidth: 2,
         validCodeBoundaryFillColor: '#2abd51',
@@ -119,20 +160,16 @@ const scannerY = (screenHeight - scannerHeight) / 2;
 
       }
       visionSdk?.current?.setFocusSettings(focusSettings);
-      visionSdk?.current?.setObjectDetectionSettings({
-        isTextIndicationOn: true,
-        isBarCodeOrQRCodeIndicationOn: true,
-        isDocumentIndicationOn: true,
-        codeDetectionConfidence: 0.5,
-        documentDetectionConfidence: 0.5,
-        secondsToWaitBeforeDocumentCapture: 2.0,
-      });
+      // console.log("SETTING DETECTION SETTING TO: ", detectionSettings)
+      visionSdk?.current?.setObjectDetectionSettings(detectionSettings);
       visionSdk?.current?.setCameraSettings({
         nthFrameToProcess: 10,
       });
 
       setTimeout(() => {
         visionSdk?.current?.startRunningHandler();
+        console.log("GETTING ALL TEMPLATES")
+        visionSdk?.current?.getAllTemplates()
       }, 0)
 
       setLoading(false);
@@ -145,6 +182,9 @@ const scannerY = (screenHeight - scannerHeight) / 2;
     requestCameraPermission()
     return () => {
       visionSdk?.current?.stopRunningHandler();
+      if(timeoutRef.current){
+        clearTimeout(timeoutRef.current)
+      }
     }
   }, []))
 
@@ -161,10 +201,31 @@ const scannerY = (screenHeight - scannerHeight) / 2;
     }
   }, [ocrConfig])
 
+  useEffect(() => {
+    let updatedDetectionSettings = detectionSettings
+    if (selectedTemplate?.name) {
+      updatedDetectionSettings = {
+        ...detectionSettings,
+        selectedTemplateId: selectedTemplate.name
+      }
+    } else {
+      const { selectedTemplateId, ...rest } = detectionSettings
+      updatedDetectionSettings = rest
+    }
+    setDetectionSettings(updatedDetectionSettings)
+  }, [selectedTemplate])
+
+  useEffect(() => {
+    visionSdk.current?.setObjectDetectionSettings(detectionSettings);
+  }, [detectionSettings])
+
   // Capture photo when the button is pressed
   const handlePressCapture = useCallback(() => {
     visionSdk?.current?.cameraCaptureHandler();
   }, [])
+
+
+
 
 
   const testReportError = (type: String) => {
@@ -291,14 +352,14 @@ const scannerY = (screenHeight - scannerHeight) / 2;
     setDetectedData(event);
   }, [])
 
-  const handleBarcodeScan = (event) => {
+  const handleBarcodeScan = useCallback( (event) => {
     console.log("=======================")
     console.log('onBarcodeScan', JSON.stringify(event));
     console.log("=======================")
     setLoading(false);
 
     visionSdk.current?.restartScanningHandler();
-  }
+  }, [])
 
   const handleOcrScan = useCallback((event) => {
     setLoading(false);
@@ -309,16 +370,7 @@ const scannerY = (screenHeight - scannerHeight) / 2;
   }, [])
 
   const handleImageCaptured = useCallback((event) => {
-
     console.log('onImageCaptured', event);
-    // console.log("CALLING GET PREDICTION shiping label ")
-    // visionSdk.current?.getPredictionShippingLabelCloud(event.image, event.barcodes, "", apiKey)
-    // visionSdk.current?.getPredictionBillOfLadingCloud(event.image,event.barcodes,"",apiKey)
-    // visionSdk?.current?.getPredictionItemLabelCloud(event.image, "", apiKey)
-    // visionSdk?.current?.getPredictionDocumentClassificationCloud(event.image, "", apiKey)
-    // visionSdk.current?.getPredictionWithCloudTransformations(event.image, event.barcodes, "", apiKey)
-    // console.log("TESTING REPORT ERROR")
-    // testReportError('shipping_label')
     visionSdk.current?.restartScanningHandler();
   }, [])
 
@@ -339,6 +391,70 @@ const scannerY = (screenHeight - scannerHeight) / 2;
     setOcrConfig(ocrConfig);
   }, [])
 
+  const handleCreateTemplate = useCallback((event) => {
+    console.log("HANDLE CREATE TEMPLATE: ", JSON.stringify(event))
+    const templates = [...availableTemplates, { name: event.data }]
+    const uniqueTemplates = [...new Map(templates.map(item => [item.name, item])).values()]
+    setAvailableTemplates(uniqueTemplates)
+
+  }, [availableTemplates])
+
+  const onDeleteTemplateById = (event) => {
+    console.log("ON DELETE TEMPLATE BY ID: ", JSON.stringify(event))
+    const updatedTemplates = availableTemplates.filter((item) => item.name !== event.data)
+    setAvailableTemplates(updatedTemplates)
+    // visionSdk.current?.stopRunningHandler()
+    // visionSdk.current?.startRunningHandler()
+  }
+
+
+  const onDeleteAllTemplates = (event) => {
+
+    setSelectedTemplate({})
+    setAvailableTemplates([])
+  }
+
+  const handleGetTemplates = useCallback((args) => {
+    setAvailableTemplates(args?.data?.map(item => ({ name: item })))
+  }, [])
+
+  const handlePressCreateTemplate = () => {
+
+    visionSdk.current?.createTemplate()
+
+  }
+
+  const handlePressDeleteTemplateById = (templateId) => {
+    visionSdk?.current?.deleteTemplateWithId(templateId)
+  }
+
+  const handlePressDeleteAllTemplates = () => {
+    visionSdk?.current?.deleteAllTemplates()
+  }
+
+  const handleBoundingBoxesDetected = (args) => {
+    // console.log("BOUNDING BOXES DETECTED: ", args)
+    setDetectedBoundingBoxes(args)
+  }
+
+  const handlePriceTagDetected = useCallback((args) => {
+    setDetectedPriceTag({
+      price: args.price,
+      sku: args.sku,
+      boundingBox: args.boundingBox
+    })
+
+    setIsPriceTagBoundingBoxVisible(true)
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current)
+    }
+    timeoutRef.current = setTimeout(() => {
+      setIsPriceTagBoundingBoxVisible(false)
+      timeoutRef.current = null
+    }, 1500)
+
+  }, [])
+
 
   return (
     <View style={styles.mainContainer}>
@@ -349,7 +465,7 @@ const scannerY = (screenHeight - scannerHeight) / 2;
         ocrType={ocrConfig.type}
         shouldResizeImage={shouldResizeImage}
         captureMode={captureMode}
-        isMultipleScanEnabled={false}
+        isMultipleScanEnabled={true}
         mode={mode}
         options={{}}
         isEnableAutoOcrResponseWithImage={true}
@@ -360,10 +476,15 @@ const scannerY = (screenHeight - scannerHeight) / 2;
         zoomLevel={zoomLevel}
         onDetected={handleDetected}
         onBarcodeScan={handleBarcodeScan}
-        onCreateTemplate={(event) => console.log(event)}
+        onCreateTemplate={handleCreateTemplate}
+        onDeleteTemplateById={onDeleteTemplateById}
+        onDeleteTemplates={onDeleteAllTemplates}
         onOCRScan={handleOcrScan}
         onImageCaptured={handleImageCaptured}
         onModelDownloadProgress={handleModelDownloadProgress}
+        onGetTemplates={handleGetTemplates}
+        onBoundingBoxesDetected={handleBoundingBoxesDetected}
+        onPriceTagDetected={handlePriceTagDetected}
         onError={handleError}
       />
       {['ocr', 'photo'].includes(mode) ? (
@@ -383,6 +504,12 @@ const scannerY = (screenHeight - scannerHeight) / 2;
         toggleFlash={toggleFlash}
         mode={mode}
         setMode={setMode}
+        templates={availableTemplates}
+        selectedTemplate={selectedTemplate}
+        setSelectedTemplate={setSelectedTemplate}
+        onPressCreateTemplate={handlePressCreateTemplate}
+        onPressDeleteTemplateById={handlePressDeleteTemplateById}
+        onPressDeleteAllTemplates={handlePressDeleteAllTemplates}
       />
       <DownloadingProgressView
         visible={loading && !modelDownloadingProgress.isReady}
@@ -399,12 +526,69 @@ const scannerY = (screenHeight - scannerHeight) / 2;
         zoomLevel={zoomLevel}
         setZoomLevel={setZoomLevel}
       />
+      { ['barcode', 'barCodeOrQRCode'].includes(mode) &&  detectedBoundingBoxes.barcodeBoundingBoxes?.length > 0 ?
+        <>
+          {detectedBoundingBoxes.barcodeBoundingBoxes.map((item, index) => (
+            <View
+              key={index}
+              style={{
+                position: 'absolute',
+                left: item.x,
+                top: item.y,
+                width: item.width,
+                height: item.height,
+                borderColor: '#00ff00',
+                borderWidth: 2,
+              }}
+            />
+          ))}
+        </> : null}
+
+      {['qrcode', 'barCodeOrQRCode'].includes(mode) &&  detectedBoundingBoxes.qrCodeBoundingBoxes?.length > 0 ?
+        <>
+          {detectedBoundingBoxes.qrCodeBoundingBoxes.map((item, index) => (
+            <View
+              key={index}
+              style={{
+                position: 'absolute',
+                left: item.x,
+                top: item.y,
+                width: item.width,
+                height: item.height,
+                borderColor: '#00ff00',
+                borderWidth: 2,
+              }}
+            />
+          ))}
+        </> : null}
+
+
+      {isPriceTagBoundingBoxVisible && detectedPriceTag.boundingBox.width > 0 ?
+        <>
+
+          <View
+
+            style={{
+              position: 'absolute',
+              left: detectedPriceTag.boundingBox.x,
+              top: detectedPriceTag.boundingBox.y,
+              width: detectedPriceTag.boundingBox.width,
+              height: detectedPriceTag.boundingBox.height,
+              borderColor: 'green',
+              borderWidth: 2,
+            }}
+          />
+
+        </> : null}
+
+
     </View>
   );
 };
 const styles = StyleSheet.create({
   mainContainer: {
     flex: 1,
+    position: 'relative'
   },
 });
 export default App;
