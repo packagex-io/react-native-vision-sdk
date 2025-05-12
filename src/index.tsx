@@ -24,6 +24,7 @@ import {
   ErrorResult,
   ReportErrorType,
   BoundingBoxesDetectedResult,
+  PriceTagDetectionResult,
 } from './types';
 
 export * from './types';
@@ -428,7 +429,7 @@ const Camera = forwardRef<VisionSdkRefProps, VisionSdkProps>(
         ['onModelDownloadProgress', (event: any) => eventHandlersRef.current.onModelDownloadProgress(event)],
         ['onBarcodeScan', (event: any) => eventHandlersRef.current.onBarcodeScan(event)],
         ['onImageCaptured', (event: any) => eventHandlersRef.current.onImageCaptured(event)],
-        ['onPriceTagDetected', (event: any) => eventHandlersRef.current.onPriceTagDetected(event)],
+        ['onPriceTagDetected', (event: PriceTagDetectionResult) => eventHandlersRef.current.onPriceTagDetected(event)],
         ['onOCRScan', (event: any) => eventHandlersRef.current.onOCRScan(event)],
         ['onDetected', (event: any) => eventHandlersRef.current.onDetected(event)],
         ['onBoundingBoxesDetected', (event: BoundingBoxesDetectedResult) => eventHandlersRef.current.onBoundingBoxesDetected(event)],

@@ -337,14 +337,26 @@ export interface VisionSdkViewProps {
   ) => void;
 
 
-    /**
-   * @type {(event: BoundingBoxesDetectedResult  }) => void}
-   * @param {BoundingBoxesDetectedResult  }} event Bounding boxes detection results.
-   * Optional event handler for detection results.
-   */
-    onBoundingBoxesDetected?: (
-      event: BoundingBoxesDetectedResult
-    ) => void;
+  /**
+ * @type {(event: BoundingBoxesDetectedResult  }) => void}
+ * @param {BoundingBoxesDetectedResult  }} event Bounding boxes detection results.
+ * Optional event handler for detection results.
+ */
+  onBoundingBoxesDetected?: (
+    event: BoundingBoxesDetectedResult
+  ) => void;
+
+
+  /**
+* @type {(event: PriceTagDetectionResult  }) => void}
+* @param {PriceTagDetectionResult  }} event Price tag detection result.
+* Optional event handler for price tag detection results.
+*/
+  onPriceTagDetected?: (
+    event: PriceTagDetectionResult
+  ) => void;
+
+
 
   /**
    * @type {(event: ErrorResult | { nativeEvent: ErrorResult }) => void}
@@ -497,6 +509,12 @@ export interface BoundingBoxesDetectedResult {
   barcodeBoundingBoxes: Array<BoundingBox>;
   qrCodeBoundingBoxes: Array<BoundingBox>;
   documentBoundingBox: BoundingBox;
+}
+
+export interface PriceTagDetectionResult {
+  price: String;
+  sku: String;
+  boundingBox: BoundingBox
 }
 
 /**
@@ -1061,17 +1079,17 @@ export interface VisionSdkProps {
   onImageCaptured?: (event: ImageCaptureEvent) => void;
 
 
-    /**
-   * @type {(event: any) => void}
-   * @param {any} event - Event triggered when a price tag is detected.
-   * @description Optional event handler that triggers when a price tag is detected.
-   * This callback receives the detected price tag details.
-   * @example
-   * onPriceTagDetected: (event) => console.log('Price Tag Detected:', event)
-   */
-    onPriceTagDetected?: (
-      event: any
-    ) => void;
+  /**
+ * @type {(event: any) => void}
+ * @param {PriceTagDetectionResult} event - Event triggered when a price tag is detected.
+ * @description Optional event handler that triggers when a price tag is detected.
+ * This callback receives the detected price tag details.
+ * @example
+ * onPriceTagDetected: (event) => console.log('Price Tag Detected:', event)
+ */
+  onPriceTagDetected?: (
+    event: PriceTagDetectionResult
+  ) => void;
 
   /**
    * @optional
