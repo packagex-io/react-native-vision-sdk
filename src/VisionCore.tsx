@@ -44,7 +44,64 @@ export const VisionCore = {
     return eventEmitter.addListener("onModelDownloadProgress", (event) => {
       callback(event.progress, event.downloadStatus, event.isReady);
     });
+  },
+
+  logItemLabelDataToPx: async (
+    imageUri: string,
+    barcodes: string[],
+    responseData: any,
+    token: string | null,
+    apiKey: string | null,
+    shouldResizeImage: boolean = true
+  ) => {
+    try {
+      const r = await VisionSdkModule.logItemLabelDataToPx(
+        imageUri,
+        barcodes,
+        responseData,
+        token,
+        apiKey,
+        shouldResizeImage
+      );
+      return r
+    } catch (error) {
+      throw error
+    }
+  },
+
+  logShippingLabelDataToPx: async (
+    imageUri: string,
+    barcodes: string[],
+    responseData: any,
+    token: string | null,
+    apiKey: string | null,
+    locationId: string | null,
+    options: {[key: string]: any} | null,
+    metadata: {[key: string]: any} | null,
+    recipient: {[key: string]: any} | null,
+    sender: {[key: string]: any} | null,
+    shouldResizeImage: boolean = true
+  ) => {
+
+    try {
+      const r = await VisionSdkModule.logShippingLabelDataToPx(
+        imageUri,
+        barcodes,
+        responseData,
+        token,
+        apiKey,
+        locationId,
+        options,
+        metadata,
+        recipient,
+        sender,
+        shouldResizeImage
+      )
+
+      return r
+    } catch(err){
+      throw err
+    }
+
   }
 }
-
-// export default VisionSdk
