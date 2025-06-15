@@ -977,7 +977,7 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
     lifecycleOwner?.lifecycle?.coroutineScope?.launchOnIO {
       try {
         val onDeviceResponse = getOnDeviceOCRResponse(bitmap, list) ?: return@launchOnIO
-        val result = ApiManager().matchingApiSync(
+        val result = ApiManager().shippingLabelMatchingApiSync(
           apiKey = resolvedApiKey,
           token = resolvedToken,
           bitmap = bitmap,
@@ -1672,7 +1672,7 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
   }
 
   // Processes the OCR response, formats it, and sends it as a JavaScript event to React Native
-  override fun onOCRResponse(response: String?) {
+  override fun onOCRResponse(response: String) {
     Log.d(TAG, "api responded with  ${response}")
     val event = Arguments.createMap().apply {
       putString("data", JSONObject(response).toString())

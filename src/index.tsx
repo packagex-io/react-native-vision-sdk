@@ -10,7 +10,7 @@ import {
   findNodeHandle,
   StyleSheet,
   DeviceEventEmitter,
-  Platform,
+  Platform
 } from 'react-native';
 import { VisionSdkView } from './VisionSdkViewManager';
 import {
@@ -29,6 +29,7 @@ import {
 
 export * from './types';
 export * from './VisionCore';
+
 
 // Camera component
 const Camera = forwardRef<VisionSdkRefProps, VisionSdkProps>(
