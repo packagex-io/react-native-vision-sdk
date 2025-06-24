@@ -23,6 +23,9 @@
     "react-native-svg": "^15.11.1",
     "react-native-vector-icons": "^10.2.0"
   },
+  "resolutions": {
+    "brace-expansion": "^1.1.12"
+  },
   "devDependencies": {
     "@babel/core": "^7.25.2",
     "@babel/runtime": "^7.26.10",
