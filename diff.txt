@@ -1,0 +1,317 @@
+diff --git a/android/src/main/java/com/visionsdk/VisionSdkViewManager.kt b/android/src/main/java/com/visionsdk/VisionSdkViewManager.kt
+index 41329ac..85e35a2 100644
+--- a/android/src/main/java/com/visionsdk/VisionSdkViewManager.kt
++++ b/android/src/main/java/com/visionsdk/VisionSdkViewManager.kt
+@@ -63,6 +63,7 @@ import com.visionsdk.utils.EventUtils
+ import io.packagex.visionsdk.core.TemplateManager
+ import io.packagex.visionsdk.core.pricetag.PriceTagData
+ import io.packagex.visionsdk.dto.ScannedCodeResult
++import io.packagex.visionsdk.ocr.ml.core.enums.ExecutionProvider
+ import io.packagex.visionsdk.ocr.ml.core.enums.OCRModule
+ import io.packagex.visionsdk.service.dto.BOLModelToReport
+ import io.packagex.visionsdk.service.dto.DCModelToReport
+@@ -115,6 +116,8 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
+ 
+   private var flash: Boolean = false // Boolean flag to enable or disable the flash
+ 
++  private var executionProvider: ExecutionProvider = ExecutionProvider.NNAPI
++
+   private var isMultipleScanEnabled: Boolean = false //  Boolean isMultipleScanEnabled to enable or disable the isMultipleScanEnabled
+ 
+   private var isEnableAutoOcrResponseWithImage : Boolean? = false //  Boolean isMultipleScanEnabled to enable or disable the isMultipleScanEnable
+@@ -1192,12 +1195,14 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
+ 
+     val onDeviceOCRManager = OnDeviceOCRManagerSingleton.getInstance(context!!, modelType)
+ 
++    val modelExecutionProvider = this.executionProvider
++    Log.d(TAG, "model execution provider: ${modelExecutionProvider}")
+     // Configure the OCR manager asynchronously, with download progress tracking
+     lifecycleOwner?.lifecycle?.coroutineScope?.launchOnIO {
+       try {
+         if (!OnDeviceOCRManagerSingleton.isModelConfigured(modelType)) {
+           var lastProgress = 0.00
+-          onDeviceOCRManager?.configure(resolvedApiKey, resolvedToken) {
++          onDeviceOCRManager?.configure(resolvedApiKey, resolvedToken, modelExecutionProvider) {
+             val progressInt = (it).toDecimalPoints(2).toDouble()
+             if (progressInt != lastProgress) {
+               lastProgress = progressInt
+@@ -1522,6 +1527,22 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
+     this.visionCameraView?.setFlashTurnedOn(flash)
+   }
+ 
++  @ReactProp(name = "modelExecutionProviderAndroid")
++  fun setModelExecutionProviderAndroid(view: View, modelExecutionProviderAndroid: String = "NNAPI"){
++    Log.d(TAG, "SETTING EXECTION PROVIFER TO: $modelExecutionProviderAndroid")
++    if(modelExecutionProviderAndroid == "CPU"){
++      this.executionProvider = ExecutionProvider.CPU
++    } else if (modelExecutionProviderAndroid == "NNAPI") {
++      this.executionProvider = ExecutionProvider.NNAPI
++    } else if (modelExecutionProviderAndroid == "XNNPACK"){
++      this.executionProvider = ExecutionProvider.XNNPACK
++    } else {
++      this.executionProvider = ExecutionProvider.NNAPI
++    }
++
++    Log.d(TAG, "SET EXECUTION PROVIDER TO : ${executionProvider}")
++  }
++
+   @ReactProp(name = "shouldResizeImage")
+   fun setShouldResizeImage(view: View, shouldResizeImage: Boolean = true){
+     Log.d(TAG, "should resize image: $shouldResizeImage")
+diff --git a/example/src/CameraScreen.tsx b/example/src/CameraScreen.tsx
+index 25d58b8..59511a4 100644
+--- a/example/src/CameraScreen.tsx
++++ b/example/src/CameraScreen.tsx
+@@ -1,12 +1,13 @@
+ import React, { useCallback, useEffect, useRef, useState } from 'react';
+-import { StyleSheet, Platform, Alert, Vibration, useWindowDimensions, Text, View } from 'react-native';
++import { StyleSheet, Platform, Alert, Vibration, useWindowDimensions, Text, View, Image } from 'react-native';
+ // import { GestureHandlerRootView } from 'react-native-gesture-handler'
+ import VisionSdkView, {
+   VisionSdkRefProps,
+   ModuleType,
+   ModuleSize,
+   OCRConfig,
+-  BoundingBoxesDetectedResult
++  BoundingBoxesDetectedResult,
++  VisionCore
+ } from '../../src/index';
+ import CameraFooterView from './Components/CameraFooterView';
+ import DownloadingProgressView from './Components/DownloadingProgressView';
+@@ -168,7 +169,6 @@ const App: React.FC<{ route: any }> = ({ route }) => {
+ 
+       setTimeout(() => {
+         visionSdk?.current?.startRunningHandler();
+-        console.log("GETTING ALL TEMPLATES")
+         visionSdk?.current?.getAllTemplates()
+       }, 0)
+ 
+@@ -182,7 +182,7 @@ const App: React.FC<{ route: any }> = ({ route }) => {
+     requestCameraPermission()
+     return () => {
+       visionSdk?.current?.stopRunningHandler();
+-      if(timeoutRef.current){
++      if (timeoutRef.current) {
+         clearTimeout(timeoutRef.current)
+       }
+     }
+@@ -352,15 +352,54 @@ const App: React.FC<{ route: any }> = ({ route }) => {
+     setDetectedData(event);
+   }, [])
+ 
+-  const handleBarcodeScan = useCallback( (event) => {
+-    console.log("=======================")
+-    console.log('onBarcodeScan', JSON.stringify(event));
+-    console.log("=======================")
++  const handleBarcodeScan = useCallback((event) => {
+     setLoading(false);
+ 
+     visionSdk.current?.restartScanningHandler();
+   }, [])
+ 
++
++  const syncSLpx = async (ocrEvent) => {
++    try {
++      VisionCore.setEnvironment("staging")
++      const r = await VisionCore.logShippingLabelDataToPx(
++        Platform.OS === 'android' ? `file://${ocrEvent.imagePath}` : ocrEvent.imagePath,
++        ocrEvent?.data?.barcode_values || [],
++        { data: ocrEvent.data },
++        null,
++        apiKey,
++        null,
++        null,
++        null,
++        null,
++        null,
++        true
++      )
++
++      console.log("SYNC SL PX SUCCESSFUL: ", r)
++    } catch (err) {
++      console.log("AN ERROR OCCURED: [SYNC SL PX]", err.message)
++    }
++  }
++
++  const syncILpx = async (ocrEvent) => {
++    try {
++      VisionCore.setEnvironment("staging")
++      const r = await VisionCore.logItemLabelDataToPx(
++        Platform.OS === 'android' ? `file://${ocrEvent.imagePath}` : ocrEvent.imagePath,
++        ocrEvent.data.inference.barcode_values || [],
++        { data: ocrEvent.data },
++        null,
++        apiKey,
++        true
++      )
++
++      console.log("IL SYNC SUCCESSFUL: ", r)
++    } catch (err) {
++      console.log("AN ERROR OCCURED IL SYNC: ", err.message)
++    }
++  }
++
+   const handleOcrScan = useCallback((event) => {
+     setLoading(false);
+     setResult(event.data);
+@@ -370,7 +409,6 @@ const App: React.FC<{ route: any }> = ({ route }) => {
+   }, [])
+ 
+   const handleImageCaptured = useCallback((event) => {
+-    console.log('onImageCaptured', event);
+     visionSdk.current?.restartScanningHandler();
+   }, [])
+ 
+@@ -392,7 +430,6 @@ const App: React.FC<{ route: any }> = ({ route }) => {
+   }, [])
+ 
+   const handleCreateTemplate = useCallback((event) => {
+-    console.log("HANDLE CREATE TEMPLATE: ", JSON.stringify(event))
+     const templates = [...availableTemplates, { name: event.data }]
+     const uniqueTemplates = [...new Map(templates.map(item => [item.name, item])).values()]
+     setAvailableTemplates(uniqueTemplates)
+@@ -400,7 +437,6 @@ const App: React.FC<{ route: any }> = ({ route }) => {
+   }, [availableTemplates])
+ 
+   const onDeleteTemplateById = (event) => {
+-    console.log("ON DELETE TEMPLATE BY ID: ", JSON.stringify(event))
+     const updatedTemplates = availableTemplates.filter((item) => item.name !== event.data)
+     setAvailableTemplates(updatedTemplates)
+     // visionSdk.current?.stopRunningHandler()
+@@ -474,6 +510,7 @@ const App: React.FC<{ route: any }> = ({ route }) => {
+         apiKey={apiKey}
+         flash={flash}
+         zoomLevel={zoomLevel}
++        modelExecutionProviderAndroid='CPU'
+         onDetected={handleDetected}
+         onBarcodeScan={handleBarcodeScan}
+         onCreateTemplate={handleCreateTemplate}
+@@ -526,7 +563,7 @@ const App: React.FC<{ route: any }> = ({ route }) => {
+         zoomLevel={zoomLevel}
+         setZoomLevel={setZoomLevel}
+       />
+-      { ['barcode', 'barCodeOrQRCode'].includes(mode) &&  detectedBoundingBoxes.barcodeBoundingBoxes?.length > 0 ?
++      {['barcode', 'barCodeOrQRCode'].includes(mode) && detectedBoundingBoxes.barcodeBoundingBoxes?.length > 0 ?
+         <>
+           {detectedBoundingBoxes.barcodeBoundingBoxes.map((item, index) => (
+             <View
+@@ -544,7 +581,7 @@ const App: React.FC<{ route: any }> = ({ route }) => {
+           ))}
+         </> : null}
+ 
+-      {['qrcode', 'barCodeOrQRCode'].includes(mode) &&  detectedBoundingBoxes.qrCodeBoundingBoxes?.length > 0 ?
++      {['qrcode', 'barCodeOrQRCode'].includes(mode) && detectedBoundingBoxes.qrCodeBoundingBoxes?.length > 0 ?
+         <>
+           {detectedBoundingBoxes.qrCodeBoundingBoxes.map((item, index) => (
+             <View
+diff --git a/src/index.tsx b/src/index.tsx
+index 949ce4f..461cfd6 100644
+--- a/src/index.tsx
++++ b/src/index.tsx
+@@ -26,6 +26,7 @@ import {
+   BoundingBoxesDetectedResult,
+   PriceTagDetectionResult,
+ } from './types';
++import { correctOcrEvent } from './utils';
+ 
+ export * from './types';
+ export * from './VisionCore';
+@@ -53,7 +54,7 @@ const Camera = forwardRef<VisionSdkRefProps, VisionSdkProps>(
+       onModelDownloadProgress = () => { },
+       onBarcodeScan = () => { },
+       onImageCaptured = () => { },
+-      onPriceTagDetected = () => {},
++      onPriceTagDetected = () => { },
+       onOCRScan = () => { },
+       onDetected = () => { },
+       onBoundingBoxesDetected = () => { },
+@@ -62,7 +63,8 @@ const Camera = forwardRef<VisionSdkRefProps, VisionSdkProps>(
+       onGetTemplates = () => { },
+       onDeleteTemplateById = () => { },
+       onDeleteTemplates = () => { },
+-      shouldResizeImage = true
++      shouldResizeImage = true,
++      modelExecutionProviderAndroid = 'NNAPI'
+     },
+     ref
+   ) => {
+@@ -368,6 +370,7 @@ const Camera = forwardRef<VisionSdkRefProps, VisionSdkProps>(
+         }
+       } else {
+         // For other platforms, ensure ocrEvent.data is in the correct format
++        // console.log("ocrEvent", JSON.stringify(ocrEvent))
+         ocrEvent.data = ocrEvent.data?.data ?? ocrEvent.data ?? null;
+       }
+       // Ensure image_url and imagePath are populated correctly
+@@ -375,8 +378,10 @@ const Camera = forwardRef<VisionSdkRefProps, VisionSdkProps>(
+         ocrEvent?.data?.image_url ?? ocrEvent?.imagePath ?? '';
+       ocrEvent.imagePath =
+         ocrEvent?.data?.image_url ?? ocrEvent?.imagePath ?? '';
+-      // Pass the final ocrEvent to the callback function
+-      onOCRScan(ocrEvent);
++
++
++      const correctedOcrEvent = correctOcrEvent(ocrEvent)
++      onOCRScan(correctedOcrEvent);
+     }, [onOCRScan]);
+ 
+     const eventHandlersRef = useRef({
+@@ -480,6 +485,7 @@ const Camera = forwardRef<VisionSdkRefProps, VisionSdkProps>(
+           environment={environment}
+           flash={flash}
+           zoomLevel={zoomLevel}
++          modelExecutionProviderAndroid={modelExecutionProviderAndroid}
+           onBarcodeScan={onBarcodeScanHandler}
+           onModelDownloadProgress={onModelDownloadProgressHandler}
+           onImageCaptured={onImageCapturedHandler}
+diff --git a/src/types.ts b/src/types.ts
+index fbd8ae6..3d8d039 100644
+--- a/src/types.ts
++++ b/src/types.ts
+@@ -233,6 +233,16 @@ export interface VisionSdkViewProps {
+   shouldResizeImage?: boolean;
+ 
+ 
++  /**
++ * @optional
++ * @type {string | undefined}
++ * @description Optional property to specify exection provider for on device models (android only).
++ * Use this to specify the execution provider for on device models.
++ * @example CPU
++ */
++  modelExecutionProviderAndroid?: 'NNAPI' | 'CPU' | 'XNNPACK';
++
++
+ 
+ 
+   /**
+@@ -685,7 +695,10 @@ export interface VisionSdkRefProps {
+   configureOnDeviceModel: (payload: {
+     type: ModuleType;
+     size?: ModuleSize;
+-  }, token?: string | undefined | null, apiKey?: string | undefined | null) => void;
++  },
++    token?: string | undefined | null,
++    apiKey?: string | undefined | null
++  ) => void;
+ 
+   /**
+    * Gets a prediction based on the provided image and barcode.
+@@ -989,6 +1002,17 @@ export interface VisionSdkProps {
+    */
+   flash?: boolean;
+ 
++
++  /**
++ * @optional
++ * @type {string | undefined}
++ * @description Optional property to specify exection provider for on device models (android only).
++ * Use this to specify the execution provider for on device models.
++ * @example CPU
++ */
++  modelExecutionProviderAndroid?: 'NNAPI' | 'CPU' | 'XNNPACK';
++
++
+   /**
+    * @optional
+    * @type {boolean | undefined}

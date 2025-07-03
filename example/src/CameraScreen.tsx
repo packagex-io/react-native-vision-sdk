@@ -1,12 +1,13 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { StyleSheet, Platform, Alert, Vibration, useWindowDimensions, Text, View } from 'react-native';
+import { StyleSheet, Platform, Alert, Vibration, useWindowDimensions, Text, View, Image } from 'react-native';
 // import { GestureHandlerRootView } from 'react-native-gesture-handler'
 import VisionSdkView, {
   VisionSdkRefProps,
   ModuleType,
   ModuleSize,
   OCRConfig,
-  BoundingBoxesDetectedResult
+  BoundingBoxesDetectedResult,
+  VisionCore
 } from '../../src/index';
 import CameraFooterView from './Components/CameraFooterView';
 import DownloadingProgressView from './Components/DownloadingProgressView';
@@ -168,7 +169,6 @@ const App: React.FC<{ route: any }> = ({ route }) => {
 
       setTimeout(() => {
         visionSdk?.current?.startRunningHandler();
-        console.log("GETTING ALL TEMPLATES")
         visionSdk?.current?.getAllTemplates()
       }, 0)
 
@@ -182,7 +182,7 @@ const App: React.FC<{ route: any }> = ({ route }) => {
     requestCameraPermission()
     return () => {
       visionSdk?.current?.stopRunningHandler();
-      if(timeoutRef.current){
+      if (timeoutRef.current) {
         clearTimeout(timeoutRef.current)
       }
     }
@@ -352,14 +352,53 @@ const App: React.FC<{ route: any }> = ({ route }) => {
     setDetectedData(event);
   }, [])
 
-  const handleBarcodeScan = useCallback( (event) => {
-    console.log("=======================")
-    console.log('onBarcodeScan', JSON.stringify(event));
-    console.log("=======================")
+  const handleBarcodeScan = useCallback((event) => {
     setLoading(false);
 
     visionSdk.current?.restartScanningHandler();
   }, [])
+
+
+  const syncSLpx = async (ocrEvent) => {
+    try {
+      VisionCore.setEnvironment("staging")
+      const r = await VisionCore.logShippingLabelDataToPx(
+        Platform.OS === 'android' ? `file://${ocrEvent.imagePath}` : ocrEvent.imagePath,
+        ocrEvent?.data?.barcode_values || [],
+        { data: ocrEvent.data },
+        null,
+        apiKey,
+        null,
+        null,
+        null,
+        null,
+        null,
+        true
+      )
+
+      console.log("SYNC SL PX SUCCESSFUL: ", r)
+    } catch (err) {
+      console.log("AN ERROR OCCURED: [SYNC SL PX]", err.message)
+    }
+  }
+
+  const syncILpx = async (ocrEvent) => {
+    try {
+      VisionCore.setEnvironment("staging")
+      const r = await VisionCore.logItemLabelDataToPx(
+        Platform.OS === 'android' ? `file://${ocrEvent.imagePath}` : ocrEvent.imagePath,
+        ocrEvent.data.inference.barcode_values || [],
+        { data: ocrEvent.data },
+        null,
+        apiKey,
+        true
+      )
+
+      console.log("IL SYNC SUCCESSFUL: ", r)
+    } catch (err) {
+      console.log("AN ERROR OCCURED IL SYNC: ", err.message)
+    }
+  }
 
   const handleOcrScan = useCallback((event) => {
     setLoading(false);
@@ -370,7 +409,6 @@ const App: React.FC<{ route: any }> = ({ route }) => {
   }, [])
 
   const handleImageCaptured = useCallback((event) => {
-    console.log('onImageCaptured', event);
     visionSdk.current?.restartScanningHandler();
   }, [])
 
@@ -392,7 +430,6 @@ const App: React.FC<{ route: any }> = ({ route }) => {
   }, [])
 
   const handleCreateTemplate = useCallback((event) => {
-    console.log("HANDLE CREATE TEMPLATE: ", JSON.stringify(event))
     const templates = [...availableTemplates, { name: event.data }]
     const uniqueTemplates = [...new Map(templates.map(item => [item.name, item])).values()]
     setAvailableTemplates(uniqueTemplates)
@@ -400,7 +437,6 @@ const App: React.FC<{ route: any }> = ({ route }) => {
   }, [availableTemplates])
 
   const onDeleteTemplateById = (event) => {
-    console.log("ON DELETE TEMPLATE BY ID: ", JSON.stringify(event))
     const updatedTemplates = availableTemplates.filter((item) => item.name !== event.data)
     setAvailableTemplates(updatedTemplates)
     // visionSdk.current?.stopRunningHandler()
@@ -474,6 +510,7 @@ const App: React.FC<{ route: any }> = ({ route }) => {
         apiKey={apiKey}
         flash={flash}
         zoomLevel={zoomLevel}
+        modelExecutionProviderAndroid='CPU'
         onDetected={handleDetected}
         onBarcodeScan={handleBarcodeScan}
         onCreateTemplate={handleCreateTemplate}
@@ -526,7 +563,7 @@ const App: React.FC<{ route: any }> = ({ route }) => {
         zoomLevel={zoomLevel}
         setZoomLevel={setZoomLevel}
       />
-      { ['barcode', 'barCodeOrQRCode'].includes(mode) &&  detectedBoundingBoxes.barcodeBoundingBoxes?.length > 0 ?
+      {['barcode', 'barCodeOrQRCode'].includes(mode) && detectedBoundingBoxes.barcodeBoundingBoxes?.length > 0 ?
         <>
           {detectedBoundingBoxes.barcodeBoundingBoxes.map((item, index) => (
             <View
@@ -544,7 +581,7 @@ const App: React.FC<{ route: any }> = ({ route }) => {
           ))}
         </> : null}
 
-      {['qrcode', 'barCodeOrQRCode'].includes(mode) &&  detectedBoundingBoxes.qrCodeBoundingBoxes?.length > 0 ?
+      {['qrcode', 'barCodeOrQRCode'].includes(mode) && detectedBoundingBoxes.qrCodeBoundingBoxes?.length > 0 ?
         <>
           {detectedBoundingBoxes.qrCodeBoundingBoxes.map((item, index) => (
             <View
