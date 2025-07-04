@@ -26,6 +26,7 @@ import {
   BoundingBoxesDetectedResult,
   PriceTagDetectionResult,
 } from './types';
+import { correctOcrEvent } from './utils';
 
 export * from './types';
 export * from './VisionCore';
@@ -53,7 +54,7 @@ const Camera = forwardRef<VisionSdkRefProps, VisionSdkProps>(
       onModelDownloadProgress = () => { },
       onBarcodeScan = () => { },
       onImageCaptured = () => { },
-      onPriceTagDetected = () => {},
+      onPriceTagDetected = () => { },
       onOCRScan = () => { },
       onDetected = () => { },
       onBoundingBoxesDetected = () => { },
@@ -62,7 +63,8 @@ const Camera = forwardRef<VisionSdkRefProps, VisionSdkProps>(
       onGetTemplates = () => { },
       onDeleteTemplateById = () => { },
       onDeleteTemplates = () => { },
-      shouldResizeImage = true
+      shouldResizeImage = true,
+      modelExecutionProviderAndroid = 'NNAPI'
     },
     ref
   ) => {
@@ -368,6 +370,7 @@ const Camera = forwardRef<VisionSdkRefProps, VisionSdkProps>(
         }
       } else {
         // For other platforms, ensure ocrEvent.data is in the correct format
+        // console.log("ocrEvent", JSON.stringify(ocrEvent))
         ocrEvent.data = ocrEvent.data?.data ?? ocrEvent.data ?? null;
       }
       // Ensure image_url and imagePath are populated correctly
@@ -375,8 +378,10 @@ const Camera = forwardRef<VisionSdkRefProps, VisionSdkProps>(
         ocrEvent?.data?.image_url ?? ocrEvent?.imagePath ?? '';
       ocrEvent.imagePath =
         ocrEvent?.data?.image_url ?? ocrEvent?.imagePath ?? '';
-      // Pass the final ocrEvent to the callback function
-      onOCRScan(ocrEvent);
+
+
+      const correctedOcrEvent = correctOcrEvent(ocrEvent)
+      onOCRScan(correctedOcrEvent);
     }, [onOCRScan]);
 
     const eventHandlersRef = useRef({
@@ -480,6 +485,7 @@ const Camera = forwardRef<VisionSdkRefProps, VisionSdkProps>(
           environment={environment}
           flash={flash}
           zoomLevel={zoomLevel}
+          modelExecutionProviderAndroid={modelExecutionProviderAndroid}
           onBarcodeScan={onBarcodeScanHandler}
           onModelDownloadProgress={onModelDownloadProgressHandler}
           onImageCaptured={onImageCapturedHandler}

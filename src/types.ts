@@ -233,6 +233,16 @@ export interface VisionSdkViewProps {
   shouldResizeImage?: boolean;
 
 
+  /**
+ * @optional
+ * @type {string | undefined}
+ * @description Optional property to specify exection provider for on device models (android only).
+ * Use this to specify the execution provider for on device models.
+ * @example CPU
+ */
+  modelExecutionProviderAndroid?: 'NNAPI' | 'CPU' | 'XNNPACK';
+
+
 
 
   /**
@@ -685,7 +695,10 @@ export interface VisionSdkRefProps {
   configureOnDeviceModel: (payload: {
     type: ModuleType;
     size?: ModuleSize;
-  }, token?: string | undefined | null, apiKey?: string | undefined | null) => void;
+  },
+    token?: string | undefined | null,
+    apiKey?: string | undefined | null
+  ) => void;
 
   /**
    * Gets a prediction based on the provided image and barcode.
@@ -988,6 +1001,17 @@ export interface VisionSdkProps {
    * @example true
    */
   flash?: boolean;
+
+
+  /**
+ * @optional
+ * @type {string | undefined}
+ * @description Optional property to specify exection provider for on device models (android only).
+ * Use this to specify the execution provider for on device models.
+ * @example CPU
+ */
+  modelExecutionProviderAndroid?: 'NNAPI' | 'CPU' | 'XNNPACK';
+
 
   /**
    * @optional

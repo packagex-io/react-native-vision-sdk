@@ -63,6 +63,7 @@ import com.visionsdk.utils.EventUtils
 import io.packagex.visionsdk.core.TemplateManager
 import io.packagex.visionsdk.core.pricetag.PriceTagData
 import io.packagex.visionsdk.dto.ScannedCodeResult
+import io.packagex.visionsdk.ocr.ml.core.enums.ExecutionProvider
 import io.packagex.visionsdk.ocr.ml.core.enums.OCRModule
 import io.packagex.visionsdk.service.dto.BOLModelToReport
 import io.packagex.visionsdk.service.dto.DCModelToReport
@@ -114,6 +115,8 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
   private var scanningMode: ScanningMode = ScanningMode.Manual // Scanning mode, can be manual or automatic scanning
 
   private var flash: Boolean = false // Boolean flag to enable or disable the flash
+
+  private var executionProvider: ExecutionProvider = ExecutionProvider.NNAPI
 
   private var isMultipleScanEnabled: Boolean = false //  Boolean isMultipleScanEnabled to enable or disable the isMultipleScanEnabled
 
@@ -1192,12 +1195,14 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
 
     val onDeviceOCRManager = OnDeviceOCRManagerSingleton.getInstance(context!!, modelType)
 
+    val modelExecutionProvider = this.executionProvider
+    Log.d(TAG, "model execution provider: ${modelExecutionProvider}")
     // Configure the OCR manager asynchronously, with download progress tracking
     lifecycleOwner?.lifecycle?.coroutineScope?.launchOnIO {
       try {
         if (!OnDeviceOCRManagerSingleton.isModelConfigured(modelType)) {
           var lastProgress = 0.00
-          onDeviceOCRManager?.configure(resolvedApiKey, resolvedToken) {
+          onDeviceOCRManager?.configure(resolvedApiKey, resolvedToken, modelExecutionProvider) {
             val progressInt = (it).toDecimalPoints(2).toDouble()
             if (progressInt != lastProgress) {
               lastProgress = progressInt
@@ -1520,6 +1525,22 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
     Log.d(TAG, "flash: $flash")
     this.flash = flash
     this.visionCameraView?.setFlashTurnedOn(flash)
+  }
+
+  @ReactProp(name = "modelExecutionProviderAndroid")
+  fun setModelExecutionProviderAndroid(view: View, modelExecutionProviderAndroid: String = "NNAPI"){
+    Log.d(TAG, "SETTING EXECTION PROVIFER TO: $modelExecutionProviderAndroid")
+    if(modelExecutionProviderAndroid == "CPU"){
+      this.executionProvider = ExecutionProvider.CPU
+    } else if (modelExecutionProviderAndroid == "NNAPI") {
+      this.executionProvider = ExecutionProvider.NNAPI
+    } else if (modelExecutionProviderAndroid == "XNNPACK"){
+      this.executionProvider = ExecutionProvider.XNNPACK
+    } else {
+      this.executionProvider = ExecutionProvider.NNAPI
+    }
+
+    Log.d(TAG, "SET EXECUTION PROVIDER TO : ${executionProvider}")
   }
 
   @ReactProp(name = "shouldResizeImage")
