@@ -106,13 +106,13 @@ class VisionSdkModule(private val reactContext: ReactApplicationContext) : React
         Log.d(TAG, "ondeviceresponse:\n $onDeviceResponse")
 
         ApiManager().itemLabelMatchingApiCallAsync(
-          reactContext,
-          apiKey,
-          token,
-          bitmap,
-          shouldResizeImage,
-          barcodeList,
-          onDeviceResponse,
+          context = reactContext,
+          apiKey = apiKey,
+          token = token,
+          bitmap = bitmap,
+          shouldResizeImage = shouldResizeImage,
+          barcodeList =  barcodeList,
+          onDeviceResponse =  onDeviceResponse,
           onResponseCallback =  object : ResponseCallback {
             override fun onError(visionException: VisionSDKException) {
               Log.e(TAG, "Item label match failed", visionException)
