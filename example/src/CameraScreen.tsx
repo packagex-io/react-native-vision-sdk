@@ -190,7 +190,7 @@ const App: React.FC<{ route: any }> = ({ route }) => {
 
 
   useEffect(() => {
-    if (modelDownloadingProgress.downloadStatus) {
+    if (modelDownloadingProgress.isReady) {
       setLoading(false);
     }
   }, [modelDownloadingProgress]);
