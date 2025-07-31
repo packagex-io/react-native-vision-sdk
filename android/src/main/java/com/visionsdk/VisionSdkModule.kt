@@ -221,7 +221,7 @@ class VisionSdkModule(private val reactContext: ReactApplicationContext) : React
 
     // Use Singleton to get OnDeviceOCRManager instance
     val onDeviceOCRManager = OnDeviceOCRManagerSingleton.getInstance(reactContext, resolvedModelType)
-
+    val isModelAlreadyDownloaded = onDeviceOCRManager.isModelAlreadyDownloaded()
 
 
     if(OnDeviceOCRManagerSingleton.isModelConfigured(resolvedModelType)){
@@ -243,7 +243,7 @@ class VisionSdkModule(private val reactContext: ReactApplicationContext) : React
             )
         }
 
-        EventUtils.sendModelDownloadProgressEvent(reactContext, progress = 1.0, downloadStatus = true, isReady = true)
+        EventUtils.sendModelDownloadProgressEvent(reactContext, progress = 1.0, downloadStatus = isModelAlreadyDownloaded, isReady = true)
         promise.resolve("Model loaded successfully")
       } catch (e: Exception) {
         Log.e("VisionSdkModule", "❌ Error loading model", e)

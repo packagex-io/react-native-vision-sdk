@@ -1202,12 +1202,14 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
       try {
         if (!OnDeviceOCRManagerSingleton.isModelConfigured(modelType)) {
           var lastProgress = 0.00
+          var isModelAlreadyDownloaded = onDeviceOCRManager.isModelAlreadyDownloaded()
           onDeviceOCRManager?.configure(resolvedApiKey, resolvedToken, modelExecutionProvider) {
             val progressInt = (it).toDecimalPoints(2).toDouble()
             if (progressInt != lastProgress) {
               lastProgress = progressInt
               Log.d(TAG, "Install Progress: ${(it * 100).toInt()}")
-              EventUtils.sendModelDownloadProgressEvent(appContext, progress = lastProgress, downloadStatus = false, isReady = false)
+
+              EventUtils.sendModelDownloadProgressEvent(appContext, progress = lastProgress, downloadStatus = isModelAlreadyDownloaded, isReady = false)
             }
           }
         }
