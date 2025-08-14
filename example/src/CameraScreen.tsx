@@ -370,7 +370,7 @@ const App: React.FC<{ route: any }> = ({ route }) => {
         apiKey,
         null,
         null,
-        null,
+        {meta1: 'metaval1', meta2: 'metaval2'},
         null,
         null,
         true
@@ -391,7 +391,8 @@ const App: React.FC<{ route: any }> = ({ route }) => {
         { data: ocrEvent.data },
         null,
         apiKey,
-        true
+        true,
+        {meta1: 'metaval1', meta2: 'metaval2'}
       )
 
       console.log("IL SYNC SUCCESSFUL: ", r)
