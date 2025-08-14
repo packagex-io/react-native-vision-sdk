@@ -15,6 +15,7 @@ RCT_EXTERN_METHOD(logItemLabelDataToPx:(NSString *)imageUri
                   token:(nullable NSString *)token
                   apiKey:(nullable NSString *)apiKey
                   shouldResizeImage:(nonnull NSNumber *)shouldResizeImage
+                  metadata:(nullable NSDictionary *)metadata
                   resolver:(RCTPromiseResolveBlock)resolver
                   rejecter:(RCTPromiseRejectBlock)rejecter)
 RCT_EXTERN_METHOD(logShippingLabelDataToPx:(NSString *)imageUri
@@ -24,7 +25,7 @@ RCT_EXTERN_METHOD(logShippingLabelDataToPx:(NSString *)imageUri
                   apiKey:(nullable NSString *)apiKey
                   locationId:(nullable NSString *)locationId
                   options:(nullable NSDictionary *)options
-                  metadata:(nullable NSDictionary *)metaData
+                  metadata:(nullable NSDictionary *)metadata
                   recipient:(nullable NSDictionary *)recipient
                   sender:(nullable NSDictionary *)sender
                   shouldResizeImage:(nonnull NSNumber *)shouldResizeImage

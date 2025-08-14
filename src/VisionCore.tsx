@@ -52,7 +52,8 @@ export const VisionCore = {
     responseData: any,
     token: string | null,
     apiKey: string | null,
-    shouldResizeImage: boolean = true
+    shouldResizeImage: boolean = true,
+    metadata: {[key: string]: any} | null = {},
   ) => {
     try {
       const r = await VisionSdkModule.logItemLabelDataToPx(
@@ -61,7 +62,8 @@ export const VisionCore = {
         responseData,
         token,
         apiKey,
-        shouldResizeImage
+        shouldResizeImage,
+        metadata
       );
       return r
     } catch (error) {

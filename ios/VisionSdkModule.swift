@@ -173,6 +173,7 @@ class VisionSdkModule: RCTEventEmitter {
     token: String?,
     apiKey: String?,
     shouldResizeImage: NSNumber,
+    metadata: [String : Any]? = nil,
     resolver: @escaping RCTPromiseResolveBlock,
     rejecter: @escaping RCTPromiseRejectBlock
   ) {
@@ -192,6 +193,7 @@ class VisionSdkModule: RCTEventEmitter {
       }
       
       let shouldResize = shouldResizeImage.boolValue
+
       
       VisionAPIManager.shared.callItemLabelsMatchingAPIWith(
         image,
@@ -199,7 +201,8 @@ class VisionSdkModule: RCTEventEmitter {
         andApiKey: apiKey,
         andToken: token,
         withResponseData: responseDataJson,
-        withImageResizing: shouldResize
+        withImageResizing: shouldResize,
+        andMetaData: metadata ?? [:]
       ){data, error in
           if let error = error {
             print(error)

@@ -84,6 +84,7 @@ class VisionSdkModule(private val reactContext: ReactApplicationContext) : React
     token: String?,
     apiKey: String?,
     shouldResizeImage: Boolean,
+    metadata: ReadableMap,
     promise: Promise
   ){
    Log.d(TAG, "log item label data to px called")
@@ -106,12 +107,12 @@ class VisionSdkModule(private val reactContext: ReactApplicationContext) : React
         Log.d(TAG, "ondeviceresponse:\n $onDeviceResponse")
 
         ApiManager().itemLabelMatchingApiCallAsync(
-          context = reactContext,
           apiKey = apiKey,
           token = token,
           bitmap = bitmap,
           shouldResizeImage = shouldResizeImage,
           barcodeList =  barcodeList,
+          metadata = metadata.toHashMap(),
           onDeviceResponse =  onDeviceResponse,
           onResponseCallback =  object : ResponseCallback {
             override fun onError(visionException: VisionSDKException) {
