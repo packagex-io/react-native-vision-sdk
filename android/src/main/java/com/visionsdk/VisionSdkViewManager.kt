@@ -930,7 +930,6 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
     lifecycleOwner?.lifecycle?.coroutineScope?.launchOnIO {
       try {
         val result = getOnDeviceOCRResponse(bitmap, list) ?: return@launchOnIO
-
         withContextMain {
           onOCRResponse(result)
         }
