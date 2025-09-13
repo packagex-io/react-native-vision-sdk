@@ -1309,7 +1309,7 @@ PODS:
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
     - Yoga
-  - react-native-vision-sdk (1.5.9):
+  - react-native-vision-sdk (1.5.13):
     - RCT-Folly
     - RCTRequired
     - RCTTypeSafety
@@ -1317,7 +1317,7 @@ PODS:
     - React-Core
     - React-RCTFabric
     - ReactCommon/turbomodule/core
-    - VisionSDK (= 1.9.1)
+    - VisionSDK (= 1.9.3)
   - React-nativeconfig (0.76.6)
   - React-NativeModulesApple (0.76.6):
     - glog
@@ -1824,7 +1824,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - Yoga
   - SocketRocket (0.7.1)
-  - VisionSDK (1.9.1)
+  - VisionSDK (1.9.3)
   - Yoga (0.0.0)
 
 DEPENDENCIES:
@@ -2091,7 +2091,7 @@ SPEC CHECKSUMS:
   React-Mapbuffer: 89885d1518433a462fe64b68bf5e097997380090
   React-microtasksnativemodule: 36341e09dcd1df535503e6ed2ddf88f10da56d52
   react-native-safe-area-context: 5e53e2b0fc3a2994ad0c89a2486e545b6566d8c4
-  react-native-vision-sdk: 101fd6981a77b01a061f929c34ff5cc51425b669
+  react-native-vision-sdk: f3563b0968b7c3f28d53c2b69c587bab26a9d5ed
   React-nativeconfig: 539ff4de6ce3b694e8e751080568c281c84903ce
   React-NativeModulesApple: 702246817c286d057e23fe4b1302019796e62521
   React-perflogger: f260e2de95f9dbd002035251559c13bf1f0643d4
@@ -2126,7 +2126,7 @@ SPEC CHECKSUMS:
   RNSVG: c50d29abf38abbf48ebfc50b6258f81099aeabae
   RNVectorIcons: a24016b773380b1aa37fca501ec6b94a951890a0
   SocketRocket: d4aabe649be1e368d1318fdf28a022d714d65748
-  VisionSDK: d03ff9060bba1123146d3767ac0a912cc316cc52
+  VisionSDK: ef15711ea616ca069e29a84a41be257b2e3ff0ab
   Yoga: be6f55a028e86c83ae066f018e9b5d24ffc45436
 
 PODFILE CHECKSUM: dc33509ec6a3d304fce4a84c03d57986d6a7860e
