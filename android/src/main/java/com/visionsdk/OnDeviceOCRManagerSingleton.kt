@@ -60,6 +60,14 @@ object OnDeviceOCRManagerSingleton {
   }
 
   /**
+   * Returns the current instance of OnDeviceOCRManager if available.
+   * @return OnDeviceOCRManager instance or null if not configured
+   */
+  fun getCurrentInstance(): OnDeviceOCRManager? {
+    return onDeviceOCRManager
+  }
+
+  /**
    * Destroys the current instance of OnDeviceOCRManager only if needed.
    */
   fun destroy() {

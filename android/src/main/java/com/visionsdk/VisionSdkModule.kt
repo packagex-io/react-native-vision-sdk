@@ -253,6 +253,338 @@ class VisionSdkModule(private val reactContext: ReactApplicationContext) : React
     }
   }
 
+  @ReactMethod
+  fun predict(
+    imagePath: String,
+    barcodes: ReadableArray,
+    promise: Promise
+  ) {
+    Log.d(TAG, "🔹 Standalone On-Device Prediction for: $imagePath")
+
+    val uri = Uri.parse(imagePath)
+    uriToBitmap(reactContext, uri) { bitmap ->
+      if (bitmap == null) {
+        promise.reject("BITMAP_ERROR", "Failed to decode image from URI: $imagePath")
+        return@uriToBitmap
+      }
+
+      try {
+        val barcodeList = mutableListOf<String>()
+        for (i in 0 until barcodes.size()) {
+          barcodeList.add(barcodes.getString(i) ?: "")
+        }
+
+        // Get the currently configured on-device OCR manager
+        val onDeviceOCRManager = OnDeviceOCRManagerSingleton.getCurrentInstance()
+
+        if (onDeviceOCRManager == null) {
+          promise.reject("MODEL_NOT_CONFIGURED", "No on-device model is configured. Please load a model first.")
+          return@uriToBitmap
+        }
+
+        // Launch coroutine for on-device prediction
+        CoroutineScope(Dispatchers.IO).launch {
+          try {
+            val result = onDeviceOCRManager.getPredictions(bitmap, barcodeList)
+
+            Handler(Looper.getMainLooper()).post {
+              if (result != null) {
+                promise.resolve(result)
+              } else {
+                promise.reject("PREDICTION_ERROR", "On-device prediction returned null result")
+              }
+            }
+          } catch (e: Exception) {
+            Log.e(TAG, "On-device prediction failed", e)
+            Handler(Looper.getMainLooper()).post {
+              promise.reject("PREDICTION_FAILED", "On-device prediction failed: ${e.message}", e)
+            }
+          }
+        }
+      } catch (e: Exception) {
+        Log.e(TAG, "Exception in predict", e)
+        promise.reject("PROCESSING_FAILED", "Error during prediction: ${e.message}", e)
+      }
+    }
+  }
+
+  @ReactMethod
+  fun predictShippingLabelCloud(
+    imagePath: String,
+    barcodes: ReadableArray,
+    token: String?,
+    apiKey: String?,
+    locationId: String?,
+    options: ReadableMap?,
+    metadata: ReadableMap?,
+    recipient: ReadableMap?,
+    sender: ReadableMap?,
+    shouldResizeImage: Boolean?,
+    promise: Promise
+  ) {
+    Log.d(TAG, "🔹 Standalone Cloud Shipping Label Prediction for: $imagePath")
+
+    val uri = Uri.parse(imagePath)
+    uriToBitmap(reactContext, uri) { bitmap ->
+      if (bitmap == null) {
+        promise.reject("BITMAP_ERROR", "Failed to decode image from URI: $imagePath")
+        return@uriToBitmap
+      }
+
+      try {
+        val barcodeList = mutableListOf<String>()
+        for (i in 0 until barcodes.size()) {
+          barcodeList.add(barcodes.getString(i) ?: "")
+        }
+
+        ApiManager().shippingLabelApiCallAsync(
+          apiKey = apiKey,
+          token = token,
+          bitmap = bitmap,
+          barcodeList = barcodeList,
+          locationId = locationId,
+          options = options?.toHashMap() ?: emptyMap(),
+          metadata = metadata?.toHashMap() ?: emptyMap(),
+          recipient = recipient?.toHashMap() ?: emptyMap(),
+          sender = sender?.toHashMap() ?: emptyMap(),
+          onScanResult = object : OCRResult {
+            override fun onOCRResponse(response: String) {
+              promise.resolve(response)
+            }
+            override fun onOCRResponseFailed(error: VisionSDKException) {
+              Log.e(TAG, "Shipping label cloud prediction failed", error)
+              promise.reject("API_ERROR", "Shipping label prediction failed: ${error.message}", error)
+            }
+          },
+          shouldResizeImage = shouldResizeImage ?: true
+        )
+      } catch (e: Exception) {
+        Log.e(TAG, "Exception in predictShippingLabelCloud", e)
+        promise.reject("PROCESSING_FAILED", "Error during cloud prediction: ${e.message}", e)
+      }
+    }
+  }
+
+  @ReactMethod
+  fun predictItemLabelCloud(
+    imagePath: String,
+    token: String?,
+    apiKey: String?,
+    shouldResizeImage: Boolean?,
+    promise: Promise
+  ) {
+    Log.d(TAG, "🔹 Standalone Cloud Item Label Prediction for: $imagePath")
+
+    val uri = Uri.parse(imagePath)
+    uriToBitmap(reactContext, uri) { bitmap ->
+      if (bitmap == null) {
+        promise.reject("BITMAP_ERROR", "Failed to decode image from URI: $imagePath")
+        return@uriToBitmap
+      }
+
+      try {
+        ApiManager().itemLabelApiCallAsync(
+          apiKey = apiKey,
+          token = token,
+          bitmap = bitmap,
+          onScanResult = object : OCRResult {
+            override fun onOCRResponse(response: String) {
+              promise.resolve(response)
+            }
+            override fun onOCRResponseFailed(error: VisionSDKException) {
+              Log.e(TAG, "Item label cloud prediction failed", error)
+              promise.reject("API_ERROR", "Item label prediction failed: ${error.message}", error)
+            }
+          },
+          shouldResizeImage = shouldResizeImage ?: true
+        )
+      } catch (e: Exception) {
+        Log.e(TAG, "Exception in predictItemLabelCloud", e)
+        promise.reject("PROCESSING_FAILED", "Error during cloud prediction: ${e.message}", e)
+      }
+    }
+  }
+
+  @ReactMethod
+  fun predictBillOfLadingCloud(
+    imagePath: String,
+    barcodes: ReadableArray,
+    token: String?,
+    apiKey: String?,
+    locationId: String?,
+    options: ReadableMap?,
+    shouldResizeImage: Boolean?,
+    promise: Promise
+  ) {
+    Log.d(TAG, "🔹 Standalone Cloud Bill of Lading Prediction for: $imagePath")
+
+    val uri = Uri.parse(imagePath)
+    uriToBitmap(reactContext, uri) { bitmap ->
+      if (bitmap == null) {
+        promise.reject("BITMAP_ERROR", "Failed to decode image from URI: $imagePath")
+        return@uriToBitmap
+      }
+
+      try {
+        val barcodeList = mutableListOf<String>()
+        for (i in 0 until barcodes.size()) {
+          barcodeList.add(barcodes.getString(i) ?: "")
+        }
+
+        ApiManager().billOfLadingApiCallAsync(
+          apiKey = apiKey,
+          token = token,
+          bitmap = bitmap,
+          barcodeList = barcodeList,
+          locationId = locationId,
+          options = options?.toHashMap() ?: emptyMap(),
+          onScanResult = object : OCRResult {
+            override fun onOCRResponse(response: String) {
+              promise.resolve(response)
+            }
+            override fun onOCRResponseFailed(error: VisionSDKException) {
+              Log.e(TAG, "Bill of lading cloud prediction failed", error)
+              promise.reject("API_ERROR", "Bill of lading prediction failed: ${error.message}", error)
+            }
+          },
+          shouldResizeImage = shouldResizeImage ?: true
+        )
+      } catch (e: Exception) {
+        Log.e(TAG, "Exception in predictBillOfLadingCloud", e)
+        promise.reject("PROCESSING_FAILED", "Error during cloud prediction: ${e.message}", e)
+      }
+    }
+  }
+
+  @ReactMethod
+  fun predictDocumentClassificationCloud(
+    imagePath: String,
+    token: String?,
+    apiKey: String?,
+    shouldResizeImage: Boolean?,
+    promise: Promise
+  ) {
+    Log.d(TAG, "🔹 Standalone Cloud Document Classification Prediction for: $imagePath")
+
+    val uri = Uri.parse(imagePath)
+    uriToBitmap(reactContext, uri) { bitmap ->
+      if (bitmap == null) {
+        promise.reject("BITMAP_ERROR", "Failed to decode image from URI: $imagePath")
+        return@uriToBitmap
+      }
+
+      try {
+        ApiManager().documentClassificationApiCallAsync(
+          apiKey = apiKey,
+          token = token,
+          bitmap = bitmap,
+          onScanResult = object : OCRResult {
+            override fun onOCRResponse(response: String) {
+              promise.resolve(response)
+            }
+            override fun onOCRResponseFailed(error: VisionSDKException) {
+              Log.e(TAG, "Document classification cloud prediction failed", error)
+              promise.reject("API_ERROR", "Document classification prediction failed: ${error.message}", error)
+            }
+          },
+          shouldResizeImage = shouldResizeImage ?: true
+        )
+      } catch (e: Exception) {
+        Log.e(TAG, "Exception in predictDocumentClassificationCloud", e)
+        promise.reject("PROCESSING_FAILED", "Error during cloud prediction: ${e.message}", e)
+      }
+    }
+  }
+
+  @ReactMethod
+  fun predictWithCloudTransformations(
+    imagePath: String,
+    barcodes: ReadableArray,
+    token: String?,
+    apiKey: String?,
+    locationId: String?,
+    options: ReadableMap?,
+    metadata: ReadableMap?,
+    recipient: ReadableMap?,
+    sender: ReadableMap?,
+    shouldResizeImage: Boolean?,
+    promise: Promise
+  ) {
+    Log.d(TAG, "🔹 Standalone Hybrid Prediction (On-Device + Cloud) for: $imagePath")
+
+    val uri = Uri.parse(imagePath)
+    uriToBitmap(reactContext, uri) { bitmap ->
+      if (bitmap == null) {
+        promise.reject("BITMAP_ERROR", "Failed to decode image from URI: $imagePath")
+        return@uriToBitmap
+      }
+
+      try {
+        val barcodeList = mutableListOf<String>()
+        for (i in 0 until barcodes.size()) {
+          barcodeList.add(barcodes.getString(i) ?: "")
+        }
+
+        // Get the currently configured on-device OCR manager
+        val onDeviceOCRManager = OnDeviceOCRManagerSingleton.getCurrentInstance()
+
+        if (onDeviceOCRManager == null) {
+          promise.reject("MODEL_NOT_CONFIGURED", "No on-device model is configured. Please load a model first.")
+          return@uriToBitmap
+        }
+
+        // Launch coroutine for hybrid prediction
+        CoroutineScope(Dispatchers.IO).launch {
+          try {
+            // Step 1: Get on-device prediction
+            val onDeviceResult = onDeviceOCRManager.getPredictions(bitmap, barcodeList)
+
+            if (onDeviceResult == null) {
+              Handler(Looper.getMainLooper()).post {
+                promise.reject("ON_DEVICE_ERROR", "On-device prediction returned null result")
+              }
+              return@launch
+            }
+
+            // Step 2: Send to cloud for transformation
+            Handler(Looper.getMainLooper()).post {
+              ApiManager().shippingLabelMatchingApiAsync(
+                apiKey = apiKey,
+                token = token,
+                bitmap = bitmap,
+                barcodeList = barcodeList,
+                locationId = locationId,
+                options = options?.toHashMap() ?: emptyMap(),
+                metadata = metadata?.toHashMap() ?: emptyMap(),
+                recipient = recipient?.toHashMap() ?: emptyMap(),
+                sender = sender?.toHashMap() ?: emptyMap(),
+                onDeviceResponse = onDeviceResult,
+                onResponseCallback = object : ResponseCallback {
+                  override fun onError(visionException: VisionSDKException) {
+                    Log.e(TAG, "Hybrid prediction cloud transformation failed", visionException)
+                    promise.reject("CLOUD_TRANSFORMATION_ERROR", "Cloud transformation failed: ${visionException.message}", visionException)
+                  }
+                  override fun onResponse(response: String) {
+                    promise.resolve(response)
+                  }
+                },
+                shouldResizeImage = shouldResizeImage ?: true
+              )
+            }
+          } catch (e: Exception) {
+            Log.e(TAG, "Hybrid prediction failed", e)
+            Handler(Looper.getMainLooper()).post {
+              promise.reject("HYBRID_PREDICTION_FAILED", "Hybrid prediction failed: ${e.message}", e)
+            }
+          }
+        }
+      } catch (e: Exception) {
+        Log.e(TAG, "Exception in predictWithCloudTransformations", e)
+        promise.reject("PROCESSING_FAILED", "Error during hybrid prediction: ${e.message}", e)
+      }
+    }
+  }
+
   /**
    * Converts a URI to a Bitmap.
    * This function supports both HTTP/HTTPS URIs (for remote images) and local URIs.
