@@ -105,5 +105,189 @@ export const VisionCore = {
       throw err
     }
 
+  },
+
+  /**
+   * Performs on-device OCR prediction on an image.
+   * @param {string} imagePath - Path to the image file.
+   * @param {string[]} barcodes - Array of barcode strings detected in the image.
+   * @returns {Promise<string>} - OCR prediction result.
+   */
+  predict: async (imagePath: string, barcodes: string[] = []) => {
+    try {
+      const result = await VisionSdkModule.predict(imagePath, barcodes);
+      return result;
+    } catch (error) {
+      console.error("Failed to get on-device prediction:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Performs cloud-based shipping label prediction.
+   * @param {string} imagePath - Path to the image file.
+   * @param {string[]} barcodes - Array of barcode strings.
+   * @param {object} options - Optional parameters for cloud prediction.
+   */
+  predictShippingLabelCloud: async (
+    imagePath: string,
+    barcodes: string[] = [],
+    options: {
+      token?: string | null,
+      apiKey?: string | null,
+      locationId?: string | null,
+      options?: {[key: string]: any} | null,
+      metadata?: {[key: string]: any} | null,
+      recipient?: {[key: string]: any} | null,
+      sender?: {[key: string]: any} | null,
+      shouldResizeImage?: boolean
+    } = {}
+  ) => {
+    try {
+      const result = await VisionSdkModule.predictShippingLabelCloud(
+        imagePath,
+        barcodes,
+        options.token,
+        options.apiKey,
+        options.locationId,
+        options.options,
+        options.metadata,
+        options.recipient,
+        options.sender,
+        options.shouldResizeImage
+      );
+      return result;
+    } catch (error) {
+      console.error("Failed to get shipping label cloud prediction:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Performs cloud-based item label prediction.
+   * @param {string} imagePath - Path to the image file.
+   * @param {object} options - Optional parameters for cloud prediction.
+   */
+  predictItemLabelCloud: async (
+    imagePath: string,
+    options: {
+      token?: string | null,
+      apiKey?: string | null,
+      shouldResizeImage?: boolean
+    } = {}
+  ) => {
+    try {
+      const result = await VisionSdkModule.predictItemLabelCloud(
+        imagePath,
+        options.token,
+        options.apiKey,
+        options.shouldResizeImage
+      );
+      return result;
+    } catch (error) {
+      console.error("Failed to get item label cloud prediction:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Performs cloud-based bill of lading prediction.
+   * @param {string} imagePath - Path to the image file.
+   * @param {string[]} barcodes - Array of barcode strings.
+   * @param {object} options - Optional parameters for cloud prediction.
+   */
+  predictBillOfLadingCloud: async (
+    imagePath: string,
+    barcodes: string[] = [],
+    options: {
+      token?: string | null,
+      apiKey?: string | null,
+      locationId?: string | null,
+      options?: {[key: string]: any} | null,
+      shouldResizeImage?: boolean
+    } = {}
+  ) => {
+    try {
+      const result = await VisionSdkModule.predictBillOfLadingCloud(
+        imagePath,
+        barcodes,
+        options.token,
+        options.apiKey,
+        options.locationId,
+        options.options,
+        options.shouldResizeImage
+      );
+      return result;
+    } catch (error) {
+      console.error("Failed to get bill of lading cloud prediction:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Performs cloud-based document classification prediction.
+   * @param {string} imagePath - Path to the image file.
+   * @param {object} options - Optional parameters for cloud prediction.
+   */
+  predictDocumentClassificationCloud: async (
+    imagePath: string,
+    options: {
+      token?: string | null,
+      apiKey?: string | null,
+      shouldResizeImage?: boolean
+    } = {}
+  ) => {
+    try {
+      const result = await VisionSdkModule.predictDocumentClassificationCloud(
+        imagePath,
+        options.token,
+        options.apiKey,
+        options.shouldResizeImage
+      );
+      return result;
+    } catch (error) {
+      console.error("Failed to get document classification cloud prediction:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Performs hybrid prediction using on-device model with cloud transformations.
+   * @param {string} imagePath - Path to the image file.
+   * @param {string[]} barcodes - Array of barcode strings.
+   * @param {object} options - Optional parameters for hybrid prediction.
+   */
+  predictWithCloudTransformations: async (
+    imagePath: string,
+    barcodes: string[] = [],
+    options: {
+      token?: string | null,
+      apiKey?: string | null,
+      locationId?: string | null,
+      options?: {[key: string]: any} | null,
+      metadata?: {[key: string]: any} | null,
+      recipient?: {[key: string]: any} | null,
+      sender?: {[key: string]: any} | null,
+      shouldResizeImage?: boolean
+    } = {}
+  ) => {
+    try {
+      const result = await VisionSdkModule.predictWithCloudTransformations(
+        imagePath,
+        barcodes,
+        options.token,
+        options.apiKey,
+        options.locationId,
+        options.options,
+        options.metadata,
+        options.recipient,
+        options.sender,
+        options.shouldResizeImage
+      );
+      return result;
+    } catch (error) {
+      console.error("Failed to get hybrid prediction:", error);
+      throw error;
+    }
   }
 }

@@ -283,6 +283,263 @@ class VisionSdkModule: RCTEventEmitter {
       }
   }
 
-  
-  
+
+
+  @objc func predict(
+    _ imagePath: String,
+    barcodes: [String]?,
+    resolver: @escaping RCTPromiseResolveBlock,
+    rejecter: @escaping RCTPromiseRejectBlock
+  ) {
+    loadImage(from: imagePath) { image in
+      guard let image = image else {
+        rejecter("IMAGE_LOAD_ERROR", "Failed to load image from path: \(imagePath)", nil)
+        return
+      }
+
+      // Convert UIImage to CIImage for OnDeviceOCRManager
+      guard let ciImage = convertToCIImage(from: image) else {
+        rejecter("IMAGE_CONVERSION_ERROR", "Failed to convert UIImage to CIImage", nil)
+        return
+      }
+
+      let barcodeList = barcodes ?? []
+
+      // Use the correct OnDeviceOCRManager API
+      OnDeviceOCRManager.shared.extractDataFromImage(ciImage, withBarcodes: barcodeList) { data, error in
+        if let error = error {
+          rejecter("PREDICTION_ERROR", "On-device prediction failed: \(error.localizedDescription)", error)
+        } else if let data = data {
+          let responseString = String(data: data, encoding: .utf8) ?? ""
+          resolver(responseString)
+        } else {
+          rejecter("NO_DATA_ERROR", "No data returned from on-device prediction", nil)
+        }
+      }
+    }
+  }
+
+  @objc func predictShippingLabelCloud(
+    _ imagePath: String,
+    barcodes: [String]?,
+    token: String?,
+    apiKey: String?,
+    locationId: String?,
+    options: [String: Any]?,
+    metadata: [String: Any]?,
+    recipient: [String: Any]?,
+    sender: [String: Any]?,
+    shouldResizeImage: NSNumber?,
+    resolver: @escaping RCTPromiseResolveBlock,
+    rejecter: @escaping RCTPromiseRejectBlock
+  ) {
+    loadImage(from: imagePath) { image in
+      guard let image = image else {
+        rejecter("IMAGE_LOAD_ERROR", "Failed to load image from path: \(imagePath)", nil)
+        return
+      }
+
+      let barcodeList = barcodes ?? []
+      let shouldResize = shouldResizeImage?.boolValue ?? true
+
+      VisionAPIManager.shared.callScanAPIWith(
+        image,
+        andBarcodes: barcodeList,
+        andApiKey: apiKey,
+        andToken: token,
+        andLocationId: locationId ?? "",
+        andOptions: options ?? [:],
+        andMetaData: metadata ?? [:],
+        andRecipient: recipient ?? [:],
+        andSender: sender ?? [:],
+        withImageResizing: shouldResize
+      ) { data, error in
+        if let error = error {
+          rejecter("API_ERROR", "Shipping label prediction failed", error)
+        } else if let data = data {
+          resolver(String(data: data, encoding: .utf8) ?? "")
+        } else {
+          rejecter("UNKNOWN_ERROR", "Unknown error occurred", nil)
+        }
+      }
+    }
+  }
+
+  @objc func predictItemLabelCloud(
+    _ imagePath: String,
+    token: String?,
+    apiKey: String?,
+    shouldResizeImage: NSNumber?,
+    resolver: @escaping RCTPromiseResolveBlock,
+    rejecter: @escaping RCTPromiseRejectBlock
+  ) {
+    loadImage(from: imagePath) { image in
+      guard let image = image else {
+        rejecter("IMAGE_LOAD_ERROR", "Failed to load image from path: \(imagePath)", nil)
+        return
+      }
+
+      let shouldResize = shouldResizeImage?.boolValue ?? true
+
+      VisionAPIManager.shared.callItemLabelsAPIWith(
+        image,
+        andApiKey: apiKey,
+        andToken: token,
+        withImageResizing: shouldResize
+      ) { data, error in
+        if let error = error {
+          rejecter("API_ERROR", "Item label prediction failed", error)
+        } else if let data = data {
+          resolver(String(data: data, encoding: .utf8) ?? "")
+        } else {
+          rejecter("UNKNOWN_ERROR", "Unknown error occurred", nil)
+        }
+      }
+    }
+  }
+
+  @objc func predictBillOfLadingCloud(
+    _ imagePath: String,
+    barcodes: [String]?,
+    token: String?,
+    apiKey: String?,
+    locationId: String?,
+    options: [String: Any]?,
+    shouldResizeImage: NSNumber?,
+    resolver: @escaping RCTPromiseResolveBlock,
+    rejecter: @escaping RCTPromiseRejectBlock
+  ) {
+    // Bill of Lading uses the same scan API as shipping labels
+    loadImage(from: imagePath) { image in
+      guard let image = image else {
+        rejecter("IMAGE_LOAD_ERROR", "Failed to load image from path: \(imagePath)", nil)
+        return
+      }
+
+      let barcodeList = barcodes ?? []
+      let shouldResize = shouldResizeImage?.boolValue ?? true
+
+      VisionAPIManager.shared.callScanAPIWith(
+        image,
+        andBarcodes: barcodeList,
+        andApiKey: apiKey,
+        andToken: token,
+        andLocationId: locationId ?? "",
+        andOptions: options ?? [:],
+        andMetaData: [:],
+        andRecipient: [:],
+        andSender: [:],
+        withImageResizing: shouldResize
+      ) { data, error in
+        if let error = error {
+          rejecter("API_ERROR", "Bill of lading prediction failed", error)
+        } else if let data = data {
+          resolver(String(data: data, encoding: .utf8) ?? "")
+        } else {
+          rejecter("UNKNOWN_ERROR", "Unknown error occurred", nil)
+        }
+      }
+    }
+  }
+
+  @objc func predictDocumentClassificationCloud(
+    _ imagePath: String,
+    token: String?,
+    apiKey: String?,
+    shouldResizeImage: NSNumber?,
+    resolver: @escaping RCTPromiseResolveBlock,
+    rejecter: @escaping RCTPromiseRejectBlock
+  ) {
+    loadImage(from: imagePath) { image in
+      guard let image = image else {
+        rejecter("IMAGE_LOAD_ERROR", "Failed to load image from path: \(imagePath)", nil)
+        return
+      }
+
+      let shouldResize = shouldResizeImage?.boolValue ?? true
+
+      VisionAPIManager.shared.callDocumentClassificationAPIWith(
+        image,
+        andApiKey: apiKey,
+        andToken: token,
+        withImageResizing: shouldResize
+      ) { data, error in
+        if let error = error {
+          rejecter("API_ERROR", "Document classification prediction failed", error)
+        } else if let data = data {
+          resolver(String(data: data, encoding: .utf8) ?? "")
+        } else {
+          rejecter("UNKNOWN_ERROR", "Unknown error occurred", nil)
+        }
+      }
+    }
+  }
+
+  @objc func predictWithCloudTransformations(
+    _ imagePath: String,
+    barcodes: [String]?,
+    token: String?,
+    apiKey: String?,
+    locationId: String?,
+    options: [String: Any]?,
+    metadata: [String: Any]?,
+    recipient: [String: Any]?,
+    sender: [String: Any]?,
+    shouldResizeImage: NSNumber?,
+    resolver: @escaping RCTPromiseResolveBlock,
+    rejecter: @escaping RCTPromiseRejectBlock
+  ) {
+    loadImage(from: imagePath) { image in
+      guard let image = image else {
+        rejecter("IMAGE_LOAD_ERROR", "Failed to load image from path: \(imagePath)", nil)
+        return
+      }
+
+      let barcodeList = barcodes ?? []
+      let shouldResize = shouldResizeImage?.boolValue ?? true
+
+      // Convert UIImage to CIImage for OnDeviceOCRManager
+      guard let ciImage = convertToCIImage(from: image) else {
+        rejecter("IMAGE_CONVERSION_ERROR", "Failed to convert UIImage to CIImage", nil)
+        return
+      }
+
+      // First get on-device prediction using correct API
+      OnDeviceOCRManager.shared.extractDataFromImage(ciImage, withBarcodes: barcodeList) { onDeviceData, onDeviceError in
+        if let onDeviceError = onDeviceError {
+          rejecter("ON_DEVICE_ERROR", "Failed to get on-device prediction: \(onDeviceError.localizedDescription)", onDeviceError)
+          return
+        }
+
+        guard let onDeviceData = onDeviceData else {
+          rejecter("NO_ON_DEVICE_DATA", "No data returned from on-device prediction", nil)
+          return
+        }
+
+        // Send to cloud for transformation
+        VisionAPIManager.shared.callMatchingAPIWith(
+          image,
+          andBarcodes: barcodeList,
+          andApiKey: apiKey,
+          andToken: token,
+          withResponseData: onDeviceData,
+          andLocationId: (locationId ?? "").isEmpty ? nil : locationId,
+          andOptions: options ?? [:],
+          andMetaData: metadata ?? [:],
+          andRecipient: recipient ?? [:],
+          andSender: sender ?? [:],
+          withImageResizing: shouldResize
+        ) { data, error in
+          if let error = error {
+            rejecter("CLOUD_TRANSFORMATION_ERROR", "Cloud transformation failed", error)
+          } else if let data = data {
+            resolver(String(data: data, encoding: .utf8) ?? "")
+          } else {
+            rejecter("UNKNOWN_ERROR", "Unknown error occurred", nil)
+          }
+        }
+      }
+    }
+  }
+
 }
