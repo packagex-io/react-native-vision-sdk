@@ -166,6 +166,148 @@ const ScannerView = () => {
 };
 ```
 
+## Headless OCR Example
+
+Here's a complete example demonstrating how to use the new headless OCR functionality:
+
+```typescript
+import React, { useState } from 'react';
+import { View, Button, Text, Alert } from 'react-native';
+import { VisionCore } from 'react-native-vision-sdk';
+
+const HeadlessOCRExample = () => {
+  const [isModelLoaded, setIsModelLoaded] = useState(false);
+  const [prediction, setPrediction] = useState('');
+
+  // Step 1: Initialize and load model
+  const loadModel = async () => {
+    try {
+      // Set environment first
+      VisionCore.setEnvironment('sandbox'); // Use 'prod' for production
+
+      // Load on-device model with progress tracking
+      VisionCore.addListener('onModelDownloadProgress', (progress) => {
+        console.log('Download progress:', progress);
+        if (progress.isReady) {
+          setIsModelLoaded(true);
+          Alert.alert('Success', 'Model loaded and ready!');
+        }
+      });
+
+      await VisionCore.loadModel({
+        token: 'your-auth-token',
+        apiKey: 'your-api-key',
+        modelType: 'shipping_label', // shipping_label, item_label, bill_of_lading, document_classification
+        modelSize: 'large' // nano, micro, small, medium, large, xlarge
+      });
+    } catch (error) {
+      console.error('Failed to load model:', error);
+      Alert.alert('Error', 'Failed to load model');
+    }
+  };
+
+  // Step 2: Make predictions
+  const runPrediction = async () => {
+    if (!isModelLoaded) {
+      Alert.alert('Warning', 'Please load model first');
+      return;
+    }
+
+    try {
+      const imagePath = 'path/to/your/image.jpg'; // Can be local file or URI
+      const barcodes = ['1234567890']; // Optional barcode data
+
+      // On-device prediction (fast, offline)
+      const result = await VisionCore.predict(imagePath, barcodes);
+      setPrediction(result);
+
+      // Alternative: Cloud prediction with more accuracy
+      // const cloudResult = await VisionCore.predictShippingLabelCloud(
+      //   imagePath,
+      //   barcodes,
+      //   {
+      //     token: 'your-token',
+      //     apiKey: 'your-api-key',
+      //     locationId: 'optional-location-id',
+      //     shouldResizeImage: true,
+      //     options: { customParam: 'value' },
+      //     metadata: { source: 'mobile-app' }
+      //   }
+      // );
+
+    } catch (error) {
+      console.error('Prediction failed:', error);
+      Alert.alert('Error', 'Prediction failed');
+    }
+  };
+
+  // Step 3: Hybrid prediction (on-device + cloud enhancement)
+  const runHybridPrediction = async () => {
+    try {
+      const imagePath = 'path/to/your/image.jpg';
+      const barcodes = ['1234567890'];
+
+      // Gets on-device prediction then enhances it with cloud processing
+      const enhancedResult = await VisionCore.predictWithCloudTransformations(
+        imagePath,
+        barcodes,
+        {
+          token: 'your-token',
+          apiKey: 'your-api-key',
+          locationId: 'optional-location-id',
+          shouldResizeImage: true
+        }
+      );
+      setPrediction(enhancedResult);
+    } catch (error) {
+      console.error('Hybrid prediction failed:', error);
+    }
+  };
+
+  return (
+    <View style={{ padding: 20 }}>
+      <Button
+        title="Load Model"
+        onPress={loadModel}
+        disabled={isModelLoaded}
+      />
+
+      <Button
+        title="Run On-Device Prediction"
+        onPress={runPrediction}
+        disabled={!isModelLoaded}
+      />
+
+      <Button
+        title="Run Hybrid Prediction"
+        onPress={runHybridPrediction}
+        disabled={!isModelLoaded}
+      />
+
+      <Text style={{ marginTop: 20 }}>
+        Model Status: {isModelLoaded ? 'Ready' : 'Not Loaded'}
+      </Text>
+
+      {prediction ? (
+        <Text style={{ marginTop: 10 }}>
+          Prediction Result: {prediction}
+        </Text>
+      ) : null}
+    </View>
+  );
+};
+
+export default HeadlessOCRExample;
+```
+
+### Key Benefits of Headless OCR
+
+- **🚀 No Camera Dependency**: Process existing images without camera component
+- **⚡ Fast On-Device Processing**: Local ML models for instant predictions
+- **🌐 Cloud Enhancement**: Optional cloud processing for higher accuracy
+- **🔄 Hybrid Workflows**: Combine on-device speed with cloud intelligence
+- **📱 Flexible Integration**: Use in any part of your app, not just camera screens
+
 ## SDK Methods
 
 ### Camera Controls
@@ -186,6 +328,35 @@ const ScannerView = () => {
    ```js
    visionSdk.current.cameraCaptureHandler();
    ```
+
+### Headless OCR Workflows
+
+**NEW**: The Vision SDK now supports headless OCR operations that work independently of the camera component. These methods allow you to perform predictions on existing images without needing the camera view.
+
+```typescript
+import { VisionCore } from 'react-native-vision-sdk';
+
+// First, set your environment and load a model
+VisionCore.setEnvironment('sandbox'); // or 'prod'
+await VisionCore.loadModel({
+  token: 'your-token',
+  apiKey: 'your-api-key',
+  modelType: 'shipping_label',
+  modelSize: 'large'
+});
+
+// Now you can make predictions on any image
+const result = await VisionCore.predict('/path/to/image.jpg', ['barcode1', 'barcode2']);
+```
+
+#### Available Headless Methods:
+
+- **`VisionCore.predict(imagePath, barcodes)`** - On-device prediction
+- **`VisionCore.predictShippingLabelCloud(imagePath, barcodes, options)`** - Cloud shipping label prediction
+- **`VisionCore.predictItemLabelCloud(imagePath, options)`** - Cloud item label prediction
+- **`VisionCore.predictBillOfLadingCloud(imagePath, barcodes, options)`** - Cloud bill of lading prediction
+- **`VisionCore.predictDocumentClassificationCloud(imagePath, options)`** - Cloud document classification
+- **`VisionCore.predictWithCloudTransformations(imagePath, barcodes, options)`** - Hybrid on-device + cloud prediction
 
 ---
 
