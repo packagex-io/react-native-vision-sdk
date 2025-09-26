@@ -5,6 +5,7 @@
 RCT_EXPORT_VIEW_PROPERTY(onBarcodeScan, RCTDirectEventBlock)
 RCT_EXPORT_VIEW_PROPERTY(onModelDownloadProgress, RCTDirectEventBlock)
 RCT_EXPORT_VIEW_PROPERTY(onImageCaptured, RCTDirectEventBlock)
+RCT_EXPORT_VIEW_PROPERTY(onSharpnessScore, RCTDirectEventBlock)
 RCT_EXPORT_VIEW_PROPERTY(onOCRScan, RCTDirectEventBlock)
 RCT_EXPORT_VIEW_PROPERTY(onError, RCTDirectEventBlock)
 RCT_EXPORT_VIEW_PROPERTY(onBoundingBoxesDetected, RCTDirectEventBlock)

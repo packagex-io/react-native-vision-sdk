@@ -681,6 +681,16 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
           // Create a WritableMap for each ScannedCodeResult
           val codeMap = Arguments.createMap().apply {
             putString("scannedCode", scannedCodeResult.scannedCode)
+            putString("symbology", scannedCodeResult.symbology.toString())
+
+            // Add bounding box
+            val boundingBoxMap = Arguments.createMap().apply {
+              putInt("x", scannedCodeResult.boundingBox.left.toDp())
+              putInt("y", scannedCodeResult.boundingBox.top.toDp())
+              putInt("width", scannedCodeResult.boundingBox.width().toDp())
+              putInt("height", scannedCodeResult.boundingBox.height().toDp())
+            }
+            putMap("boundingBox", boundingBoxMap)
 
             scannedCodeResult.gs1ExtractedInfo?.let { gs1Info ->
               val gs1Map = Arguments.createMap()
@@ -711,13 +721,32 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
 
 
   override fun onImageCaptured(bitmap: Bitmap, scannedCodeResults: List<ScannedCodeResult>) {
-    Log.d(TAG, "onImageCaptured: ")
+    // Empty stub - only the version with sharpness score is used
+  }
+
+  override fun onImageCaptured(bitmap: Bitmap, scannedCodeResults: List<ScannedCodeResult>, imageSharpnessScore: Float) {
+    Log.d(TAG, "onImageCaptured (with sharpness): ")
     this.imagePath = ""
-    val image = saveBitmapAndSendEvent(bitmap, scannedCodeResults.map { it.scannedCode })
+    val image = saveBitmapAndSendEvent(bitmap, scannedCodeResults, imageSharpnessScore)
     // Check if OCR mode is enabled and auto-response is required
     if (detectionMode == DetectionMode.OCR && isEnableAutoOcrResponseWithImage == true) {
       this.imagePath = image
       handleOcrMode(bitmap, scannedCodeResults.map { it.scannedCode })
+    }
+  }
+
+  override fun onImageSharpnessScore(imageSharpnessScore: Float) {
+    Log.d(TAG, "onImageSharpnessScore: $imageSharpnessScore")
+    try {
+      val event = Arguments.createMap().apply {
+        putDouble("sharpnessScore", imageSharpnessScore.toDouble())
+      }
+      // Emit the event to JavaScript listeners for onSharpnessScore
+      appContext
+        .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
+        .emit("onSharpnessScore", event)
+    } catch (e: Exception) {
+      Log.e(TAG, "Error in onImageSharpnessScore: ${e.message}", e)
     }
   }
 
@@ -754,9 +783,10 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
    * Saves the provided bitmap to the device and sends an event with the saved image's URI and barcode data.
    * If the directory contains more than 10 images, it deletes the oldest image.
    * @param bitmap - Bitmap to be saved
-   * @param barcode - List of detected barcodes
+   * @param scannedCodeResults - List of detected ScannedCodeResult objects
+   * @param sharpnessScore - Image sharpness score
    */
-  private fun saveBitmapAndSendEvent(bitmap: Bitmap, barcode: List<String>): String {
+  private fun saveBitmapAndSendEvent(bitmap: Bitmap, scannedCodeResults: List<ScannedCodeResult>, sharpnessScore: Float): String {
     val parentDir = File(context?.filesDir, "VisionSdkSavedBitmaps")
     parentDir.mkdirs()
 
@@ -778,11 +808,41 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
     /**
      * Prepares and emits an event containing the captured image URI and barcode data to JavaScript.
      * @param savedBitmapFile - The file where the image is saved
-     * @param barcode - List of detected barcode values
+     * @param scannedCodeResults - List of detected ScannedCodeResult objects
+     * @param sharpnessScore - Image sharpness score
      */
     val event = Arguments.createMap().apply {
       putString("image", savedBitmapFile.toUri().toString())
-      putArray("barcodes", Arguments.fromList(barcode))
+      putDouble("sharpnessScore", sharpnessScore.toDouble())
+
+      // Create a detailed barcodes array matching iOS format
+      val codesArray = Arguments.createArray()
+      scannedCodeResults.forEach { scannedCodeResult ->
+        val codeMap = Arguments.createMap().apply {
+          putString("scannedCode", scannedCodeResult.scannedCode)
+          putString("symbology", scannedCodeResult.symbology.toString())
+
+          // Add bounding box
+          val boundingBoxMap = Arguments.createMap().apply {
+            putInt("x", scannedCodeResult.boundingBox.left.toDp())
+            putInt("y", scannedCodeResult.boundingBox.top.toDp())
+            putInt("width", scannedCodeResult.boundingBox.width().toDp())
+            putInt("height", scannedCodeResult.boundingBox.height().toDp())
+          }
+          putMap("boundingBox", boundingBoxMap)
+
+          // Add gs1ExtractedInfo if available
+          scannedCodeResult.gs1ExtractedInfo?.let { gs1Info ->
+            val gs1Map = Arguments.createMap()
+            for ((key, value) in gs1Info) {
+              gs1Map.putString(key, value)
+            }
+            putMap("gs1ExtractedInfo", gs1Map)
+          }
+        }
+        codesArray.pushMap(codeMap)
+      }
+      putArray("barcodes", codesArray)
     }
     // Emit the event to JavaScript listeners for onImageCaptured
     appContext

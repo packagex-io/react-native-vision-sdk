@@ -11,6 +11,7 @@ class RNCodeScannerView: UIView {
     @objc var onBarcodeScan: RCTDirectEventBlock?
     @objc var onModelDownloadProgress: RCTDirectEventBlock?
     @objc var onImageCaptured: RCTDirectEventBlock?
+    @objc var onSharpnessScore: RCTDirectEventBlock?
     @objc var onOCRScan: RCTDirectEventBlock?
     @objc var onDetected: RCTDirectEventBlock?
     @objc var onError: RCTDirectEventBlock?
@@ -187,6 +188,8 @@ extension RNCodeScannerView: CodeScannerViewDelegate {
       for code in codes{
         var codeInfo: [String: Any] = [:]
         codeInfo["scannedCode"] = code.stringValue
+        codeInfo["symbology"] = code.symbology.stringValue()
+        codeInfo["boundingBox"] = dict(from: code.boundingBox)
         if let gs1Info = code.extractedData {
           codeInfo["gs1ExtractedInfo"] = gs1Info
         }
@@ -209,6 +212,13 @@ extension RNCodeScannerView: CodeScannerViewDelegate {
         if onDetected != nil {
             onDetected!(["text": text, "barcode": barCode, "qrcode": qrCode, "document": document])
         }
+    }
+  
+    func codeScannerView(_ imageSharpnessScore: Float) {
+      //
+      if onSharpnessScore != nil {
+        onSharpnessScore!(["sharpnessScore": imageSharpnessScore])
+      }
     }
   
     func dict(from rect: CGRect) -> [String: CGFloat] {
@@ -252,30 +262,38 @@ extension RNCodeScannerView: CodeScannerViewDelegate {
     return true
   }
 
-    func codeScannerView(_ scannerView: CodeScannerView, didCaptureOCRImage image: UIImage, withCroppedImge croppedImage: UIImage?, withbarCodes barcodes: [String]) {
+  func codeScannerView(_ scannerView: CodeScannerView, didCaptureOCRImage image: UIImage, withCroppedImge croppedImage: UIImage?, withBarcodes barcodes: [DetectedBarcode], imageSharpnessScore: Float) {
+    
+    guard let savedImageURL = saveImageToVisionSDK(image: image, withName: UUID().uuidString) else {
+          print("❌ Image saving failed.")
+          onError?(["message": "Error converting image: Could not save image to disk."])
+          return
+      }
 
-        guard let savedImageURL = saveImageToVisionSDK(image: image, withName: UUID().uuidString) else {
-              print("❌ Image saving failed.")
-              onError?(["message": "Error converting image: Could not save image to disk."])
-              return
-          }
-
-          // Log the successful save
-        print("✅ Image saved successfully at: \(savedImageURL.path)")
-        handleCapturedImage(withImage: savedImageURL, barcodes: barcodes, nativeImage: image)
+      // Log the successful save
+    print("✅ Image saved successfully at: \(savedImageURL.path)")
+    handleCapturedImage(withImage: savedImageURL, barcodes: barcodes, nativeImage: image, sharpnessScore: imageSharpnessScore)
 //        if scanMode != .ocr {
 //            print("Scan mode is not OCR. Skipping OCR logic.")
 //            return // Exit the function early
 //        }
-        guard isEnableAutoOcrResponseWithImage == true, scanMode == .ocr else {
-              print("Auto OCR response with image is disabled or scan mode is not OCR. Exiting function.")
-              return
-        }
-        handelAutoOcrResponseWithImage(image: image, barcodes: barcodes,  imagePath: savedImageURL.path)
+    guard isEnableAutoOcrResponseWithImage == true, scanMode == .ocr else {
+          print("Auto OCR response with image is disabled or scan mode is not OCR. Exiting function.")
+          return
     }
+    handelAutoOcrResponseWithImage(image: image, barcodes: barcodes,  imagePath: savedImageURL.path)
+    
+    
+    
+    
+    
+    
+    
+    
+  }
+  
 
-
-    func handelAutoOcrResponseWithImage(image: UIImage, barcodes: [String], imagePath:String?) {
+  func handelAutoOcrResponseWithImage(image: UIImage, barcodes: [VisionSDK.DetectedBarcode], imagePath:String?) {
         guard isEnableAutoOcrResponseWithImage == true, scanMode == .ocr else {
               print("Auto OCR response with image is disabled or scan mode is not OCR. Exiting function.")
               return
@@ -310,7 +328,7 @@ extension RNCodeScannerView: CodeScannerViewDelegate {
               case "bill_of_lading", "bill-of-lading":
                 self.getPredictionBillOfLadingCloud(
                     withImage: image,
-                    andBarcodes: barcodes,
+                    andBarcodes: barcodes.map(\.stringValue),
                     imagePath:imagePath,
                     token: self.token,
                     apiKey: VSDKConstants.apiKey,
@@ -475,14 +493,14 @@ extension RNCodeScannerView {
     /// - Parameters:
     ///   - uiImage: uiImage of label that is going to be detected
     ///   - barcodes: barcodes that are detected by SDK within the label
-    func getPrediction(withImage uiImage: UIImage, andBarcodes barcodes: [String], imagePath: String?) {
+  func getPrediction(withImage uiImage: UIImage, andBarcodes barcodes: [VisionSDK.DetectedBarcode], imagePath: String?) {
       debugPrint("GET PREDICTION METHOD")
         guard let ciImage = convertToCIImage(from: uiImage) else {
             callForOCRWithImageFailedWithMessage(message: "Failed to convert UIImage to CIImage.")
             return
         }
 
-        OnDeviceOCRManager.shared.extractDataFromImage(ciImage, withBarcodes: barcodes) { [weak self] data, error in
+        OnDeviceOCRManager.shared.extractDataFromImageUsing(ciImage, withBarcodes: barcodes) { [weak self] data, error in
             if let error = error {
                 self?.callForOCRWithImageFailedWithMessage(message: error.localizedDescription)
             } else {
@@ -504,7 +522,7 @@ extension RNCodeScannerView {
     ///   - barcodes: barcodes that are detected by SDK within the label
     func getPredictionWithCloudTransformations(
         withImage uiImage: UIImage,
-        andBarcodes barcodes: [String],
+        andBarcodes barcodes: [VisionSDK.DetectedBarcode],
         imagePath:String?,
         token: String?,
         apiKey: String?,
@@ -514,46 +532,47 @@ extension RNCodeScannerView {
         recipient: [String: Any]?,
         sender: [String: Any]?,
         shouldResizeImage: Bool
-      ) {
-        guard let ciImage = convertToCIImage(from: uiImage) else {
-            callForOCRWithImageFailedWithMessage(message: "Failed to convert UIImage to CIImage.")
+    ) {
+      guard let ciImage = convertToCIImage(from: uiImage) else {
+        callForOCRWithImageFailedWithMessage(message: "Failed to convert UIImage to CIImage.")
+        return
+      }
+      
+      OnDeviceOCRManager.shared.extractDataFromImageUsing(ciImage, withBarcodes: barcodes) { [weak self] data, error in
+        if let error = error {
+          self?.callForOCRWithImageFailedWithMessage(message: error.localizedDescription)
+        }
+        else {
+          guard let responseData = data else {
+            DispatchQueue.main.async {
+              self?.callForOCRWithImageFailedWithMessage(message: "Data of request was found nil")
+            }
             return
+          }
+          
+          if let ocrMode = self?.ocrMode.lowercased(),
+             ["on-device-with-translation", "on_device_with_translation"].contains(ocrMode) {
+            // on-device + matching API case
+            self?.callMatchingAPIWithImage(
+              usingImage: uiImage,
+              withbarCodes: barcodes.map(\.stringValue),
+              responseData: responseData,
+              imagePath: imagePath,
+              token: token,
+              apiKey: apiKey,
+              locationId: locationId,
+              options: options,
+              metadata: metadata,
+              recipient: recipient,
+              sender: sender,
+              shouldResizeImage: shouldResizeImage
+            )
+          }
+          else {
+            self?.onDeviceAPIResponse(responseData: responseData, imagePath:imagePath)
+          }
         }
-        OnDeviceOCRManager.shared.extractDataFromImage(ciImage, withBarcodes: barcodes) { [weak self] data, error in
-            if let error = error {
-                self?.callForOCRWithImageFailedWithMessage(message: error.localizedDescription)
-            }
-            else {
-                guard let responseData = data else {
-                    DispatchQueue.main.async {
-                        self?.callForOCRWithImageFailedWithMessage(message: "Data of request was found nil")
-                    }
-                    return
-                }
-
-                if let ocrMode = self?.ocrMode.lowercased(),
-                   ["on-device-with-translation", "on_device_with_translation"].contains(ocrMode) {
-                    // on-device + matching API case
-                    self?.callMatchingAPIWithImage(
-                        usingImage: uiImage,
-                        withbarCodes: barcodes,
-                        responseData: responseData,
-                        imagePath: imagePath,
-                        token: token,
-                        apiKey: apiKey,
-                        locationId: locationId,
-                        options: options,
-                        metadata: metadata,
-                        recipient: recipient,
-                        sender: sender,
-                        shouldResizeImage: shouldResizeImage
-                      )
-                }
-                else {
-                    self?.onDeviceAPIResponse(responseData: responseData, imagePath:imagePath)
-                }
-            }
-        }
+      }
     }
     /// This Method is responsible for sending the on-device extracted data object to client side.
     /// - Parameter responseData: responseData that needs to be sent back to client
@@ -580,7 +599,7 @@ extension RNCodeScannerView {
     ///   - barcodes: Detected barcodes from VisionSDK to pass into API
     func getPredictionShippingLabelCloud(
       withImage image: UIImage,
-      andBarcodes barcodes: [String],
+      andBarcodes barcodes: [VisionSDK.DetectedBarcode],
       imagePath:String?,
       token: String?,
       apiKey: String?,
@@ -593,7 +612,7 @@ extension RNCodeScannerView {
     ) {
       VisionAPIManager.shared.callScanAPIWith(
           image,
-          andBarcodes: barcodes,
+          andBarcodes: barcodes.map(\.stringValue),
           andApiKey: apiKey?.isEmpty == false ? apiKey : nil, //!VSDKConstants.apiKey.isEmpty ? VSDKConstants.apiKey : nil,
           andToken: token?.isEmpty == false ? token : nil,
           andLocationId: locationId ?? "",
@@ -1325,12 +1344,37 @@ extension RNCodeScannerView {
 
     /// Send converted (UIImage to URL) image to client side, via event onImageCaptured
     /// - Parameter savedImageURL: url of the converted image
-    func handleCapturedImage(withImage savedImageURL: URL?, barcodes: [String], nativeImage: UIImage) {
+  func handleCapturedImage(
+    withImage savedImageURL: URL?,
+    barcodes: [VisionSDK.DetectedBarcode],
+    nativeImage: UIImage,
+    sharpnessScore: Float
+  ) {
         if savedImageURL == nil {
             onImageCaptured!(["image": "Nil: URL not found"])
         }
         else {
-            onImageCaptured!(["image": savedImageURL!.path, "barcodes": barcodes, "nativeImage":nativeImage])
+          
+          var codesArray: [[String: Any]] = []
+
+          for code in barcodes{
+            var codeInfo: [String: Any] = [:]
+            codeInfo["scannedCode"] = code.stringValue
+            codeInfo["symbology"] = code.symbology.stringValue()
+            codeInfo["boundingBox"] = dict(from: code.boundingBox)
+            
+            if let gs1Info = code.extractedData {
+              codeInfo["gs1ExtractedInfo"] = gs1Info
+            }
+            codesArray.append(codeInfo)
+          }
+          
+          onImageCaptured!([
+            "image": savedImageURL!.path,
+            "barcodes": codesArray,
+            "nativeImage":nativeImage,
+            "sharpnessScore": sharpnessScore
+          ])
         }
     }
 }

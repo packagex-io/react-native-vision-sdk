@@ -103,7 +103,7 @@ class VisionSdkViewManager: RCTViewManager {
     }
 
 
-    @objc func  getPrediction (_ node: NSNumber, image: String, barcode barcodeArray: [String]) {
+  @objc func  getPrediction (_ node: NSNumber, image: String, barcode barcodeArray: [NSDictionary]) {
         getComponent(node) { component in
             // Load the image (either from a local URI or URL)
             print("Image Path: \(image)")
@@ -115,14 +115,16 @@ class VisionSdkViewManager: RCTViewManager {
                 }
                 print("Loaded Image: \(finalImage)")
                 // Call onDeviceFlow with the UIImage and barcodes
-                component?.getPrediction(withImage: finalImage, andBarcodes: barcodeArray, imagePath:image)
+              
+              let barcodes = self.transformBarcodeArray(barcodes: barcodeArray)
+              component?.getPrediction(withImage: finalImage, andBarcodes: barcodes, imagePath:image)
             }
         }
     }
     @objc func  getPredictionWithCloudTransformations (
       _ node: NSNumber,
         image: String,
-        barcode: [String],
+        barcode: [NSDictionary],
         token: NSString?,
         apiKey: NSString?,
         locationId: NSString?,
@@ -152,10 +154,13 @@ class VisionSdkViewManager: RCTViewManager {
                 let recipientDict = recipient as? [String: Any] ?? component?.recipient ?? [:]
                 let senderDict = sender as? [String: Any] ?? component?.sender ?? [:]
                 let shouldResize = shouldResizeImage?.boolValue ?? component?.shouldResizeImage ?? true
+              
+              
+              let codesArray = self.transformBarcodeArray(barcodes: barcode)
 
                 component?.getPredictionWithCloudTransformations(
                   withImage: finalImage,
-                  andBarcodes: barcode,
+                  andBarcodes: codesArray,
                   imagePath:image,
                   token: tokenValue,
                   apiKey: apiKeyValue,
@@ -169,10 +174,43 @@ class VisionSdkViewManager: RCTViewManager {
             }
         }
     }
+  
+  func transformBarcodeArray(barcodes: [NSDictionary]) -> [VisionSDK.DetectedBarcode]{
+    var codesArray: [VisionSDK.DetectedBarcode] = []
+    
+    for code in barcodes {
+      
+      
+      let stringValue = (code["scannedCode"] as? String) ?? ""
+      let symbology = (code["symbology"] as? Int) ?? 0
+      
+      let symbologyValue = VisionSDK.BarcodeSymbology(rawValue: symbology) ?? .unknown
+      
+      let boundingBox = (code["boundingBox"] as? [String: CGFloat]) ?? [:]
+      
+      let x = boundingBox["x"] ?? 0
+      let y = boundingBox["y"] ?? 0
+      let width = boundingBox["width"] ?? 0
+      let height = boundingBox["height"] ?? 0
+      
+      let boundingBoxRect = CGRect(x: x, y: y, width: width, height: height)
+      
+      let gs1ExtractedInfo: [String: String]? = (code["gs1ExtractedInfo"] as? [String: String])
+      
+      let detectedCode = VisionSDK.DetectedBarcode(stringValue: stringValue, symbology: symbologyValue, extractedData: gs1ExtractedInfo , boundingBox: boundingBoxRect)
+      
+      
+     
+      codesArray.append(detectedCode)
+    }
+    
+    return codesArray
+  }
+  
     @objc func getPredictionShippingLabelCloud(
       _ node: NSNumber,
       image: String,
-      barcode: [String],
+      barcode: [NSDictionary],
       token: NSString?,
       apiKey: NSString?,
       locationId: NSString?,
@@ -203,10 +241,13 @@ class VisionSdkViewManager: RCTViewManager {
                 let recipientDict = recipient as? [String: Any] ?? component?.recipient ?? [:]
                 let senderDict = sender as? [String: Any] ?? component?.sender ?? [:]
                 let shouldResize = shouldResizeImage?.boolValue ?? component?.shouldResizeImage ?? true
+              
+              
+              let codesArray = self.transformBarcodeArray(barcodes: barcode)
 
                 component?.getPredictionShippingLabelCloud(
                   withImage: finalImage,
-                  andBarcodes: barcode,
+                  andBarcodes: codesArray,
                   imagePath:image,
                   token: tokenValue,
                   apiKey: apiKeyValue,
