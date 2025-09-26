@@ -2,7 +2,6 @@ import { Platform } from 'react-native'
 import { VisionCore } from '../../../src/index'
 
 export const syncWithPx = async (scanResult, modelName, env, apiKey) => {
-    console.log("INISIDE SYNC WITH PX FUNCTION, SCANRESULT IS: ", JSON.stringify(scanResult))
     try {
 
         const updatedScanResult = JSON.parse(JSON.stringify(scanResult))

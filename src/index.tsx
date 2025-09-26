@@ -25,6 +25,7 @@ import {
   ReportErrorType,
   BoundingBoxesDetectedResult,
   PriceTagDetectionResult,
+  SharpnessScoreEvent,
 } from './types';
 import { correctOcrEvent } from './utils';
 
@@ -54,6 +55,7 @@ const Camera = forwardRef<VisionSdkRefProps, VisionSdkProps>(
       onModelDownloadProgress = () => { },
       onBarcodeScan = () => { },
       onImageCaptured = () => { },
+      onSharpnessScore = () => {},
       onPriceTagDetected = () => { },
       onOCRScan = () => { },
       onDetected = () => { },
@@ -330,6 +332,10 @@ const Camera = forwardRef<VisionSdkRefProps, VisionSdkProps>(
       onImageCaptured(parseNativeEvent<ImageCaptureEvent>(event)), [onImageCaptured])
 
 
+    const onSharpnessScoreHandler = useCallback((event: any) => 
+      onSharpnessScore(parseNativeEvent<SharpnessScoreEvent>(event)), [onSharpnessScore])
+
+
     const onPriceTagDetectedHandler = useCallback((event: any) => onPriceTagDetected(parseNativeEvent(event)), [onPriceTagDetected])
 
     const onDetectedHandler = useCallback(
@@ -388,6 +394,7 @@ const Camera = forwardRef<VisionSdkRefProps, VisionSdkProps>(
       onBarcodeScan: onBarcodeScanHandler,
       onModelDownloadProgress: onModelDownloadProgressHandler,
       onImageCaptured: onImageCapturedHandler,
+      onSharpnessScore: onSharpnessScoreHandler,
       onPriceTagDetected: onPriceTagDetectedHandler,
       onOCRScan: onOCRScanHandler,
       onDetected: onDetectedHandler,
@@ -403,11 +410,12 @@ const Camera = forwardRef<VisionSdkRefProps, VisionSdkProps>(
       eventHandlersRef.current.onBarcodeScan = onBarcodeScanHandler
       eventHandlersRef.current.onModelDownloadProgress = onModelDownloadProgressHandler
       eventHandlersRef.current.onImageCaptured = onImageCapturedHandler
+      eventHandlersRef.current.onSharpnessScore = onSharpnessScoreHandler
       eventHandlersRef.current.onPriceTagDetected = onPriceTagDetectedHandler
       eventHandlersRef.current.onOCRScan = onOCRScanHandler
       eventHandlersRef.current.onDetected = onDetectedHandler
       eventHandlersRef.current.onError = onErrorHandler
-      eventHandlersRef.current.onCreateTemplate = onCreateTemplate
+      eventHandlersRef.current.onCreateTemplate = onCreateTemplateHandler
       eventHandlersRef.current.onGetTemplates = onGetTemplateHandler
       eventHandlersRef.current.onDeleteTemplateById = onDeleteTemplateByIdHandler
       eventHandlersRef.current.onDeleteTemplates = onDeleteTemplatesHandler
@@ -416,6 +424,7 @@ const Camera = forwardRef<VisionSdkRefProps, VisionSdkProps>(
       onBarcodeScan,
       onModelDownloadProgress,
       onImageCaptured,
+      onSharpnessScore,
       onPriceTagDetected,
       onOCRScan,
       onDetected,
@@ -435,6 +444,8 @@ const Camera = forwardRef<VisionSdkRefProps, VisionSdkProps>(
         ['onModelDownloadProgress', (event: any) => eventHandlersRef.current.onModelDownloadProgress(event)],
         ['onBarcodeScan', (event: any) => eventHandlersRef.current.onBarcodeScan(event)],
         ['onImageCaptured', (event: any) => eventHandlersRef.current.onImageCaptured(event)],
+        ['onSharpnessScore', (event: any) => eventHandlersRef.current.onSharpnessScore(event)],
+        
         ['onPriceTagDetected', (event: PriceTagDetectionResult) => eventHandlersRef.current.onPriceTagDetected(event)],
         ['onOCRScan', (event: any) => eventHandlersRef.current.onOCRScan(event)],
         ['onDetected', (event: any) => eventHandlersRef.current.onDetected(event)],
@@ -489,6 +500,7 @@ const Camera = forwardRef<VisionSdkRefProps, VisionSdkProps>(
           onBarcodeScan={onBarcodeScanHandler}
           onModelDownloadProgress={onModelDownloadProgressHandler}
           onImageCaptured={onImageCapturedHandler}
+          onSharpnessScore={onSharpnessScoreHandler}
           onPriceTagDetected={onPriceTagDetectedHandler}
           onOCRScan={onOCRScanHandler}
           onDetected={onDetectedHandler}

@@ -290,6 +290,14 @@ export interface VisionSdkViewProps {
     event: ImageCaptureEvent | { nativeEvent: ImageCaptureEvent }
   ) => void;
 
+
+    /**
+   * @type {(event: SharpnessScoreEvent | { nativeEvent: SharpnessScoreEvent }) => void}
+   * @param {SharpnessScoreEvent | { nativeEvent: SharpnessScoreEvent }} event camera feed image sharpness value.
+   * Optional event handler for image capture events.
+   */
+  onSharpnessScore?: (event: SharpnessScoreEvent | { nativeEvent: SharpnessScoreEvent }) => void;
+
   /**
    * @type {(event: OCRScanResult | { nativeEvent: OCRScanResult }) => void}
    * @param {OCRScanResult | { nativeEvent: OCRScanResult }} event OCR scan result.
@@ -401,6 +409,18 @@ export interface ImageCaptureEvent {
    * @example 'file:///path/to/image.jpg'
    */
   nativeImage?: string;
+
+
+    /**
+   * @type {number}
+   * @description sharpness value for the captured image, could be used for blur detection.
+   * @example 'file:///path/to/image.jpg'
+   */
+  sharpnessScore?: number;
+}
+
+export interface SharpnessScoreEvent {
+  sharpnessScore: number;
 }
 
 /**
@@ -1101,6 +1121,18 @@ export interface VisionSdkProps {
    * @return {void}
    */
   onImageCaptured?: (event: ImageCaptureEvent) => void;
+
+
+    /**
+   * @optional
+   * @param {onSharpnessScore} event
+   * @type {(event: SharpnessScoreEvent) => void | undefined}
+   * @description Event handler for image sharpness events.
+   * This callback is triggered when camera feed is active in modes: [ocr, photo].
+   * @example (event) => console.log(event)
+   * @return {void}
+   */
+    onSharpnessScore?: (event: SharpnessScoreEvent) => void;
 
 
   /**

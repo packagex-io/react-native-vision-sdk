@@ -354,6 +354,7 @@ const App: React.FC<{ route: any }> = ({ route }) => {
 
   const handleBarcodeScan = useCallback((event) => {
     setLoading(false);
+    console.log("BARCODE SCAN RESULT: ", JSON.stringify(event))
 
     visionSdk.current?.restartScanningHandler();
   }, [])
@@ -410,7 +411,12 @@ const App: React.FC<{ route: any }> = ({ route }) => {
   }, [])
 
   const handleImageCaptured = useCallback((event) => {
+    console.log("ON IMAGE CAPTURED: ", JSON.stringify(event))
     visionSdk.current?.restartScanningHandler();
+  }, [])
+
+  const handleSharpnessScore = useCallback((event) => { 
+    console.log("SHARPNESS SCORE: ", JSON.stringify(event))
   }, [])
 
   const handleModelDownloadProgress = useCallback((event) => {
@@ -519,6 +525,7 @@ const App: React.FC<{ route: any }> = ({ route }) => {
         onDeleteTemplates={onDeleteAllTemplates}
         onOCRScan={handleOcrScan}
         onImageCaptured={handleImageCaptured}
+        onSharpnessScore={handleSharpnessScore}
         onModelDownloadProgress={handleModelDownloadProgress}
         onGetTemplates={handleGetTemplates}
         onBoundingBoxesDetected={handleBoundingBoxesDetected}
