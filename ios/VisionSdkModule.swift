@@ -306,7 +306,8 @@ class VisionSdkModule: RCTEventEmitter {
       let barcodeList = barcodes ?? []
 
       // Use the correct OnDeviceOCRManager API
-      OnDeviceOCRManager.shared.extractDataFromImage(ciImage, withBarcodes: barcodeList) { data, error in
+      
+      OnDeviceOCRManager.shared.extractDataFromImageUsing(ciImage, withBarcodes: []) { data, error in
         if let error = error {
           rejecter("PREDICTION_ERROR", "On-device prediction failed: \(error.localizedDescription)", error)
         } else if let data = data {
@@ -505,7 +506,7 @@ class VisionSdkModule: RCTEventEmitter {
       }
 
       // First get on-device prediction using correct API
-      OnDeviceOCRManager.shared.extractDataFromImage(ciImage, withBarcodes: barcodeList) { onDeviceData, onDeviceError in
+      OnDeviceOCRManager.shared.extractDataFromImageUsing(ciImage, withBarcodes: []) { onDeviceData, onDeviceError in
         if let onDeviceError = onDeviceError {
           rejecter("ON_DEVICE_ERROR", "Failed to get on-device prediction: \(onDeviceError.localizedDescription)", onDeviceError)
           return
