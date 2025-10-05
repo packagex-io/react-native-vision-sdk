@@ -511,7 +511,7 @@ const App: React.FC<{ route: any }> = ({ route }) => {
         isMultipleScanEnabled={true}
         mode={mode}
         options={{}}
-        isEnableAutoOcrResponseWithImage={true}
+        isEnableAutoOcrResponseWithImage={false}
         locationId=""
         token=""
         apiKey={apiKey}
