@@ -186,126 +186,6 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
     }
   }
 
-  // ScannerCallback implementation
-  override fun onScanResult(barcodeList: List<ScannedCodeResult>) {
-    Log.d(TAG, "onScanResult called with ${barcodeList.size} codes")
-    val event = Arguments.createMap()
-    val codesArray = Arguments.createArray()
-
-    for (code in barcodeList) {
-      Log.d(TAG, "Barcode detected: ${code.scannedCode}, symbology: ${code.symbology}")
-      val codeMap = Arguments.createMap()
-      codeMap.putString("scannedCode", code.scannedCode)
-      codeMap.putString("symbology", code.symbology.toString())
-
-      val boundingBox = Arguments.createMap()
-      code.boundingBox?.let { box ->
-        boundingBox.putDouble("x", box.left.toDouble())
-        boundingBox.putDouble("y", box.top.toDouble())
-        boundingBox.putDouble("width", box.width().toDouble())
-        boundingBox.putDouble("height", box.height().toDouble())
-      }
-      codeMap.putMap("boundingBox", boundingBox)
-
-      if (!code.gs1ExtractedInfo.isNullOrEmpty()) {
-        val gs1Map = Arguments.createMap()
-        code.gs1ExtractedInfo?.forEach { (key, value) ->
-          gs1Map.putString(key, value)
-        }
-        codeMap.putMap("gs1ExtractedInfo", gs1Map)
-      }
-
-      codesArray.pushMap(codeMap)
-    }
-
-    event.putArray("codes", codesArray)
-    sendEvent("onBarcodeDetected", event)
-
-    // Automatically restart scanning after barcode detection
-    visionCameraView?.rescan()
-  }
-
-  override fun onFailure(exception: VisionSDKException) {
-    val event = Arguments.createMap()
-    event.putString("message", exception.message ?: "Unknown error")
-    sendEvent("onError", event)
-  }
-
-  override fun onIndications(
-    barcodeDetected: Boolean,
-    qrCodeDetected: Boolean,
-    textDetected: Boolean,
-    documentDetected: Boolean
-  ) {
-    Log.d(TAG, "onIndications - barcode: $barcodeDetected, qr: $qrCodeDetected, text: $textDetected, doc: $documentDetected")
-    val event = Arguments.createMap()
-    event.putBoolean("text", textDetected)
-    event.putBoolean("barcode", barcodeDetected)
-    event.putBoolean("qrcode", qrCodeDetected)
-    event.putBoolean("document", documentDetected)
-    sendEvent("onRecognitionUpdate", event)
-  }
-
-  override fun onIndicationsBoundingBoxes(
-    barcodeBoundingBoxes: List<android.graphics.Rect>,
-    qrCodeBoundingBoxes: List<android.graphics.Rect>,
-    documentBoundingBox: android.graphics.Rect?
-  ) {
-    // Not used in minimal implementation
-  }
-
-  override fun onItemRetrievalResult(scannedCodeResults: ScannedCodeResult) {
-    // Not used in minimal implementation
-  }
-
-  override fun onPriceTagResult(priceTagData: io.packagex.visionsdk.core.pricetag.PriceTagData) {
-    // Not used in minimal implementation
-  }
-
-  override fun onImageSharpnessScore(imageSharpnessScore: Float) {
-    Log.d(TAG, "onImageSharpnessScore called: $imageSharpnessScore")
-    val event = Arguments.createMap()
-    event.putDouble("sharpnessScore", imageSharpnessScore.toDouble())
-    sendEvent("onSharpnessScoreUpdate", event)
-  }
-
-  override fun onImageCaptured(bitmap: Bitmap, scannedCodeResults: List<ScannedCodeResult>, imageSharpnessScore: Float) {
-    try {
-      val tempDir = appContext.cacheDir
-      val fileName = "camera_${System.currentTimeMillis()}.jpg"
-      val file = java.io.File(tempDir, fileName)
-
-      java.io.FileOutputStream(file).use { output ->
-        bitmap.compress(Bitmap.CompressFormat.JPEG, 90, output)
-      }
-
-      val event = Arguments.createMap()
-      event.putString("image", file.absolutePath)
-      event.putString("nativeImage", file.toURI().toString())
-      sendEvent("onCapture", event)
-
-      // Automatically restart scanning after image capture
-      visionCameraView?.rescan()
-    } catch (e: Exception) {
-      val event = Arguments.createMap()
-      event.putString("message", "Failed to save image: ${e.message}")
-      sendEvent("onError", event)
-    }
-  }
-
-  override fun onImageCaptured(bitmap: Bitmap, scannedCodeResults: List<ScannedCodeResult>) {
-    // Empty stub - only the version with sharpness score is used
-  }
-
-  // CameraLifecycleCallback implementation
-  override fun onCameraStarted() {
-    Log.d(TAG, "✅ Camera started successfully")
-  }
-
-  override fun onCameraStopped() {
-    Log.d(TAG, "⏹️ Camera stopped")
-  }
-
   override fun onDropViewInstance(view: VisionCameraView) {
     super.onDropViewInstance(view)
     Log.d(TAG, "Dropping view instance with id: ${view.id}")
@@ -345,3 +225,125 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
         Log.w(TAG, "Cannot send event $eventName - view is not attached")
       }
     }
+
+    // ScannerCallback implementation
+    override fun onScanResult(barcodeList: List<ScannedCodeResult>) {
+      Log.d(TAG, "onScanResult called with ${barcodeList.size} codes")
+      val event = Arguments.createMap()
+      val codesArray = Arguments.createArray()
+
+      for (code in barcodeList) {
+        Log.d(TAG, "Barcode detected: ${code.scannedCode}, symbology: ${code.symbology}")
+        val codeMap = Arguments.createMap()
+        codeMap.putString("scannedCode", code.scannedCode)
+        codeMap.putString("symbology", code.symbology.toString())
+
+        val boundingBox = Arguments.createMap()
+        code.boundingBox?.let { box ->
+          boundingBox.putDouble("x", box.left.toDouble())
+          boundingBox.putDouble("y", box.top.toDouble())
+          boundingBox.putDouble("width", box.width().toDouble())
+          boundingBox.putDouble("height", box.height().toDouble())
+        }
+        codeMap.putMap("boundingBox", boundingBox)
+
+        if (!code.gs1ExtractedInfo.isNullOrEmpty()) {
+          val gs1Map = Arguments.createMap()
+          code.gs1ExtractedInfo?.forEach { (key, value) ->
+            gs1Map.putString(key, value)
+          }
+          codeMap.putMap("gs1ExtractedInfo", gs1Map)
+        }
+
+        codesArray.pushMap(codeMap)
+      }
+
+      event.putArray("codes", codesArray)
+      sendEvent("onBarcodeDetected", event)
+
+      // Automatically restart scanning after barcode detection
+      visionCameraView?.rescan()
+    }
+
+    override fun onFailure(exception: VisionSDKException) {
+      val event = Arguments.createMap()
+      event.putString("message", exception.message ?: "Unknown error")
+      sendEvent("onError", event)
+    }
+
+    override fun onIndications(
+      barcodeDetected: Boolean,
+      qrCodeDetected: Boolean,
+      textDetected: Boolean,
+      documentDetected: Boolean
+    ) {
+      Log.d(TAG, "onIndications - barcode: $barcodeDetected, qr: $qrCodeDetected, text: $textDetected, doc: $documentDetected")
+      val event = Arguments.createMap()
+      event.putBoolean("text", textDetected)
+      event.putBoolean("barcode", barcodeDetected)
+      event.putBoolean("qrcode", qrCodeDetected)
+      event.putBoolean("document", documentDetected)
+      sendEvent("onRecognitionUpdate", event)
+    }
+
+    override fun onIndicationsBoundingBoxes(
+      barcodeBoundingBoxes: List<android.graphics.Rect>,
+      qrCodeBoundingBoxes: List<android.graphics.Rect>,
+      documentBoundingBox: android.graphics.Rect?
+    ) {
+      // Not used in minimal implementation
+    }
+
+    override fun onItemRetrievalResult(scannedCodeResults: ScannedCodeResult) {
+      // Not used in minimal implementation
+    }
+
+    override fun onPriceTagResult(priceTagData: io.packagex.visionsdk.core.pricetag.PriceTagData) {
+      // Not used in minimal implementation
+    }
+
+    override fun onImageSharpnessScore(imageSharpnessScore: Float) {
+      Log.d(TAG, "onImageSharpnessScore called: $imageSharpnessScore")
+      val event = Arguments.createMap()
+      event.putDouble("sharpnessScore", imageSharpnessScore.toDouble())
+      sendEvent("onSharpnessScoreUpdate", event)
+    }
+
+    override fun onImageCaptured(bitmap: Bitmap, scannedCodeResults: List<ScannedCodeResult>, imageSharpnessScore: Float) {
+      try {
+        val tempDir = appContext.cacheDir
+        val fileName = "camera_${System.currentTimeMillis()}.jpg"
+        val file = java.io.File(tempDir, fileName)
+
+        java.io.FileOutputStream(file).use { output ->
+          bitmap.compress(Bitmap.CompressFormat.JPEG, 90, output)
+        }
+
+        val event = Arguments.createMap()
+        event.putString("image", file.absolutePath)
+        event.putString("nativeImage", file.toURI().toString())
+        sendEvent("onCapture", event)
+
+        // Automatically restart scanning after image capture
+        visionCameraView?.rescan()
+      } catch (e: Exception) {
+        val event = Arguments.createMap()
+        event.putString("message", "Failed to save image: ${e.message}")
+        sendEvent("onError", event)
+      }
+    }
+
+    override fun onImageCaptured(bitmap: Bitmap, scannedCodeResults: List<ScannedCodeResult>) {
+      // Empty stub - only the version with sharpness score is used
+    }
+
+    // CameraLifecycleCallback implementation
+    override fun onCameraStarted() {
+      Log.d(TAG, "✅ Camera started successfully")
+    }
+
+    override fun onCameraStopped() {
+      Log.d(TAG, "⏹️ Camera stopped")
+    }
+  }
+}
