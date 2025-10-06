@@ -31,6 +31,8 @@ import { correctOcrEvent } from './utils';
 
 export * from './types';
 export * from './VisionCore';
+export { VisionCamera } from './VisionCamera';
+export * from './VisionCameraTypes';
 
 
 // Camera component

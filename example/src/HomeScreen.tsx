@@ -450,12 +450,19 @@ const HomeScreen = ({ navigation }) => {
       <TouchableOpacity
         style={[styles.secondaryButton]}
         onPress={() => navigation.navigate("CameraScreen", {
-          modelSize: 'large',
-          modelType: 'shipping_label',
-          mode: 'ocr'
+          // modelSize: 'large',
+          // modelType: 'shipping_label',
+          mode: 'barcode'
         })}
       >
         <Text style={styles.secondaryButtonText}>📷 Open Camera View</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={[styles.primaryButton]}
+        onPress={() => navigation.navigate("VisionCameraExample")}
+      >
+        <Text style={styles.primaryButtonText}>🎥 Open Vision Camera (New)</Text>
       </TouchableOpacity>
     </ScrollView>
   );
@@ -705,6 +712,23 @@ const styles = StyleSheet.create({
   secondaryButtonText: {
     fontSize: 16,
     color: '#007bff',
+    fontWeight: 'bold'
+  },
+  primaryButton: {
+    backgroundColor: '#007bff',
+    paddingVertical: 14,
+    borderRadius: 10,
+    alignItems: 'center',
+    marginTop: 12,
+    shadowColor: '#007bff',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4
+  },
+  primaryButtonText: {
+    fontSize: 16,
+    color: '#fff',
     fontWeight: 'bold'
   }
 });
