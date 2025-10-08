@@ -11,6 +11,7 @@ class RNVisionCameraView: UIView {
     @objc var onRecognitionUpdate: RCTDirectEventBlock?
     @objc var onSharpnessScoreUpdate: RCTDirectEventBlock?
     @objc var onBarcodeDetected: RCTDirectEventBlock?
+    @objc var onBoundingBoxesUpdate: RCTDirectEventBlock?
 
     // MARK: - Properties
     @objc var enableFlash: Bool = false {
@@ -41,7 +42,7 @@ class RNVisionCameraView: UIView {
     var cameraView: CodeScannerView?
     private var currentScanMode: CodeScannerMode = .photo
     private var currentCaptureMode: CaptureMode = .manual
-    private var captureType: CaptureType = .single
+    private var captureType: CaptureType = .multiple
 
     // MARK: - Initialization
     override init(frame: CGRect) {
@@ -239,6 +240,31 @@ extension RNVisionCameraView: CodeScannerViewDelegate {
             "barcode": barCode,
             "qrcode": qrCode,
             "document": document
+        ])
+    }
+
+    func codeScannerViewDidDetectBoxes(_ text: Bool, barCode: [CGRect], qrCode: [CGRect], document: CGRect) {
+        guard let onBoundingBoxesUpdate = onBoundingBoxesUpdate else { return }
+
+        // Helper to convert CGRect to dictionary
+        func dict(from rect: CGRect) -> [String: CGFloat] {
+            return [
+                "x": rect.origin.x,
+                "y": rect.origin.y,
+                "width": rect.size.width,
+                "height": rect.size.height
+            ]
+        }
+
+        // Convert arrays of CGRects
+        let barcodeBoundingBoxes = barCode.map { dict(from: $0) }
+        let qrCodeBoundingBoxes = qrCode.map { dict(from: $0) }
+        let documentBoundingBox = dict(from: document)
+
+        onBoundingBoxesUpdate([
+            "barcodeBoundingBoxes": barcodeBoundingBoxes,
+            "qrCodeBoundingBoxes": qrCodeBoundingBoxes,
+            "documentBoundingBox": documentBoundingBox
         ])
     }
 

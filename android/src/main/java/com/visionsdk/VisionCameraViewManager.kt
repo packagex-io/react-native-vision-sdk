@@ -58,7 +58,7 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
     )
 
     newView.configure(
-      isMultipleScanEnabled = false,
+      isMultipleScanEnabled = true,
       detectionMode = io.packagex.visionsdk.core.DetectionMode.Photo,
       scanningMode = io.packagex.visionsdk.core.ScanningMode.Manual
     )
@@ -121,7 +121,8 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
       "onError" to mapOf("registrationName" to "onError"),
       "onRecognitionUpdate" to mapOf("registrationName" to "onRecognitionUpdate"),
       "onSharpnessScoreUpdate" to mapOf("registrationName" to "onSharpnessScoreUpdate"),
-      "onBarcodeDetected" to mapOf("registrationName" to "onBarcodeDetected")
+      "onBarcodeDetected" to mapOf("registrationName" to "onBarcodeDetected"),
+      "onBoundingBoxesUpdate" to mapOf("registrationName" to "onBoundingBoxesUpdate")
     )
   }
 
@@ -205,6 +206,10 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
       Log.e(TAG, "Error stopping camera: ${e.message}")
     }
   }
+
+  // Utility to convert pixels to DP
+  private val density = appContext.resources.displayMetrics.density
+  private fun Int.toDp(): Int = (this / density + 0.5f).toInt()
 
   // Inner class for per-view callbacks
   inner class ViewCallback(
@@ -291,7 +296,44 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
       qrCodeBoundingBoxes: List<android.graphics.Rect>,
       documentBoundingBox: android.graphics.Rect?
     ) {
-      // Not used in minimal implementation
+      Log.d(TAG, "onIndicationsBoundingBoxes - barcodes: ${barcodeBoundingBoxes.size}, qrCodes: ${qrCodeBoundingBoxes.size}, document: ${documentBoundingBox != null}")
+      val event = Arguments.createMap()
+
+      // Convert barcode bounding boxes (px to dp)
+      val barcodeBoxesArray = Arguments.createArray()
+      barcodeBoundingBoxes.forEach { box ->
+        val boxMap = Arguments.createMap()
+        boxMap.putInt("x", box.left.toDp())
+        boxMap.putInt("y", box.top.toDp())
+        boxMap.putInt("width", box.width().toDp())
+        boxMap.putInt("height", box.height().toDp())
+        barcodeBoxesArray.pushMap(boxMap)
+      }
+      event.putArray("barcodeBoundingBoxes", barcodeBoxesArray)
+
+      // Convert QR code bounding boxes (px to dp)
+      val qrCodeBoxesArray = Arguments.createArray()
+      qrCodeBoundingBoxes.forEach { box ->
+        val boxMap = Arguments.createMap()
+        boxMap.putInt("x", box.left.toDp())
+        boxMap.putInt("y", box.top.toDp())
+        boxMap.putInt("width", box.width().toDp())
+        boxMap.putInt("height", box.height().toDp())
+        qrCodeBoxesArray.pushMap(boxMap)
+      }
+      event.putArray("qrCodeBoundingBoxes", qrCodeBoxesArray)
+
+      // Convert document bounding box (px to dp)
+      documentBoundingBox?.let { box ->
+        val boxMap = Arguments.createMap()
+        boxMap.putInt("x", box.left.toDp())
+        boxMap.putInt("y", box.top.toDp())
+        boxMap.putInt("width", box.width().toDp())
+        boxMap.putInt("height", box.height().toDp())
+        event.putMap("documentBoundingBox", boxMap)
+      }
+
+      sendEvent("onBoundingBoxesUpdate", event)
     }
 
     override fun onItemRetrievalResult(scannedCodeResults: ScannedCodeResult) {

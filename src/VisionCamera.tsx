@@ -18,6 +18,7 @@ import {
   VisionCameraRecognitionUpdateEvent,
   VisionCameraSharpnessScoreEvent,
   VisionCameraBarcodeDetectedEvent,
+  VisionCameraBoundingBoxesUpdateEvent,
 } from './VisionCameraTypes';
 
 export * from './VisionCameraTypes';
@@ -36,6 +37,7 @@ const Camera = forwardRef<VisionCameraRefProps, VisionCameraProps>(
       onRecognitionUpdate = () => { },
       onSharpnessScoreUpdate = () => { },
       onBarcodeDetected = () => { },
+      onBoundingBoxesUpdate = () => { },
     },
     ref
   ) => {
@@ -135,6 +137,12 @@ const Camera = forwardRef<VisionCameraRefProps, VisionCameraProps>(
       [onBarcodeDetected]
     )
 
+    const onBoundingBoxesUpdateHandler = useCallback(
+      (event: any) =>
+        onBoundingBoxesUpdate(parseNativeEvent<VisionCameraBoundingBoxesUpdateEvent>(event)),
+      [onBoundingBoxesUpdate]
+    )
+
     return (
       <>
         <VisionCameraView
@@ -149,6 +157,7 @@ const Camera = forwardRef<VisionCameraRefProps, VisionCameraProps>(
           onRecognitionUpdate={onRecognitionUpdateHandler}
           onSharpnessScoreUpdate={onSharpnessScoreUpdateHandler}
           onBarcodeDetected={onBarcodeDetectedHandler}
+          onBoundingBoxesUpdate={onBoundingBoxesUpdateHandler}
         />
         {children}
       </>

@@ -126,6 +126,58 @@ export interface VisionCameraBarcodeDetectedEvent {
 }
 
 /**
+ * Bounding box coordinates
+ */
+export interface BoundingBox {
+  /**
+   * @type {number}
+   * @description X coordinate of the bounding box (top-left corner).
+   */
+  x: number;
+
+  /**
+   * @type {number}
+   * @description Y coordinate of the bounding box (top-left corner).
+   */
+  y: number;
+
+  /**
+   * @type {number}
+   * @description Width of the bounding box.
+   */
+  width: number;
+
+  /**
+   * @type {number}
+   * @description Height of the bounding box.
+   */
+  height: number;
+}
+
+/**
+ * Event triggered continuously with bounding box updates for detected objects.
+ */
+export interface VisionCameraBoundingBoxesUpdateEvent {
+  /**
+   * @type {BoundingBox[]}
+   * @description Array of bounding boxes for detected barcodes.
+   */
+  barcodeBoundingBoxes: BoundingBox[];
+
+  /**
+   * @type {BoundingBox[]}
+   * @description Array of bounding boxes for detected QR codes.
+   */
+  qrCodeBoundingBoxes: BoundingBox[];
+
+  /**
+   * @type {BoundingBox}
+   * @description Bounding box for detected document.
+   */
+  documentBoundingBox: BoundingBox;
+}
+
+/**
  * Props for the Vision Camera view component.
  */
 export interface VisionCameraViewProps {
@@ -214,6 +266,15 @@ export interface VisionCameraViewProps {
    * Triggered when barcodes or QR codes are detected in scan modes: barcode, qrcode, barcodeorqrcode, barcodesinglecapture.
    */
   onBarcodeDetected?: (event: VisionCameraBarcodeDetectedEvent) => void;
+
+  /**
+   * @optional
+   * @param {VisionCameraBoundingBoxesUpdateEvent} event
+   * @type {(event: VisionCameraBoundingBoxesUpdateEvent) => void | undefined}
+   * @description Event handler for continuous bounding box updates from the camera feed.
+   * Reports bounding boxes for detected objects (barcodes, QR codes, documents) in the viewfinder.
+   */
+  onBoundingBoxesUpdate?: (event: VisionCameraBoundingBoxesUpdateEvent) => void;
 
   /**
    * @optional
@@ -347,4 +408,13 @@ export interface VisionCameraProps {
    * Triggered when barcodes or QR codes are detected in scan modes: barcode, qrcode, barcodeorqrcode, barcodesinglecapture.
    */
   onBarcodeDetected?: (event: VisionCameraBarcodeDetectedEvent) => void;
+
+  /**
+   * @optional
+   * @param {VisionCameraBoundingBoxesUpdateEvent} event
+   * @type {(event: VisionCameraBoundingBoxesUpdateEvent) => void | undefined}
+   * @description Event handler for continuous bounding box updates from the camera feed.
+   * Reports bounding boxes for detected objects (barcodes, QR codes, documents) in the viewfinder.
+   */
+  onBoundingBoxesUpdate?: (event: VisionCameraBoundingBoxesUpdateEvent) => void;
 }
