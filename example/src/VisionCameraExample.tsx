@@ -9,6 +9,7 @@ import {
   Image,
   ScrollView,
   Platform,
+  Dimensions,
 } from 'react-native';
 import { PERMISSIONS, RESULTS, request } from 'react-native-permissions';
 import { VisionCamera, VisionCameraRefProps, VisionCameraCaptureEvent, VisionCameraScanMode } from '../../src/VisionCamera';
@@ -18,27 +19,67 @@ const VisionCameraExample = ({ navigation }) => {
   const [flashEnabled, setFlashEnabled] = useState(false);
   const [zoomLevel, setZoomLevel] = useState(1.0);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
-  const [scanMode, setScanMode] = useState<VisionCameraScanMode>('ocr');
-  const [autoCapture, setAutoCapture] = useState(true);
+  const [scanMode, setScanMode] = useState<VisionCameraScanMode>('barcode');
+  const [currentMode, setCurrentMode] = useState<VisionCameraScanMode | 'barcode-focused'>('barcode-focused');
+  const [autoCapture, setAutoCapture] = useState(false);
   const [recognitionData, setRecognitionData] = useState({ text: false, barcode: false, qrcode: false, document: false });
   const [sharpness, setSharpness] = useState(0);
   const [barcodeResults, setBarcodeResults] = useState<any[]>([]);
   const [hasPermission, setHasPermission] = useState(false);
+  const [boundingBoxes, setBoundingBoxes] = useState<{
+    barcodeBoundingBoxes: any[];
+    qrCodeBoundingBoxes: any[];
+    documentBoundingBox: any;
+  }>({
+    barcodeBoundingBoxes: [],
+    qrCodeBoundingBoxes: [],
+    documentBoundingBox: null,
+  });
 
   // Throttle sharpness updates (update at most every 200ms)
   const lastSharpnessUpdate = useRef<number>(0);
   const sharpnessThrottleMs = 200;
 
-  const scanModes: { label: string; value: VisionCameraScanMode }[] = [
+  // Throttle bounding boxes updates (update at most every 300ms)
+  const lastBoundingBoxUpdate = useRef<number>(0);
+  const boundingBoxThrottleMs = 300;
+
+  const scanModes: { label: string; value: VisionCameraScanMode | 'barcode-focused' }[] = [
     { label: '📷 Photo', value: 'photo' },
     { label: '📊 Barcode', value: 'barcode' },
+    { label: '🎯 Barcode (Focused)', value: 'barcode-focused' },
     { label: '🔲 QR Code', value: 'qrcode' },
     { label: '🔍 OCR', value: 'ocr' },
   ];
 
-  const handleScanModeChange = (mode: VisionCameraScanMode) => {
-    setScanMode(mode);
+  const handleScanModeChange = (mode: VisionCameraScanMode | 'barcode-focused') => {
+    setCurrentMode(mode);
+    if (mode === 'barcode-focused') {
+      setScanMode('barcode');
+    } else {
+      setScanMode(mode);
+    }
     setAutoCapture(false);
+  };
+
+  // State to store camera view dimensions
+  const [cameraViewSize, setCameraViewSize] = useState({ width: 0, height: 0 });
+
+  // Calculate centered scan area for barcode-focused mode
+  const getCenteredScanArea = () => {
+    // Use camera view dimensions if available, otherwise fallback to screen width
+    const { width: screenWidth } = Dimensions.get('window');
+    const viewWidth = cameraViewSize.width || screenWidth;
+    const viewHeight = cameraViewSize.height || 600; // Reasonable fallback
+
+    // Centered rectangle: 300dp wide, 100dp tall
+    const width = 300;
+    const height = 100;
+    const x = (viewWidth - width) / 2;
+    const y = (viewHeight - height) / 2;
+
+    const scanArea = { x, y, width, height };
+    return scanArea;
   };
 
   const requestCameraPermission = async () => {
@@ -93,6 +134,24 @@ const VisionCameraExample = ({ navigation }) => {
     Alert.alert('Barcode Detected', `Found ${event.codes.length} barcode(s)`);
   };
 
+  const handleBoundingBoxesUpdate = (event: any) => {
+    const now = Date.now();
+    if (now - lastBoundingBoxUpdate.current >= boundingBoxThrottleMs) {
+      lastBoundingBoxUpdate.current = now;
+      // console.log('📦 Bounding Boxes Update:', {
+      //   barcodes: event.barcodeBoundingBoxes?.length || 0,
+      //   qrCodes: event.qrCodeBoundingBoxes?.length || 0,
+      //   document: event.documentBoundingBox ? 'detected' : 'none',
+      //   data: event
+      // });
+      setBoundingBoxes({
+        barcodeBoundingBoxes: event.barcodeBoundingBoxes || [],
+        qrCodeBoundingBoxes: event.qrCodeBoundingBoxes || [],
+        documentBoundingBox: event.documentBoundingBox || null,
+      });
+    }
+  };
+
   const onCapturePress = () => {
     cameraRef.current?.capture();
   };
@@ -122,7 +181,14 @@ const VisionCameraExample = ({ navigation }) => {
         <View style={styles.placeholder} />
       </View>
 
-      <View style={styles.cameraContainer}>
+      <View
+        style={styles.cameraContainer}
+        onLayout={(event) => {
+          const { width, height } = event.nativeEvent.layout;
+          setCameraViewSize({ width, height });
+          console.log('📍 JS: Camera container layout:', { width, height });
+        }}
+      >
         {hasPermission ? (
           <VisionCamera
             ref={cameraRef}
@@ -130,11 +196,19 @@ const VisionCameraExample = ({ navigation }) => {
             zoomLevel={zoomLevel}
             scanMode={scanMode}
             autoCapture={autoCapture}
+            scanArea={currentMode === 'barcode-focused' ? getCenteredScanArea() : undefined}
             onCapture={handleCapture}
             onError={handleError}
             onRecognitionUpdate={handleRecognitionUpdate}
             onSharpnessScoreUpdate={handleSharpnessScoreUpdate}
             onBarcodeDetected={handleBarcodeDetected}
+            detectionConfig={{
+              text: true,
+              barcode: true,
+              document: true,
+            }}
+            frameSkip={15}
+            // onBoundingBoxesUpdate={handleBoundingBoxesUpdate}
           />
         ) : (
           <View style={styles.permissionContainer}>
@@ -147,6 +221,73 @@ const VisionCameraExample = ({ navigation }) => {
             </TouchableOpacity>
           </View>
         )}
+
+        {/* Scan Area Overlay (for barcode-focused mode) */}
+        {currentMode === 'barcode-focused' && (
+          <View style={styles.scanAreaOverlay} pointerEvents="none">
+            <View style={[styles.scanAreaRect, {
+              left: getCenteredScanArea().x,
+              top: getCenteredScanArea().y,
+              width: getCenteredScanArea().width,
+              height: getCenteredScanArea().height,
+            }]}>
+              <Text style={styles.scanAreaLabel}>Scan Area - Only barcodes in this region will be detected</Text>
+            </View>
+          </View>
+        )}
+
+        {/* Bounding Boxes Overlay */}
+        <View style={styles.boundingBoxesContainer} pointerEvents="none">
+          {/* Barcode Bounding Boxes - Yellow */}
+          {boundingBoxes.barcodeBoundingBoxes.map((box, index) => (
+            <View
+              key={`barcode-${index}`}
+              style={[
+                styles.boundingBox,
+                {
+                  left: box.x,
+                  top: box.y,
+                  width: box.width,
+                  height: box.height,
+                  borderColor: '#FFEB3B', // Yellow for barcodes
+                },
+              ]}
+            />
+          ))}
+
+          {/* QR Code Bounding Boxes - Cyan */}
+          {boundingBoxes.qrCodeBoundingBoxes.map((box, index) => (
+            <View
+              key={`qrcode-${index}`}
+              style={[
+                styles.boundingBox,
+                {
+                  left: box.x,
+                  top: box.y,
+                  width: box.width,
+                  height: box.height,
+                  borderColor: '#00E5FF', // Cyan for QR codes
+                },
+              ]}
+            />
+          ))}
+
+          {/* Document Bounding Box - Green */}
+          {boundingBoxes.documentBoundingBox && boundingBoxes.documentBoundingBox.width > 0 && (
+            <View
+              style={[
+                styles.boundingBox,
+                {
+                  left: boundingBoxes.documentBoundingBox.x,
+                  top: boundingBoxes.documentBoundingBox.y,
+                  width: boundingBoxes.documentBoundingBox.width,
+                  height: boundingBoxes.documentBoundingBox.height,
+                  borderColor: '#4CAF50', // Green for documents
+                },
+              ]}
+            />
+          )}
+        </View>
 
         {/* Recognition Status Overlay */}
         <View style={styles.recognitionOverlay}>
@@ -182,14 +323,14 @@ const VisionCameraExample = ({ navigation }) => {
               key={mode.value}
               style={[
                 styles.modeButton,
-                scanMode === mode.value && styles.modeButtonActive,
+                currentMode === mode.value && styles.modeButtonActive,
               ]}
               onPress={() => handleScanModeChange(mode.value)}
             >
               <Text
                 style={[
                   styles.modeButtonText,
-                  scanMode === mode.value && styles.modeButtonTextActive,
+                  currentMode === mode.value && styles.modeButtonTextActive,
                 ]}
               >
                 {mode.label}
@@ -310,6 +451,18 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#000',
     position: 'relative',
+  },
+  boundingBoxesContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  boundingBox: {
+    position: 'absolute',
+    borderWidth: 2,
+    backgroundColor: 'transparent',
   },
   permissionContainer: {
     flex: 1,
@@ -537,6 +690,31 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderWidth: 2,
     borderColor: '#333',
+  },
+  scanAreaOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  scanAreaRect: {
+    position: 'absolute',
+    borderWidth: 3,
+    borderColor: '#FF9800',
+    backgroundColor: 'rgba(255, 152, 0, 0.1)',
+    borderStyle: 'dashed',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  scanAreaLabel: {
+    color: '#FF9800',
+    fontSize: 12,
+    fontWeight: 'bold',
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    padding: 8,
+    borderRadius: 4,
+    textAlign: 'center',
   },
 });
 

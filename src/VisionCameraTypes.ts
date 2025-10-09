@@ -155,6 +155,88 @@ export interface BoundingBox {
 }
 
 /**
+ * Scan area/region configuration
+ */
+export interface ScanArea {
+  /**
+   * @type {number}
+   * @description X coordinate of the scan area (top-left corner).
+   */
+  x: number;
+
+  /**
+   * @type {number}
+   * @description Y coordinate of the scan area (top-left corner).
+   */
+  y: number;
+
+  /**
+   * @type {number}
+   * @description Width of the scan area.
+   */
+  width: number;
+
+  /**
+   * @type {number}
+   * @description Height of the scan area.
+   */
+  height: number;
+}
+
+/**
+ * Object detection configuration
+ */
+export interface DetectionConfig {
+  /**
+   * @optional
+   * @type {boolean}
+   * @description Enable/disable text detection.
+   * @default true
+   */
+  text?: boolean;
+
+  /**
+   * @optional
+   * @type {boolean}
+   * @description Enable/disable barcode/QR code detection.
+   * @default true
+   */
+  barcode?: boolean;
+
+  /**
+   * @optional
+   * @type {boolean}
+   * @description Enable/disable document detection.
+   * @default true
+   */
+  document?: boolean;
+
+  /**
+   * @optional
+   * @type {number}
+   * @description Minimum confidence threshold for barcode detection (0.0-1.0).
+   * @default 0.5
+   */
+  barcodeConfidence?: number;
+
+  /**
+   * @optional
+   * @type {number}
+   * @description Minimum confidence threshold for document detection (0.0-1.0).
+   * @default 0.5
+   */
+  documentConfidence?: number;
+
+  /**
+   * @optional
+   * @type {number}
+   * @description Delay in seconds before auto-capturing detected documents.
+   * @default 2.0
+   */
+  documentCaptureDelay?: number;
+}
+
+/**
  * Event triggered continuously with bounding box updates for detected objects.
  */
 export interface VisionCameraBoundingBoxesUpdateEvent {
@@ -275,6 +357,31 @@ export interface VisionCameraViewProps {
    * Reports bounding boxes for detected objects (barcodes, QR codes, documents) in the viewfinder.
    */
   onBoundingBoxesUpdate?: (event: VisionCameraBoundingBoxesUpdateEvent) => void;
+
+  /**
+   * @optional
+   * @type {ScanArea}
+   * @description Optional scan area to restrict scanning to a specific region of the camera feed.
+   * When provided, only objects within this area will be detected.
+   */
+  scanArea?: ScanArea;
+
+  /**
+   * @optional
+   * @type {DetectionConfig}
+   * @description Optional object detection configuration to control which objects to detect and confidence thresholds.
+   */
+  detectionConfig?: DetectionConfig;
+
+  /**
+   * @optional
+   * @type {number}
+   * @description Optional frame skip interval for performance optimization.
+   * Process every Nth frame (e.g., 10 = process 1 out of every 10 frames).
+   * Higher values = better performance, lower detection frequency.
+   * @default 10
+   */
+  frameSkip?: number;
 
   /**
    * @optional
@@ -417,4 +524,29 @@ export interface VisionCameraProps {
    * Reports bounding boxes for detected objects (barcodes, QR codes, documents) in the viewfinder.
    */
   onBoundingBoxesUpdate?: (event: VisionCameraBoundingBoxesUpdateEvent) => void;
+
+  /**
+   * @optional
+   * @type {ScanArea}
+   * @description Optional scan area to restrict scanning to a specific region of the camera feed.
+   * When provided, only objects within this area will be detected.
+   */
+  scanArea?: ScanArea;
+
+  /**
+   * @optional
+   * @type {DetectionConfig}
+   * @description Optional object detection configuration to control which objects to detect and confidence thresholds.
+   */
+  detectionConfig?: DetectionConfig;
+
+  /**
+   * @optional
+   * @type {number}
+   * @description Optional frame skip interval for performance optimization.
+   * Process every Nth frame (e.g., 10 = process 1 out of every 10 frames).
+   * Higher values = better performance, lower detection frequency.
+   * @default 10
+   */
+  frameSkip?: number;
 }

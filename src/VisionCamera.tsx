@@ -32,6 +32,9 @@ const Camera = forwardRef<VisionCameraRefProps, VisionCameraProps>(
       zoomLevel = 1.0,
       scanMode = 'photo',
       autoCapture = false,
+      scanArea,
+      detectionConfig,
+      frameSkip,
       onCapture = () => { },
       onError = () => { },
       onRecognitionUpdate = () => { },
@@ -152,6 +155,9 @@ const Camera = forwardRef<VisionCameraRefProps, VisionCameraProps>(
           zoomLevel={zoomLevel}
           scanMode={scanMode}
           autoCapture={autoCapture}
+          scanArea={scanArea}
+          detectionConfig={detectionConfig}
+          frameSkip={frameSkip}
           onCapture={onCaptureHandler}
           onError={onErrorHandler}
           onRecognitionUpdate={onRecognitionUpdateHandler}

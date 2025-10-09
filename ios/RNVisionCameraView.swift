@@ -38,6 +38,26 @@ class RNVisionCameraView: UIView {
         }
     }
 
+    @objc var scanArea: NSDictionary? {
+        didSet {
+            DispatchQueue.main.async {
+                self.updateScanArea()
+            }
+        }
+    }
+
+    @objc var detectionConfig: NSDictionary? {
+        didSet {
+            updateDetectionConfig()
+        }
+    }
+
+    @objc var frameSkip: NSNumber? {
+        didSet {
+            updateFrameSkip()
+        }
+    }
+
     // MARK: - VisionSDK Components
     var cameraView: CodeScannerView?
     private var currentScanMode: CodeScannerMode = .photo
@@ -64,6 +84,11 @@ class RNVisionCameraView: UIView {
         if !hasStarted && bounds.size.width > 0 && bounds.size.height > 0 {
             hasStarted = true
             cameraView?.startRunning()
+
+            // Apply scan area settings after camera starts
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                self.updateScanArea()
+            }
         }
     }
 
@@ -83,6 +108,9 @@ class RNVisionCameraView: UIView {
             captureType: captureType,
             scanMode: currentScanMode
         )
+
+        // Disable default SDK bounding boxes
+        updateScanArea()
 
         // Stop initially, will auto-start after layout
         cameraView.stopRunning()
@@ -152,6 +180,66 @@ class RNVisionCameraView: UIView {
         let newCaptureMode: CaptureMode = autoCapture ? .auto : .manual
         currentCaptureMode = newCaptureMode
         cameraView.setCaptureModeTo(newCaptureMode)
+    }
+
+    private func updateScanArea() {
+        guard let cameraView = cameraView else { return }
+
+        // If no scan area provided, enable multiple scan and disable default SDK boxes
+        guard let scanArea = scanArea else {
+            captureType = .multiple
+            cameraView.setCaptureTypeTo(captureType)
+
+            let focusSettings = VisionSDK.CodeScannerView.FocusSettings()
+            focusSettings.shouldDisplayFocusImage = false
+            focusSettings.shouldScanInFocusImageRect = false
+            focusSettings.showCodeBoundariesInMultipleScan = false
+            focusSettings.showDocumentBoundries = false
+            cameraView.setFocusSettingsTo(focusSettings)
+            return
+        }
+
+        // When scan area is defined, use single capture mode
+        captureType = .single
+        cameraView.setCaptureTypeTo(captureType)
+
+        let x = scanArea["x"] as? CGFloat ?? 0
+        let y = scanArea["y"] as? CGFloat ?? 0
+        let width = scanArea["width"] as? CGFloat ?? 0
+        let height = scanArea["height"] as? CGFloat ?? 0
+
+        let focusRect = CGRect(x: x, y: y, width: width, height: height)
+
+        let focusSettings = VisionSDK.CodeScannerView.FocusSettings()
+        focusSettings.shouldDisplayFocusImage = false
+        focusSettings.shouldScanInFocusImageRect = true
+        focusSettings.focusImageRect = focusRect
+        focusSettings.showCodeBoundariesInMultipleScan = false
+        focusSettings.showDocumentBoundries = false
+
+        cameraView.setFocusSettingsTo(focusSettings)
+        cameraView.rescan()
+    }
+
+    private func updateDetectionConfig() {
+        guard let cameraView = cameraView, let config = detectionConfig else { return }
+
+        let detectionSettings = VisionSDK.CodeScannerView.ObjectDetectionConfiguration()
+        detectionSettings.isTextIndicationOn = config["text"] as? Bool ?? true
+        detectionSettings.isBarCodeOrQRCodeIndicationOn = config["barcode"] as? Bool ?? true
+        detectionSettings.isDocumentIndicationOn = config["document"] as? Bool ?? true
+        detectionSettings.codeDetectionConfidence = config["barcodeConfidence"] as? Float ?? 0.5
+        detectionSettings.documentDetectionConfidence = config["documentConfidence"] as? Float ?? 0.5
+        detectionSettings.secondsToWaitBeforeDocumentCapture = config["documentCaptureDelay"] as? Double ?? 2.0
+        cameraView.setObjectDetectionConfigurationTo(detectionSettings)
+    }
+
+    private func updateFrameSkip() {
+        guard let cameraView = cameraView, let frameSkip = frameSkip else { return }
+
+        let cameraSettings = VisionSDK.CodeScannerView.CameraSettings()
+        cameraSettings.nthFrameToProcess = frameSkip.int64Value
+        cameraView.setCameraSettingsTo(cameraSettings)
     }
 
     private func updateScanMode() {
@@ -230,6 +318,9 @@ extension RNVisionCameraView: CodeScannerViewDelegate {
 
     func codeScannerView(_ scannerView: CodeScannerView, didFailure error: NSError) {
         sendError(message: error.localizedDescription)
+
+        // Restart scanning after error
+        cameraView?.rescan()
     }
 
     @objc func codeScannerViewDidDetect(_ text: Bool, barCode: Bool, qrCode: Bool, document: Bool) {
@@ -284,6 +375,7 @@ extension RNVisionCameraView: CodeScannerViewDelegate {
 
         guard let imageData = image.jpegData(compressionQuality: 0.9) else {
             sendError(message: "Failed to convert image to JPEG")
+            cameraView?.rescan()
             return
         }
 
@@ -301,6 +393,7 @@ extension RNVisionCameraView: CodeScannerViewDelegate {
             cameraView?.rescan()
         } catch {
             sendError(message: "Failed to save image: \(error.localizedDescription)")
+            cameraView?.rescan()
         }
     }
 }
