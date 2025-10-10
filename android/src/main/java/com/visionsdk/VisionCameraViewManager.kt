@@ -27,6 +27,12 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
   private var visionCameraView: VisionCameraView? = null
   private var hasStarted = false
   private var currentCallback: ViewCallback? = null
+  private var pendingScanArea: com.facebook.react.bridge.ReadableMap? = null
+  private var isCameraReady = false
+  private var consecutiveFailures = 0
+  private var lastFailureTime = 0L
+  private val maxConsecutiveFailures = 3
+  private val failureResetWindowMs = 2000L // Reset counter after 2 seconds
 
   companion object {
     private const val TAG = "VisionCameraViewManager"
@@ -58,7 +64,7 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
     )
 
     newView.configure(
-      isMultipleScanEnabled = false,
+      isMultipleScanEnabled = true,
       detectionMode = io.packagex.visionsdk.core.DetectionMode.Photo,
       scanningMode = io.packagex.visionsdk.core.ScanningMode.Manual
     )
@@ -121,7 +127,8 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
       "onError" to mapOf("registrationName" to "onError"),
       "onRecognitionUpdate" to mapOf("registrationName" to "onRecognitionUpdate"),
       "onSharpnessScoreUpdate" to mapOf("registrationName" to "onSharpnessScoreUpdate"),
-      "onBarcodeDetected" to mapOf("registrationName" to "onBarcodeDetected")
+      "onBarcodeDetected" to mapOf("registrationName" to "onBarcodeDetected"),
+      "onBoundingBoxesUpdate" to mapOf("registrationName" to "onBoundingBoxesUpdate")
     )
   }
 
@@ -157,6 +164,87 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
   fun setAutoCapture(view: VisionCameraView, autoCapture: Boolean) {
     val mode = if (autoCapture) io.packagex.visionsdk.core.ScanningMode.Auto else io.packagex.visionsdk.core.ScanningMode.Manual
     view.setScanningMode(mode)
+  }
+
+  @ReactProp(name = "scanArea")
+  fun setScanArea(view: VisionCameraView, scanArea: com.facebook.react.bridge.ReadableMap?) {
+    // Store the scanArea for later application
+    pendingScanArea = scanArea
+
+    // Only apply if camera is ready
+    if (!isCameraReady) {
+      Log.d(TAG, "Camera not ready, storing scanArea for later application")
+      return
+    }
+
+    applyScanArea(view, scanArea)
+  }
+
+  private fun applyScanArea(view: VisionCameraView, scanArea: com.facebook.react.bridge.ReadableMap?) {
+    try {
+      if (scanArea != null) {
+        // When scan area is defined, disable multiple scan mode
+        view.setMultipleScanEnabled(false)
+
+        val x = scanArea.getDouble("x")
+        val y = scanArea.getDouble("y")
+        val width = scanArea.getDouble("width")
+        val height = scanArea.getDouble("height")
+
+        val density = appContext.resources.displayMetrics.density
+        val xPx = (x * density).toFloat()
+        val yPx = (y * density).toFloat()
+        val widthPx = (width * density).toFloat()
+        val heightPx = (height * density).toFloat()
+
+        val focusRect = android.graphics.RectF(xPx, yPx, xPx + widthPx, yPx + heightPx)
+        val focusSettings = io.packagex.visionsdk.config.FocusSettings(
+          context = appContext,
+          shouldScanInFocusImageRect = true,
+          focusImageRect = focusRect,
+          showCodeBoundariesInMultipleScan = false,
+          showDocumentBoundaries = false
+        )
+        view.getFocusRegionManager()?.setFocusSettings(focusSettings)
+        Log.d(TAG, "Scan area applied - single scan mode enabled")
+      } else {
+        // If no scan area, enable multiple scan mode
+        view.setMultipleScanEnabled(true)
+
+        val focusSettings = io.packagex.visionsdk.config.FocusSettings(
+          context = appContext,
+          showCodeBoundariesInMultipleScan = false,
+          showDocumentBoundaries = false
+        )
+        view.getFocusRegionManager()?.setFocusSettings(focusSettings)
+        Log.d(TAG, "No scan area - multiple scan mode enabled")
+      }
+    } catch (e: Exception) {
+      Log.e(TAG, "Failed to apply scanArea: ${e.message}")
+    }
+  }
+
+  @ReactProp(name = "detectionConfig")
+  fun setDetectionConfig(view: VisionCameraView, config: com.facebook.react.bridge.ReadableMap?) {
+    if (config != null) {
+      val detectionConfig = io.packagex.visionsdk.config.ObjectDetectionConfiguration(
+        isTextIndicationOn = if (config.hasKey("text")) config.getBoolean("text") else true,
+        isBarcodeOrQRCodeIndicationOn = if (config.hasKey("barcode")) config.getBoolean("barcode") else true,
+        isDocumentIndicationOn = if (config.hasKey("document")) config.getBoolean("document") else true,
+        secondsToWaitBeforeDocumentCapture = if (config.hasKey("documentCaptureDelay")) config.getDouble("documentCaptureDelay").toInt() else 2
+      )
+      android.util.Log.d(TAG, "Detection config - text: ${detectionConfig.isTextIndicationOn}, barcode: ${detectionConfig.isBarcodeOrQRCodeIndicationOn}, document: ${detectionConfig.isDocumentIndicationOn}")
+      view.setObjectDetectionConfiguration(detectionConfig)
+      android.util.Log.d(TAG, "Detection config applied successfully")
+    }
+  }
+
+  @ReactProp(name = "frameSkip")
+  fun setFrameSkip(view: VisionCameraView, frameSkip: Int) {
+    val cameraSettings = io.packagex.visionsdk.config.CameraSettings(
+      nthFrameToProcess = frameSkip
+    )
+    view.setCameraSettings(cameraSettings)
   }
 
   // Commands
@@ -205,6 +293,10 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
       Log.e(TAG, "Error stopping camera: ${e.message}")
     }
   }
+
+  // Utility to convert pixels to DP
+  private val density = appContext.resources.displayMetrics.density
+  private fun Int.toDp(): Int = (this / density + 0.5f).toInt()
 
   // Inner class for per-view callbacks
   inner class ViewCallback(
@@ -261,6 +353,9 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
       event.putArray("codes", codesArray)
       sendEvent("onBarcodeDetected", event)
 
+      // Reset failure counter on successful scan
+      consecutiveFailures = 0
+
       // Automatically restart scanning after barcode detection
       visionCameraView?.rescan()
     }
@@ -269,6 +364,26 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
       val event = Arguments.createMap()
       event.putString("message", exception.message ?: "Unknown error")
       sendEvent("onError", event)
+
+      // Check if enough time has passed since last failure to reset counter
+      val currentTime = System.currentTimeMillis()
+      if (currentTime - lastFailureTime > failureResetWindowMs) {
+        consecutiveFailures = 0
+      }
+      lastFailureTime = currentTime
+
+      // Track consecutive failures to prevent infinite loop
+      consecutiveFailures++
+
+      if (consecutiveFailures <= maxConsecutiveFailures) {
+        Log.d(TAG, "Failure detected (${consecutiveFailures}/${maxConsecutiveFailures}), rescanning...")
+        // Delay rescan slightly to avoid immediate recursion
+        view.postDelayed({
+          visionCameraView?.rescan()
+        }, 100)
+      } else {
+        Log.e(TAG, "Too many consecutive failures (${consecutiveFailures}), pausing auto-rescan")
+      }
     }
 
     override fun onIndications(
@@ -291,7 +406,44 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
       qrCodeBoundingBoxes: List<android.graphics.Rect>,
       documentBoundingBox: android.graphics.Rect?
     ) {
-      // Not used in minimal implementation
+      Log.d(TAG, "onIndicationsBoundingBoxes - barcodes: ${barcodeBoundingBoxes.size}, qrCodes: ${qrCodeBoundingBoxes.size}, document: ${documentBoundingBox != null}")
+      val event = Arguments.createMap()
+
+      // Convert barcode bounding boxes (px to dp)
+      val barcodeBoxesArray = Arguments.createArray()
+      barcodeBoundingBoxes.forEach { box ->
+        val boxMap = Arguments.createMap()
+        boxMap.putInt("x", box.left.toDp())
+        boxMap.putInt("y", box.top.toDp())
+        boxMap.putInt("width", box.width().toDp())
+        boxMap.putInt("height", box.height().toDp())
+        barcodeBoxesArray.pushMap(boxMap)
+      }
+      event.putArray("barcodeBoundingBoxes", barcodeBoxesArray)
+
+      // Convert QR code bounding boxes (px to dp)
+      val qrCodeBoxesArray = Arguments.createArray()
+      qrCodeBoundingBoxes.forEach { box ->
+        val boxMap = Arguments.createMap()
+        boxMap.putInt("x", box.left.toDp())
+        boxMap.putInt("y", box.top.toDp())
+        boxMap.putInt("width", box.width().toDp())
+        boxMap.putInt("height", box.height().toDp())
+        qrCodeBoxesArray.pushMap(boxMap)
+      }
+      event.putArray("qrCodeBoundingBoxes", qrCodeBoxesArray)
+
+      // Convert document bounding box (px to dp)
+      documentBoundingBox?.let { box ->
+        val boxMap = Arguments.createMap()
+        boxMap.putInt("x", box.left.toDp())
+        boxMap.putInt("y", box.top.toDp())
+        boxMap.putInt("width", box.width().toDp())
+        boxMap.putInt("height", box.height().toDp())
+        event.putMap("documentBoundingBox", boxMap)
+      }
+
+      sendEvent("onBoundingBoxesUpdate", event)
     }
 
     override fun onItemRetrievalResult(scannedCodeResults: ScannedCodeResult) {
@@ -330,6 +482,9 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
         val event = Arguments.createMap()
         event.putString("message", "Failed to save image: ${e.message}")
         sendEvent("onError", event)
+
+        // Restart scanning after error
+        visionCameraView?.rescan()
       }
     }
 
@@ -340,6 +495,12 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
     // CameraLifecycleCallback implementation
     override fun onCameraStarted() {
       Log.d(TAG, "✅ Camera started successfully")
+      isCameraReady = true
+
+      // Apply pending scanArea if it exists
+      if (pendingScanArea != null || pendingScanArea == null) {
+        applyScanArea(view, pendingScanArea)
+      }
     }
 
     override fun onCameraStopped() {
