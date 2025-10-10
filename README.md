@@ -308,6 +308,200 @@ export default HeadlessOCRExample;
 - **🔄 Hybrid Workflows**: Combine on-device speed with cloud intelligence
 - **📱 Flexible Integration**: Use in any part of your app, not just camera screens
 
+## VisionCamera - Minimal Camera Component
+
+**NEW**: `VisionCamera` is a lightweight, minimal camera component designed for barcode scanning and OCR. Unlike the full `VisionSDK` component, it provides a streamlined API without requiring API keys or cloud configuration for basic scanning functionality.
+
+### Basic VisionCamera Example
+
+```tsx
+import React, { useRef } from 'react';
+import { VisionCamera, VisionCameraRefProps } from 'react-native-vision-sdk';
+
+const SimpleScannerView = () => {
+  const cameraRef = useRef<VisionCameraRefProps>(null);
+
+  return (
+    <VisionCamera
+      ref={cameraRef}
+      scanMode="barcode"
+      autoCapture={false}
+      enableFlash={false}
+      zoomLevel={1.0}
+      onBarcodeDetected={(event) => {
+        console.log('Barcodes detected:', event.codes);
+        // event.codes is an array of detected barcodes with:
+        // - scannedCode: the barcode value
+        // - symbology: barcode type (e.g., "CODE_128", "QR_CODE")
+        // - boundingBox: position of the barcode
+        // - gs1ExtractedInfo: GS1 data if applicable
+      }}
+      onCapture={(event) => {
+        console.log('Image captured:', event.image);
+      }}
+      onError={(error) => {
+        console.error('Camera error:', error.message);
+      }}
+    />
+  );
+};
+```
+
+### VisionCamera Props
+
+| **Prop** | **Type** | **Default** | **Description** |
+|----------|----------|-------------|-----------------|
+| `scanMode` | `'photo' \| 'barcode' \| 'qrcode' \| 'barcodeOrQrCode' \| 'ocr'` | `'photo'` | Detection mode for the camera |
+| `autoCapture` | `boolean` | `false` | Automatically capture when detection is successful |
+| `enableFlash` | `boolean` | `false` | Enable/disable camera flash |
+| `zoomLevel` | `number` | `1.0` | Camera zoom level (device dependent, typically 1.0-5.0) |
+| `scanArea` | `{ x: number, y: number, width: number, height: number }` | `undefined` | Restrict scanning to a specific region (coordinates in dp) |
+| `detectionConfig` | `object` | See below | Configure object detection settings |
+| `frameSkip` | `number` | `undefined` | Process every Nth frame for performance optimization |
+
+### Detection Config Object
+
+```tsx
+detectionConfig={{
+  text: true,              // Enable text detection (iOS only)
+  barcode: true,           // Enable barcode detection
+  document: true,          // Enable document detection (iOS only)
+  barcodeConfidence: 0.5,  // Barcode detection confidence (0-1, iOS only)
+  documentConfidence: 0.5, // Document confidence (0-1, iOS only)
+  documentCaptureDelay: 2.0 // Delay before auto-capture (seconds, iOS only)
+}}
+```
+
+### VisionCamera Events
+
+| **Event** | **Description** | **Payload** |
+|-----------|-----------------|-------------|
+| `onBarcodeDetected` | Fired when barcode(s) are detected | `{ codes: Array<{ scannedCode, symbology, boundingBox, gs1ExtractedInfo }> }` |
+| `onCapture` | Fired when image is captured | `{ image: string, nativeImage: string }` |
+| `onRecognitionUpdate` | Continuous updates of detected objects | `{ text: boolean, barcode: boolean, qrcode: boolean, document: boolean }` |
+| `onSharpnessScoreUpdate` | Image sharpness score updates | `{ sharpnessScore: number }` |
+| `onBoundingBoxesUpdate` | Bounding boxes for detected objects | `{ barcodeBoundingBoxes: [], qrCodeBoundingBoxes: [], documentBoundingBox: {} }` |
+| `onError` | Error events | `{ message: string }` |
+
+### VisionCamera Methods (via ref)
+
+The camera **starts automatically** when mounted - you don't need to call `start()` manually in most cases.
+
+```tsx
+const cameraRef = useRef<VisionCameraRefProps>(null);
+
+// Capture image manually (when autoCapture is false)
+cameraRef.current?.capture();
+
+// Start camera (only needed if you previously stopped it)
+// Useful when camera screen stays in navigation stack but goes to background
+cameraRef.current?.start();
+
+// Stop camera (e.g., when screen goes to background)
+// Useful to pause camera when not actively scanning
+cameraRef.current?.stop();
+```
+
+**Note**: Flash and zoom are controlled via props (`enableFlash`, `zoomLevel`), not ref methods. Update the prop values to change these settings dynamically.
+
+### Advanced VisionCamera Example with Scan Area
+
+```tsx
+import React, { useRef, useState } from 'react';
+import { View, StyleSheet } from 'react-native';
+import { VisionCamera, VisionCameraRefProps } from 'react-native-vision-sdk';
+
+const AdvancedScannerView = () => {
+  const cameraRef = useRef<VisionCameraRefProps>(null);
+  const [flashEnabled, setFlashEnabled] = useState(false);
+
+  return (
+    <View style={styles.container}>
+      <VisionCamera
+        ref={cameraRef}
+        scanMode="barcode"
+        autoCapture={true}
+        enableFlash={flashEnabled}
+        zoomLevel={1.5}
+        // Restrict scanning to center region (200x100 dp area)
+        scanArea={{
+          x: 100,
+          y: 300,
+          width: 200,
+          height: 100
+        }}
+        detectionConfig={{
+          barcode: true,
+          barcodeConfidence: 0.7
+        }}
+        frameSkip={10} // Process every 10th frame for better performance
+        onBarcodeDetected={(event) => {
+          console.log(`Detected ${event.codes.length} barcode(s)`);
+          event.codes.forEach(code => {
+            console.log(`Type: ${code.symbology}, Value: ${code.scannedCode}`);
+          });
+        }}
+        onBoundingBoxesUpdate={(event) => {
+          // Display custom bounding box overlays
+          console.log('Barcodes found at:', event.barcodeBoundingBoxes);
+        }}
+        onError={(error) => {
+          console.error('Error:', error.message);
+        }}
+      />
+
+      {/* Overlay UI for scan area visualization */}
+      <View style={[styles.scanAreaOverlay, {
+        left: 100,
+        top: 300,
+        width: 200,
+        height: 100
+      }]} />
+    </View>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1
+  },
+  scanAreaOverlay: {
+    position: 'absolute',
+    borderWidth: 2,
+    borderColor: '#00FF00',
+    backgroundColor: 'transparent'
+  }
+});
+```
+
+### Key Differences: VisionCamera vs VisionSDK
+
+| **Feature** | **VisionCamera** | **VisionSDK** |
+|-------------|------------------|---------------|
+| **Setup Complexity** | Minimal - no API keys needed | Requires API key/token for cloud features |
+| **Use Case** | Simple barcode/QR scanning | Full OCR + cloud predictions |
+| **Bundle Size** | Lightweight | Full-featured |
+| **Configuration** | Props-based | Imperative methods + props |
+| **Cloud Integration** | No | Yes (shipping labels, BOL, etc.) |
+| **Offline Capability** | Full (barcode/QR only) | Partial (requires model download for OCR) |
+
+### When to Use VisionCamera
+
+- ✅ Simple barcode or QR code scanning
+- ✅ On-device OCR (when coupled with `VisionCore` for predictions)
+- ✅ No cloud OCR needed
+- ✅ Want minimal setup
+- ✅ Building a lightweight scanner
+- ✅ Custom UI overlays for scanning region
+
+### When to Use VisionSDK (Full Component)
+
+- ✅ Need OCR for shipping labels, bills of lading
+- ✅ Cloud prediction API integration
+- ✅ On-device ML model inference
+- ✅ Complex document processing workflows
+- ✅ Template management
+
 ## SDK Methods
 
 ### Camera Controls

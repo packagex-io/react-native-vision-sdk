@@ -186,7 +186,6 @@ const VisionCameraExample = ({ navigation }) => {
         onLayout={(event) => {
           const { width, height } = event.nativeEvent.layout;
           setCameraViewSize({ width, height });
-          console.log('📍 JS: Camera container layout:', { width, height });
         }}
       >
         {hasPermission ? (
@@ -208,7 +207,7 @@ const VisionCameraExample = ({ navigation }) => {
               document: true,
             }}
             frameSkip={15}
-            // onBoundingBoxesUpdate={handleBoundingBoxesUpdate}
+            onBoundingBoxesUpdate={handleBoundingBoxesUpdate}
           />
         ) : (
           <View style={styles.permissionContainer}>
@@ -238,54 +237,78 @@ const VisionCameraExample = ({ navigation }) => {
 
         {/* Bounding Boxes Overlay */}
         <View style={styles.boundingBoxesContainer} pointerEvents="none">
-          {/* Barcode Bounding Boxes - Yellow */}
-          {boundingBoxes.barcodeBoundingBoxes.map((box, index) => (
-            <View
-              key={`barcode-${index}`}
-              style={[
-                styles.boundingBox,
-                {
-                  left: box.x,
-                  top: box.y,
-                  width: box.width,
-                  height: box.height,
-                  borderColor: '#FFEB3B', // Yellow for barcodes
-                },
-              ]}
-            />
-          ))}
+          {/* For OCR mode with autoCapture, only show document box with translucent fill */}
+          {scanMode === 'ocr' && autoCapture ? (
+            <>
+              {/* Document Bounding Box - Translucent fill */}
+              {boundingBoxes.documentBoundingBox && boundingBoxes.documentBoundingBox.width > 0 && (
+                <View
+                  style={[
+                    styles.boundingBox,
+                    {
+                      left: boundingBoxes.documentBoundingBox.x,
+                      top: boundingBoxes.documentBoundingBox.y,
+                      width: boundingBoxes.documentBoundingBox.width,
+                      height: boundingBoxes.documentBoundingBox.height,
+                      borderColor: '#4CAF50', // Green for documents
+                      backgroundColor: 'rgba(76, 175, 80, 0.2)', // Translucent green fill
+                    },
+                  ]}
+                />
+              )}
+            </>
+          ) : (
+            <>
+              {/* Barcode Bounding Boxes - Yellow */}
+              {boundingBoxes.barcodeBoundingBoxes.map((box, index) => (
+                <View
+                  key={`barcode-${index}`}
+                  style={[
+                    styles.boundingBox,
+                    {
+                      left: box.x,
+                      top: box.y,
+                      width: box.width,
+                      height: box.height,
+                      borderColor: '#FFEB3B', // Yellow for barcodes
+                    },
+                  ]}
+                />
+              ))}
 
-          {/* QR Code Bounding Boxes - Cyan */}
-          {boundingBoxes.qrCodeBoundingBoxes.map((box, index) => (
-            <View
-              key={`qrcode-${index}`}
-              style={[
-                styles.boundingBox,
-                {
-                  left: box.x,
-                  top: box.y,
-                  width: box.width,
-                  height: box.height,
-                  borderColor: '#00E5FF', // Cyan for QR codes
-                },
-              ]}
-            />
-          ))}
+              {/* QR Code Bounding Boxes - Cyan */}
+              {boundingBoxes.qrCodeBoundingBoxes.map((box, index) => (
+                <View
+                  key={`qrcode-${index}`}
+                  style={[
+                    styles.boundingBox,
+                    {
+                      left: box.x,
+                      top: box.y,
+                      width: box.width,
+                      height: box.height,
+                      borderColor: '#00E5FF', // Cyan for QR codes
+                    },
+                  ]}
+                />
+              ))}
 
-          {/* Document Bounding Box - Green */}
-          {boundingBoxes.documentBoundingBox && boundingBoxes.documentBoundingBox.width > 0 && (
-            <View
-              style={[
-                styles.boundingBox,
-                {
-                  left: boundingBoxes.documentBoundingBox.x,
-                  top: boundingBoxes.documentBoundingBox.y,
-                  width: boundingBoxes.documentBoundingBox.width,
-                  height: boundingBoxes.documentBoundingBox.height,
-                  borderColor: '#4CAF50', // Green for documents
-                },
-              ]}
-            />
+              {/* Document Bounding Box - Green */}
+              {boundingBoxes.documentBoundingBox && boundingBoxes.documentBoundingBox.width > 0 && (
+                <View
+                  style={[
+                    styles.boundingBox,
+                    {
+                      left: boundingBoxes.documentBoundingBox.x,
+                      top: boundingBoxes.documentBoundingBox.y,
+                      width: boundingBoxes.documentBoundingBox.width,
+                      height: boundingBoxes.documentBoundingBox.height,
+                      borderColor: '#4CAF50', // Green for documents
+                    },
+                  ]}
+                />
+              )}
+            </>
           )}
         </View>
 

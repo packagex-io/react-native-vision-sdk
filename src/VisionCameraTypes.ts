@@ -126,9 +126,9 @@ export interface VisionCameraBarcodeDetectedEvent {
 }
 
 /**
- * Bounding box coordinates
+ * Bounding box coordinates for VisionCamera
  */
-export interface BoundingBox {
+export interface VisionCameraBoundingBox {
   /**
    * @type {number}
    * @description X coordinate of the bounding box (top-left corner).
@@ -241,22 +241,22 @@ export interface DetectionConfig {
  */
 export interface VisionCameraBoundingBoxesUpdateEvent {
   /**
-   * @type {BoundingBox[]}
+   * @type {VisionCameraBoundingBox[]}
    * @description Array of bounding boxes for detected barcodes.
    */
-  barcodeBoundingBoxes: BoundingBox[];
+  barcodeBoundingBoxes: VisionCameraBoundingBox[];
 
   /**
-   * @type {BoundingBox[]}
+   * @type {VisionCameraBoundingBox[]}
    * @description Array of bounding boxes for detected QR codes.
    */
-  qrCodeBoundingBoxes: BoundingBox[];
+  qrCodeBoundingBoxes: VisionCameraBoundingBox[];
 
   /**
-   * @type {BoundingBox}
+   * @type {VisionCameraBoundingBox}
    * @description Bounding box for detected document.
    */
-  documentBoundingBox: BoundingBox;
+  documentBoundingBox: VisionCameraBoundingBox;
 }
 
 /**

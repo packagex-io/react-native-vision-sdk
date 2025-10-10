@@ -29,6 +29,10 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
   private var currentCallback: ViewCallback? = null
   private var pendingScanArea: com.facebook.react.bridge.ReadableMap? = null
   private var isCameraReady = false
+  private var consecutiveFailures = 0
+  private var lastFailureTime = 0L
+  private val maxConsecutiveFailures = 3
+  private val failureResetWindowMs = 2000L // Reset counter after 2 seconds
 
   companion object {
     private const val TAG = "VisionCameraViewManager"
@@ -349,6 +353,9 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
       event.putArray("codes", codesArray)
       sendEvent("onBarcodeDetected", event)
 
+      // Reset failure counter on successful scan
+      consecutiveFailures = 0
+
       // Automatically restart scanning after barcode detection
       visionCameraView?.rescan()
     }
@@ -358,8 +365,25 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
       event.putString("message", exception.message ?: "Unknown error")
       sendEvent("onError", event)
 
-      // Restart scanning after error
-      view.rescan()
+      // Check if enough time has passed since last failure to reset counter
+      val currentTime = System.currentTimeMillis()
+      if (currentTime - lastFailureTime > failureResetWindowMs) {
+        consecutiveFailures = 0
+      }
+      lastFailureTime = currentTime
+
+      // Track consecutive failures to prevent infinite loop
+      consecutiveFailures++
+
+      if (consecutiveFailures <= maxConsecutiveFailures) {
+        Log.d(TAG, "Failure detected (${consecutiveFailures}/${maxConsecutiveFailures}), rescanning...")
+        // Delay rescan slightly to avoid immediate recursion
+        view.postDelayed({
+          visionCameraView?.rescan()
+        }, 100)
+      } else {
+        Log.e(TAG, "Too many consecutive failures (${consecutiveFailures}), pausing auto-rescan")
+      }
     }
 
     override fun onIndications(
