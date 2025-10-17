@@ -32,9 +32,8 @@ export const VisionCore = {
   loadModel: async (token: string | null, apiKey: string | null, modelType: string, modelSize: string) => {
     try {
       await VisionSdkModule.loadOnDeviceModels(token, apiKey, modelType, modelSize);
-      console.log("Model loaded");
     } catch (error) {
-      console.error("Failed to load models:", error);
+      throw error
     }
   },
   /**
