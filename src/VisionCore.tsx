@@ -36,6 +36,21 @@ export const VisionCore = {
       throw error
     }
   },
+
+  /**
+ * Unloads on-device models to free up memory.
+ * @param {string | null} modelType - Model type to unload (null to unload all models).
+ * @param {boolean} shouldDeleteFromDisk - Whether to delete model files from disk.
+ * @returns {Promise<string>} - Success message.
+ */
+  unLoadModel: async (modelType: string | null = null, shouldDeleteFromDisk: boolean = false) => {
+    try {
+      const result = await VisionSdkModule.unLoadOnDeviceModels(modelType, shouldDeleteFromDisk);
+      return result;
+    } catch (error) {
+      throw error
+    }
+  },
   /**
   * Subscribes to model download progress updates.
   */

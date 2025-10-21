@@ -308,7 +308,6 @@ const Camera = forwardRef<VisionSdkRefProps, VisionSdkProps>(
 
       // 21: Deletes all templates from storage using the 'deleteAllTemplates' command
       deleteAllTemplates: () => dispatchCommand('deleteAllTemplates'),  //no implementation found in android wrapper for this
-      // onCreateTemplate: () => dispatchCommand('deleteAllTemplates'),
     }), [dispatchCommand]);
 
 

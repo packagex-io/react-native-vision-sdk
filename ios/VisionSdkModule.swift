@@ -70,7 +70,40 @@ class VisionSdkModule: RCTEventEmitter {
   }
 
 
-
+  @objc func unLoadOnDeviceModels(
+      _ modelType: String?,
+      shouldDeleteFromDisk: Bool,
+      resolver: @escaping RCTPromiseResolveBlock,
+      rejecter: @escaping RCTPromiseRejectBlock
+  ) {
+    if let modelType = modelType {
+      let modelClass = getModelType(modelType)
+      
+      do {
+        try OnDeviceOCRManager.shared.deconfigureOfflineOCR(for: modelClass, shouldDeleteFromDisk: shouldDeleteFromDisk)
+      }
+      catch(let error) {
+        rejecter("MODEL_UNLOAD_ERROR", error.localizedDescription, nil)
+      }
+      
+      resolver("Model unloaded successfully")
+      
+    }
+    else {
+      do {
+        try OnDeviceOCRManager.shared.deconfigureOfflineOCR(shouldDeleteFromDisk: shouldDeleteFromDisk)
+      }
+      catch(let error) {
+        
+        rejecter("MODEL_UNLOAD_ERROR", error.localizedDescription, nil)
+      }
+      
+      resolver("Model unloaded successfully")
+    }
+    
+  }
+  
+  
   @objc func loadOnDeviceModels(
     _ token: String?,
       apiKey: String?,
@@ -110,6 +143,9 @@ class VisionSdkModule: RCTEventEmitter {
         }
       )
   }
+  
+  
+  
   
   @objc func logShippingLabelDataToPx(
     _ imageUri: String,
@@ -287,7 +323,7 @@ class VisionSdkModule: RCTEventEmitter {
 
   @objc func predict(
     _ imagePath: String,
-    barcodes: [String]?,
+    barcodes: [[String: Any]]?,
     resolver: @escaping RCTPromiseResolveBlock,
     rejecter: @escaping RCTPromiseRejectBlock
   ) {
@@ -304,10 +340,33 @@ class VisionSdkModule: RCTEventEmitter {
       }
 
       let barcodeList = barcodes ?? []
+      
+      let allBarcodes: [DetectedCode] = barcodeList.map { barcodeDict in
+        
+        let stringValue: String = (barcodeDict["scannedCode"] as? String) ?? ""
+        let symbology: VisionSDK.BarcodeSymbology = VisionSDK.BarcodeSymbology.value(VNStringValue: (barcodeDict["symbology"] as? String) ?? "")
+        let extractedData: [String : String]? = (barcodeDict["gs1ExtractedInfo"] as? [String : String])
+        
+        var finalRect: CGRect = .zero
+        
+        if let boundingBoxRect = barcodeDict["boundingBox"] as? [String: CGFloat] {
+          let x: CGFloat = boundingBoxRect["x"] ?? 0
+          let y: CGFloat = boundingBoxRect["y"] ?? 0
+          let width: CGFloat = boundingBoxRect["width"] ?? 0
+          let height: CGFloat = boundingBoxRect["height"] ?? 0
+          
+          finalRect = CGRect(x: x, y: y, width: width, height: height)
+        }
+        
+        return DetectedCode(stringValue: stringValue, symbology: symbology, extractedData: extractedData, boundingBox: finalRect)
+        
+      }
+      
+      
 
       // Use the correct OnDeviceOCRManager API
       
-      OnDeviceOCRManager.shared.extractDataFromImageUsing(ciImage, withBarcodes: []) { data, error in
+      OnDeviceOCRManager.shared.extractDataFromImageUsing(ciImage, withBarcodes: allBarcodes) { data, error in
         if let error = error {
           rejecter("PREDICTION_ERROR", "On-device prediction failed: \(error.localizedDescription)", error)
         } else if let data = data {

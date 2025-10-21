@@ -591,10 +591,15 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
         if(barcodeBoundingBoxes.isNotEmpty()){
           barcodeBoundingBoxes.forEach {
             boundingBox -> barcodeRectsArray.pushMap(Arguments.createMap().apply {
-                putInt("x", boundingBox.left.toDp())
-                putInt("y", boundingBox.top.toDp())
-                putInt("width", boundingBox.width().toDp())
-                putInt("height", boundingBox.height().toDp())
+                putString("scannedCode", "") // Not available on Android
+                putString("symbology", "") // Not available on Android
+                putMap("gs1ExtractedInfo", Arguments.createMap()) // Empty map
+                putMap("boundingBox", Arguments.createMap().apply {
+                  putInt("x", boundingBox.left.toDp())
+                  putInt("y", boundingBox.top.toDp())
+                  putInt("width", boundingBox.width().toDp())
+                  putInt("height", boundingBox.height().toDp())
+                })
             })
           }
         }
@@ -602,10 +607,15 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
         if(qrCodeBoundingBoxes.isNotEmpty()){
           qrCodeBoundingBoxes.forEach{
             boundingBox -> qrCodeRectsArray.pushMap(Arguments.createMap().apply {
-                putInt("x", boundingBox.left.toDp())
-                putInt("y", boundingBox.top.toDp())
-                putInt("width", boundingBox.width().toDp())
-                putInt("height", boundingBox.height().toDp())
+                putString("scannedCode", "") // Not available on Android
+                putString("symbology", "") // Not available on Android
+                putMap("gs1ExtractedInfo", Arguments.createMap()) // Empty map
+                putMap("boundingBox", Arguments.createMap().apply {
+                  putInt("x", boundingBox.left.toDp())
+                  putInt("y", boundingBox.top.toDp())
+                  putInt("width", boundingBox.width().toDp())
+                  putInt("height", boundingBox.height().toDp())
+                })
             })
           }
         }
@@ -660,6 +670,14 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
    * @param exception - Exception representing the failure cause
    */
   override fun onFailure(exception: VisionSDKException) {
+    val event = Arguments.createMap().apply {
+      putString("message", exception.message ?: "Unknown error")
+      putInt("code", exception.errorCode ?: -1)
+    }
+    appContext
+      .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
+      .emit("onError", event)
+
     onOCRResponseFailed(exception)
   }
 

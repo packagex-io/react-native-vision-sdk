@@ -18,7 +18,7 @@ import ResultViewOCR from './Components/ResultViewOCR';
 import { useFocusEffect } from '@react-navigation/native';
 
 
-const apiKey = ""
+const apiKey = "" // Add your PackageX API key here
 
 // Define interfaces for the state types
 interface DownloadingProgress {
@@ -342,9 +342,9 @@ const App: React.FC<{ route: any }> = ({ route }) => {
 
   const handleError = useCallback((error) => {
     console.log('onError', error);
-    Alert.alert('ERROR', error?.message);
+    // Alert.alert('ERROR', error?.message);
     setLoading(false);
-    visionSdk.current?.restartScanningHandler();
+    // visionSdk.current?.restartScanningHandler();
   }, [])
 
   const handleDetected = useCallback((event) => {
@@ -416,7 +416,7 @@ const App: React.FC<{ route: any }> = ({ route }) => {
   }, [])
 
   const handleSharpnessScore = useCallback((event) => { 
-    console.log("SHARPNESS SCORE: ", JSON.stringify(event))
+    // console.log("SHARPNESS SCORE: ", JSON.stringify(event))
   }, [])
 
   const handleModelDownloadProgress = useCallback((event) => {
@@ -498,7 +498,6 @@ const App: React.FC<{ route: any }> = ({ route }) => {
 
   }, [])
 
-
   return (
     <View style={styles.mainContainer}>
       <VisionSdkView
@@ -511,7 +510,7 @@ const App: React.FC<{ route: any }> = ({ route }) => {
         isMultipleScanEnabled={true}
         mode={mode}
         options={{}}
-        isEnableAutoOcrResponseWithImage={false}
+        isEnableAutoOcrResponseWithImage={true}
         locationId=""
         token=""
         apiKey={apiKey}
@@ -573,37 +572,65 @@ const App: React.FC<{ route: any }> = ({ route }) => {
       />
       {['barcode', 'barCodeOrQRCode'].includes(mode) && detectedBoundingBoxes.barcodeBoundingBoxes?.length > 0 ?
         <>
-          {detectedBoundingBoxes.barcodeBoundingBoxes.map((item, index) => (
+          {detectedBoundingBoxes.barcodeBoundingBoxes.map((code, index) => (
             <View
               key={index}
               style={{
                 position: 'absolute',
-                left: item.x,
-                top: item.y,
-                width: item.width,
-                height: item.height,
+                left: code.boundingBox.x,
+                top: code.boundingBox.y,
+                width: code.boundingBox.width,
+                height: code.boundingBox.height,
                 borderColor: '#00ff00',
                 borderWidth: 2,
               }}
-            />
+            >
+              <Text style={{
+                color: '#FFFFFF',
+                fontSize: 10,
+                fontWeight: 'bold',
+                backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                padding: 4,
+                borderRadius: 3,
+                position: 'absolute',
+                top: -20,
+                left: 0,
+              }}>
+                {code.scannedCode} ({code.symbology})
+              </Text>
+            </View>
           ))}
         </> : null}
 
       {['qrcode', 'barCodeOrQRCode'].includes(mode) && detectedBoundingBoxes.qrCodeBoundingBoxes?.length > 0 ?
         <>
-          {detectedBoundingBoxes.qrCodeBoundingBoxes.map((item, index) => (
+          {detectedBoundingBoxes.qrCodeBoundingBoxes.map((code, index) => (
             <View
               key={index}
               style={{
                 position: 'absolute',
-                left: item.x,
-                top: item.y,
-                width: item.width,
-                height: item.height,
+                left: code.boundingBox.x,
+                top: code.boundingBox.y,
+                width: code.boundingBox.width,
+                height: code.boundingBox.height,
                 borderColor: '#00ff00',
                 borderWidth: 2,
               }}
-            />
+            >
+              <Text style={{
+                color: '#FFFFFF',
+                fontSize: 10,
+                fontWeight: 'bold',
+                backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                padding: 4,
+                borderRadius: 3,
+                position: 'absolute',
+                top: -20,
+                left: 0,
+              }}>
+                {code.scannedCode}
+              </Text>
+            </View>
           ))}
         </> : null}
 

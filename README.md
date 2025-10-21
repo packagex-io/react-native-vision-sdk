@@ -34,7 +34,7 @@ yarn add react-native-vision-sdk
 1. Open your `ios/Podfile` and add the following line to ensure compatibility:
    ```ruby
    platform :ios, '16.0'  # Vision SDK requires at least iOS 15.0 or higher
-   pod 'VisionSDK', "1.5.7"
+   pod 'VisionSDK', "1.9.8"
    ```
 2. Run `pod install` to install necessary dependencies.
 
@@ -68,7 +68,7 @@ In the `build.gradle` file of your Android project, add the following dependenci
 ```gradle
 dependencies {
     // Existing dependencies
-    implementation 'com.github.packagexlabs:vision-sdk-android:v2.1.13'
+    implementation 'com.github.packagexlabs:vision-sdk-android:v2.4.22'
     implementation 'com.github.asadullahilyas:HandyUtils:1.1.6'
 }
 ```
@@ -308,6 +308,55 @@ export default HeadlessOCRExample;
 - **🔄 Hybrid Workflows**: Combine on-device speed with cloud intelligence
 - **📱 Flexible Integration**: Use in any part of your app, not just camera screens
 
+### Model Management
+
+**NEW**: The Vision SDK now supports unloading on-device models to free up memory and disk space when they're no longer needed.
+
+#### Unloading Models
+
+```typescript
+import { VisionCore } from 'react-native-vision-sdk';
+
+// Unload a specific model type
+const unloadSpecificModel = async () => {
+  try {
+    const result = await VisionCore.unLoadModel(
+      'shipping_label',  // Model type to unload
+      true               // shouldDeleteFromDisk - removes model files from disk
+    );
+    console.log(result); // "Model unloaded successfully"
+  } catch (error) {
+    console.error('Failed to unload model:', error);
+  }
+};
+
+// Unload all models
+const unloadAllModels = async () => {
+  try {
+    const result = await VisionCore.unLoadModel(
+      null,  // Pass null to unload all models
+      true   // shouldDeleteFromDisk
+    );
+    console.log(result); // "All models unloaded successfully"
+  } catch (error) {
+    console.error('Failed to unload models:', error);
+  }
+};
+```
+
+#### VisionCore.unLoadModel Parameters
+
+| **Parameter** | **Type** | **Required** | **Description** |
+|---------------|----------|--------------|-----------------|
+| `modelType` | `string \| null` | Yes | The type of model to unload (e.g., 'shipping_label', 'bill_of_lading'). Pass `null` to unload all models. |
+| `shouldDeleteFromDisk` | `boolean` | No (default: `false`) | If `true`, deletes model files from disk. If `false`, keeps files for faster reloading. |
+
+**Use Cases:**
+- Free up memory when switching between different model types
+- Clean up disk space after processing
+- Prepare for app updates or model version changes
+- Optimize app performance by removing unused models
+
 ## VisionCamera - Minimal Camera Component
 
 **NEW**: `VisionCamera` is a lightweight, minimal camera component designed for barcode scanning and OCR. Unlike the full `VisionSDK` component, it provides a streamlined API without requiring API keys or cloud configuration for basic scanning functionality.
@@ -330,17 +379,22 @@ const SimpleScannerView = () => {
       zoomLevel={1.0}
       onBarcodeDetected={(event) => {
         console.log('Barcodes detected:', event.codes);
-        // event.codes is an array of detected barcodes with:
-        // - scannedCode: the barcode value
-        // - symbology: barcode type (e.g., "CODE_128", "QR_CODE")
-        // - boundingBox: position of the barcode
-        // - gs1ExtractedInfo: GS1 data if applicable
+        // event.codes is an array of detected barcodes with enhanced metadata:
+        event.codes.forEach(code => {
+          console.log('Value:', code.scannedCode);        // "1234567890"
+          console.log('Type:', code.symbology);           // "CODE_128"
+          console.log('Position:', code.boundingBox);     // { x, y, width, height }
+          console.log('GS1 Data:', code.gs1ExtractedInfo); // { "01": "12345", ... }
+        });
       }}
       onCapture={(event) => {
         console.log('Image captured:', event.image);
+        console.log('Sharpness score:', event.sharpnessScore); // 0.0 - 1.0
+        console.log('Detected barcodes:', event.barcodes);     // Array of barcodes in image
       }}
       onError={(error) => {
-        console.error('Camera error:', error.message);
+        console.error('Error:', error.message);
+        console.error('Error code:', error.code); // Numeric error code
       }}
     />
   );
@@ -376,12 +430,60 @@ detectionConfig={{
 
 | **Event** | **Description** | **Payload** |
 |-----------|-----------------|-------------|
-| `onBarcodeDetected` | Fired when barcode(s) are detected | `{ codes: Array<{ scannedCode, symbology, boundingBox, gs1ExtractedInfo }> }` |
-| `onCapture` | Fired when image is captured | `{ image: string, nativeImage: string }` |
+| `onBarcodeDetected` | Fired when barcode(s) are detected | `{ codes: Array<BarcodeResult> }` - See details below |
+| `onCapture` | Fired when image is captured | `{ image: string, nativeImage: string, sharpnessScore?: number, barcodes?: Array<BarcodeResult> }` |
 | `onRecognitionUpdate` | Continuous updates of detected objects | `{ text: boolean, barcode: boolean, qrcode: boolean, document: boolean }` |
 | `onSharpnessScoreUpdate` | Image sharpness score updates | `{ sharpnessScore: number }` |
-| `onBoundingBoxesUpdate` | Bounding boxes for detected objects | `{ barcodeBoundingBoxes: [], qrCodeBoundingBoxes: [], documentBoundingBox: {} }` |
-| `onError` | Error events | `{ message: string }` |
+| `onBoundingBoxesUpdate` | Bounding boxes for detected objects | `{ barcodeBoundingBoxes: Array<DetectedCodeBoundingBox>, qrCodeBoundingBoxes: Array<DetectedCodeBoundingBox>, documentBoundingBox: BoundingBox }` |
+| `onError` | Error events | `{ message: string, code?: number }` |
+
+#### Enhanced Event Payloads
+
+##### BarcodeResult Interface
+```typescript
+interface BarcodeResult {
+  scannedCode: string;           // The barcode value
+  symbology: string;             // Barcode type (e.g., "CODE_128", "QR_CODE", "EAN_13")
+  boundingBox: {                 // Position of the barcode in the frame
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  };
+  gs1ExtractedInfo?: {           // GS1 data if applicable
+    [key: string]: string;
+  };
+}
+```
+
+##### DetectedCodeBoundingBox Interface (for onBoundingBoxesUpdate)
+```typescript
+interface DetectedCodeBoundingBox {
+  scannedCode: string;           // iOS: actual barcode value | Android: empty string ""
+  symbology: string;             // iOS: barcode type | Android: empty string ""
+  gs1ExtractedInfo: {            // iOS: actual GS1 data | Android: empty object {}
+    [key: string]: string;
+  };
+  boundingBox: {                 // Available on both platforms
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  };
+}
+```
+
+**Platform Note:** On Android, `onBoundingBoxesUpdate` only provides bounding box coordinates. The `scannedCode`, `symbology`, and `gs1ExtractedInfo` fields will be empty due to Android VisionSDK limitations. For full barcode metadata on Android, use the `onBarcodeDetected` event instead.
+
+##### Capture Event Enhancements
+The `onCapture` event now includes:
+- **`sharpnessScore`** (number, 0-1): Image quality score - higher values indicate sharper images
+- **`barcodes`** (Array<BarcodeResult>): Any barcodes detected in the captured image, available in both OCR and barcode modes
+
+##### Error Event Enhancements
+The `onError` event now includes:
+- **`code`** (number, optional): Numeric error code for programmatic handling
+- **iOS Note:** Error codes 13, 14, 15, and 16 are automatically filtered and won't trigger the `onError` callback
 
 ### VisionCamera Methods (via ref)
 
@@ -439,14 +541,20 @@ const AdvancedScannerView = () => {
           console.log(`Detected ${event.codes.length} barcode(s)`);
           event.codes.forEach(code => {
             console.log(`Type: ${code.symbology}, Value: ${code.scannedCode}`);
+            console.log(`Position:`, code.boundingBox);
           });
         }}
         onBoundingBoxesUpdate={(event) => {
-          // Display custom bounding box overlays
-          console.log('Barcodes found at:', event.barcodeBoundingBoxes);
+          // Real-time bounding box updates for visual overlays
+          // Note: On Android, scannedCode/symbology will be empty strings
+          event.barcodeBoundingBoxes.forEach(box => {
+            console.log('Barcode position:', box.boundingBox);
+            // iOS: box.scannedCode and box.symbology available
+            // Android: Use onBarcodeDetected for metadata
+          });
         }}
         onError={(error) => {
-          console.error('Error:', error.message);
+          console.error('Error:', error.message, 'Code:', error.code);
         }}
       />
 
@@ -501,6 +609,118 @@ const styles = StyleSheet.create({
 - ✅ On-device ML model inference
 - ✅ Complex document processing workflows
 - ✅ Template management
+
+---
+
+## Platform-Specific Limitations & Differences
+
+While we strive to maintain feature parity across iOS and Android, certain limitations exist due to differences in the underlying native VisionSDK implementations.
+
+### Android Limitations
+
+#### 1. Bounding Box Metadata (Android VisionSDK 2.4.22)
+
+**Affected Events:** `onBoundingBoxesUpdate`, `onIndicationsBoundingBoxes`
+
+The Android VisionSDK returns only bounding box coordinates (`List<Rect>`) without barcode metadata. As a result:
+
+```typescript
+// iOS - Full metadata available
+{
+  barcodeBoundingBoxes: [
+    {
+      scannedCode: "1234567890",      // ✅ Available
+      symbology: "CODE_128",          // ✅ Available
+      gs1ExtractedInfo: { /* ... */ }, // ✅ Available
+      boundingBox: { x: 10, y: 20, width: 100, height: 50 }
+    }
+  ]
+}
+
+// Android - Only coordinates available
+{
+  barcodeBoundingBoxes: [
+    {
+      scannedCode: "",                // ❌ Empty string
+      symbology: "",                  // ❌ Empty string
+      gs1ExtractedInfo: {},           // ❌ Empty object
+      boundingBox: { x: 10, y: 20, width: 100, height: 50 } // ✅ Available
+    }
+  ]
+}
+```
+
+**Workaround:** Use the `onBarcodeDetected` event on Android, which provides full barcode metadata including `scannedCode`, `symbology`, `boundingBox`, and `gs1ExtractedInfo`.
+
+```typescript
+// Recommended approach for Android
+onBarcodeDetected={(event) => {
+  event.codes.forEach(code => {
+    console.log('Barcode:', code.scannedCode);
+    console.log('Type:', code.symbology);
+    console.log('Position:', code.boundingBox);
+    console.log('GS1:', code.gs1ExtractedInfo);
+  });
+}}
+```
+
+#### 2. Detection Configuration
+
+Some detection config options are iOS-only:
+- `detectionConfig.text` - iOS only
+- `detectionConfig.document` - iOS only
+- `detectionConfig.barcodeConfidence` - iOS only
+- `detectionConfig.documentConfidence` - iOS only
+- `detectionConfig.documentCaptureDelay` - iOS only
+
+These options are accepted on Android but have no effect.
+
+### iOS Limitations
+
+#### 1. Error Code Filtering
+
+**Affected Events:** `onError`
+
+iOS automatically filters error codes 13, 14, 15, and 16 to prevent excessive error callbacks during normal operation. These errors will not trigger the `onError` callback.
+
+```typescript
+// Error codes 13, 14, 15, 16 are silently filtered on iOS
+onError={(error) => {
+  console.log('Error code:', error.code); // Will never be 13, 14, 15, or 16
+  console.log('Error message:', error.message);
+}}
+```
+
+### Model Management Differences
+
+| Feature | iOS | Android |
+|---------|-----|---------|
+| Implementation | `OnDeviceOCRManager` | `OnDeviceOCRManagerSingleton` |
+| Unload specific model | ✅ Supported | ⚠️ Destroys all models |
+| Unload all models | ✅ Supported | ✅ Supported |
+| Delete from disk | ✅ Supported | ⚠️ Limited |
+
+**Android Note:** Due to the singleton pattern, calling `VisionCore.unLoadModel()` with a specific model type will still destroy the entire singleton instance, effectively unloading all models.
+
+### Feature Parity Table
+
+| Feature | iOS | Android |
+|---------|-----|---------|
+| Barcode Detection | ✅ Full support | ✅ Full support |
+| Bounding Boxes (coordinates) | ✅ Full support | ✅ Full support |
+| Bounding Boxes (metadata) | ✅ Full metadata | ⚠️ Coordinates only |
+| Error codes | ✅ With filtering | ✅ Full support |
+| Sharpness score | ✅ Supported | ✅ Supported |
+| GS1 extraction | ✅ Supported | ✅ Supported |
+| Model management | ✅ Granular | ⚠️ All-or-nothing |
+| Detection config | ✅ Full support | ⚠️ Partial support |
+
+**Legend:**
+- ✅ Fully supported
+- ⚠️ Limited or different behavior
+- ❌ Not available
+
+---
 
 ## SDK Methods
 

@@ -101,6 +101,7 @@ class VisionSdkViewManager: RCTViewManager {
               )
         }
     }
+  
 
 
   @objc func  getPrediction (_ node: NSNumber, image: String, barcode barcodeArray: [NSDictionary]) {
@@ -175,8 +176,8 @@ class VisionSdkViewManager: RCTViewManager {
         }
     }
   
-  func transformBarcodeArray(barcodes: [NSDictionary]) -> [VisionSDK.DetectedBarcode]{
-    var codesArray: [VisionSDK.DetectedBarcode] = []
+  func transformBarcodeArray(barcodes: [NSDictionary]) -> [VisionSDK.DetectedCode]{
+    var codesArray: [VisionSDK.DetectedCode] = []
     
     for code in barcodes {
       
@@ -197,7 +198,7 @@ class VisionSdkViewManager: RCTViewManager {
       
       let gs1ExtractedInfo: [String: String]? = (code["gs1ExtractedInfo"] as? [String: String])
       
-      let detectedCode = VisionSDK.DetectedBarcode(stringValue: stringValue, symbology: symbologyValue, extractedData: gs1ExtractedInfo , boundingBox: boundingBoxRect)
+      let detectedCode = VisionSDK.DetectedCode(stringValue: stringValue, symbology: symbologyValue, extractedData: gs1ExtractedInfo , boundingBox: boundingBoxRect)
       
       
      
@@ -588,6 +589,8 @@ class VisionSdkViewManager: RCTViewManager {
           component?.codeScannerView?.rescan()
         }
     }
+  
+    
 
     @objc func setObjectDetectionSettings(_ node: NSNumber, objectDetectionSettings: NSDictionary) {
 
