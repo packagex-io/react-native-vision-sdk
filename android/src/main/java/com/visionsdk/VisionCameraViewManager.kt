@@ -363,6 +363,7 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
     override fun onFailure(exception: VisionSDKException) {
       val event = Arguments.createMap()
       event.putString("message", exception.message ?: "Unknown error")
+      event.putInt("code", exception.errorCode ?: -1)
       sendEvent("onError", event)
 
       // Check if enough time has passed since last failure to reset counter
@@ -413,10 +414,15 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
       val barcodeBoxesArray = Arguments.createArray()
       barcodeBoundingBoxes.forEach { box ->
         val boxMap = Arguments.createMap()
-        boxMap.putInt("x", box.left.toDp())
-        boxMap.putInt("y", box.top.toDp())
-        boxMap.putInt("width", box.width().toDp())
-        boxMap.putInt("height", box.height().toDp())
+        boxMap.putString("scannedCode", "") // Not available on Android
+        boxMap.putString("symbology", "") // Not available on Android
+        boxMap.putMap("gs1ExtractedInfo", Arguments.createMap()) // Empty map
+        boxMap.putMap("boundingBox", Arguments.createMap().apply {
+          putInt("x", box.left.toDp())
+          putInt("y", box.top.toDp())
+          putInt("width", box.width().toDp())
+          putInt("height", box.height().toDp())
+        })
         barcodeBoxesArray.pushMap(boxMap)
       }
       event.putArray("barcodeBoundingBoxes", barcodeBoxesArray)
@@ -425,10 +431,15 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
       val qrCodeBoxesArray = Arguments.createArray()
       qrCodeBoundingBoxes.forEach { box ->
         val boxMap = Arguments.createMap()
-        boxMap.putInt("x", box.left.toDp())
-        boxMap.putInt("y", box.top.toDp())
-        boxMap.putInt("width", box.width().toDp())
-        boxMap.putInt("height", box.height().toDp())
+        boxMap.putString("scannedCode", "") // Not available on Android
+        boxMap.putString("symbology", "") // Not available on Android
+        boxMap.putMap("gs1ExtractedInfo", Arguments.createMap()) // Empty map
+        boxMap.putMap("boundingBox", Arguments.createMap().apply {
+          putInt("x", box.left.toDp())
+          putInt("y", box.top.toDp())
+          putInt("width", box.width().toDp())
+          putInt("height", box.height().toDp())
+        })
         qrCodeBoxesArray.pushMap(boxMap)
       }
       event.putArray("qrCodeBoundingBoxes", qrCodeBoxesArray)
@@ -474,6 +485,36 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
         val event = Arguments.createMap()
         event.putString("image", file.absolutePath)
         event.putString("nativeImage", file.toURI().toString())
+        event.putDouble("sharpnessScore", imageSharpnessScore.toDouble())
+
+        // Add barcodes array
+        val barcodesArray = Arguments.createArray()
+        scannedCodeResults.forEach { code ->
+          val barcodeMap = Arguments.createMap()
+          barcodeMap.putString("scannedCode", code.scannedCode)
+          barcodeMap.putString("symbology", code.symbology.toString())
+
+          val boundingBox = Arguments.createMap()
+          code.boundingBox?.let { box ->
+            boundingBox.putDouble("x", box.left.toDouble())
+            boundingBox.putDouble("y", box.top.toDouble())
+            boundingBox.putDouble("width", box.width().toDouble())
+            boundingBox.putDouble("height", box.height().toDouble())
+          }
+          barcodeMap.putMap("boundingBox", boundingBox)
+
+          if (!code.gs1ExtractedInfo.isNullOrEmpty()) {
+            val gs1Map = Arguments.createMap()
+            code.gs1ExtractedInfo?.forEach { (key, value) ->
+              gs1Map.putString(key, value)
+            }
+            barcodeMap.putMap("gs1ExtractedInfo", gs1Map)
+          }
+
+          barcodesArray.pushMap(barcodeMap)
+        }
+        event.putArray("barcodes", barcodesArray)
+
         sendEvent("onCapture", event)
 
         // Automatically restart scanning after image capture

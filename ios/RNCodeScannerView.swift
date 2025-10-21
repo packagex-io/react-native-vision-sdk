@@ -180,7 +180,7 @@ extension RNCodeScannerView: GenerateTemplateControllerDelegate {
 // MARK: - VisionSDK CodeScannerViewDelegate functions
 //MARK: -
 extension RNCodeScannerView: CodeScannerViewDelegate {
-  func codeScannerView(_ scannerView: VisionSDK.CodeScannerView, didSuccess codes: [VisionSDK.DetectedBarcode]) {
+  func codeScannerView(_ scannerView: VisionSDK.CodeScannerView, didSuccess codes: [VisionSDK.DetectedCode]) {
     if onBarcodeScan != nil {
 
       var codesArray: [[String: Any]] = []
@@ -203,7 +203,9 @@ extension RNCodeScannerView: CodeScannerViewDelegate {
 
     func codeScannerView(_ scannerView: VisionSDK.CodeScannerView, didFailure error: NSError) {
         if onError != nil {
+          if error.code != 13 && error.code != 14 && error.code != 15 && error.code != 16 {
             onError!(["message": error.localizedDescription, "code": error.code])
+          }
         }
     }
 
@@ -230,23 +232,57 @@ extension RNCodeScannerView: CodeScannerViewDelegate {
       ]
     }
 
-    func codeScannerViewDidDetectBoxes(_ text: Bool, barCode: [CGRect], qrCode: [CGRect], document: CGRect) {
-      guard let callback = onBoundingBoxesDetected else { return }
+//    func codeScannerViewDidDetectBoxes(_ text: Bool, barCode: [CGRect], qrCode: [CGRect], document: CGRect) {
+//      guard let callback = onBoundingBoxesDetected else { return }
+//
+//      // Helper to convert a single CGRect -> [String: CGFloat]
+//
+//
+//      // Convert arrays of CGRects
+//      let barcodeBoundingBoxes = barCode.map { dict(from: $0) }
+//      let qrCodeBoundingBoxes  = qrCode.map { dict(from: $0) }
+//      let documentBoundingBox  = dict(from: document)
+//
+//      callback([
+//        "barcodeBoundingBoxes": barcodeBoundingBoxes,
+//        "qrCodeBoundingBoxes":  qrCodeBoundingBoxes,
+//        "documentBoundingBox":  documentBoundingBox
+//      ])
+//    }
+  
+  func codeScannerViewDidDetectBoxes(_ text: Bool, barCode: [DetectedCode], qrCode: [DetectedCode], document: CGRect) {
+    
+    guard let onBoundingBoxesUpdate = onBoundingBoxesDetected else { return }
 
-      // Helper to convert a single CGRect -> [String: CGFloat]
+    
 
-
-      // Convert arrays of CGRects
-      let barcodeBoundingBoxes = barCode.map { dict(from: $0) }
-      let qrCodeBoundingBoxes  = qrCode.map { dict(from: $0) }
-      let documentBoundingBox  = dict(from: document)
-
-      callback([
-        "barcodeBoundingBoxes": barcodeBoundingBoxes,
-        "qrCodeBoundingBoxes":  qrCodeBoundingBoxes,
-        "documentBoundingBox":  documentBoundingBox
-      ])
+    // Convert arrays of CGRects
+    let barcodeBoundingBoxes = barCode.map { code in
+      return [
+        "scannedCode": code.stringValue,
+        "symbology": code.symbology.stringValue(),
+        "gs1ExtractedInfo": code.extractedData ?? [:],
+        "boundingBox": dict(from: code.boundingBox)
+      ]
     }
+    
+    let qrCodeBoundingBoxes = qrCode.map { code in
+      return [
+        "scannedCode": code.stringValue,
+        "symbology": code.symbology.stringValue(),
+        "gs1ExtractedInfo": code.extractedData ?? [:],
+        "boundingBox": dict(from: code.boundingBox)
+      ]
+    }
+    
+    let documentBoundingBox = dict(from: document)
+
+    onBoundingBoxesUpdate([
+        "barcodeBoundingBoxes": barcodeBoundingBoxes,
+        "qrCodeBoundingBoxes": qrCodeBoundingBoxes,
+        "documentBoundingBox": documentBoundingBox
+    ])
+  }
   
   func codeScannerViewDidCapturePrice(_ price: String, withSKU sKU: String, withBoundingBox boundingBox: CGRect) -> Bool {
     print("Price: \(price), SKU: \(sKU), Bounding Box: \(boundingBox)")
@@ -262,7 +298,7 @@ extension RNCodeScannerView: CodeScannerViewDelegate {
     return true
   }
 
-  func codeScannerView(_ scannerView: CodeScannerView, didCaptureOCRImage image: UIImage, withCroppedImge croppedImage: UIImage?, withBarcodes barcodes: [DetectedBarcode], imageSharpnessScore: Float) {
+  func codeScannerView(_ scannerView: CodeScannerView, didCaptureOCRImage image: UIImage, withCroppedImge croppedImage: UIImage?, withBarcodes barcodes: [DetectedCode], imageSharpnessScore: Float) {
     
     guard let savedImageURL = saveImageToVisionSDK(image: image, withName: UUID().uuidString) else {
           print("❌ Image saving failed.")
@@ -277,23 +313,17 @@ extension RNCodeScannerView: CodeScannerViewDelegate {
 //            print("Scan mode is not OCR. Skipping OCR logic.")
 //            return // Exit the function early
 //        }
+    print("isEnableAutoOcrResponseWithImage: ", isEnableAutoOcrResponseWithImage as Any, " scanMode: ", scanMode, "")
     guard isEnableAutoOcrResponseWithImage == true, scanMode == .ocr else {
           print("Auto OCR response with image is disabled or scan mode is not OCR. Exiting function.")
           return
     }
     handelAutoOcrResponseWithImage(image: image, barcodes: barcodes,  imagePath: savedImageURL.path)
     
-    
-    
-    
-    
-    
-    
-    
   }
   
 
-  func handelAutoOcrResponseWithImage(image: UIImage, barcodes: [VisionSDK.DetectedBarcode], imagePath:String?) {
+  func handelAutoOcrResponseWithImage(image: UIImage, barcodes: [VisionSDK.DetectedCode], imagePath:String?) {
         guard isEnableAutoOcrResponseWithImage == true, scanMode == .ocr else {
               print("Auto OCR response with image is disabled or scan mode is not OCR. Exiting function.")
               return
@@ -493,7 +523,7 @@ extension RNCodeScannerView {
     /// - Parameters:
     ///   - uiImage: uiImage of label that is going to be detected
     ///   - barcodes: barcodes that are detected by SDK within the label
-  func getPrediction(withImage uiImage: UIImage, andBarcodes barcodes: [VisionSDK.DetectedBarcode], imagePath: String?) {
+  func getPrediction(withImage uiImage: UIImage, andBarcodes barcodes: [VisionSDK.DetectedCode], imagePath: String?) {
       debugPrint("GET PREDICTION METHOD")
         guard let ciImage = convertToCIImage(from: uiImage) else {
             callForOCRWithImageFailedWithMessage(message: "Failed to convert UIImage to CIImage.")
@@ -522,7 +552,7 @@ extension RNCodeScannerView {
     ///   - barcodes: barcodes that are detected by SDK within the label
     func getPredictionWithCloudTransformations(
         withImage uiImage: UIImage,
-        andBarcodes barcodes: [VisionSDK.DetectedBarcode],
+        andBarcodes barcodes: [VisionSDK.DetectedCode],
         imagePath:String?,
         token: String?,
         apiKey: String?,
@@ -599,7 +629,7 @@ extension RNCodeScannerView {
     ///   - barcodes: Detected barcodes from VisionSDK to pass into API
     func getPredictionShippingLabelCloud(
       withImage image: UIImage,
-      andBarcodes barcodes: [VisionSDK.DetectedBarcode],
+      andBarcodes barcodes: [VisionSDK.DetectedCode],
       imagePath:String?,
       token: String?,
       apiKey: String?,
@@ -1313,7 +1343,7 @@ extension RNCodeScannerView {
             if let data = image.pngData() {
                 let imageURL = ocrImageDirectory.appendingPathComponent(imageName)
                 try data.write(to: imageURL, options: .atomic)
-                print("✅ Image saved successfully at \(imageURL.path)")
+                print("✅ Image saved successfully at [sivsdk]: \(imageURL.path)")
                 return imageURL
             } else {
                 print("❌ Image does not have PNG data.")
@@ -1346,7 +1376,7 @@ extension RNCodeScannerView {
     /// - Parameter savedImageURL: url of the converted image
   func handleCapturedImage(
     withImage savedImageURL: URL?,
-    barcodes: [VisionSDK.DetectedBarcode],
+    barcodes: [VisionSDK.DetectedCode],
     nativeImage: UIImage,
     sharpnessScore: Float
   ) {

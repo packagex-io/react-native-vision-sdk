@@ -254,6 +254,37 @@ class VisionSdkModule(private val reactContext: ReactApplicationContext) : React
   }
 
   @ReactMethod
+  fun unLoadOnDeviceModels(
+    modelType: String?,
+    shouldDeleteFromDisk: Boolean,
+    promise: Promise
+  ) {
+    Log.d(TAG, "🗑️ Unloading model: $modelType, deleteFromDisk: $shouldDeleteFromDisk")
+
+    try {
+      if (modelType == null) {
+        // Unload all models
+        OnDeviceOCRManagerSingleton.destroy()
+        promise.resolve("All models unloaded successfully")
+      } else {
+        // Check if requested model matches current model
+        val modelSize = ModelSize.Large // Default size for comparison
+        val requestedModelType = getModelType(modelType, modelSize)
+
+        if (OnDeviceOCRManagerSingleton.isModelConfigured(requestedModelType)) {
+          OnDeviceOCRManagerSingleton.destroy()
+          promise.resolve("Model '$modelType' unloaded successfully")
+        } else {
+          promise.resolve("Model '$modelType' is not currently loaded")
+        }
+      }
+    } catch (e: Exception) {
+      Log.e(TAG, "❌ Error unloading model", e)
+      promise.reject("MODEL_UNLOAD_ERROR", "Failed to unload model: ${e.message}", e)
+    }
+  }
+
+  @ReactMethod
   fun predict(
     imagePath: String,
     barcodes: ReadableArray,

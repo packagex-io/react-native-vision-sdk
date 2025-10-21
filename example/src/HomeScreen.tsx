@@ -15,7 +15,7 @@ import { VisionCore } from '../../src/index';
 import { useFocusEffect } from '@react-navigation/native';
 
 
-const api_key = ""
+const api_key = "" // Add your PackageX API key here
 const HomeScreen = ({ navigation }) => {
   const [selectedModelType, setSelectedModelType] = useState<string>('shipping_label');
   const [selectedModelSize, setSelectedModelSize] = useState<string>('large');
@@ -107,7 +107,7 @@ const HomeScreen = ({ navigation }) => {
     try {
       await VisionCore.loadModel(
         null,
-        "key_00203c5642F9SYnJkKyi9dRw1eeteeUwXhbEfGuPZ4NML8l2bAfysni4ZpcZEBKn0gnbcOZYwIaJnOyp",
+        api_key, // Use your PackageX API key
         selectedModelType,
         selectedModelSize,
         // "staging"
@@ -138,7 +138,7 @@ const HomeScreen = ({ navigation }) => {
       // Wait for model to download with progress tracking
       await VisionCore.loadModel(
         null,
-        "key_00203c5642F9SYnJkKyi9dRw1eeteeUwXhbEfGuPZ4NML8l2bAfysni4ZpcZEBKn0gnbcOZYwIaJnOyp",
+        api_key, // Use your PackageX API key
         selectedModelType,
         selectedModelSize
       );
@@ -271,6 +271,29 @@ const HomeScreen = ({ navigation }) => {
     }
   };
 
+  const handleUnloadCurrentModel = async () => {
+    try {
+      const modelTypeLabel = modelTypes.find(t => t.value === selectedModelType)?.label || selectedModelType;
+      const result = await VisionCore.unLoadModel(selectedModelType, true);
+      setIsModelReady(false);
+      Alert.alert('Success! 🗑️', `Unloaded ${modelTypeLabel} model: ${result}`);
+    } catch (error) {
+      Alert.alert('Error', `Failed to unload model: ${error.message}`);
+      console.error('Unload model error:', error);
+    }
+  };
+
+  const handleUnloadAllModels = async () => {
+    try {
+      const result = await VisionCore.unLoadModel(null, true);
+      setIsModelReady(false);
+      Alert.alert('Success! 🗑️', `Unloaded all models: ${result}`);
+    } catch (error) {
+      Alert.alert('Error', `Failed to unload all models: ${error.message}`);
+      console.error('Unload all models error:', error);
+    }
+  };
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.scrollContainer}>
       <Text style={styles.title}>VisionCore Standalone Prediction Examples</Text>
@@ -363,6 +386,27 @@ const HomeScreen = ({ navigation }) => {
             🚀 Complete On-Device Workflow (Download Model + On-Device Prediction)
           </Text>
         </TouchableOpacity>
+
+        {/* Model Unload Buttons */}
+        <View style={styles.unloadButtonsRow}>
+          <TouchableOpacity
+            style={[styles.unloadButton]}
+            onPress={handleUnloadCurrentModel}
+          >
+            <Text style={styles.unloadButtonText}>
+              🗑️ Unload Current Model
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.unloadButton]}
+            onPress={handleUnloadAllModels}
+          >
+            <Text style={styles.unloadButtonText}>
+              🗑️ Unload All Models
+            </Text>
+          </TouchableOpacity>
+        </View>
 {/* 
         <TouchableOpacity
           style={[styles.cloudButton, isPredicting && styles.disabledButton]}
@@ -730,6 +774,30 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#fff',
     fontWeight: 'bold'
+  },
+  unloadButtonsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 10,
+    marginTop: 12
+  },
+  unloadButton: {
+    flex: 1,
+    backgroundColor: '#dc3545',
+    paddingVertical: 12,
+    borderRadius: 10,
+    alignItems: 'center',
+    shadowColor: '#dc3545',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3
+  },
+  unloadButtonText: {
+    fontSize: 14,
+    color: '#fff',
+    fontWeight: '600',
+    textAlign: 'center'
   }
 });
 

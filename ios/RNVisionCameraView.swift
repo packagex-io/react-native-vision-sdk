@@ -289,7 +289,7 @@ class RNVisionCameraView: UIView {
 @available(iOS 13.0, *)
 extension RNVisionCameraView: CodeScannerViewDelegate {
 
-    func codeScannerView(_ scannerView: CodeScannerView, didSuccess codes: [VisionSDK.DetectedBarcode]) {
+    func codeScannerView(_ scannerView: CodeScannerView, didSuccess codes: [VisionSDK.DetectedCode]) {
         guard let onBarcodeDetected = onBarcodeDetected else { return }
 
         var codesArray: [[String: Any]] = []
@@ -317,7 +317,11 @@ extension RNVisionCameraView: CodeScannerViewDelegate {
     }
 
     func codeScannerView(_ scannerView: CodeScannerView, didFailure error: NSError) {
-        sendError(message: error.localizedDescription)
+        // Filter out error codes 13, 14, 15, and 16
+        if error.code != 13 && error.code != 14 && error.code != 15 && error.code != 16 {
+            guard let onError = onError else { return }
+            onError(["message": error.localizedDescription, "code": error.code])
+        }
 
         // Restart scanning after error
         cameraView?.rescan()
@@ -334,30 +338,50 @@ extension RNVisionCameraView: CodeScannerViewDelegate {
         ])
     }
 
-    func codeScannerViewDidDetectBoxes(_ text: Bool, barCode: [CGRect], qrCode: [CGRect], document: CGRect) {
-        guard let onBoundingBoxesUpdate = onBoundingBoxesUpdate else { return }
+  // Helper to convert CGRect to dictionary
+  fileprivate func dict(from rect: CGRect) -> [String: CGFloat] {
+      return [
+          "x": rect.origin.x,
+          "y": rect.origin.y,
+          "width": rect.size.width,
+          "height": rect.size.height
+      ]
+  }
+  
+  func codeScannerViewDidDetectBoxes(_ text: Bool, barCode: [DetectedCode], qrCode: [DetectedCode], document: CGRect) {
+    
+    guard let onBoundingBoxesUpdate = onBoundingBoxesUpdate else { return }
 
-        // Helper to convert CGRect to dictionary
-        func dict(from rect: CGRect) -> [String: CGFloat] {
-            return [
-                "x": rect.origin.x,
-                "y": rect.origin.y,
-                "width": rect.size.width,
-                "height": rect.size.height
-            ]
-        }
+    
 
-        // Convert arrays of CGRects
-        let barcodeBoundingBoxes = barCode.map { dict(from: $0) }
-        let qrCodeBoundingBoxes = qrCode.map { dict(from: $0) }
-        let documentBoundingBox = dict(from: document)
-
-        onBoundingBoxesUpdate([
-            "barcodeBoundingBoxes": barcodeBoundingBoxes,
-            "qrCodeBoundingBoxes": qrCodeBoundingBoxes,
-            "documentBoundingBox": documentBoundingBox
-        ])
+    // Convert arrays of CGRects
+    let barcodeBoundingBoxes = barCode.map { code in
+      return [
+        "scannedCode": code.stringValue,
+        "symbology": code.symbology.stringValue(),
+        "gs1ExtractedInfo": code.extractedData ?? [:],
+        "boundingBox": dict(from: code.boundingBox)
+      ]
     }
+    
+    let qrCodeBoundingBoxes = qrCode.map { code in
+      return [
+        "scannedCode": code.stringValue,
+        "symbology": code.symbology.stringValue(),
+        "gs1ExtractedInfo": code.extractedData ?? [:],
+        "boundingBox": dict(from: code.boundingBox)
+      ]
+    }
+    
+    let documentBoundingBox = dict(from: document)
+
+    onBoundingBoxesUpdate([
+        "barcodeBoundingBoxes": barcodeBoundingBoxes,
+        "qrCodeBoundingBoxes": qrCodeBoundingBoxes,
+        "documentBoundingBox": documentBoundingBox
+    ])
+  }
+  
 
     func codeScannerView(_ imageSharpnessScore: Float) {
         guard let onSharpnessScoreUpdate = onSharpnessScoreUpdate else { return }
@@ -367,7 +391,7 @@ extension RNVisionCameraView: CodeScannerViewDelegate {
         ])
     }
 
-    func codeScannerView(_ scannerView: CodeScannerView, didCaptureOCRImage image: UIImage, withCroppedImge croppedImage: UIImage?, withBarcodes barcodes: [DetectedBarcode], imageSharpnessScore: Float) {
+    func codeScannerView(_ scannerView: CodeScannerView, didCaptureOCRImage image: UIImage, withCroppedImge croppedImage: UIImage?, withBarcodes barcodes: [DetectedCode], imageSharpnessScore: Float) {
         // Save image to temporary directory
         let tempDir = FileManager.default.temporaryDirectory
         let fileName = "camera_\(Date().timeIntervalSince1970).jpg"
@@ -383,10 +407,19 @@ extension RNVisionCameraView: CodeScannerViewDelegate {
             try imageData.write(to: fileURL)
 
             guard let onCapture = onCapture else { return }
-
+          
             onCapture([
                 "image": fileURL.path,
-                "nativeImage": fileURL.absoluteString
+                "nativeImage": fileURL.absoluteString,
+                "sharpnessScore": imageSharpnessScore,
+                "barcodes": barcodes.map { barcode in
+                  return [
+                    "scannedCode": barcode.stringValue,
+                    "symbology": barcode.symbology.stringValue(),
+                    "gs1ExtractedInfo": barcode.extractedData ?? [:],
+                    "boundingBox": dict(from: barcode.boundingBox)
+                  ]
+                }
             ])
 
             // Automatically restart scanning after capture

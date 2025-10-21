@@ -3,10 +3,14 @@
 
 @interface RCT_EXTERN_MODULE(VisionSdkModule, RCTEventEmitter)
 RCT_EXTERN_METHOD(setEnvironment:(NSString *)environment)
-RCT_EXTERN_METHOD(loadOnDeviceModels:(NSString * _Nullable)token
-                  apiKey:(NSString * _Nullable)apiKey
+RCT_EXTERN_METHOD(loadOnDeviceModels:(nullable NSString *)token
+                  apiKey:(nullable NSString *)apiKey
                   modelType:(NSString *)modelType
-                  modelSize:(NSString * _Nullable)modelSize
+                  modelSize:(nullable NSString *)modelSize
+                  resolver:(RCTPromiseResolveBlock)resolver
+                  rejecter:(RCTPromiseRejectBlock)rejecter)
+RCT_EXTERN_METHOD(unLoadOnDeviceModels:(nullable NSString *)modelType
+                  shouldDeleteFromDisk:(BOOL)shouldDeleteFromDisk
                   resolver:(RCTPromiseResolveBlock)resolver
                   rejecter:(RCTPromiseRejectBlock)rejecter)
 RCT_EXTERN_METHOD(logItemLabelDataToPx:(NSString *)imageUri
@@ -31,10 +35,9 @@ RCT_EXTERN_METHOD(logShippingLabelDataToPx:(NSString *)imageUri
                   shouldResizeImage:(nonnull NSNumber *)shouldResizeImage
                   resolver:(RCTPromiseResolveBlock)resolver
                   rejecter:(RCTPromiseRejectBlock)rejecter)
-
 // Standalone prediction methods
 RCT_EXTERN_METHOD(predict:(NSString *)imagePath
-                  barcodes:(nullable NSArray<NSString *> *)barcodes
+                  barcodes:(nullable NSArray<NSDictionary *> *)barcodes
                   resolver:(RCTPromiseResolveBlock)resolver
                   rejecter:(RCTPromiseRejectBlock)rejecter)
 

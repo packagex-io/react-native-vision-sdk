@@ -32,9 +32,23 @@ export const VisionCore = {
   loadModel: async (token: string | null, apiKey: string | null, modelType: string, modelSize: string) => {
     try {
       await VisionSdkModule.loadOnDeviceModels(token, apiKey, modelType, modelSize);
-      console.log("Model loaded");
     } catch (error) {
-      console.error("Failed to load models:", error);
+      throw error
+    }
+  },
+
+  /**
+ * Unloads on-device models to free up memory.
+ * @param {string | null} modelType - Model type to unload (null to unload all models).
+ * @param {boolean} shouldDeleteFromDisk - Whether to delete model files from disk.
+ * @returns {Promise<string>} - Success message.
+ */
+  unLoadModel: async (modelType: string | null = null, shouldDeleteFromDisk: boolean = false) => {
+    try {
+      const result = await VisionSdkModule.unLoadOnDeviceModels(modelType, shouldDeleteFromDisk);
+      return result;
+    } catch (error) {
+      throw error
     }
   },
   /**

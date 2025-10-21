@@ -12,9 +12,9 @@
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
 		13B07FC11A68108700A75B9A /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 13B07FB71A68108700A75B9A /* main.m */; };
 		20EF62A956279F947FACAB9B /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 1E591D7910254208C7686E93 /* PrivacyInfo.xcprivacy */; };
+		2B4F76044261BC614281B8DC /* libPods-VisionSdkExample.a in Frameworks */ = {isa = PBXBuildFile; fileRef = E8B303233A036F66314F95C0 /* libPods-VisionSdkExample.a */; };
 		81AB9BB82411601600AC10FF /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */; };
-		A4F34B370B2C8D21060C2CA2 /* libPods-VisionSdkExample-VisionSdkExampleTests.a in Frameworks */ = {isa = PBXBuildFile; fileRef = C151C342DDFDBBC5A3CFF96F /* libPods-VisionSdkExample-VisionSdkExampleTests.a */; };
-		BF2AD726CD78AC08BBDBE13C /* libPods-VisionSdkExample.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 4E1A36F62546C00D52860629 /* libPods-VisionSdkExample.a */; };
+		CE581A2E078512A79C08AB5B /* libPods-VisionSdkExample-VisionSdkExampleTests.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 5B2B10326B02765F42284A78 /* libPods-VisionSdkExample-VisionSdkExampleTests.a */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -37,15 +37,15 @@
 		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = VisionSdkExample/Images.xcassets; sourceTree = "<group>"; };
 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = VisionSdkExample/Info.plist; sourceTree = "<group>"; };
 		13B07FB71A68108700A75B9A /* main.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = main.m; path = VisionSdkExample/main.m; sourceTree = "<group>"; };
+		1509AC9D2F549E191157DE7B /* Pods-VisionSdkExample.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-VisionSdkExample.release.xcconfig"; path = "Target Support Files/Pods-VisionSdkExample/Pods-VisionSdkExample.release.xcconfig"; sourceTree = "<group>"; };
 		1E591D7910254208C7686E93 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xml; name = PrivacyInfo.xcprivacy; path = VisionSdkExample/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
-		373718F4DFAFAB66001A6171 /* Pods-VisionSdkExample-VisionSdkExampleTests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-VisionSdkExample-VisionSdkExampleTests.release.xcconfig"; path = "Target Support Files/Pods-VisionSdkExample-VisionSdkExampleTests/Pods-VisionSdkExample-VisionSdkExampleTests.release.xcconfig"; sourceTree = "<group>"; };
-		4E1A36F62546C00D52860629 /* libPods-VisionSdkExample.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-VisionSdkExample.a"; sourceTree = BUILT_PRODUCTS_DIR; };
-		6FE38E4C346055481B06ACC3 /* Pods-VisionSdkExample-VisionSdkExampleTests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-VisionSdkExample-VisionSdkExampleTests.debug.xcconfig"; path = "Target Support Files/Pods-VisionSdkExample-VisionSdkExampleTests/Pods-VisionSdkExample-VisionSdkExampleTests.debug.xcconfig"; sourceTree = "<group>"; };
+		4D14202A95B12CEDC0D3FA65 /* Pods-VisionSdkExample.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-VisionSdkExample.debug.xcconfig"; path = "Target Support Files/Pods-VisionSdkExample/Pods-VisionSdkExample.debug.xcconfig"; sourceTree = "<group>"; };
+		5B2B10326B02765F42284A78 /* libPods-VisionSdkExample-VisionSdkExampleTests.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-VisionSdkExample-VisionSdkExampleTests.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = LaunchScreen.storyboard; path = VisionSdkExample/LaunchScreen.storyboard; sourceTree = "<group>"; };
-		BA37BED5AA1956D2693EE30D /* Pods-VisionSdkExample.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-VisionSdkExample.debug.xcconfig"; path = "Target Support Files/Pods-VisionSdkExample/Pods-VisionSdkExample.debug.xcconfig"; sourceTree = "<group>"; };
-		C151C342DDFDBBC5A3CFF96F /* libPods-VisionSdkExample-VisionSdkExampleTests.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-VisionSdkExample-VisionSdkExampleTests.a"; sourceTree = BUILT_PRODUCTS_DIR; };
+		9AF0083D95D857C830EAEB84 /* Pods-VisionSdkExample-VisionSdkExampleTests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-VisionSdkExample-VisionSdkExampleTests.release.xcconfig"; path = "Target Support Files/Pods-VisionSdkExample-VisionSdkExampleTests/Pods-VisionSdkExample-VisionSdkExampleTests.release.xcconfig"; sourceTree = "<group>"; };
+		E8B303233A036F66314F95C0 /* libPods-VisionSdkExample.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-VisionSdkExample.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
-		F40CE3B58ECCCB17CFB40AEA /* Pods-VisionSdkExample.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-VisionSdkExample.release.xcconfig"; path = "Target Support Files/Pods-VisionSdkExample/Pods-VisionSdkExample.release.xcconfig"; sourceTree = "<group>"; };
+		FA30EE04AD85950595B47237 /* Pods-VisionSdkExample-VisionSdkExampleTests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-VisionSdkExample-VisionSdkExampleTests.debug.xcconfig"; path = "Target Support Files/Pods-VisionSdkExample-VisionSdkExampleTests/Pods-VisionSdkExample-VisionSdkExampleTests.debug.xcconfig"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -53,7 +53,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				A4F34B370B2C8D21060C2CA2 /* libPods-VisionSdkExample-VisionSdkExampleTests.a in Frameworks */,
+				CE581A2E078512A79C08AB5B /* libPods-VisionSdkExample-VisionSdkExampleTests.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -61,7 +61,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				BF2AD726CD78AC08BBDBE13C /* libPods-VisionSdkExample.a in Frameworks */,
+				2B4F76044261BC614281B8DC /* libPods-VisionSdkExample.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -103,8 +103,8 @@
 			isa = PBXGroup;
 			children = (
 				ED297162215061F000B7C4FE /* JavaScriptCore.framework */,
-				4E1A36F62546C00D52860629 /* libPods-VisionSdkExample.a */,
-				C151C342DDFDBBC5A3CFF96F /* libPods-VisionSdkExample-VisionSdkExampleTests.a */,
+				E8B303233A036F66314F95C0 /* libPods-VisionSdkExample.a */,
+				5B2B10326B02765F42284A78 /* libPods-VisionSdkExample-VisionSdkExampleTests.a */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -143,10 +143,10 @@
 		BBD78D7AC51CEA395F1C20DB /* Pods */ = {
 			isa = PBXGroup;
 			children = (
-				BA37BED5AA1956D2693EE30D /* Pods-VisionSdkExample.debug.xcconfig */,
-				F40CE3B58ECCCB17CFB40AEA /* Pods-VisionSdkExample.release.xcconfig */,
-				6FE38E4C346055481B06ACC3 /* Pods-VisionSdkExample-VisionSdkExampleTests.debug.xcconfig */,
-				373718F4DFAFAB66001A6171 /* Pods-VisionSdkExample-VisionSdkExampleTests.release.xcconfig */,
+				4D14202A95B12CEDC0D3FA65 /* Pods-VisionSdkExample.debug.xcconfig */,
+				1509AC9D2F549E191157DE7B /* Pods-VisionSdkExample.release.xcconfig */,
+				FA30EE04AD85950595B47237 /* Pods-VisionSdkExample-VisionSdkExampleTests.debug.xcconfig */,
+				9AF0083D95D857C830EAEB84 /* Pods-VisionSdkExample-VisionSdkExampleTests.release.xcconfig */,
 			);
 			path = Pods;
 			sourceTree = "<group>";
@@ -158,12 +158,12 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 00E357021AD99517003FC87E /* Build configuration list for PBXNativeTarget "VisionSdkExampleTests" */;
 			buildPhases = (
-				1C6BE58ED7AE00748F4D8828 /* [CP] Check Pods Manifest.lock */,
+				EA7D672AA2EC15EFB33E8387 /* [CP] Check Pods Manifest.lock */,
 				00E356EA1AD99517003FC87E /* Sources */,
 				00E356EB1AD99517003FC87E /* Frameworks */,
 				00E356EC1AD99517003FC87E /* Resources */,
-				B87BD27763A518F2F8AA253D /* [CP] Embed Pods Frameworks */,
-				B3942EE55B451F79912C21E1 /* [CP] Copy Pods Resources */,
+				6F4A61E4B731EA9893DE9BE4 /* [CP] Embed Pods Frameworks */,
+				07BDFBD9E77F903EC6EB62E2 /* [CP] Copy Pods Resources */,
 			);
 			buildRules = (
 			);
@@ -179,13 +179,13 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 13B07F931A680F5B00A75B9A /* Build configuration list for PBXNativeTarget "VisionSdkExample" */;
 			buildPhases = (
-				90A7E0F091A2B38A79C3FF55 /* [CP] Check Pods Manifest.lock */,
+				E560EDE1028CF57864BD30E5 /* [CP] Check Pods Manifest.lock */,
 				13B07F8E1A680F5B00A75B9A /* Resources */,
 				00DD1BFF1BD5951E006B06BC /* Bundle React Native code and images */,
 				13B07F8C1A680F5B00A75B9A /* Frameworks */,
 				13B07F871A680F5B00A75B9A /* Sources */,
-				A1E92783F43E8FD1D89E0C95 /* [CP] Embed Pods Frameworks */,
-				D00B2E43F92A58D0646F5BCD /* [CP] Copy Pods Resources */,
+				E78D95B6D426149E2CB718F8 /* [CP] Embed Pods Frameworks */,
+				A619036C2202D83491E53F0F /* [CP] Copy Pods Resources */,
 			);
 			buildRules = (
 			);
@@ -269,29 +269,58 @@
 			shellPath = /bin/sh;
 			shellScript = "set -e\n\nWITH_ENVIRONMENT=\"$REACT_NATIVE_PATH/scripts/xcode/with-environment.sh\"\nREACT_NATIVE_XCODE=\"$REACT_NATIVE_PATH/scripts/react-native-xcode.sh\"\n\n/bin/sh -c \"$WITH_ENVIRONMENT $REACT_NATIVE_XCODE\"\n";
 		};
-		1C6BE58ED7AE00748F4D8828 /* [CP] Check Pods Manifest.lock */ = {
+		07BDFBD9E77F903EC6EB62E2 /* [CP] Copy Pods Resources */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 			);
 			inputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-VisionSdkExample-VisionSdkExampleTests/Pods-VisionSdkExample-VisionSdkExampleTests-resources-${CONFIGURATION}-input-files.xcfilelist",
 			);
-			inputPaths = (
-				"${PODS_PODFILE_DIR_PATH}/Podfile.lock",
-				"${PODS_ROOT}/Manifest.lock",
-			);
-			name = "[CP] Check Pods Manifest.lock";
+			name = "[CP] Copy Pods Resources";
 			outputFileListPaths = (
-			);
-			outputPaths = (
-				"$(DERIVED_FILE_DIR)/Pods-VisionSdkExample-VisionSdkExampleTests-checkManifestLockResult.txt",
+				"${PODS_ROOT}/Target Support Files/Pods-VisionSdkExample-VisionSdkExampleTests/Pods-VisionSdkExample-VisionSdkExampleTests-resources-${CONFIGURATION}-output-files.xcfilelist",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-VisionSdkExample-VisionSdkExampleTests/Pods-VisionSdkExample-VisionSdkExampleTests-resources.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
-		90A7E0F091A2B38A79C3FF55 /* [CP] Check Pods Manifest.lock */ = {
+		6F4A61E4B731EA9893DE9BE4 /* [CP] Embed Pods Frameworks */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-VisionSdkExample-VisionSdkExampleTests/Pods-VisionSdkExample-VisionSdkExampleTests-frameworks-${CONFIGURATION}-input-files.xcfilelist",
+			);
+			name = "[CP] Embed Pods Frameworks";
+			outputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-VisionSdkExample-VisionSdkExampleTests/Pods-VisionSdkExample-VisionSdkExampleTests-frameworks-${CONFIGURATION}-output-files.xcfilelist",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-VisionSdkExample-VisionSdkExampleTests/Pods-VisionSdkExample-VisionSdkExampleTests-frameworks.sh\"\n";
+			showEnvVarsInLog = 0;
+		};
+		A619036C2202D83491E53F0F /* [CP] Copy Pods Resources */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-VisionSdkExample/Pods-VisionSdkExample-resources-${CONFIGURATION}-input-files.xcfilelist",
+			);
+			name = "[CP] Copy Pods Resources";
+			outputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-VisionSdkExample/Pods-VisionSdkExample-resources-${CONFIGURATION}-output-files.xcfilelist",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-VisionSdkExample/Pods-VisionSdkExample-resources.sh\"\n";
+			showEnvVarsInLog = 0;
+		};
+		E560EDE1028CF57864BD30E5 /* [CP] Check Pods Manifest.lock */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -313,7 +342,7 @@
 			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
 			showEnvVarsInLog = 0;
 		};
-		A1E92783F43E8FD1D89E0C95 /* [CP] Embed Pods Frameworks */ = {
+		E78D95B6D426149E2CB718F8 /* [CP] Embed Pods Frameworks */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -330,55 +359,26 @@
 			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-VisionSdkExample/Pods-VisionSdkExample-frameworks.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
-		B3942EE55B451F79912C21E1 /* [CP] Copy Pods Resources */ = {
+		EA7D672AA2EC15EFB33E8387 /* [CP] Check Pods Manifest.lock */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 			);
 			inputFileListPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-VisionSdkExample-VisionSdkExampleTests/Pods-VisionSdkExample-VisionSdkExampleTests-resources-${CONFIGURATION}-input-files.xcfilelist",
 			);
-			name = "[CP] Copy Pods Resources";
+			inputPaths = (
+				"${PODS_PODFILE_DIR_PATH}/Podfile.lock",
+				"${PODS_ROOT}/Manifest.lock",
+			);
+			name = "[CP] Check Pods Manifest.lock";
 			outputFileListPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-VisionSdkExample-VisionSdkExampleTests/Pods-VisionSdkExample-VisionSdkExampleTests-resources-${CONFIGURATION}-output-files.xcfilelist",
+			);
+			outputPaths = (
+				"$(DERIVED_FILE_DIR)/Pods-VisionSdkExample-VisionSdkExampleTests-checkManifestLockResult.txt",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-VisionSdkExample-VisionSdkExampleTests/Pods-VisionSdkExample-VisionSdkExampleTests-resources.sh\"\n";
-			showEnvVarsInLog = 0;
-		};
-		B87BD27763A518F2F8AA253D /* [CP] Embed Pods Frameworks */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-VisionSdkExample-VisionSdkExampleTests/Pods-VisionSdkExample-VisionSdkExampleTests-frameworks-${CONFIGURATION}-input-files.xcfilelist",
-			);
-			name = "[CP] Embed Pods Frameworks";
-			outputFileListPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-VisionSdkExample-VisionSdkExampleTests/Pods-VisionSdkExample-VisionSdkExampleTests-frameworks-${CONFIGURATION}-output-files.xcfilelist",
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-VisionSdkExample-VisionSdkExampleTests/Pods-VisionSdkExample-VisionSdkExampleTests-frameworks.sh\"\n";
-			showEnvVarsInLog = 0;
-		};
-		D00B2E43F92A58D0646F5BCD /* [CP] Copy Pods Resources */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-VisionSdkExample/Pods-VisionSdkExample-resources-${CONFIGURATION}-input-files.xcfilelist",
-			);
-			name = "[CP] Copy Pods Resources";
-			outputFileListPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-VisionSdkExample/Pods-VisionSdkExample-resources-${CONFIGURATION}-output-files.xcfilelist",
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-VisionSdkExample/Pods-VisionSdkExample-resources.sh\"\n";
+			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
 			showEnvVarsInLog = 0;
 		};
 /* End PBXShellScriptBuildPhase section */
@@ -414,7 +414,7 @@
 /* Begin XCBuildConfiguration section */
 		00E356F61AD99517003FC87E /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 6FE38E4C346055481B06ACC3 /* Pods-VisionSdkExample-VisionSdkExampleTests.debug.xcconfig */;
+			baseConfigurationReference = FA30EE04AD85950595B47237 /* Pods-VisionSdkExample-VisionSdkExampleTests.debug.xcconfig */;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				GCC_PREPROCESSOR_DEFINITIONS = (
@@ -441,7 +441,7 @@
 		};
 		00E356F71AD99517003FC87E /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 373718F4DFAFAB66001A6171 /* Pods-VisionSdkExample-VisionSdkExampleTests.release.xcconfig */;
+			baseConfigurationReference = 9AF0083D95D857C830EAEB84 /* Pods-VisionSdkExample-VisionSdkExampleTests.release.xcconfig */;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				COPY_PHASE_STRIP = NO;
@@ -465,7 +465,7 @@
 		};
 		13B07F941A680F5B00A75B9A /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = BA37BED5AA1956D2693EE30D /* Pods-VisionSdkExample.debug.xcconfig */;
+			baseConfigurationReference = 4D14202A95B12CEDC0D3FA65 /* Pods-VisionSdkExample.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
@@ -494,7 +494,7 @@
 		};
 		13B07F951A680F5B00A75B9A /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = F40CE3B58ECCCB17CFB40AEA /* Pods-VisionSdkExample.release.xcconfig */;
+			baseConfigurationReference = 1509AC9D2F549E191157DE7B /* Pods-VisionSdkExample.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;

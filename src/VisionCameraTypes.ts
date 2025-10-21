@@ -27,6 +27,18 @@ export interface VisionCameraCaptureEvent {
    * @description Optional native image URI if available.
    */
   nativeImage?: string;
+
+  /**
+   * @type {number | undefined}
+   * @description Optional sharpness score of the captured image.
+   */
+  sharpnessScore?: number;
+
+  /**
+   * @type {VisionCameraBarcodeResult[] | undefined}
+   * @description Optional array of detected barcodes in the captured image.
+   */
+  barcodes?: VisionCameraBarcodeResult[];
 }
 
 /**
@@ -237,20 +249,49 @@ export interface DetectionConfig {
 }
 
 /**
+ * Detected code with bounding box information for VisionCamera
+ */
+export interface VisionCameraDetectedCodeBoundingBox {
+  /**
+   * @type {string}
+   * @description The scanned barcode/QR code value.
+   */
+  scannedCode: string;
+
+  /**
+   * @type {string}
+   * @description The barcode symbology type (e.g., QR, EAN, UPC, Code128).
+   */
+  symbology: string;
+
+  /**
+   * @type {Record<string, string> | undefined}
+   * @description Additional GS1 extracted information as key-value pairs (if available).
+   */
+  gs1ExtractedInfo?: Record<string, string>;
+
+  /**
+   * @type {VisionCameraBoundingBox}
+   * @description Bounding box coordinates of the detected code.
+   */
+  boundingBox: VisionCameraBoundingBox;
+}
+
+/**
  * Event triggered continuously with bounding box updates for detected objects.
  */
 export interface VisionCameraBoundingBoxesUpdateEvent {
   /**
-   * @type {VisionCameraBoundingBox[]}
-   * @description Array of bounding boxes for detected barcodes.
+   * @type {VisionCameraDetectedCodeBoundingBox[]}
+   * @description Array of detected barcodes with full information including scanned code, symbology, and bounding box.
    */
-  barcodeBoundingBoxes: VisionCameraBoundingBox[];
+  barcodeBoundingBoxes: VisionCameraDetectedCodeBoundingBox[];
 
   /**
-   * @type {VisionCameraBoundingBox[]}
-   * @description Array of bounding boxes for detected QR codes.
+   * @type {VisionCameraDetectedCodeBoundingBox[]}
+   * @description Array of detected QR codes with full information including scanned code, symbology, and bounding box.
    */
-  qrCodeBoundingBoxes: VisionCameraBoundingBox[];
+  qrCodeBoundingBoxes: VisionCameraDetectedCodeBoundingBox[];
 
   /**
    * @type {VisionCameraBoundingBox}

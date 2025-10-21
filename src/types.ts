@@ -397,11 +397,11 @@ export interface ImageCaptureEvent {
   image: string;
 
   /**
-   * @type {string[]}
-   * @description List of scanned barcodes detected in the image.
-   * @example ['1234567890', '0987654321']
+   * @type {BarcodeResult[]}
+   * @description List of scanned barcodes detected in the image with detailed information.
+   * @example [{ scannedCode: '1234567890', symbology: 'QR', gs1ExtractedInfo: {...}, boundingBox: {...} }]
    */
-  barcodes: string[];
+  barcodes: BarcodeResult[];
 
   /**
    * @type {string | undefined}
@@ -410,11 +410,10 @@ export interface ImageCaptureEvent {
    */
   nativeImage?: string;
 
-
-    /**
+  /**
    * @type {number}
    * @description sharpness value for the captured image, could be used for blur detection.
-   * @example 'file:///path/to/image.jpg'
+   * @example 0.85
    */
   sharpnessScore?: number;
 }
@@ -492,7 +491,9 @@ export interface BarcodeScanResult {
 
 export interface BarcodeResult {
   scannedCode: string; // The scanned barcode value
+  symbology?: string; // Barcode symbology type (e.g., QR, EAN, CODE128)
   gs1ExtractedInfo?: Record<string, string>; // Additional extracted information as a key-value map
+  boundingBox?: BoundingBox; // Bounding box coordinates of the detected barcode
 }
 
 /**
@@ -535,9 +536,16 @@ export interface BoundingBox {
   height: number;
 }
 
+export interface DetectedCodeBoundingBox {
+  scannedCode: string;
+  symbology: string;
+  gs1ExtractedInfo?: Record<string, string>;
+  boundingBox: BoundingBox;
+}
+
 export interface BoundingBoxesDetectedResult {
-  barcodeBoundingBoxes: Array<BoundingBox>;
-  qrCodeBoundingBoxes: Array<BoundingBox>;
+  barcodeBoundingBoxes: Array<DetectedCodeBoundingBox>;
+  qrCodeBoundingBoxes: Array<DetectedCodeBoundingBox>;
   documentBoundingBox: BoundingBox;
 }
 
