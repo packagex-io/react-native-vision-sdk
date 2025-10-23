@@ -575,46 +575,67 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
   }
 
   override fun onIndicationsBoundingBoxes(
-    barcodeBoundingBoxes: List<Rect>,
-    qrCodeBoundingBoxes: List<Rect>,
+    barcodeBoundingBoxes: List<ScannedCodeResult>,
+    qrCodeBoundingBoxes: List<ScannedCodeResult>,
     documentBoundingBox: Rect?
   ) {
     try {
-
-
-
       val event = Arguments.createMap().apply {
         val barcodeRectsArray = Arguments.createArray()
         val qrCodeRectsArray = Arguments.createArray()
         val documentsRect = Arguments.createMap()
 
+        // Convert barcode bounding boxes with full metadata (Android SDK v2.4.23+)
         if(barcodeBoundingBoxes.isNotEmpty()){
-          barcodeBoundingBoxes.forEach {
-            boundingBox -> barcodeRectsArray.pushMap(Arguments.createMap().apply {
-                putString("scannedCode", "") // Not available on Android
-                putString("symbology", "") // Not available on Android
-                putMap("gs1ExtractedInfo", Arguments.createMap()) // Empty map
+          barcodeBoundingBoxes.forEach { code ->
+            barcodeRectsArray.pushMap(Arguments.createMap().apply {
+                putString("scannedCode", code.scannedCode)
+                putString("symbology", code.symbology.toString())
+
+                // Add GS1 extracted info if available
+                if (!code.gs1ExtractedInfo.isNullOrEmpty()) {
+                  val gs1Map = Arguments.createMap()
+                  code.gs1ExtractedInfo?.forEach { (key, value) ->
+                    gs1Map.putString(key, value)
+                  }
+                  putMap("gs1ExtractedInfo", gs1Map)
+                } else {
+                  putMap("gs1ExtractedInfo", Arguments.createMap())
+                }
+
                 putMap("boundingBox", Arguments.createMap().apply {
-                  putInt("x", boundingBox.left.toDp())
-                  putInt("y", boundingBox.top.toDp())
-                  putInt("width", boundingBox.width().toDp())
-                  putInt("height", boundingBox.height().toDp())
+                  putInt("x", code.boundingBox.left.toDp())
+                  putInt("y", code.boundingBox.top.toDp())
+                  putInt("width", code.boundingBox.width().toDp())
+                  putInt("height", code.boundingBox.height().toDp())
                 })
             })
           }
         }
 
+        // Convert QR code bounding boxes with full metadata (Android SDK v2.4.23+)
         if(qrCodeBoundingBoxes.isNotEmpty()){
-          qrCodeBoundingBoxes.forEach{
-            boundingBox -> qrCodeRectsArray.pushMap(Arguments.createMap().apply {
-                putString("scannedCode", "") // Not available on Android
-                putString("symbology", "") // Not available on Android
-                putMap("gs1ExtractedInfo", Arguments.createMap()) // Empty map
+          qrCodeBoundingBoxes.forEach{ code ->
+            qrCodeRectsArray.pushMap(Arguments.createMap().apply {
+                putString("scannedCode", code.scannedCode)
+                putString("symbology", code.symbology.toString())
+
+                // Add GS1 extracted info if available
+                if (!code.gs1ExtractedInfo.isNullOrEmpty()) {
+                  val gs1Map = Arguments.createMap()
+                  code.gs1ExtractedInfo?.forEach { (key, value) ->
+                    gs1Map.putString(key, value)
+                  }
+                  putMap("gs1ExtractedInfo", gs1Map)
+                } else {
+                  putMap("gs1ExtractedInfo", Arguments.createMap())
+                }
+
                 putMap("boundingBox", Arguments.createMap().apply {
-                  putInt("x", boundingBox.left.toDp())
-                  putInt("y", boundingBox.top.toDp())
-                  putInt("width", boundingBox.width().toDp())
-                  putInt("height", boundingBox.height().toDp())
+                  putInt("x", code.boundingBox.left.toDp())
+                  putInt("y", code.boundingBox.top.toDp())
+                  putInt("width", code.boundingBox.width().toDp())
+                  putInt("height", code.boundingBox.height().toDp())
                 })
             })
           }

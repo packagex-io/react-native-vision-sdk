@@ -403,42 +403,64 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
     }
 
     override fun onIndicationsBoundingBoxes(
-      barcodeBoundingBoxes: List<android.graphics.Rect>,
-      qrCodeBoundingBoxes: List<android.graphics.Rect>,
+      barcodeBoundingBoxes: List<ScannedCodeResult>,
+      qrCodeBoundingBoxes: List<ScannedCodeResult>,
       documentBoundingBox: android.graphics.Rect?
     ) {
       Log.d(TAG, "onIndicationsBoundingBoxes - barcodes: ${barcodeBoundingBoxes.size}, qrCodes: ${qrCodeBoundingBoxes.size}, document: ${documentBoundingBox != null}")
       val event = Arguments.createMap()
 
-      // Convert barcode bounding boxes (px to dp)
+      // Convert barcode bounding boxes with full metadata (Android SDK v2.4.23+)
       val barcodeBoxesArray = Arguments.createArray()
-      barcodeBoundingBoxes.forEach { box ->
+      barcodeBoundingBoxes.forEach { code ->
         val boxMap = Arguments.createMap()
-        boxMap.putString("scannedCode", "") // Not available on Android
-        boxMap.putString("symbology", "") // Not available on Android
-        boxMap.putMap("gs1ExtractedInfo", Arguments.createMap()) // Empty map
+        boxMap.putString("scannedCode", code.scannedCode)
+        boxMap.putString("symbology", code.symbology.toString())
+
+        // Add GS1 extracted info if available
+        if (!code.gs1ExtractedInfo.isNullOrEmpty()) {
+          val gs1Map = Arguments.createMap()
+          code.gs1ExtractedInfo?.forEach { (key, value) ->
+            gs1Map.putString(key, value)
+          }
+          boxMap.putMap("gs1ExtractedInfo", gs1Map)
+        } else {
+          boxMap.putMap("gs1ExtractedInfo", Arguments.createMap())
+        }
+
         boxMap.putMap("boundingBox", Arguments.createMap().apply {
-          putInt("x", box.left.toDp())
-          putInt("y", box.top.toDp())
-          putInt("width", box.width().toDp())
-          putInt("height", box.height().toDp())
+          putInt("x", code.boundingBox.left.toDp())
+          putInt("y", code.boundingBox.top.toDp())
+          putInt("width", code.boundingBox.width().toDp())
+          putInt("height", code.boundingBox.height().toDp())
         })
         barcodeBoxesArray.pushMap(boxMap)
       }
       event.putArray("barcodeBoundingBoxes", barcodeBoxesArray)
 
-      // Convert QR code bounding boxes (px to dp)
+      // Convert QR code bounding boxes with full metadata (Android SDK v2.4.23+)
       val qrCodeBoxesArray = Arguments.createArray()
-      qrCodeBoundingBoxes.forEach { box ->
+      qrCodeBoundingBoxes.forEach { code ->
         val boxMap = Arguments.createMap()
-        boxMap.putString("scannedCode", "") // Not available on Android
-        boxMap.putString("symbology", "") // Not available on Android
-        boxMap.putMap("gs1ExtractedInfo", Arguments.createMap()) // Empty map
+        boxMap.putString("scannedCode", code.scannedCode)
+        boxMap.putString("symbology", code.symbology.toString())
+
+        // Add GS1 extracted info if available
+        if (!code.gs1ExtractedInfo.isNullOrEmpty()) {
+          val gs1Map = Arguments.createMap()
+          code.gs1ExtractedInfo?.forEach { (key, value) ->
+            gs1Map.putString(key, value)
+          }
+          boxMap.putMap("gs1ExtractedInfo", gs1Map)
+        } else {
+          boxMap.putMap("gs1ExtractedInfo", Arguments.createMap())
+        }
+
         boxMap.putMap("boundingBox", Arguments.createMap().apply {
-          putInt("x", box.left.toDp())
-          putInt("y", box.top.toDp())
-          putInt("width", box.width().toDp())
-          putInt("height", box.height().toDp())
+          putInt("x", code.boundingBox.left.toDp())
+          putInt("y", code.boundingBox.top.toDp())
+          putInt("width", code.boundingBox.width().toDp())
+          putInt("height", code.boundingBox.height().toDp())
         })
         qrCodeBoxesArray.pushMap(boxMap)
       }

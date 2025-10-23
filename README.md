@@ -68,7 +68,7 @@ In the `build.gradle` file of your Android project, add the following dependenci
 ```gradle
 dependencies {
     // Existing dependencies
-    implementation 'com.github.packagexlabs:vision-sdk-android:v2.4.22'
+    implementation 'com.github.packagexlabs:vision-sdk-android:v2.4.23'
     implementation 'com.github.asadullahilyas:HandyUtils:1.1.6'
 }
 ```
@@ -473,7 +473,7 @@ interface DetectedCodeBoundingBox {
 }
 ```
 
-**Platform Note:** On Android, `onBoundingBoxesUpdate` only provides bounding box coordinates. The `scannedCode`, `symbology`, and `gs1ExtractedInfo` fields will be empty due to Android VisionSDK limitations. For full barcode metadata on Android, use the `onBarcodeDetected` event instead.
+**Platform Note:** As of Android VisionSDK v2.4.23, `onBoundingBoxesUpdate` now provides **full barcode metadata** including `scannedCode`, `symbology`, and `gs1ExtractedInfo`, achieving **full feature parity with iOS**!
 
 ##### Capture Event Enhancements
 The `onCapture` event now includes:
@@ -616,53 +616,32 @@ const styles = StyleSheet.create({
 
 While we strive to maintain feature parity across iOS and Android, certain limitations exist due to differences in the underlying native VisionSDK implementations.
 
-### Android Limitations
+### Android Improvements
 
-#### 1. Bounding Box Metadata (Android VisionSDK 2.4.22)
+#### 1. ✅ Bounding Box Metadata - **FULL PARITY ACHIEVED** (Android VisionSDK v2.4.23+)
 
 **Affected Events:** `onBoundingBoxesUpdate`, `onIndicationsBoundingBoxes`
 
-The Android VisionSDK returns only bounding box coordinates (`List<Rect>`) without barcode metadata. As a result:
+As of Android VisionSDK v2.4.23, the Android platform now provides **full barcode metadata** in bounding box events, achieving complete feature parity with iOS!
 
 ```typescript
-// iOS - Full metadata available
+// Both iOS and Android - Full metadata now available on both platforms!
 {
   barcodeBoundingBoxes: [
     {
-      scannedCode: "1234567890",      // ✅ Available
-      symbology: "CODE_128",          // ✅ Available
-      gs1ExtractedInfo: { /* ... */ }, // ✅ Available
+      scannedCode: "1234567890",      // ✅ Available on both platforms
+      symbology: "CODE_128",          // ✅ Available on both platforms
+      gs1ExtractedInfo: { /* ... */ }, // ✅ Available on both platforms
       boundingBox: { x: 10, y: 20, width: 100, height: 50 }
     }
   ]
 }
-
-// Android - Only coordinates available
-{
-  barcodeBoundingBoxes: [
-    {
-      scannedCode: "",                // ❌ Empty string
-      symbology: "",                  // ❌ Empty string
-      gs1ExtractedInfo: {},           // ❌ Empty object
-      boundingBox: { x: 10, y: 20, width: 100, height: 50 } // ✅ Available
-    }
-  ]
-}
 ```
 
-**Workaround:** Use the `onBarcodeDetected` event on Android, which provides full barcode metadata including `scannedCode`, `symbology`, `boundingBox`, and `gs1ExtractedInfo`.
-
-```typescript
-// Recommended approach for Android
-onBarcodeDetected={(event) => {
-  event.codes.forEach(code => {
-    console.log('Barcode:', code.scannedCode);
-    console.log('Type:', code.symbology);
-    console.log('Position:', code.boundingBox);
-    console.log('GS1:', code.gs1ExtractedInfo);
-  });
-}}
-```
+**What Changed:**
+- Previous versions (v2.4.22 and earlier) only provided `List<Rect>` coordinates
+- Version v2.4.23+ now uses `List<ScannedCodeResult>` with full metadata
+- No workarounds needed - both `onBarcodeDetected` and `onBoundingBoxesUpdate` provide complete data
 
 #### 2. Detection Configuration
 
@@ -704,11 +683,11 @@ onError={(error) => {
 
 ### Feature Parity Table
 
-| Feature | iOS | Android |
+| Feature | iOS | Android (v2.4.23+) |
 |---------|-----|---------|
 | Barcode Detection | ✅ Full support | ✅ Full support |
 | Bounding Boxes (coordinates) | ✅ Full support | ✅ Full support |
-| Bounding Boxes (metadata) | ✅ Full metadata | ⚠️ Coordinates only |
+| Bounding Boxes (metadata) | ✅ Full metadata | ✅ **Full metadata** |
 | Error codes | ✅ With filtering | ✅ Full support |
 | Sharpness score | ✅ Supported | ✅ Supported |
 | GS1 extraction | ✅ Supported | ✅ Supported |
@@ -719,6 +698,8 @@ onError={(error) => {
 - ✅ Fully supported
 - ⚠️ Limited or different behavior
 - ❌ Not available
+
+**Major Improvement:** As of Android VisionSDK v2.4.23, bounding box metadata is now fully supported on both platforms!
 
 ---
 
