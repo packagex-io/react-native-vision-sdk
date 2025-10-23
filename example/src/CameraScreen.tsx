@@ -570,7 +570,7 @@ const App: React.FC<{ route: any }> = ({ route }) => {
         zoomLevel={zoomLevel}
         setZoomLevel={setZoomLevel}
       />
-      {['barcode', 'barCodeOrQRCode'].includes(mode) && detectedBoundingBoxes.barcodeBoundingBoxes?.length > 0 ?
+      {detectedBoundingBoxes.barcodeBoundingBoxes?.length > 0 ?
         <>
           {detectedBoundingBoxes.barcodeBoundingBoxes.map((code, index) => (
             <View

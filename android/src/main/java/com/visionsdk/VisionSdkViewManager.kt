@@ -60,6 +60,10 @@ import com.asadullah.handyutils.launchOnDefault
 import java.net.HttpURLConnection
 import java.net.URL
 import com.visionsdk.utils.EventUtils
+import com.visionsdk.utils.toNonNullableMap
+import com.visionsdk.utils.toDp
+import com.visionsdk.utils.uriToBitmap
+import com.visionsdk.utils.getModelType
 import io.packagex.visionsdk.core.TemplateManager
 import io.packagex.visionsdk.core.pricetag.PriceTagData
 import io.packagex.visionsdk.dto.ScannedCodeResult
@@ -139,7 +143,11 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
 
   private var focusSettings: FocusSettings = FocusSettings(appContext) // Focus settings for controlling focus behavior in the camera view
 
-  private var objectDetectionConfiguration: ObjectDetectionConfiguration = ObjectDetectionConfiguration() // Object detection settings for identifying objects within the camera view
+  private var objectDetectionConfiguration: ObjectDetectionConfiguration = ObjectDetectionConfiguration(
+    isDocumentIndicationOn = true,
+    isTextIndicationOn = true,
+    isBarcodeOrQRCodeIndicationOn = true
+  ) // Object detection settings for identifying objects within the camera view - enabled by default to support bounding box updates
 
   companion object {
     const val TAG = "VisionCameraView" // Companion object to hold constants, like the TAG for logging
@@ -536,8 +544,6 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
   }
 
   private val density = appContext.resources.displayMetrics.density
-  fun Int.toDp(): Int = (this / density + 0.5f).toInt()
-
 
   /**
    * Sets focus settings for the camera if the camera is started, using the focus region manager.
@@ -575,56 +581,77 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
   }
 
   override fun onIndicationsBoundingBoxes(
-    barcodeBoundingBoxes: List<Rect>,
-    qrCodeBoundingBoxes: List<Rect>,
+    barcodeBoundingBoxes: List<ScannedCodeResult>,
+    qrCodeBoundingBoxes: List<ScannedCodeResult>,
     documentBoundingBox: Rect?
   ) {
     try {
-
-
-
       val event = Arguments.createMap().apply {
         val barcodeRectsArray = Arguments.createArray()
         val qrCodeRectsArray = Arguments.createArray()
         val documentsRect = Arguments.createMap()
 
+        // Convert barcode bounding boxes with full metadata (Android SDK v2.4.23+)
         if(barcodeBoundingBoxes.isNotEmpty()){
-          barcodeBoundingBoxes.forEach {
-            boundingBox -> barcodeRectsArray.pushMap(Arguments.createMap().apply {
-                putString("scannedCode", "") // Not available on Android
-                putString("symbology", "") // Not available on Android
-                putMap("gs1ExtractedInfo", Arguments.createMap()) // Empty map
+          barcodeBoundingBoxes.forEach { code ->
+            barcodeRectsArray.pushMap(Arguments.createMap().apply {
+                putString("scannedCode", code.scannedCode)
+                putString("symbology", code.symbology.toString())
+
+                // Add GS1 extracted info if available
+                if (!code.gs1ExtractedInfo.isNullOrEmpty()) {
+                  val gs1Map = Arguments.createMap()
+                  code.gs1ExtractedInfo?.forEach { (key, value) ->
+                    gs1Map.putString(key, value)
+                  }
+                  putMap("gs1ExtractedInfo", gs1Map)
+                } else {
+                  putMap("gs1ExtractedInfo", Arguments.createMap())
+                }
+
                 putMap("boundingBox", Arguments.createMap().apply {
-                  putInt("x", boundingBox.left.toDp())
-                  putInt("y", boundingBox.top.toDp())
-                  putInt("width", boundingBox.width().toDp())
-                  putInt("height", boundingBox.height().toDp())
+                  putInt("x", code.boundingBox.left.toDp(density))
+                  putInt("y", code.boundingBox.top.toDp(density))
+                  putInt("width", code.boundingBox.width().toDp(density))
+                  putInt("height", code.boundingBox.height().toDp(density))
                 })
             })
           }
         }
 
+        // Convert QR code bounding boxes with full metadata (Android SDK v2.4.23+)
         if(qrCodeBoundingBoxes.isNotEmpty()){
-          qrCodeBoundingBoxes.forEach{
-            boundingBox -> qrCodeRectsArray.pushMap(Arguments.createMap().apply {
-                putString("scannedCode", "") // Not available on Android
-                putString("symbology", "") // Not available on Android
-                putMap("gs1ExtractedInfo", Arguments.createMap()) // Empty map
+          qrCodeBoundingBoxes.forEach{ code ->
+            qrCodeRectsArray.pushMap(Arguments.createMap().apply {
+                putString("scannedCode", code.scannedCode)
+                putString("symbology", code.symbology.toString())
+
+                // Add GS1 extracted info if available
+                if (!code.gs1ExtractedInfo.isNullOrEmpty()) {
+                  val gs1Map = Arguments.createMap()
+                  code.gs1ExtractedInfo?.forEach { (key, value) ->
+                    gs1Map.putString(key, value)
+                  }
+                  putMap("gs1ExtractedInfo", gs1Map)
+                } else {
+                  putMap("gs1ExtractedInfo", Arguments.createMap())
+                }
+
                 putMap("boundingBox", Arguments.createMap().apply {
-                  putInt("x", boundingBox.left.toDp())
-                  putInt("y", boundingBox.top.toDp())
-                  putInt("width", boundingBox.width().toDp())
-                  putInt("height", boundingBox.height().toDp())
+                  putInt("x", code.boundingBox.left.toDp(density))
+                  putInt("y", code.boundingBox.top.toDp(density))
+                  putInt("width", code.boundingBox.width().toDp(density))
+                  putInt("height", code.boundingBox.height().toDp(density))
                 })
             })
           }
         }
 
         if(documentBoundingBox != null){
-          documentsRect.putInt("x", documentBoundingBox.left.toDp())
-          documentsRect.putInt("y", documentBoundingBox.top.toDp())
-          documentsRect.putInt("width", documentBoundingBox.width().toDp())
-          documentsRect.putInt("height", documentBoundingBox.height().toDp())
+          documentsRect.putInt("x", documentBoundingBox.left.toDp(density))
+          documentsRect.putInt("y", documentBoundingBox.top.toDp(density))
+          documentsRect.putInt("width", documentBoundingBox.width().toDp(density))
+          documentsRect.putInt("height", documentBoundingBox.height().toDp(density))
         }
 
         putArray("barcodeBoundingBoxes", barcodeRectsArray)
@@ -647,10 +674,10 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
 
   override fun onPriceTagResult(priceTagData: PriceTagData) {
     val boundingBoxMap = Arguments.createMap().apply {
-      putInt("x", priceTagData.boundingBox.left.toDp())
-      putInt("y", priceTagData.boundingBox.top.toDp())
-      putInt("width", priceTagData.boundingBox.width().toDp())
-      putInt("height", priceTagData.boundingBox.height().toDp())
+      putInt("x", priceTagData.boundingBox.left.toDp(density))
+      putInt("y", priceTagData.boundingBox.top.toDp(density))
+      putInt("width", priceTagData.boundingBox.width().toDp(density))
+      putInt("height", priceTagData.boundingBox.height().toDp(density))
     }
 
     val event = Arguments.createMap().apply {
@@ -703,10 +730,10 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
 
             // Add bounding box
             val boundingBoxMap = Arguments.createMap().apply {
-              putInt("x", scannedCodeResult.boundingBox.left.toDp())
-              putInt("y", scannedCodeResult.boundingBox.top.toDp())
-              putInt("width", scannedCodeResult.boundingBox.width().toDp())
-              putInt("height", scannedCodeResult.boundingBox.height().toDp())
+              putInt("x", scannedCodeResult.boundingBox.left.toDp(density))
+              putInt("y", scannedCodeResult.boundingBox.top.toDp(density))
+              putInt("width", scannedCodeResult.boundingBox.width().toDp(density))
+              putInt("height", scannedCodeResult.boundingBox.height().toDp(density))
             }
             putMap("boundingBox", boundingBoxMap)
 
@@ -842,10 +869,10 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
 
           // Add bounding box
           val boundingBoxMap = Arguments.createMap().apply {
-            putInt("x", scannedCodeResult.boundingBox.left.toDp())
-            putInt("y", scannedCodeResult.boundingBox.top.toDp())
-            putInt("width", scannedCodeResult.boundingBox.width().toDp())
-            putInt("height", scannedCodeResult.boundingBox.height().toDp())
+            putInt("x", scannedCodeResult.boundingBox.left.toDp(density))
+            putInt("y", scannedCodeResult.boundingBox.top.toDp(density))
+            putInt("width", scannedCodeResult.boundingBox.width().toDp(density))
+            putInt("height", scannedCodeResult.boundingBox.height().toDp(density))
           }
           putMap("boundingBox", boundingBoxMap)
 
@@ -1706,6 +1733,9 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
       }
 
       visionCameraView?.setDetectionMode(detectionMode)
+
+      // Re-apply ObjectDetectionConfiguration after mode change to ensure bounding box callbacks work
+      visionCameraView?.setObjectDetectionConfiguration(objectDetectionConfiguration)
     } else {
       //mode = pricetag
 //      visionCameraView?.enablePriceTagMode(apiKey, token)
@@ -1845,46 +1875,4 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
     return Base64.encodeToString(byteArray, Base64.DEFAULT)
   }
 
-  /**
-   * Converts a URI to a Bitmap.
-   * This function supports both HTTP/HTTPS URIs (for remote images) and local URIs.
-   * The result is posted back to the main UI thread through a callback.
-   *
-   * @param context - The application context, used to access content resolver for local URIs.
-   * @param uri - The URI to be converted to a Bitmap.
-   * @param onComplete - A callback function invoked with the Bitmap result on the main UI thread, or null if conversion fails.
-   */
-  private fun uriToBitmap(context: Context, uri: Uri, onComplete: (Bitmap?) -> Unit) {
-    Thread {
-      try {
-        val bitmap: Bitmap? = if (uri.scheme == "http" || uri.scheme == "https") {
-          // Handle HTTP/HTTPS URIs for remote images
-          val url = URL(uri.toString())
-          val connection: HttpURLConnection = url.openConnection() as HttpURLConnection
-          connection.doInput = true
-          connection.connect()
-
-          connection.inputStream.use { inputStream ->
-            BitmapFactory.decodeStream(inputStream)
-          }
-        } else {
-          // Handle local URIs (file, content, etc.)
-          context.contentResolver.openInputStream(uri)?.use { inputStream ->
-            BitmapFactory.decodeStream(inputStream)
-          } ?: null
-        }
-
-        // Post the result back to the main UI thread via the callback
-        Handler(Looper.getMainLooper()).post {
-          onComplete(bitmap)
-        }
-      } catch (e: Exception) {
-        e.printStackTrace()
-        // Post null to the callback on the main thread if there's an error
-        Handler(Looper.getMainLooper()).post {
-          onComplete(null)
-        }
-      }
-    }.start()  // Start the background thread
-  }
 }

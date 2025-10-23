@@ -15,6 +15,9 @@ import io.packagex.visionsdk.ocr.ml.core.enums.OCRModule
 import io.packagex.visionsdk.ApiManager
 import kotlinx.coroutines.*
 import com.visionsdk.utils.EventUtils
+import com.visionsdk.utils.toNonNullableMap
+import com.visionsdk.utils.uriToBitmap
+import com.visionsdk.utils.getModelType
 import io.packagex.visionsdk.exceptions.VisionSDKException
 import io.packagex.visionsdk.interfaces.OCRResult
 import io.packagex.visionsdk.interfaces.ResponseCallback
@@ -41,20 +44,6 @@ class VisionSdkModule(private val reactContext: ReactApplicationContext) : React
       "large" -> ModelSize.Large
       "xlarge" -> ModelSize.XLarge
       else -> ModelSize.Large // Default to Large
-    }
-  }
-  private fun getModelType(modelTypeStr: String?, modelSize: ModelSize): OCRModule {
-    Log.d(TAG, "Setting Model Type: $modelTypeStr")
-
-    return when (modelTypeStr?.lowercase()) {
-      "shipping_label", "shipping-label" -> OCRModule.ShippingLabel(modelSize)
-      "bill_of_lading", "bill-of-lading" -> OCRModule.BillOfLading(modelSize)
-      "item_label", "item-label" -> OCRModule.ItemLabel(modelSize)
-      "document_classification", "document-classification" -> OCRModule.DocumentClassification(modelSize)
-      else -> {
-        Log.w(TAG, "⚠️ Unknown model type, defaulting to ShippingLabel")
-        OCRModule.ShippingLabel(modelSize)  // Default to Shipping Label
-      }
     }
   }
 
@@ -112,7 +101,7 @@ class VisionSdkModule(private val reactContext: ReactApplicationContext) : React
           bitmap = bitmap,
           shouldResizeImage = shouldResizeImage,
           barcodeList =  barcodeList,
-          metadata = metadata.toHashMap(),
+          metadata = metadata.toNonNullableMap(),
           onDeviceResponse =  onDeviceResponse,
           onResponseCallback =  object : ResponseCallback {
             override fun onError(visionException: VisionSDKException) {
@@ -170,10 +159,10 @@ class VisionSdkModule(private val reactContext: ReactApplicationContext) : React
 
         Log.d(TAG, "ondeviceresponse:\n $onDeviceResponse")
 
-        val optionsMap = options?.toHashMap() ?: emptyMap()
-        val metadataMap = metadata?.toHashMap() ?: emptyMap()
-        val recipientMap = recipient?.toHashMap()
-        val senderMap = sender?.toHashMap()
+        val optionsMap = options?.toNonNullableMap() ?: emptyMap()
+        val metadataMap = metadata?.toNonNullableMap() ?: emptyMap()
+        val recipientMap = recipient?.toNonNullableMap()
+        val senderMap = sender?.toNonNullableMap()
 
         ApiManager().shippingLabelMatchingApiAsync(
           apiKey = apiKey,
@@ -374,10 +363,10 @@ class VisionSdkModule(private val reactContext: ReactApplicationContext) : React
           bitmap = bitmap,
           barcodeList = barcodeList,
           locationId = locationId,
-          options = options?.toHashMap() ?: emptyMap(),
-          metadata = metadata?.toHashMap() ?: emptyMap(),
-          recipient = recipient?.toHashMap() ?: emptyMap(),
-          sender = sender?.toHashMap() ?: emptyMap(),
+          options = options?.toNonNullableMap() ?: emptyMap(),
+          metadata = metadata?.toNonNullableMap() ?: emptyMap(),
+          recipient = recipient?.toNonNullableMap() ?: emptyMap(),
+          sender = sender?.toNonNullableMap() ?: emptyMap(),
           onScanResult = object : OCRResult {
             override fun onOCRResponse(response: String) {
               promise.resolve(response)
@@ -468,7 +457,7 @@ class VisionSdkModule(private val reactContext: ReactApplicationContext) : React
           bitmap = bitmap,
           barcodeList = barcodeList,
           locationId = locationId,
-          options = options?.toHashMap() ?: emptyMap(),
+          options = options?.toNonNullableMap() ?: emptyMap(),
           onScanResult = object : OCRResult {
             override fun onOCRResponse(response: String) {
               promise.resolve(response)
@@ -585,10 +574,10 @@ class VisionSdkModule(private val reactContext: ReactApplicationContext) : React
                 bitmap = bitmap,
                 barcodeList = barcodeList,
                 locationId = locationId,
-                options = options?.toHashMap() ?: emptyMap(),
-                metadata = metadata?.toHashMap() ?: emptyMap(),
-                recipient = recipient?.toHashMap() ?: emptyMap(),
-                sender = sender?.toHashMap() ?: emptyMap(),
+                options = options?.toNonNullableMap() ?: emptyMap(),
+                metadata = metadata?.toNonNullableMap() ?: emptyMap(),
+                recipient = recipient?.toNonNullableMap() ?: emptyMap(),
+                sender = sender?.toNonNullableMap() ?: emptyMap(),
                 onDeviceResponse = onDeviceResult,
                 onResponseCallback = object : ResponseCallback {
                   override fun onError(visionException: VisionSDKException) {
@@ -614,49 +603,6 @@ class VisionSdkModule(private val reactContext: ReactApplicationContext) : React
         promise.reject("PROCESSING_FAILED", "Error during hybrid prediction: ${e.message}", e)
       }
     }
-  }
-
-  /**
-   * Converts a URI to a Bitmap.
-   * This function supports both HTTP/HTTPS URIs (for remote images) and local URIs.
-   * The result is posted back to the main UI thread through a callback.
-   *
-   * @param context - The application context, used to access content resolver for local URIs.
-   * @param uri - The URI to be converted to a Bitmap.
-   * @param onComplete - A callback function invoked with the Bitmap result on the main UI thread, or null if conversion fails.
-   */
-  private fun uriToBitmap(context: Context, uri: Uri, onComplete: (Bitmap?) -> Unit) {
-    Thread {
-      try {
-        val bitmap: Bitmap? = if (uri.scheme == "http" || uri.scheme == "https") {
-          // Handle HTTP/HTTPS URIs for remote images
-          val url = URL(uri.toString())
-          val connection: HttpURLConnection = url.openConnection() as HttpURLConnection
-          connection.doInput = true
-          connection.connect()
-
-          connection.inputStream.use { inputStream ->
-            BitmapFactory.decodeStream(inputStream)
-          }
-        } else {
-          // Handle local URIs (file, content, etc.)
-          context.contentResolver.openInputStream(uri)?.use { inputStream ->
-            BitmapFactory.decodeStream(inputStream)
-          } ?: null
-        }
-
-        // Post the result back to the main UI thread via the callback
-        Handler(Looper.getMainLooper()).post {
-          onComplete(bitmap)
-        }
-      } catch (e: Exception) {
-        e.printStackTrace()
-        // Post null to the callback on the main thread if there's an error
-        Handler(Looper.getMainLooper()).post {
-          onComplete(null)
-        }
-      }
-    }.start()  // Start the background thread
   }
 
 }
