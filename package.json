@@ -1,6 +1,6 @@
 {
   "name": "react-native-vision-sdk",
-  "version": "1.5.25",
+  "version": "1.5.26",
   "description": "VisionSDK for React Native.",
   "main": "lib/commonjs/index",
   "module": "lib/module/index",
