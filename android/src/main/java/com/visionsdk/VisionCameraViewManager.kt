@@ -12,6 +12,7 @@ import com.facebook.react.uimanager.SimpleViewManager
 import com.facebook.react.uimanager.ThemedReactContext
 import com.facebook.react.uimanager.annotations.ReactProp
 import com.facebook.react.uimanager.events.RCTEventEmitter
+import com.visionsdk.utils.toDp
 import io.packagex.visionsdk.core.DetectionMode
 import io.packagex.visionsdk.core.ScanningMode
 import io.packagex.visionsdk.dto.ScannedCodeResult
@@ -296,7 +297,6 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
 
   // Utility to convert pixels to DP
   private val density = appContext.resources.displayMetrics.density
-  private fun Int.toDp(): Int = (this / density + 0.5f).toInt()
 
   // Inner class for per-view callbacks
   inner class ViewCallback(
@@ -429,10 +429,10 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
         }
 
         boxMap.putMap("boundingBox", Arguments.createMap().apply {
-          putInt("x", code.boundingBox.left.toDp())
-          putInt("y", code.boundingBox.top.toDp())
-          putInt("width", code.boundingBox.width().toDp())
-          putInt("height", code.boundingBox.height().toDp())
+          putInt("x", code.boundingBox.left.toDp(density))
+          putInt("y", code.boundingBox.top.toDp(density))
+          putInt("width", code.boundingBox.width().toDp(density))
+          putInt("height", code.boundingBox.height().toDp(density))
         })
         barcodeBoxesArray.pushMap(boxMap)
       }
@@ -457,10 +457,10 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
         }
 
         boxMap.putMap("boundingBox", Arguments.createMap().apply {
-          putInt("x", code.boundingBox.left.toDp())
-          putInt("y", code.boundingBox.top.toDp())
-          putInt("width", code.boundingBox.width().toDp())
-          putInt("height", code.boundingBox.height().toDp())
+          putInt("x", code.boundingBox.left.toDp(density))
+          putInt("y", code.boundingBox.top.toDp(density))
+          putInt("width", code.boundingBox.width().toDp(density))
+          putInt("height", code.boundingBox.height().toDp(density))
         })
         qrCodeBoxesArray.pushMap(boxMap)
       }
@@ -469,10 +469,10 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
       // Convert document bounding box (px to dp)
       documentBoundingBox?.let { box ->
         val boxMap = Arguments.createMap()
-        boxMap.putInt("x", box.left.toDp())
-        boxMap.putInt("y", box.top.toDp())
-        boxMap.putInt("width", box.width().toDp())
-        boxMap.putInt("height", box.height().toDp())
+        boxMap.putInt("x", box.left.toDp(density))
+        boxMap.putInt("y", box.top.toDp(density))
+        boxMap.putInt("width", box.width().toDp(density))
+        boxMap.putInt("height", box.height().toDp(density))
         event.putMap("documentBoundingBox", boxMap)
       }
 

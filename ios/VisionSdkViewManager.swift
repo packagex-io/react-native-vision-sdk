@@ -597,7 +597,12 @@ class VisionSdkViewManager: RCTViewManager {
         getComponent(node) { component in
             let detectionSettings = VisionSDK.CodeScannerView.ObjectDetectionConfiguration()
 
-            // Update the camera settings in the component
+            // Enable indication flags by default to support bounding box updates in all modes
+            detectionSettings.isTextIndicationOn = true
+            detectionSettings.isBarCodeOrQRCodeIndicationOn = true
+            detectionSettings.isDocumentIndicationOn = true
+
+            // Override with user settings if provided
             if let isTextIndicationOn = objectDetectionSettings["isTextIndicationOn"] as? Bool {
                 detectionSettings.isTextIndicationOn = isTextIndicationOn
             }
