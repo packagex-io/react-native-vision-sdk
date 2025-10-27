@@ -35,6 +35,7 @@ const Camera = forwardRef<VisionCameraRefProps, VisionCameraProps>(
       scanArea,
       detectionConfig,
       frameSkip,
+      cameraFacing = 'back',
       onCapture = () => { },
       onError = () => { },
       onRecognitionUpdate = () => { },
@@ -158,6 +159,7 @@ const Camera = forwardRef<VisionCameraRefProps, VisionCameraProps>(
           scanArea={scanArea}
           detectionConfig={detectionConfig}
           frameSkip={frameSkip}
+          cameraFacing={cameraFacing}
           onCapture={onCaptureHandler}
           onError={onErrorHandler}
           onRecognitionUpdate={onRecognitionUpdateHandler}

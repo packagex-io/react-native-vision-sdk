@@ -13,6 +13,11 @@ export type VisionCameraScanMode =
   | 'barcodesinglecapture';
 
 /**
+ * Camera facing direction types
+ */
+export type CameraFacing = 'back' | 'front';
+
+/**
  * Event triggered when an image is captured by the camera.
  */
 export interface VisionCameraCaptureEvent {
@@ -426,6 +431,14 @@ export interface VisionCameraViewProps {
 
   /**
    * @optional
+   * @type {CameraFacing}
+   * @description Camera facing direction - 'back' for rear camera or 'front' for front-facing camera.
+   * @default 'back'
+   */
+  cameraFacing?: CameraFacing;
+
+  /**
+   * @optional
    * @type {React.Ref<any>}
    * @description Optional reference to the component.
    */
@@ -590,4 +603,12 @@ export interface VisionCameraProps {
    * @default 10
    */
   frameSkip?: number;
+
+  /**
+   * @optional
+   * @type {CameraFacing}
+   * @description Camera facing direction - 'back' for rear camera or 'front' for front-facing camera.
+   * @default 'back'
+   */
+  cameraFacing?: CameraFacing;
 }
