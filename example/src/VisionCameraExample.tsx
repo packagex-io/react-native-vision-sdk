@@ -27,6 +27,7 @@ const VisionCameraExample = ({ navigation }) => {
   const [sharpness, setSharpness] = useState(0);
   const [barcodeResults, setBarcodeResults] = useState<any[]>([]);
   const [hasPermission, setHasPermission] = useState(false);
+  const [cameraFacing, setCameraFacing] = useState<'back' | 'front'>('back');
   const [boundingBoxes, setBoundingBoxes] = useState<{
     barcodeBoundingBoxes: any[];
     qrCodeBoundingBoxes: any[];
@@ -157,6 +158,7 @@ const VisionCameraExample = ({ navigation }) => {
   };
 
   const handleBoundingBoxesUpdate = (event: any) => {
+    console.log("BOUNDING BOXES UPDATEL: ", JSON.stringify(event))
     const now = Date.now();
     if (now - lastBoundingBoxUpdate.current >= boundingBoxThrottleMs) {
       lastBoundingBoxUpdate.current = now;
@@ -196,6 +198,10 @@ const VisionCameraExample = ({ navigation }) => {
     setZoomLevel(Math.max(zoomLevel - 0.5, 1.0));
   };
 
+  const onToggleCameraFacing = () => {
+    setCameraFacing(prevFacing => prevFacing === 'back' ? 'front' : 'back');
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -223,6 +229,7 @@ const VisionCameraExample = ({ navigation }) => {
             zoomLevel={zoomLevel}
             scanMode={scanMode}
             autoCapture={autoCapture}
+            cameraFacing={cameraFacing}
             scanArea={
               currentMode === 'barcode-focused'
                 ? getCenteredScanArea()
@@ -452,6 +459,15 @@ const VisionCameraExample = ({ navigation }) => {
           >
             <Text style={styles.controlButtonText}>
               {flashEnabled ? '⚡ Flash ON' : '⚡ Flash OFF'}
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.controlButton, styles.cameraFlipButton]}
+            onPress={onToggleCameraFacing}
+          >
+            <Text style={styles.controlButtonText}>
+              {cameraFacing === 'back' ? '📷 Back' : '🤳 Front'}
             </Text>
           </TouchableOpacity>
 
@@ -712,6 +728,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#333',
   },
   flashButton: {
+    flex: 1,
+    marginRight: 10,
+  },
+  cameraFlipButton: {
     flex: 1,
     marginRight: 10,
   },

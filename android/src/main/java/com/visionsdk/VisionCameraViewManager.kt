@@ -248,6 +248,14 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
     view.setCameraSettings(cameraSettings)
   }
 
+  @ReactProp(name = "cameraFacing")
+  fun setCameraFacing(view: VisionCameraView, cameraFacing: String?) {
+    // TODO: Implement camera facing/position switching for Android
+    // This will require updating the VisionSDK Android implementation
+    // to support CameraPosition enum (similar to iOS)
+    Log.d(TAG, "Camera facing prop received: $cameraFacing (Android implementation pending)")
+  }
+
   // Commands
   override fun getCommandsMap(): Map<String, Int> {
     return mapOf(

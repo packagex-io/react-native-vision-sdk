@@ -364,39 +364,50 @@ const unloadAllModels = async () => {
 ### Basic VisionCamera Example
 
 ```tsx
-import React, { useRef } from 'react';
-import { VisionCamera, VisionCameraRefProps } from 'react-native-vision-sdk';
+import React, { useRef, useState } from 'react';
+import { Button } from 'react-native';
+import { VisionCamera, VisionCameraRefProps, CameraFacing } from 'react-native-vision-sdk';
 
 const SimpleScannerView = () => {
   const cameraRef = useRef<VisionCameraRefProps>(null);
+  const [cameraFacing, setCameraFacing] = useState<CameraFacing>('back');
 
   return (
-    <VisionCamera
-      ref={cameraRef}
-      scanMode="barcode"
-      autoCapture={false}
-      enableFlash={false}
-      zoomLevel={1.0}
-      onBarcodeDetected={(event) => {
-        console.log('Barcodes detected:', event.codes);
-        // event.codes is an array of detected barcodes with enhanced metadata:
-        event.codes.forEach(code => {
-          console.log('Value:', code.scannedCode);        // "1234567890"
-          console.log('Type:', code.symbology);           // "CODE_128"
-          console.log('Position:', code.boundingBox);     // { x, y, width, height }
-          console.log('GS1 Data:', code.gs1ExtractedInfo); // { "01": "12345", ... }
-        });
-      }}
-      onCapture={(event) => {
-        console.log('Image captured:', event.image);
-        console.log('Sharpness score:', event.sharpnessScore); // 0.0 - 1.0
-        console.log('Detected barcodes:', event.barcodes);     // Array of barcodes in image
-      }}
-      onError={(error) => {
-        console.error('Error:', error.message);
-        console.error('Error code:', error.code); // Numeric error code
-      }}
-    />
+    <>
+      <VisionCamera
+        ref={cameraRef}
+        scanMode="barcode"
+        autoCapture={false}
+        enableFlash={false}
+        zoomLevel={1.0}
+        cameraFacing={cameraFacing}
+        onBarcodeDetected={(event) => {
+          console.log('Barcodes detected:', event.codes);
+          // event.codes is an array of detected barcodes with enhanced metadata:
+          event.codes.forEach(code => {
+            console.log('Value:', code.scannedCode);        // "1234567890"
+            console.log('Type:', code.symbology);           // "CODE_128"
+            console.log('Position:', code.boundingBox);     // { x, y, width, height }
+            console.log('GS1 Data:', code.gs1ExtractedInfo); // { "01": "12345", ... }
+          });
+        }}
+        onCapture={(event) => {
+          console.log('Image captured:', event.image);
+          console.log('Sharpness score:', event.sharpnessScore); // 0.0 - 1.0
+          console.log('Detected barcodes:', event.barcodes);     // Array of barcodes in image
+        }}
+        onError={(error) => {
+          console.error('Error:', error.message);
+          console.error('Error code:', error.code); // Numeric error code
+        }}
+      />
+
+      {/* Camera switch button */}
+      <Button
+        title={`Switch to ${cameraFacing === 'back' ? 'Front' : 'Back'} Camera`}
+        onPress={() => setCameraFacing(prev => prev === 'back' ? 'front' : 'back')}
+      />
+    </>
   );
 };
 ```
@@ -409,6 +420,7 @@ const SimpleScannerView = () => {
 | `autoCapture` | `boolean` | `false` | Automatically capture when detection is successful |
 | `enableFlash` | `boolean` | `false` | Enable/disable camera flash |
 | `zoomLevel` | `number` | `1.0` | Camera zoom level (device dependent, typically 1.0-5.0) |
+| `cameraFacing` | `'back' \| 'front'` | `'back'` | Camera facing direction - 'back' for rear camera or 'front' for front-facing camera. **iOS**: ✅ Fully supported \| **Android**: 🚧 Placeholder (not yet functional) |
 | `scanArea` | `{ x: number, y: number, width: number, height: number }` | `undefined` | Restrict scanning to a specific region (coordinates in dp) |
 | `detectionConfig` | `object` | See below | Configure object detection settings |
 | `frameSkip` | `number` | `undefined` | Process every Nth frame for performance optimization |
@@ -504,7 +516,92 @@ cameraRef.current?.start();
 cameraRef.current?.stop();
 ```
 
-**Note**: Flash and zoom are controlled via props (`enableFlash`, `zoomLevel`), not ref methods. Update the prop values to change these settings dynamically.
+**Note**: Flash, zoom, and camera facing are controlled via props (`enableFlash`, `zoomLevel`, `cameraFacing`), not ref methods. Update the prop values to change these settings dynamically.
+
+### Camera Switching (Front/Back)
+
+Both `VisionCamera` and `VisionSdkView` components support switching between front and back cameras.
+
+#### VisionCamera (Prop-based)
+
+Switch cameras by updating the `cameraFacing` prop:
+
+```tsx
+import React, { useState, useRef } from 'react';
+import { VisionCamera, VisionCameraRefProps, CameraFacing } from 'react-native-vision-sdk';
+
+const CameraSwitchExample = () => {
+  const cameraRef = useRef<VisionCameraRefProps>(null);
+  const [cameraFacing, setCameraFacing] = useState<CameraFacing>('back');
+
+  const toggleCamera = () => {
+    setCameraFacing(prev => prev === 'back' ? 'front' : 'back');
+  };
+
+  return (
+    <>
+      <VisionCamera
+        ref={cameraRef}
+        scanMode="barcode"
+        cameraFacing={cameraFacing}
+        onBarcodeDetected={(event) => {
+          console.log('Barcode detected:', event.codes);
+        }}
+      />
+      <Button title="Switch Camera" onPress={toggleCamera} />
+    </>
+  );
+};
+```
+
+#### VisionSdkView (Ref-based)
+
+Use the `setCameraSettings` method to switch cameras:
+
+```tsx
+import React, { useRef } from 'react';
+import VisionSdkView, { VisionSdkRefProps } from 'react-native-vision-sdk';
+
+const LegacyCameraSwitchExample = () => {
+  const visionSdkRef = useRef<VisionSdkRefProps>(null);
+
+  const switchToFrontCamera = () => {
+    visionSdkRef.current?.setCameraSettings({
+      cameraPosition: 2  // 2 = front camera
+    });
+  };
+
+  const switchToBackCamera = () => {
+    visionSdkRef.current?.setCameraSettings({
+      cameraPosition: 1  // 1 = back camera
+    });
+  };
+
+  return (
+    <>
+      <VisionSdkView
+        ref={visionSdkRef}
+        mode="barcode"
+        onBarcodeScan={(event) => {
+          console.log('Barcode scanned:', event);
+        }}
+      />
+      <Button title="Front Camera" onPress={switchToFrontCamera} />
+      <Button title="Back Camera" onPress={switchToBackCamera} />
+    </>
+  );
+};
+```
+
+**Platform Support:**
+- **iOS**: ✅ Fully functional - Switches between front and back cameras seamlessly
+- **Android**: 🚧 Placeholder implementation - Prop/method is accepted but camera switching is not yet functional (awaiting VisionSDK Android support)
+
+**Type Export:**
+```typescript
+import { CameraFacing } from 'react-native-vision-sdk';
+// CameraFacing = 'back' | 'front'
+```
 
 ### Advanced VisionCamera Example with Scan Area
 
@@ -688,6 +785,7 @@ onError={(error) => {
 | Barcode Detection | ✅ Full support | ✅ Full support |
 | Bounding Boxes (coordinates) | ✅ Full support | ✅ Full support |
 | Bounding Boxes (metadata) | ✅ Full metadata | ✅ **Full metadata** |
+| Camera Switching (Front/Back) | ✅ Full support | 🚧 Placeholder |
 | Error codes | ✅ With filtering | ✅ Full support |
 | Sharpness score | ✅ Supported | ✅ Supported |
 | GS1 extraction | ✅ Supported | ✅ Supported |
@@ -797,13 +895,18 @@ visionSdk?.current?.setObjectDetectionSettings({
 
 #### Set Camera Settings (Optional)
 
-You can customize frames processing by setting N number that will process every Nth frame.
+You can customize frames processing and camera position.
 
 ```js
 visionSdk?.current?.setCameraSettings({
-  nthFrameToProcess: 10,
+  nthFrameToProcess: 10,  // Process every Nth frame (default: 10)
+  cameraPosition: 1,      // 1 = back camera, 2 = front camera
 });
 ```
+
+**Parameters:**
+- `nthFrameToProcess` (number): Process every Nth frame for performance optimization (default: 10)
+- `cameraPosition` (number): Camera position - `1` for back camera, `2` for front camera. **iOS**: ✅ Fully supported | **Android**: 🚧 Placeholder (not yet functional)
 
 #### Configure On-Device Model
 

@@ -645,6 +645,11 @@ class VisionSdkViewManager: RCTViewManager {
                 updatedCameraSettings.nthFrameToProcess = Int64(nthFrameToProcess)
             }
 
+            // Handle camera position: 1 = back, 2 = front (based on VisionSDK.CameraPosition enum)
+            if let cameraPosition = cameraSettings["cameraPosition"] as? Int {
+                updatedCameraSettings.cameraPosition = cameraPosition == 2 ? .front : .back
+            }
+
           component?.codeScannerView?.setCameraSettingsTo(updatedCameraSettings)
         }
     }

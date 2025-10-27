@@ -107,6 +107,7 @@ const App: React.FC<{ route: any }> = ({ route }) => {
 
   const [flash, setFlash] = useState<boolean>(false);
   const [zoomLevel, setZoomLevel] = useState<number>(1.8);
+  const [cameraFacing, setCameraFacing] = useState<'back' | 'front'>('back');
   const [availableTemplates, setAvailableTemplates] = useState([])
   const [selectedTemplate, setSelectedTemplate] = useState({})
   const [detectedData, setDetectedData] = useState<DetectedDataProps>({
@@ -164,7 +165,8 @@ const App: React.FC<{ route: any }> = ({ route }) => {
       // console.log("SETTING DETECTION SETTING TO: ", detectionSettings)
       visionSdk?.current?.setObjectDetectionSettings(detectionSettings);
       visionSdk?.current?.setCameraSettings({
-        nthFrameToProcess: 10,
+        nthFrameToProcess: 10
+
       });
 
       setTimeout(() => {
@@ -319,6 +321,16 @@ const App: React.FC<{ route: any }> = ({ route }) => {
   const toggleFlash = (val: boolean) => {
     setFlash(val);
   };
+
+  // Toggle camera facing
+  const toggleCameraFacing = () => {
+    const newFacing = cameraFacing === 'back' ? 'front' : 'back';
+    setCameraFacing(newFacing);
+    visionSdk?.current?.setCameraSettings({
+      nthFrameToProcess: 10,
+      cameraPosition: newFacing === 'front' ? 2 : 1 // 1 = back, 2 = front based on VisionSDK.CameraPosition enum
+    });
+  };
   // Function to configure on-device OCR
   const handlePressOnDeviceOcr = useCallback((type: ModuleType = 'shipping_label',
     size: ModuleSize = 'large') => {
@@ -416,7 +428,7 @@ const App: React.FC<{ route: any }> = ({ route }) => {
   }, [])
 
   const handleSharpnessScore = useCallback((event) => { 
-    // console.log("SHARPNESS SCORE: ", JSON.stringify(event))
+    console.log("SHARPNESS SCORE: ", JSON.stringify(event))
   }, [])
 
   const handleModelDownloadProgress = useCallback((event) => {
@@ -546,6 +558,8 @@ const App: React.FC<{ route: any }> = ({ route }) => {
       <CameraHeaderView
         detectedData={detectedData}
         toggleFlash={toggleFlash}
+        toggleCameraFacing={toggleCameraFacing}
+        cameraFacing={cameraFacing}
         mode={mode}
         setMode={setMode}
         templates={availableTemplates}

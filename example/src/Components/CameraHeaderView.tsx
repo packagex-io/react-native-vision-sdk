@@ -15,6 +15,8 @@ import TemplateSelectionView from './TemplateSelectionView';
 function CameraHeaderView({
    detectedData,
    toggleFlash,
+   toggleCameraFacing,
+   cameraFacing,
    mode,
    setMode,
    templates,
@@ -92,6 +94,16 @@ function CameraHeaderView({
         >
           <Icon
             name={isFlashOn ? 'flash-outline' : 'flash-off-outline'}
+            size={20}
+            color="white"
+          />
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={toggleCameraFacing}
+          style={[styles.rightIconContainer, {marginTop: 12}]}
+        >
+          <Icon
+            name={cameraFacing === 'back' ? 'camera-reverse-outline' : 'camera-outline'}
             size={20}
             color="white"
           />

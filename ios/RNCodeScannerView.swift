@@ -203,9 +203,7 @@ extension RNCodeScannerView: CodeScannerViewDelegate {
 
     func codeScannerView(_ scannerView: VisionSDK.CodeScannerView, didFailure error: NSError) {
         if onError != nil {
-          if error.code != 13 && error.code != 14 && error.code != 15 && error.code != 16 {
-            onError!(["message": error.localizedDescription, "code": error.code])
-          }
+          onError!(["message": error.localizedDescription, "code": error.code])
         }
     }
 
@@ -216,12 +214,12 @@ extension RNCodeScannerView: CodeScannerViewDelegate {
         }
     }
   
-    func codeScannerView(_ imageSharpnessScore: Float) {
-      //
-      if onSharpnessScore != nil {
-        onSharpnessScore!(["sharpnessScore": imageSharpnessScore])
-      }
+  func codeScannerViewdidUpdateSceneWithSharpness(_ imageSharpnessScore: Float, onCameraLiveGuidance: CameraLiveGuidance) {
+    if onSharpnessScore != nil {
+      onSharpnessScore!(["sharpnessScore": imageSharpnessScore])
     }
+  }
+
   
     func dict(from rect: CGRect) -> [String: CGFloat] {
       return [

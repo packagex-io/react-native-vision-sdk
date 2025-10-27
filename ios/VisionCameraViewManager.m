@@ -15,6 +15,7 @@ RCT_EXPORT_VIEW_PROPERTY(autoCapture, BOOL)
 RCT_EXPORT_VIEW_PROPERTY(scanArea, NSDictionary)
 RCT_EXPORT_VIEW_PROPERTY(detectionConfig, NSDictionary)
 RCT_EXPORT_VIEW_PROPERTY(frameSkip, NSNumber)
+RCT_EXPORT_VIEW_PROPERTY(cameraFacing, NSString)
 
 RCT_EXTERN_METHOD(capture:(nonnull NSNumber *)node)
 RCT_EXTERN_METHOD(stop:(nonnull NSNumber *)node)
