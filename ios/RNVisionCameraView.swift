@@ -75,25 +75,45 @@ class RNVisionCameraView: UIView {
     super.init(frame: frame)
     setupCamera()
   }
-  
+
   required init?(coder: NSCoder) {
     fatalError("init(coder:) has not been implemented")
   }
-  
+
   private var hasStarted = false
+  private var isRunning = false
+  private var isDeallocating = false
   
   override func layoutSubviews() {
     super.layoutSubviews()
     cameraView?.frame = self.bounds
-    
+
     // Auto-start camera after first layout
-    if !hasStarted && bounds.size.width > 0 && bounds.size.height > 0 {
+    if !hasStarted && !isDeallocating && bounds.size.width > 0 && bounds.size.height > 0 {
       hasStarted = true
-      cameraView?.startRunning()
-      
+
+      // IMPORTANT: Apply camera settings BEFORE starting the camera
+      // This ensures initial camera position (front/back) is set correctly
+      applyInitialCameraSettings()
+
+      // Now start the camera with the correct settings
+      guard let cameraView = cameraView, !isRunning else { return }
+
+      // IMPORTANT: startRunning() is a blocking call that can take time
+      // Move it to background queue to prevent main thread blocking
+      DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+        guard let self = self, let cameraView = self.cameraView, !self.isDeallocating else { return }
+
+        cameraView.startRunning()
+
+        DispatchQueue.main.async {
+          self.isRunning = true
+        }
+      }
+
       // Apply scan area settings after camera starts
-      DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-        self.updateScanArea()
+      DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+        self?.updateScanArea()
       }
     }
   }
@@ -102,10 +122,13 @@ class RNVisionCameraView: UIView {
   private func setupCamera() {
     // Use UIScreen bounds initially, will be adjusted in layoutSubviews
     cameraView = CodeScannerView(frame: CGRect(x: 0, y: 0, width: UIScreen.main.bounds.width, height: UIScreen.main.bounds.height))
-    guard let cameraView = cameraView else { return }
-    
+    guard let cameraView = cameraView else {
+      NSLog("[VisionCamera] Failed to create cameraView")
+      return
+    }
+
     self.addSubview(cameraView)
-    
+
     // Configure with minimal settings
     cameraView.configure(
       delegate: self,
@@ -114,23 +137,70 @@ class RNVisionCameraView: UIView {
       captureType: captureType,
       scanMode: currentScanMode
     )
-    
+
     // Disable default SDK bounding boxes
     updateScanArea()
-    
+
     // Stop initially, will auto-start after layout
     cameraView.stopRunning()
+  }
+
+  /// Applies initial camera settings before the camera starts for the first time.
+  /// This ensures properties like cameraFacing (front/back) are set correctly on initial load.
+  private func applyInitialCameraSettings() {
+    guard let cameraView = cameraView else { return }
+
+    // Determine camera position from cameraFacing prop
+    let position: VisionSDK.CameraPosition
+    if let facingString = cameraFacing?.lowercased {
+      position = facingString == "front" ? .front : .back
+    } else {
+      position = .back
+    }
+
+    // Create camera settings with position and frame skip
+    let cameraSettings = VisionSDK.CodeScannerView.CameraSettings()
+    cameraSettings.cameraPosition = position
+    cameraSettings.nthFrameToProcess = frameSkip?.int64Value ?? 10
+
+    // Apply settings BEFORE camera starts
+    cameraView.setCameraSettingsTo(cameraSettings)
   }
   
   // MARK: - Camera Control
   @objc func start() {
-    cameraView?.startRunning()
+    guard !isDeallocating else { return }
+    guard let cameraView = cameraView else { return }
+    guard !isRunning else { return }
+
+    // IMPORTANT: startRunning() is a blocking call that can take time
+    // Move it to background queue to prevent main thread blocking
+    DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+      guard let self = self, !self.isDeallocating else { return }
+
+      cameraView.startRunning()
+
+      DispatchQueue.main.async {
+        self.isRunning = true
+      }
+    }
   }
-  
+
   @objc func stop() {
-    cameraView?.stopRunning()
+    guard let cameraView = cameraView else { return }
+    guard isRunning else { return }
+
+    // IMPORTANT: stopRunning() is a blocking call that can take time
+    // Move it to background queue to prevent main thread blocking
+    DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+      cameraView.stopRunning()
+
+      DispatchQueue.main.async {
+        self?.isRunning = false
+      }
+    }
   }
-  
+
   @objc func capture() {
     cameraView?.capturePhoto()
   }
@@ -280,8 +350,15 @@ class RNVisionCameraView: UIView {
     }
   }
 
+  /// Updates camera position dynamically when cameraFacing prop changes.
+  /// This method handles camera position changes after the camera has already started.
+  /// Note: Switching camera position requires stopping and restarting the camera session.
   private func updateCameraPosition() {
     guard let cameraView = cameraView else { return }
+    guard !isDeallocating else { return }
+
+    // Check if camera has started - if not, settings will be applied by applyInitialCameraSettings()
+    if !hasStarted { return }
 
     let position: VisionSDK.CameraPosition
     if let facingString = cameraFacing?.lowercased {
@@ -290,10 +367,34 @@ class RNVisionCameraView: UIView {
       position = .back
     }
 
-    let cameraSettings = VisionSDK.CodeScannerView.CameraSettings()
-    cameraSettings.cameraPosition = position
-    cameraSettings.nthFrameToProcess = frameSkip?.int64Value ?? 10
-    cameraView.setCameraSettingsTo(cameraSettings)
+    // IMPORTANT: Camera position change requires stopping and restarting the camera
+    // Use background queue to prevent main thread blocking
+    if isRunning {
+      DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+        guard let self = self, !self.isDeallocating else { return }
+
+        cameraView.stopRunning()
+
+        DispatchQueue.main.async {
+          self.isRunning = false
+
+          let cameraSettings = VisionSDK.CodeScannerView.CameraSettings()
+          cameraSettings.cameraPosition = position
+          cameraSettings.nthFrameToProcess = self.frameSkip?.int64Value ?? 10
+
+          cameraView.setCameraSettingsTo(cameraSettings)
+
+          // Restart camera with new position on background queue
+          DispatchQueue.global(qos: .userInitiated).async {
+            cameraView.startRunning()
+
+            DispatchQueue.main.async {
+              self.isRunning = true
+            }
+          }
+        }
+      }
+    }
   }
   
   // MARK: - Helper Methods
@@ -303,7 +404,22 @@ class RNVisionCameraView: UIView {
   }
   
   deinit {
-    stop()
+    // Set flag FIRST to prevent any other operations from executing
+    isDeallocating = true
+
+    // Stop camera if running
+    // Note: In deinit, we must stop synchronously to ensure cleanup completes
+    // before the object is deallocated
+    if isRunning {
+      cameraView?.stopRunning()
+      isRunning = false
+    }
+
+    // Clean up camera view reference
+    if let cameraView = cameraView {
+      cameraView.removeFromSuperview()
+      self.cameraView = nil
+    }
   }
 }
 

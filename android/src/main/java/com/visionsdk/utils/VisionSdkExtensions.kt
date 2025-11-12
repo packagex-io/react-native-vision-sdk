@@ -8,6 +8,7 @@ import com.facebook.react.bridge.ReadableMap
 import io.packagex.visionsdk.ocr.ml.core.enums.ModelSize
 import io.packagex.visionsdk.ocr.ml.core.enums.OCRModule
 import java.io.FileNotFoundException
+import java.net.URL
 
 /**
  * Shared utility functions and extension methods for VisionSDK
@@ -46,6 +47,7 @@ fun Int.toDp(density: Float): Int = (this / density + 0.5f).toInt()
  * Converts a URI to a Bitmap asynchronously
  *
  * This function handles URI to Bitmap conversion with proper error handling.
+ * Supports both local URIs (file://, content://) and remote URLs (http://, https://)
  * The conversion happens on the calling thread, so use appropriate threading.
  *
  * @param context Android context for accessing content resolver
@@ -53,19 +55,45 @@ fun Int.toDp(density: Float): Int = (this / density + 0.5f).toInt()
  * @param onComplete Callback with the resulting Bitmap, or null if conversion failed
  */
 fun uriToBitmap(context: Context, uri: Uri, onComplete: (Bitmap?) -> Unit) {
-    try {
-        val inputStream = context.contentResolver.openInputStream(uri)
-        if (inputStream != null) {
-            val bitmap = BitmapFactory.decodeStream(inputStream)
-            inputStream.close()
-            onComplete(bitmap)
-        } else {
+    val scheme = uri.scheme?.lowercase()
+
+    // Handle remote URLs (http/https) - must run on background thread
+    if (scheme == "http" || scheme == "https") {
+        Thread {
+            try {
+                val url = URL(uri.toString())
+                val connection = url.openConnection()
+                connection.connectTimeout = 10000 // 10 second timeout
+                connection.readTimeout = 10000
+                connection.connect()
+                val inputStream = connection.getInputStream()
+                val bitmap = BitmapFactory.decodeStream(inputStream)
+                inputStream.close()
+                onComplete(bitmap)
+            } catch (e: Exception) {
+                android.util.Log.e("VisionSDK", "Failed to download image from remote URL: ${uri}", e)
+                onComplete(null)
+            }
+        }.start()
+    }
+    // Handle local URIs (file://, content://, etc)
+    else {
+        try {
+            val inputStream = context.contentResolver.openInputStream(uri)
+            if (inputStream != null) {
+                val bitmap = BitmapFactory.decodeStream(inputStream)
+                inputStream.close()
+                onComplete(bitmap)
+            } else {
+                onComplete(null)
+            }
+        } catch (e: FileNotFoundException) {
+            android.util.Log.e("VisionSDK", "File not found: ${uri}", e)
+            onComplete(null)
+        } catch (e: Exception) {
+            android.util.Log.e("VisionSDK", "Error decoding bitmap from URI: ${uri}", e)
             onComplete(null)
         }
-    } catch (e: FileNotFoundException) {
-        onComplete(null)
-    } catch (e: Exception) {
-        onComplete(null)
     }
 }
 

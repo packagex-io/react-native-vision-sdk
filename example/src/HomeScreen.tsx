@@ -155,6 +155,8 @@ const HomeScreen = ({ navigation }) => {
       // Step 3: Make ON-DEVICE prediction using our new standalone method
       const result = await VisionCore.predict(sampleImageUrl, []);
 
+      console.log("PREDICTION RESULT IS: ", result)
+
       setPredictionResult(result);
       setShowPredictionExample(true);
 

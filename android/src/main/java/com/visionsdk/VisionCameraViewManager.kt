@@ -495,7 +495,7 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
       // Not used in minimal implementation
     }
 
-    override fun onImageSharpnessScore(imageSharpnessScore: Float) {
+    override fun onImageSharpnessScore(imageSharpnessScore: Double) {
       Log.d(TAG, "onImageSharpnessScore called: $imageSharpnessScore")
       val event = Arguments.createMap()
       event.putDouble("sharpnessScore", imageSharpnessScore.toDouble())

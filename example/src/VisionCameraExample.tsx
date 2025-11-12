@@ -27,7 +27,7 @@ const VisionCameraExample = ({ navigation }) => {
   const [sharpness, setSharpness] = useState(0);
   const [barcodeResults, setBarcodeResults] = useState<any[]>([]);
   const [hasPermission, setHasPermission] = useState(false);
-  const [cameraFacing, setCameraFacing] = useState<'back' | 'front'>('back');
+  const [cameraFacing, setCameraFacing] = useState<'back' | 'front'>('front');
   const [boundingBoxes, setBoundingBoxes] = useState<{
     barcodeBoundingBoxes: any[];
     qrCodeBoundingBoxes: any[];
@@ -158,7 +158,6 @@ const VisionCameraExample = ({ navigation }) => {
   };
 
   const handleBoundingBoxesUpdate = (event: any) => {
-    console.log("BOUNDING BOXES UPDATEL: ", JSON.stringify(event))
     const now = Date.now();
     if (now - lastBoundingBoxUpdate.current >= boundingBoxThrottleMs) {
       lastBoundingBoxUpdate.current = now;
