@@ -780,7 +780,7 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
     }
   }
 
-  override fun onImageSharpnessScore(imageSharpnessScore: Float) {
+  override fun onImageSharpnessScore(imageSharpnessScore: Double) {
     Log.d(TAG, "onImageSharpnessScore: $imageSharpnessScore")
     try {
       val event = Arguments.createMap().apply {

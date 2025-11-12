@@ -166,8 +166,9 @@ const App: React.FC<{ route: any }> = ({ route }) => {
       visionSdk?.current?.setObjectDetectionSettings(detectionSettings);
       visionSdk?.current?.setCameraSettings({
         nthFrameToProcess: 10
-
       });
+
+
 
       setTimeout(() => {
         visionSdk?.current?.startRunningHandler();
@@ -330,6 +331,7 @@ const App: React.FC<{ route: any }> = ({ route }) => {
       nthFrameToProcess: 10,
       cameraPosition: newFacing === 'front' ? 2 : 1 // 1 = back, 2 = front based on VisionSDK.CameraPosition enum
     });
+    visionSdk?.current?.startRunningHandler()
   };
   // Function to configure on-device OCR
   const handlePressOnDeviceOcr = useCallback((type: ModuleType = 'shipping_label',
@@ -415,6 +417,7 @@ const App: React.FC<{ route: any }> = ({ route }) => {
   }
 
   const handleOcrScan = useCallback((event) => {
+    console.log("OCR SCAN IS: \n", JSON.stringify(event.data))
     setLoading(false);
     setResult(event.data);
     // onReportError(event.data);
@@ -458,8 +461,6 @@ const App: React.FC<{ route: any }> = ({ route }) => {
   const onDeleteTemplateById = (event) => {
     const updatedTemplates = availableTemplates.filter((item) => item.name !== event.data)
     setAvailableTemplates(updatedTemplates)
-    // visionSdk.current?.stopRunningHandler()
-    // visionSdk.current?.startRunningHandler()
   }
 
 
