@@ -42,6 +42,15 @@ android {
     minSdkVersion getExtOrIntegerDefault('minSdkVersion')
     targetSdkVersion getExtOrIntegerDefault('targetSdkVersion')
     buildConfigField "boolean", "IS_NEW_ARCHITECTURE_ENABLED", isNewArchitectureEnabled().toString()
+            // This block is different from the one you use to link Gradle
+        // to your CMake or ndk-build script.
+    externalNativeBuild {
+        // For ndk-build, instead use the ndkBuild block.
+        cmake {
+            // Passes optional arguments to CMake.
+            arguments "-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON"
+        }
+    }
   }
   buildTypes {
     release {
