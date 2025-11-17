@@ -29,6 +29,9 @@ RCT_EXPORT_VIEW_PROPERTY(flash, BOOL)
 RCT_EXPORT_VIEW_PROPERTY(isEnableAutoOcrResponseWithImage, BOOL)
 RCT_EXPORT_VIEW_PROPERTY(isMultipleScanEnabled, BOOL)
 RCT_EXPORT_VIEW_PROPERTY(zoomLevel, NSNumber)
+RCT_CUSTOM_VIEW_PROPERTY(sheetLargestUndimmedDetent, NSString, UIView) {
+  // Ignore this property - it's being set by RN 0.82 interop layer but not needed
+}
 RCT_EXTERN_METHOD(captureImage:(nonnull NSNumber *)node)
 RCT_EXTERN_METHOD(stopRunning:(nonnull NSNumber *)node)
 RCT_EXTERN_METHOD(startRunning:(nonnull NSNumber *)node)

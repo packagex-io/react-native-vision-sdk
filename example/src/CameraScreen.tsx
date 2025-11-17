@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { StyleSheet, Platform, Alert, Vibration, useWindowDimensions, Text, View, Image } from 'react-native';
+import { StyleSheet, Platform, Alert, Vibration, useWindowDimensions, Text, View, Image, TouchableOpacity } from 'react-native';
 // import { GestureHandlerRootView } from 'react-native-gesture-handler'
 import VisionSdkView, {
   VisionSdkRefProps,
@@ -18,7 +18,7 @@ import ResultViewOCR from './Components/ResultViewOCR';
 import { useFocusEffect } from '@react-navigation/native';
 
 
-const apiKey = "" // Add your PackageX API key here
+const apiKey = "key_00203c5642F9SYnJkKyi9dRw1eeteeUwXhbEfGuPZ4NML8l2bAfysni4ZpcZEBKn0gnbcOZYwIaJnOyp" // Add your PackageX API key here
 
 // Define interfaces for the state types
 interface DownloadingProgress {
@@ -92,6 +92,7 @@ const App: React.FC<{ route: any }> = ({ route }) => {
   })
 
   const [isPriceTagBoundingBoxVisible, setIsPriceTagBoundingBoxVisible] = useState(false)
+  const [reportErrorStatus, setReportErrorStatus] = useState<'idle' | 'success' | 'error'>('idle')
 
   const [shouldResizeImage, setShouldResizeImage] = useState(false)
   const [ocrConfig, setOcrConfig] = useState<OCRConfig>({
@@ -232,26 +233,28 @@ const App: React.FC<{ route: any }> = ({ route }) => {
 
 
   const testReportError = (type: String) => {
-    switch (type) {
-      case 'shipping_label':
-        visionSdk.current?.reportError({
-          reportText: 'respose is not correct',
-          type: 'shipping_label',
-          size: 'large',
-          response: {},
-          image: '',
-          errorFlags: {
-            trackingNo: true,
-            courierName: false,
-            weight: true,
-            dimensions: false,
-            receiverName: true,
-            receiverAddress: true,
-            senderName: false,
-            senderAddres: false
-          }
-        }, "", apiKey)
-        break;
+    try {
+      setReportErrorStatus('idle');
+      switch (type) {
+        case 'shipping_label':
+          visionSdk.current?.reportError({
+            reportText: 'respose is not correct',
+            type: 'shipping_label',
+            size: 'large',
+            response: {},
+            image: '',
+            errorFlags: {
+              trackingNo: true,
+              courierName: false,
+              weight: true,
+              dimensions: false,
+              receiverName: true,
+              receiverAddress: true,
+              senderName: false,
+              senderAddres: false
+            }
+          }, "", apiKey)
+          break;
 
       case 'item_label':
         visionSdk.current?.reportError({
@@ -313,6 +316,24 @@ const App: React.FC<{ route: any }> = ({ route }) => {
       default:
         break;
     }
+
+    // Set success status
+    setReportErrorStatus('success');
+
+    // Reset status after 3 seconds
+    setTimeout(() => {
+      setReportErrorStatus('idle');
+    }, 3000);
+
+  } catch (error) {
+    console.error('Error calling reportError:', error);
+    setReportErrorStatus('error');
+
+    // Reset status after 3 seconds
+    setTimeout(() => {
+      setReportErrorStatus('idle');
+    }, 3000);
+  }
   }
 
 
@@ -431,7 +452,7 @@ const App: React.FC<{ route: any }> = ({ route }) => {
   }, [])
 
   const handleSharpnessScore = useCallback((event) => { 
-    console.log("SHARPNESS SCORE: ", JSON.stringify(event))
+    // console.log("SHARPNESS SCORE: ", JSON.stringify(event))
   }, [])
 
   const handleModelDownloadProgress = useCallback((event) => {
@@ -585,6 +606,32 @@ const App: React.FC<{ route: any }> = ({ route }) => {
         zoomLevel={zoomLevel}
         setZoomLevel={setZoomLevel}
       />
+
+      {/* Test Report Error Button */}
+      <TouchableOpacity
+        style={{
+          position: 'absolute',
+          bottom: 150,
+          right: 20,
+          backgroundColor: reportErrorStatus === 'success' ? '#4CAF50' :
+                           reportErrorStatus === 'error' ? '#f44336' : '#2196F3',
+          padding: 15,
+          borderRadius: 10,
+          elevation: 5,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.25,
+          shadowRadius: 3.84,
+        }}
+        onPress={() => testReportError('shipping_label')}
+      >
+        <Text style={{ color: 'white', fontWeight: 'bold', fontSize: 12 }}>
+          Test Report Error
+          {reportErrorStatus === 'success' && ' ✓'}
+          {reportErrorStatus === 'error' && ' ✗'}
+        </Text>
+      </TouchableOpacity>
+
       {detectedBoundingBoxes.barcodeBoundingBoxes?.length > 0 ?
         <>
           {detectedBoundingBoxes.barcodeBoundingBoxes.map((code, index) => (

@@ -487,6 +487,12 @@ export interface BarcodeScanResult {
    * @description An array of scanned barcode results, where each result contains detailed information.
    */
   codes: BarcodeResult[];
+  /**
+   * @type {string}
+   * @description JSON string containing the codes array (used internally for Fabric architecture)
+   * @internal
+   */
+  codesJson?: string;
 }
 
 export interface BarcodeResult {

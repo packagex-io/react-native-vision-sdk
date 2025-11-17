@@ -5,6 +5,7 @@ import AVFoundation
 
 //MARK: - React Native CodeScannerView Wrapper
 //MARK: -
+@objc(RNCodeScannerView)
 class RNCodeScannerView: UIView {
 
     //MARK: - Events from Swift to Js, on any update to sent back
@@ -23,7 +24,7 @@ class RNCodeScannerView: UIView {
     @objc var onDeleteTemplates: RCTDirectEventBlock?
 
     //MARK: - CodeScannerView Instance
-    var codeScannerView: CodeScannerView?
+    @objc var codeScannerView: CodeScannerView?
 
     //MARK: - Variable Details
     // Dynamic Props are the one that are being passed by Client side, but if Client doesn't passed value then default values will be set.
@@ -114,25 +115,65 @@ class RNCodeScannerView: UIView {
       }
     }
 
+    // Helper function to convert data to JSON string for Fabric compatibility
+    private func toJSONString(_ data: Any) -> String? {
+        // NSJSONSerialization requires top-level object to be Array or Dictionary
+        // For strings and other primitives, wrap them in an array
+        let jsonObject: Any
+        if data is String || data is NSNumber || data is Bool {
+            jsonObject = [data]
+        } else if data is [Any] || data is [String: Any] {
+            jsonObject = data
+        } else {
+            // Wrap unknown types in array
+            jsonObject = [data]
+        }
+
+        guard let jsonData = try? JSONSerialization.data(withJSONObject: jsonObject, options: []),
+              let jsonString = String(data: jsonData, encoding: .utf8) else {
+            return nil
+        }
+        return jsonString
+    }
+
     // Fetch saved templates
     @objc func getAllTemplates() {
         let savedTemplates = CodeScannerView.getAllTemplates()
         print("Saved Template IDs: \(savedTemplates)")
-        onGetTemplates!(["data": savedTemplates])
+
+        // Send both formats for Fabric and Legacy compatibility
+        if let jsonString = toJSONString(savedTemplates) {
+            onGetTemplates!(["data": savedTemplates, "dataJson": jsonString])
+        } else {
+            onGetTemplates!(["data": savedTemplates])
+        }
     }
 
     // Delete template with specific ID
     @objc func deleteTemplate(withId id: String) {
         CodeScannerView.deleteTemplateWithId(id)
-        onDeleteTemplateById!(["data": id])
+
+        // Send both formats for Fabric and Legacy compatibility
+        if let jsonString = toJSONString(id) {
+            onDeleteTemplateById!(["data": id, "dataJson": jsonString])
+        } else {
+            onDeleteTemplateById!(["data": id])
+        }
         print("Template with ID \(id) has been deleted.")
     }
 
     // Delete all templates
     @objc func deleteAllTemplates() {
         CodeScannerView.deleteAllTemplates()
-        onDeleteTemplates!(["data": "All templates have been deleted."])
-        print("All templates have been deleted.")
+        let message = "All templates have been deleted."
+
+        // Send both formats for Fabric and Legacy compatibility
+        if let jsonString = toJSONString(message) {
+            onDeleteTemplates!(["data": message, "dataJson": jsonString])
+        } else {
+            onDeleteTemplates!(["data": message])
+        }
+        print(message)
     }
 }
 
@@ -146,7 +187,12 @@ extension RNCodeScannerView: GenerateTemplateControllerDelegate {
 
         if !result.isEmpty {
             if let onCreateTemplate = onCreateTemplate {
-                onCreateTemplate(["data": result]) // Safely call onCreateTemplate
+                // Send both formats for Fabric and Legacy compatibility
+                if let jsonString = toJSONString(result) {
+                    onCreateTemplate(["data": result, "dataJson": jsonString])
+                } else {
+                    onCreateTemplate(["data": result])
+                }
             } else {
                 print("Error: onCreateTemplate is nil.")
             }
@@ -407,22 +453,32 @@ extension RNCodeScannerView: CodeScannerViewDelegate {
 extension RNCodeScannerView {
 
     /// This method initialises and setup On-Device OCR model to detect labels, can be called from client side, will download and prepare model only if scanMode == ocr
+    @objc func configureOnDeviceModelWithModelType(_ modelType: String, modelSize: String?, token: String?, apiKey: String?) {
+        // Convert empty strings to nil, then use fallback values from component properties
+        let tokenValue = (token?.isEmpty == false) ? token : self.token
+        let apiKeyValue = (apiKey?.isEmpty == false) ? apiKey : VSDKConstants.apiKey
+
+        print("[RNCodeScannerView] configureOnDeviceModel - modelType: \(modelType), modelSize: \(modelSize ?? "nil"), token: \(tokenValue ?? "nil"), apiKey: \(apiKeyValue ?? "nil")")
+
+        // Calling the setupDownloadOnDeviceOCR method
+        setupDownloadOnDeviceOCR(modelType: modelType,
+                                 modelSize: modelSize,
+                                 token: tokenValue,
+                                 apiKey: apiKeyValue
+        ) {
+            // Completion block after OCR setup
+            // Add any actions you want to take after the OCR is downloaded and prepared
+            debugPrint("On-Device OCR setup completed")
+        }
+    }
+
     func configureOnDeviceModel(
         modelType: String,
         modelSize: String?,
         token: String?,
         apiKey: String?
       ) {
-        // Calling the setupDownloadOnDeviceOCR method
-        setupDownloadOnDeviceOCR(modelType: modelType,
-                                 modelSize: modelSize,
-                                 token: token,
-                                 apiKey: apiKey
-        ) {
-            // Completion block after OCR setup
-            // Add any actions you want to take after the OCR is downloaded and prepared
-            debugPrint("On-Device OCR setup completed")
-        }
+        configureOnDeviceModelWithModelType(modelType, modelSize: modelSize, token: token, apiKey: apiKey)
     }
 
     /// This method downloads and prepares offline / On Device OCR for use in the app.
@@ -1408,6 +1464,143 @@ extension RNCodeScannerView {
 }
 
 
+
+// MARK: - Fabric Command Wrappers
+// These @objc methods are called from the Fabric ComponentView
+extension RNCodeScannerView {
+
+    @objc func applyCameraSettings(_ cameraSettings: NSDictionary) {
+        let updatedCameraSettings = VisionSDK.CodeScannerView.CameraSettings()
+
+        if let nthFrameToProcess = cameraSettings["nthFrameToProcess"] as? Int {
+            updatedCameraSettings.nthFrameToProcess = Int64(nthFrameToProcess)
+        }
+
+        if let cameraPosition = cameraSettings["cameraPosition"] as? Int {
+            updatedCameraSettings.cameraPosition = cameraPosition == 2 ? .front : .back
+        }
+
+        codeScannerView?.setCameraSettingsTo(updatedCameraSettings)
+    }
+
+    @objc func applyFocusSettings(_ focusSettings: NSDictionary) {
+        let updatedFocusSettings = VisionSDK.CodeScannerView.FocusSettings()
+
+        if let shouldDisplayFocusImage = focusSettings["shouldDisplayFocusImage"] as? Bool {
+            updatedFocusSettings.shouldDisplayFocusImage = shouldDisplayFocusImage
+        }
+
+        if let shouldScanInFocusImageRect = focusSettings["shouldScanInFocusImageRect"] as? Bool {
+            updatedFocusSettings.shouldScanInFocusImageRect = shouldScanInFocusImageRect
+        }
+
+        if let focusImageRectDict = focusSettings["focusImageRect"] as? NSDictionary,
+           let x = focusImageRectDict["x"] as? CGFloat,
+           let y = focusImageRectDict["y"] as? CGFloat,
+           let width = focusImageRectDict["width"] as? CGFloat,
+           let height = focusImageRectDict["height"] as? CGFloat {
+            updatedFocusSettings.focusImageRect = CGRect(x: x, y: y, width: width, height: height)
+        }
+
+        if let showCodeBoundariesInMultipleScan = focusSettings["showCodeBoundariesInMultipleScan"] as? Bool {
+            updatedFocusSettings.showCodeBoundariesInMultipleScan = showCodeBoundariesInMultipleScan
+        }
+
+        if let showDocumentBoundaries = focusSettings["showDocumentBoundaries"] as? Bool {
+            updatedFocusSettings.showDocumentBoundries = showDocumentBoundaries
+        }
+
+        // Border colors and widths
+        if let colorHex = focusSettings["validCodeBoundaryBorderColor"] as? String,
+           let color = UIColor(hex: colorHex) {
+            updatedFocusSettings.validCodeBoundryBorderColor = color
+        }
+
+        if let width = focusSettings["validCodeBoundaryBorderWidth"] as? NSNumber {
+            updatedFocusSettings.validCodeBoundryBorderWidth = CGFloat(width.floatValue)
+        }
+
+        if let colorHex = focusSettings["validCodeBoundaryFillColor"] as? String,
+           let color = UIColor(hex: colorHex) {
+            updatedFocusSettings.validCodeBoundryFillColor = color
+        }
+
+        if let colorHex = focusSettings["inValidCodeBoundaryBorderColor"] as? String,
+           let color = UIColor(hex: colorHex) {
+            updatedFocusSettings.inValidCodeBoundryBorderColor = color
+        }
+
+        if let width = focusSettings["inValidCodeBoundaryBorderWidth"] as? NSNumber {
+            updatedFocusSettings.inValidCodeBoundryBorderWidth = CGFloat(width.floatValue)
+        }
+
+        if let colorHex = focusSettings["inValidCodeBoundaryFillColor"] as? String,
+           let color = UIColor(hex: colorHex) {
+            updatedFocusSettings.inValidCodeBoundryFillColor = color
+        }
+
+        if let colorHex = focusSettings["documentBoundaryBorderColor"] as? String,
+           let color = UIColor(hex: colorHex) {
+            updatedFocusSettings.documentBoundryBorderColor = color
+        }
+
+        if let colorHex = focusSettings["documentBoundaryFillColor"] as? String {
+            let color = UIColor(hex: colorHex, alpha: 0.4)
+            updatedFocusSettings.documentBoundryFillColor = color
+        }
+
+        if let colorHex = focusSettings["focusImageTintColor"] as? String,
+           let color = UIColor(hex: colorHex) {
+            updatedFocusSettings.focusImageTintColor = color
+        }
+
+        if let colorHex = focusSettings["focusImageHighlightedColor"] as? String,
+           let color = UIColor(hex: colorHex) {
+            updatedFocusSettings.focusImageHighlightedColor = color
+        }
+
+        codeScannerView?.setFocusSettingsTo(updatedFocusSettings)
+        codeScannerView?.rescan()
+    }
+
+    @objc func applyObjectDetectionSettings(_ objectDetectionSettings: NSDictionary) {
+        let detectionSettings = VisionSDK.CodeScannerView.ObjectDetectionConfiguration()
+
+        detectionSettings.isTextIndicationOn = true
+        detectionSettings.isBarCodeOrQRCodeIndicationOn = true
+        detectionSettings.isDocumentIndicationOn = true
+
+        if let isTextIndicationOn = objectDetectionSettings["isTextIndicationOn"] as? Bool {
+            detectionSettings.isTextIndicationOn = isTextIndicationOn
+        }
+
+        if let isBarCodeOrQRCodeIndicationOn = objectDetectionSettings["isBarCodeOrQRCodeIndicationOn"] as? Bool {
+            detectionSettings.isBarCodeOrQRCodeIndicationOn = isBarCodeOrQRCodeIndicationOn
+        }
+
+        if let isDocumentIndicationOn = objectDetectionSettings["isDocumentIndicationOn"] as? Bool {
+            detectionSettings.isDocumentIndicationOn = isDocumentIndicationOn
+        }
+
+        if let codeDetectionConfidence = objectDetectionSettings["codeDetectionConfidence"] as? Float {
+            detectionSettings.codeDetectionConfidence = codeDetectionConfidence
+        }
+
+        if let documentDetectionConfidence = objectDetectionSettings["documentDetectionConfidence"] as? Float {
+            detectionSettings.documentDetectionConfidence = documentDetectionConfidence
+        }
+
+        if let secondsToWaitBeforeDocumentCapture = objectDetectionSettings["secondsToWaitBeforeDocumentCapture"] as? Double {
+            detectionSettings.secondsToWaitBeforeDocumentCapture = secondsToWaitBeforeDocumentCapture
+        }
+
+        if let selectedTemplateId = objectDetectionSettings["selectedTemplateId"] as? String {
+            detectionSettings.selectedTemplateId = selectedTemplateId
+        }
+
+        codeScannerView?.setObjectDetectionConfigurationTo(detectionSettings)
+    }
+}
 
 // Convert UIImage to CIImage if it doesn't already have one
 func convertToCIImage(from uiImage: UIImage) -> CIImage? {

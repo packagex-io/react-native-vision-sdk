@@ -116,9 +116,19 @@ const Camera = forwardRef<VisionCameraRefProps, VisionCameraProps>(
       return event; // If no 'nativeEvent', return the event itself
     }, []);
 
-    const onCaptureHandler = useCallback((event: any) =>
-      onCapture(parseNativeEvent<VisionCameraCaptureEvent>(event)),
-      [onCapture])
+    const onCaptureHandler = useCallback((event: any) => {
+      const nativeEvent = parseNativeEvent<any>(event);
+      // Parse barcodesJson back to barcodes array for backward compatibility
+      if (nativeEvent.barcodesJson && typeof nativeEvent.barcodesJson === 'string') {
+        try {
+          nativeEvent.barcodes = JSON.parse(nativeEvent.barcodesJson);
+          delete nativeEvent.barcodesJson;
+        } catch (e) {
+          console.error('Failed to parse barcodesJson:', e);
+        }
+      }
+      onCapture(nativeEvent);
+    }, [onCapture])
 
     const onErrorHandler = useCallback((event: any) =>
       onError(parseNativeEvent<VisionCameraErrorResult>(event)), [onError])
@@ -136,14 +146,44 @@ const Camera = forwardRef<VisionCameraRefProps, VisionCameraProps>(
     )
 
     const onBarcodeDetectedHandler = useCallback(
-      (event: any) =>
-        onBarcodeDetected(parseNativeEvent<VisionCameraBarcodeDetectedEvent>(event)),
+      (event: any) => {
+        const nativeEvent = parseNativeEvent<any>(event);
+        // Parse codesJson back to codes array for backward compatibility
+        if (nativeEvent.codesJson && typeof nativeEvent.codesJson === 'string') {
+          try {
+            nativeEvent.codes = JSON.parse(nativeEvent.codesJson);
+            delete nativeEvent.codesJson;
+          } catch (e) {
+            console.error('Failed to parse codesJson:', e);
+          }
+        }
+        onBarcodeDetected(nativeEvent);
+      },
       [onBarcodeDetected]
     )
 
     const onBoundingBoxesUpdateHandler = useCallback(
-      (event: any) =>
-        onBoundingBoxesUpdate(parseNativeEvent<VisionCameraBoundingBoxesUpdateEvent>(event)),
+      (event: any) => {
+        const nativeEvent = parseNativeEvent<any>(event);
+        // Parse JSON fields back to arrays for backward compatibility
+        if (nativeEvent.barcodeBoundingBoxesJson && typeof nativeEvent.barcodeBoundingBoxesJson === 'string') {
+          try {
+            nativeEvent.barcodeBoundingBoxes = JSON.parse(nativeEvent.barcodeBoundingBoxesJson);
+            delete nativeEvent.barcodeBoundingBoxesJson;
+          } catch (e) {
+            console.error('Failed to parse barcodeBoundingBoxesJson:', e);
+          }
+        }
+        if (nativeEvent.qrCodeBoundingBoxesJson && typeof nativeEvent.qrCodeBoundingBoxesJson === 'string') {
+          try {
+            nativeEvent.qrCodeBoundingBoxes = JSON.parse(nativeEvent.qrCodeBoundingBoxesJson);
+            delete nativeEvent.qrCodeBoundingBoxesJson;
+          } catch (e) {
+            console.error('Failed to parse qrCodeBoundingBoxesJson:', e);
+          }
+        }
+        onBoundingBoxesUpdate(nativeEvent);
+      },
       [onBoundingBoxesUpdate]
     )
 
