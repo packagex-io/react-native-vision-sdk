@@ -70,6 +70,17 @@ android {
     targetCompatibility JavaVersion.VERSION_11
   }
 
+  // Configure source sets for old vs new architecture
+  sourceSets {
+    main {
+      if (isNewArchitectureEnabled()) {
+        java.srcDirs += ['src/newarch/java']
+      } else {
+        java.srcDirs += ['src/oldarch/java']
+      }
+    }
+  }
+
 }
 
 repositories {

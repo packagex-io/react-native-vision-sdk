@@ -33,38 +33,47 @@ try {
 // Wrapper component to handle prop conversion for Fabric
 const VisionCameraViewWrapper = React.forwardRef<any, VisionCameraViewProps>((props, ref) => {
   // If using Fabric, convert object props to JSON strings
-  if (isFabric) {
-    const fabricProps: any = { ...props };
+  const fabricProps = React.useMemo(() => {
+    if (!isFabric) return props;
+
+    const convertedProps: any = { ...props };
 
     // Convert scanArea object to JSON string, or clear it if undefined
     if (props.scanArea && typeof props.scanArea === 'object') {
-      fabricProps.scanAreaJson = JSON.stringify(props.scanArea);
-      console.log('[VisionCameraView] Converting scanArea to JSON:', fabricProps.scanAreaJson);
+      convertedProps.scanAreaJson = JSON.stringify(props.scanArea);
     } else {
-      fabricProps.scanAreaJson = '';
-      console.log('[VisionCameraView] Clearing scanArea (set to empty string)');
+      convertedProps.scanAreaJson = '';
     }
-    delete fabricProps.scanArea;
+    delete convertedProps.scanArea;
 
     // Convert detectionConfig object to JSON string, or clear it if undefined
     if (props.detectionConfig && typeof props.detectionConfig === 'object') {
-      fabricProps.detectionConfigJson = JSON.stringify(props.detectionConfig);
-      console.log('[VisionCameraView] Converting detectionConfig to JSON:', fabricProps.detectionConfigJson);
+      convertedProps.detectionConfigJson = JSON.stringify(props.detectionConfig);
     } else {
-      fabricProps.detectionConfigJson = '';
+      convertedProps.detectionConfigJson = '';
     }
-    delete fabricProps.detectionConfig;
+    delete convertedProps.detectionConfig;
 
-    // Log other important props
-    if (props.enableFlash !== undefined) {
-      console.log('[VisionCameraView] enableFlash prop:', props.enableFlash);
-    }
-
-    return React.createElement(VisionCameraViewNative, { ...fabricProps, ref });
-  }
+    return convertedProps;
+  }, [
+    props.scanArea,
+    props.detectionConfig,
+    props.enableFlash,
+    props.zoomLevel,
+    props.scanMode,
+    props.autoCapture,
+    props.frameSkip,
+    props.cameraFacing,
+    props.onCapture,
+    props.onError,
+    props.onRecognitionUpdate,
+    props.onSharpnessScoreUpdate,
+    props.onBarcodeDetected,
+    props.onBoundingBoxesUpdate,
+  ]);
 
   // For legacy architecture, pass props as-is
-  return React.createElement(VisionCameraViewNative, { ...props, ref });
+  return React.createElement(VisionCameraViewNative, { ...(isFabric ? fabricProps : props), ref });
 });
 
 VisionCameraViewWrapper.displayName = 'VisionCameraView';

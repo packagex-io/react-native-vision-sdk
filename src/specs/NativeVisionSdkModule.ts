@@ -124,6 +124,122 @@ export interface Spec extends TurboModule {
   ): Promise<string>;
 
   /**
+   * Performs on-device OCR prediction
+   * @param imagePath - Local file path or remote URL to the image
+   * @param barcodes - Array of barcodes
+   * @returns Prediction result as JSON string
+   */
+  predict(
+    imagePath: string,
+    barcodes: string[]
+  ): Promise<string>;
+
+  /**
+   * Performs cloud-based shipping label prediction
+   * @param imagePath - Local file path or remote URL to the image
+   * @param barcodes - Array of barcodes
+   * @param token - Authentication token (can be null)
+   * @param apiKey - API Key (can be null)
+   * @param locationId - Location ID (can be null)
+   * @param options - Options object as JSON string
+   * @param metadata - Metadata object as JSON string
+   * @param recipient - Recipient object as JSON string
+   * @param sender - Sender object as JSON string
+   * @param shouldResizeImage - Whether to resize the image
+   * @returns Prediction result as JSON string
+   */
+  predictShippingLabelCloud(
+    imagePath: string,
+    barcodes: string[],
+    token: string | null,
+    apiKey: string | null,
+    locationId: string | null,
+    options: string,
+    metadata: string,
+    recipient: string,
+    sender: string,
+    shouldResizeImage: boolean
+  ): Promise<string>;
+
+  /**
+   * Performs cloud-based item label prediction
+   * @param imagePath - Local file path or remote URL to the image
+   * @param token - Authentication token (can be null)
+   * @param apiKey - API Key (can be null)
+   * @param shouldResizeImage - Whether to resize the image
+   * @returns Prediction result as JSON string
+   */
+  predictItemLabelCloud(
+    imagePath: string,
+    token: string | null,
+    apiKey: string | null,
+    shouldResizeImage: boolean
+  ): Promise<string>;
+
+  /**
+   * Performs cloud-based bill of lading prediction
+   * @param imagePath - Local file path or remote URL to the image
+   * @param barcodes - Array of barcodes
+   * @param token - Authentication token (can be null)
+   * @param apiKey - API Key (can be null)
+   * @param locationId - Location ID (can be null)
+   * @param options - Options object as JSON string
+   * @param shouldResizeImage - Whether to resize the image
+   * @returns Prediction result as JSON string
+   */
+  predictBillOfLadingCloud(
+    imagePath: string,
+    barcodes: string[],
+    token: string | null,
+    apiKey: string | null,
+    locationId: string | null,
+    options: string,
+    shouldResizeImage: boolean
+  ): Promise<string>;
+
+  /**
+   * Performs cloud-based document classification prediction
+   * @param imagePath - Local file path or remote URL to the image
+   * @param token - Authentication token (can be null)
+   * @param apiKey - API Key (can be null)
+   * @param shouldResizeImage - Whether to resize the image
+   * @returns Prediction result as JSON string
+   */
+  predictDocumentClassificationCloud(
+    imagePath: string,
+    token: string | null,
+    apiKey: string | null,
+    shouldResizeImage: boolean
+  ): Promise<string>;
+
+  /**
+   * Performs on-device prediction followed by cloud transformations
+   * @param imagePath - Local file path or remote URL to the image
+   * @param barcodes - Array of barcodes
+   * @param token - Authentication token (can be null)
+   * @param apiKey - API Key (can be null)
+   * @param locationId - Location ID (can be null)
+   * @param options - Options object as JSON string
+   * @param metadata - Metadata object as JSON string
+   * @param recipient - Recipient object as JSON string
+   * @param sender - Sender object as JSON string
+   * @param shouldResizeImage - Whether to resize the image
+   * @returns Prediction result as JSON string
+   */
+  predictWithCloudTransformations(
+    imagePath: string,
+    barcodes: string[],
+    token: string | null,
+    apiKey: string | null,
+    locationId: string | null,
+    options: string,
+    metadata: string,
+    recipient: string,
+    sender: string,
+    shouldResizeImage: boolean
+  ): Promise<string>;
+
+  /**
    * Adds a listener for the specified event
    * This is required for TurboModule event emitters
    */

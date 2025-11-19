@@ -132,7 +132,7 @@ const VisionCameraExample = ({ navigation }) => {
   const handleCapture = (event: VisionCameraCaptureEvent) => {
     console.log("HANDLE CAPTURE: ", JSON.stringify(event))
     setCapturedImage(event.image);
-    Alert.alert('Success', `Image captured: ${event.image}`);
+    // Alert.alert('Success', `Image captured: ${event.image}`);
   };
 
   const handleError = (error: any) => {

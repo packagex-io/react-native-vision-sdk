@@ -379,7 +379,7 @@ const App: React.FC<{ route: any }> = ({ route }) => {
     console.log('onError', error);
     // Alert.alert('ERROR', error?.message);
     setLoading(false);
-    // visionSdk.current?.restartScanningHandler();
+    visionSdk.current?.restartScanningHandler();
   }, [])
 
   const handleDetected = useCallback((event) => {
@@ -452,7 +452,7 @@ const App: React.FC<{ route: any }> = ({ route }) => {
   }, [])
 
   const handleSharpnessScore = useCallback((event) => { 
-    // console.log("SHARPNESS SCORE: ", JSON.stringify(event))
+    console.log("SHARPNESS SCORE: ", JSON.stringify(event))
   }, [])
 
   const handleModelDownloadProgress = useCallback((event) => {

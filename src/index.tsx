@@ -29,6 +29,14 @@ import {
 } from './types';
 import { correctOcrEvent } from './utils';
 
+// Import Fabric commands for new architecture
+let FabricCommands: any = null;
+try {
+  FabricCommands = require('./specs/VisionSdkViewNativeComponent').Commands;
+} catch (e) {
+  // Not using Fabric, will fall back to UIManager
+}
+
 export * from './types';
 export * from './VisionCore';
 export { VisionCamera } from './VisionCamera';
@@ -107,22 +115,12 @@ const Camera = forwardRef<VisionSdkRefProps, VisionSdkProps>(
       params: any[] = []
     ) => {
       try {
-        // Detect if we're using Fabric or Legacy architecture
-        const viewManagerConfig = UIManager.getViewManagerConfig('VisionSDKView');
-        const command = viewManagerConfig?.Commands?.[commandName] ?? Commands[commandName];
-
-        // If command is not found in either UIManager or Commands, throw an error.
-        if (command === undefined) {
-          throw new Error(
-            `Command "${commandName}" not found in VisionSDKView or Commands.`
-          );
+        if (!VisionSDKViewRef.current) {
+          console.warn(`🚨 No ref for command: ${commandName}`);
+          return;
         }
 
-        // Fabric uses numeric command IDs, Legacy uses string names
-        const isFabric = typeof command === 'number';
-
-        // Convert object parameters to JSON strings for Fabric architecture
-        // Commands that need JSON string conversion for their first parameter
+        // Convert object parameters to JSON strings
         const commandsNeedingJsonConversion = [
           'setMetaData',
           'setRecipient',
@@ -136,8 +134,6 @@ const Camera = forwardRef<VisionSdkRefProps, VisionSdkProps>(
         let processedParams = params;
         if (commandsNeedingJsonConversion.includes(commandName)) {
           processedParams = params.map((param, index) => {
-            // Only convert the first parameter (index 0) which is the object
-            // Keep other parameters (token, apiKey) as-is
             if (index === 0 && typeof param === 'object' && param !== null) {
               return JSON.stringify(param);
             }
@@ -145,23 +141,43 @@ const Camera = forwardRef<VisionSdkRefProps, VisionSdkProps>(
           });
         }
 
-        // For Fabric, convert null/undefined to empty strings (Fabric doesn't accept nullable strings)
-        if (isFabric) {
-          processedParams = processedParams.map(param => {
-            if (param === null || param === undefined) {
-              return '';
-            }
-            return param;
-          });
+        // Convert null/undefined to empty strings for Fabric
+        processedParams = processedParams.map(param => {
+          if (param === null || param === undefined) {
+            return '';
+          }
+          return param;
+        });
+
+        // Try to use Fabric commands first (new architecture) - Android only for now
+        // iOS still uses the RCT_EXTERN_METHOD pattern which works via UIManager
+        if (Platform.OS === 'android' && FabricCommands && FabricCommands[commandName]) {
+          console.log(`📤 Dispatching Fabric command: ${commandName}`);
+          FabricCommands[commandName](VisionSDKViewRef.current, ...processedParams);
+          return;
         }
 
-        // Dispatch the command with the provided parameters to the native module (VisionSDKView).
-        const viewHandle = findNodeHandle(VisionSDKViewRef.current)
-        if (!viewHandle) return
+        // Fallback to UIManager for old architecture
+        const viewHandle = findNodeHandle(VisionSDKViewRef.current);
+        if (!viewHandle) {
+          console.warn(`🚨 No viewHandle for command: ${commandName}`);
+          return;
+        }
+
+        const viewManagerConfig = UIManager.getViewManagerConfig('VisionSdkView');
+        const commandId = viewManagerConfig?.Commands?.[commandName] ?? Commands[commandName];
+
+        if (commandId === undefined) {
+          throw new Error(
+            `Command "${commandName}" not found in VisionSdkView or Commands.`
+          );
+        }
+
+        console.log(`📤 Dispatching UIManager command: ${commandName}, commandId: ${commandId}`);
         UIManager.dispatchViewManagerCommand(
-          viewHandle, // Find the native view reference
-          command, // The command to dispatch
-          processedParams // Parameters to pass with the command (with JSON conversion if needed for Fabric)
+          viewHandle,
+          commandId,
+          processedParams
         );
       } catch (error: any) {
         console.error(`🚨 Error dispatching command: ${error.message}`);

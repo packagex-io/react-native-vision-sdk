@@ -63,11 +63,16 @@ const Camera = forwardRef<VisionCameraRefProps, VisionCameraProps>(
       params: any[] = []
     ) => {
       try {
+        console.log(`📤 Dispatching command: ${commandName} with params:`, params);
+
         // Attempt to retrieve the command from the VisionCameraView's UIManager configuration. If not found, fall back to using the command from the Commands enum.
         const command =
           UIManager.getViewManagerConfig('VisionCameraView')?.Commands[
           commandName
           ] ?? Commands[commandName];
+
+        console.log(`📋 Command resolved to:`, command);
+
         // If command is not found in either UIManager or Commands, throw an error.
         if (command === undefined) {
           throw new Error(
@@ -76,8 +81,15 @@ const Camera = forwardRef<VisionCameraRefProps, VisionCameraProps>(
         }
 
         // Dispatch the command with the provided parameters to the native module (VisionCameraView).
-        const viewHandle = findNodeHandle(VisionCameraViewRef.current)
-        if (!viewHandle) return
+        const viewHandle = findNodeHandle(VisionCameraViewRef.current);
+        console.log(`🎯 View handle:`, viewHandle);
+
+        if (!viewHandle) {
+          console.error('❌ View handle is null, cannot dispatch command');
+          return;
+        }
+
+        console.log(`✅ Dispatching command to native: ${commandName} (${command})`);
         UIManager.dispatchViewManagerCommand(
           viewHandle, // Find the native view reference
           command, // The command to dispatch

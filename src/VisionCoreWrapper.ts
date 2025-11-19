@@ -302,10 +302,10 @@ export const VisionCore = {
         token,
         apiKey,
         locationId,
-        options,
-        metadata,
-        recipient,
-        sender,
+        JSON.stringify(options || {}),
+        JSON.stringify(metadata || {}),
+        JSON.stringify(recipient || {}),
+        JSON.stringify(sender || {}),
         shouldResizeImage
       );
       return fromJsonString(result);
@@ -355,7 +355,7 @@ export const VisionCore = {
         token,
         apiKey,
         locationId,
-        options,
+        JSON.stringify(options || {}),
         shouldResizeImage
       );
       return fromJsonString(result);
@@ -408,10 +408,10 @@ export const VisionCore = {
         token,
         apiKey,
         locationId,
-        options,
-        metadata,
-        recipient,
-        sender,
+        JSON.stringify(options || {}),
+        JSON.stringify(metadata || {}),
+        JSON.stringify(recipient || {}),
+        JSON.stringify(sender || {}),
         shouldResizeImage
       );
       return fromJsonString(result);
