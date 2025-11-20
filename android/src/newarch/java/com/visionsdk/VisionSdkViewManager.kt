@@ -26,6 +26,7 @@ import com.facebook.react.uimanager.ViewGroupManager
 import com.facebook.react.uimanager.annotations.ReactProp
 import com.visionsdk.utils.EventUtils
 import com.visionsdk.utils.toDp
+import com.visionsdk.utils.uriToBitmap
 import io.packagex.visionsdk.ApiManager
 import io.packagex.visionsdk.Environment
 import io.packagex.visionsdk.core.DetectionMode
@@ -45,9 +46,20 @@ import io.packagex.visionsdk.interfaces.ScannerCallback
 import io.packagex.visionsdk.ocr.ml.core.enums.ExecutionProvider
 import io.packagex.visionsdk.ocr.ml.core.enums.ModelSize
 import io.packagex.visionsdk.ocr.ml.core.enums.OCRModule
+import io.packagex.visionsdk.ocr.ml.core.enums.PlatformType
+import io.packagex.visionsdk.service.dto.BOLModelToReport
+import io.packagex.visionsdk.service.dto.DCModelToReport
+import io.packagex.visionsdk.service.dto.ILModelToReport
+import io.packagex.visionsdk.service.dto.SLModelToReport
 import io.packagex.visionsdk.ui.views.VisionCameraView
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.json.JSONObject
+import android.net.Uri
+import android.util.Base64
+import com.facebook.react.bridge.ReadableMap
+import java.io.FileInputStream
 
 /**
  * Fabric-compatible ViewManager for VisionSdkView
@@ -99,6 +111,11 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
     // Density for converting pixels to dp
     private val density: Float
         get() = appContext.resources.displayMetrics.density
+
+    // Metadata, recipient, and sender for cloud predictions
+    private var metaData: Map<String, Any>? = null
+    private var recipient: Map<String, Any>? = null
+    private var sender: Map<String, Any>? = null
 
     override fun getName(): String = REACT_CLASS
 
@@ -751,11 +768,21 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
             "captureImage" to 1,
             "stopRunning" to 2,
             "startRunning" to 3,
+            "setMetaData" to 3,
+            "setRecipient" to 4,
+            "setSender" to 5,
             "restartScanning" to 4,
             "configureOnDeviceModel" to 6,
             "setFocusSettings" to 8,
             "setObjectDetectionSettings" to 9,
             "setCameraSettings" to 10,
+            "getPrediction" to 11,
+            "getPredictionWithCloudTransformations" to 12,
+            "getPredictionShippingLabelCloud" to 13,
+            "getPredictionBillOfLadingCloud" to 14,
+            "getPredictionItemLabelCloud" to 15,
+            "getPredictionDocumentClassificationCloud" to 16,
+            "reportError" to 17,
             "createTemplate" to 18,
             "getAllTemplates" to 19,
             "deleteTemplateWithId" to 20,
@@ -773,11 +800,21 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
             "captureImage", "1" -> captureImage(root)
             "stopRunning", "2" -> stopRunning(root)
             "startRunning", "3" -> startRunning(root)
+            "setMetaData", "3" -> setMetaData(args)
+            "setRecipient", "4" -> setRecipient(args)
+            "setSender", "5" -> setSender(args)
             "restartScanning", "4" -> restartScanning(root)
             "configureOnDeviceModel", "6" -> configureOnDeviceModel(args)
             "setFocusSettings", "8" -> setFocusSettings(root, args)
             "setObjectDetectionSettings", "9" -> setObjectDetectionSettings(root, args)
             "setCameraSettings", "10" -> setCameraSettings(root, args)
+            "getPrediction", "11" -> getPrediction(args)
+            "getPredictionWithCloudTransformations", "12" -> getPredictionWithCloudTransformations(args)
+            "getPredictionShippingLabelCloud", "13" -> getPredictionShippingLabelCloud(args)
+            "getPredictionBillOfLadingCloud", "14" -> getPredictionBillOfLadingCloud(args)
+            "getPredictionItemLabelCloud", "15" -> getPredictionItemLabelCloud(args)
+            "getPredictionDocumentClassificationCloud", "16" -> getPredictionDocumentClassificationCloud(args)
+            "reportError", "17" -> reportError(args)
             "createTemplate", "18" -> createTemplate(root)
             "getAllTemplates", "19" -> getAllTemplates(root)
             "deleteTemplateWithId", "20" -> deleteTemplateWithId(args)
@@ -1039,6 +1076,518 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
             putBoolean("success", true)
         }
         sendEvent("onDeleteTemplates", event)
+    }
+
+    // MARK: - Metadata/Recipient/Sender Commands
+
+    private fun setMetaData(args: ReadableArray?) {
+        val metaDataMap = args?.getMap(0)
+        Log.d(TAG, "setMetaData: $metaDataMap")
+        this.metaData = metaDataMap?.toHashMap() as? Map<String, Any>
+    }
+
+    private fun setRecipient(args: ReadableArray?) {
+        val recipientMap = args?.getMap(0)
+        Log.d(TAG, "setRecipient: $recipientMap")
+        this.recipient = if (recipientMap == null) {
+            emptyMap()
+        } else {
+            recipientMap.toHashMap() as? Map<String, Any>
+        }
+    }
+
+    private fun setSender(args: ReadableArray?) {
+        val senderMap = args?.getMap(0)
+        Log.d(TAG, "setSender: $senderMap")
+        this.sender = if (senderMap == null) {
+            emptyMap()
+        } else {
+            senderMap.toHashMap() as? Map<String, Any>
+        }
+    }
+
+    // MARK: - Manual Prediction Commands
+
+    private fun getPrediction(args: ReadableArray?) {
+        val image = args?.getString(0)
+        this.imagePath = image ?: ""
+        val barcodeArray = args?.getArray(1)
+        val barcodeList = barcodeArray?.toArrayList()?.map { it.toString() } ?: emptyList()
+
+        uriToBitmap(context!!, Uri.parse(image)) { bitmap ->
+            bitmap?.let {
+                performOnDevicePrediction(it, barcodeList)
+            }
+        }
+    }
+
+    private fun performOnDevicePrediction(bitmap: Bitmap, barcodes: List<String>) {
+        lifecycleOwner?.lifecycle?.coroutineScope?.launchOnIO {
+            try {
+                val onDeviceOCRManager = OnDeviceOCRManagerSingleton.getInstance(context!!, modelType)
+                val result = onDeviceOCRManager.getPredictions(bitmap, barcodes)
+                withContextMain {
+                    onOCRResponse(result)
+                }
+            } catch (e: VisionSDKException) {
+                withContextMain {
+                    onOCRResponseFailed(e)
+                }
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                withContextMain {
+                    onOCRResponseFailed(VisionSDKException.UnknownException(e))
+                }
+            }
+        }
+    }
+
+    private fun getPredictionWithCloudTransformations(args: ReadableArray?) {
+        val image = args?.getString(0)
+        this.imagePath = image ?: ""
+        val barcodeArray = args?.getArray(1)
+        val barcodeList = barcodeArray?.toArrayList()?.map { it.toString() } ?: emptyList()
+        val token = args?.getString(2)
+        val apiKey = args?.getString(3)
+        val locationId = args?.getString(4)
+        val options = args?.getMap(5)?.toHashMap()?.mapValues { it.value ?: "" } ?: emptyMap()
+        val metadata = args?.getMap(6)?.toHashMap()?.mapValues { it.value ?: "" } ?: emptyMap()
+        val recipient = args?.getMap(7)?.toHashMap()?.mapValues { it.value ?: "" } ?: emptyMap()
+        val sender = args?.getMap(8)?.toHashMap()?.mapValues { it.value ?: "" } ?: emptyMap()
+        val shouldResizeImage = if (args != null && args.size() > 9 && !args.isNull(9)) {
+            args.getBoolean(9)
+        } else {
+            true
+        }
+
+        uriToBitmap(context!!, Uri.parse(image)) { bitmap ->
+            bitmap?.let {
+                performPredictionWithCloudTransformations(
+                    it, barcodeList, token, apiKey, locationId,
+                    options, metadata, recipient, sender, shouldResizeImage
+                )
+            }
+        }
+    }
+
+    private fun performPredictionWithCloudTransformations(
+        bitmap: Bitmap,
+        list: List<String>,
+        token: String?,
+        apiKey: String?,
+        locationId: String?,
+        options: Map<String, Any>?,
+        metadata: Map<String, Any>?,
+        recipient: Map<String, Any>?,
+        sender: Map<String, Any>?,
+        shouldResizeImage: Boolean
+    ) {
+        val resolvedToken = token ?: this.token
+        val resolvedApiKey = apiKey ?: this.apiKey
+        val resolvedLocationId = locationId ?: this.locationId ?: ""
+        val resolvedOptions = options ?: emptyMap()
+        val resolvedMetadata = metadata ?: this.metaData ?: emptyMap()
+        val resolvedRecipient = recipient ?: this.recipient ?: emptyMap()
+        val resolvedSender = sender ?: this.sender ?: emptyMap()
+
+        lifecycleOwner?.lifecycle?.coroutineScope?.launchOnIO {
+            try {
+                val onDeviceOCRManager = OnDeviceOCRManagerSingleton.getInstance(context!!, modelType)
+                val onDeviceResponse = onDeviceOCRManager.getPredictions(bitmap, list)
+
+                val result = ApiManager().shippingLabelMatchingApiSync(
+                    apiKey = resolvedApiKey,
+                    token = resolvedToken,
+                    bitmap = bitmap,
+                    shouldResizeImage = shouldResizeImage,
+                    barcodeList = list,
+                    onDeviceResponse = onDeviceResponse,
+                    locationId = resolvedLocationId.takeIf { it.isNotEmpty() },
+                    recipient = resolvedRecipient,
+                    sender = resolvedSender,
+                    options = resolvedOptions,
+                    metadata = resolvedMetadata
+                )
+                withContextMain {
+                    onOCRResponse(result)
+                }
+            } catch (e: VisionSDKException) {
+                Log.e(TAG, "Error in matching api: ", e)
+                withContextMain {
+                    onOCRResponseFailed(e)
+                }
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                Log.e(TAG, "Error in matching api: ", e)
+                withContextMain {
+                    onOCRResponseFailed(VisionSDKException.UnknownException(e))
+                }
+            }
+        }
+    }
+
+    private fun getPredictionShippingLabelCloud(args: ReadableArray?) {
+        try {
+            val image = args?.getString(0)
+            this.imagePath = image ?: ""
+            val barcodeArray = args?.getArray(1)
+            val barcodeList = barcodeArray?.toArrayList()?.map { it.toString() } ?: emptyList()
+            val token = args?.getString(2)
+            val apiKey = args?.getString(3)
+            val locationId = args?.getString(4)
+            val options = args?.getMap(5)?.toHashMap()?.mapValues { it.value ?: "" } ?: emptyMap()
+            val metadata = args?.getMap(6)?.toHashMap()?.mapValues { it.value ?: "" } ?: emptyMap()
+            val recipient = args?.getMap(7)?.toHashMap()?.mapValues { it.value ?: "" } ?: emptyMap()
+            val sender = args?.getMap(8)?.toHashMap()?.mapValues { it.value ?: "" } ?: emptyMap()
+            val shouldResizeImage = if (args != null && args.size() > 9 && !args.isNull(9)) {
+                args.getBoolean(9)
+            } else {
+                true
+            }
+
+            uriToBitmap(context!!, Uri.parse(image)) { bitmap ->
+                bitmap?.let {
+                    performShippingLabelCloudPrediction(
+                        it, barcodeList, token, apiKey, locationId,
+                        options, metadata, recipient, sender, shouldResizeImage
+                    )
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Exception in getPredictionShippingLabelCloud: ${e.message}", e)
+        }
+    }
+
+    private fun performShippingLabelCloudPrediction(
+        bitmap: Bitmap,
+        list: List<String>,
+        token: String?,
+        apiKey: String?,
+        locationId: String?,
+        options: Map<String, Any>?,
+        metadata: Map<String, Any>?,
+        recipient: Map<String, Any>?,
+        sender: Map<String, Any>?,
+        shouldResizeImage: Boolean
+    ) {
+        val resolvedToken = token ?: this.token
+        val resolvedApiKey = apiKey ?: this.apiKey
+        val resolvedLocationId = locationId ?: this.locationId ?: ""
+        val resolvedOptions = options ?: emptyMap()
+        val resolvedMetadata = metadata ?: this.metaData ?: emptyMap()
+        val resolvedRecipient = recipient ?: this.recipient ?: emptyMap()
+        val resolvedSender = sender ?: this.sender ?: emptyMap()
+
+        ApiManager().shippingLabelApiCallAsync(
+            apiKey = resolvedApiKey,
+            token = resolvedToken,
+            bitmap = bitmap,
+            barcodeList = list,
+            locationId = resolvedLocationId,
+            options = resolvedOptions,
+            metadata = resolvedMetadata,
+            recipient = resolvedRecipient,
+            sender = resolvedSender,
+            onScanResult = this,
+            shouldResizeImage = shouldResizeImage
+        )
+    }
+
+    private fun getPredictionBillOfLadingCloud(args: ReadableArray?) {
+        try {
+            val image = args?.getString(0)
+            this.imagePath = image ?: ""
+            val barcodeArray = args?.getArray(1)
+            val barcodeList = barcodeArray?.toArrayList()?.map { it.toString() } ?: emptyList()
+            val token = args?.getString(2)
+            val apiKey = args?.getString(3)
+            val locationId = args?.getString(4)
+            val options = args?.getMap(5)?.toHashMap()?.mapValues { it.value ?: "" } ?: emptyMap()
+            val shouldResizeImage = if (args != null && args.size() > 6 && !args.isNull(6)) {
+                args.getBoolean(6)
+            } else {
+                true
+            }
+
+            uriToBitmap(context!!, Uri.parse(image)) { bitmap ->
+                bitmap?.let {
+                    performBillOfLadingCloudPrediction(it, barcodeList, token, apiKey, locationId, options, shouldResizeImage)
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Exception in getPredictionBillOfLadingCloud: ${e.message}", e)
+        }
+    }
+
+    private fun performBillOfLadingCloudPrediction(
+        bitmap: Bitmap,
+        list: List<String>,
+        token: String?,
+        apiKey: String?,
+        locationId: String?,
+        options: Map<String, Any>?,
+        shouldResizeImage: Boolean
+    ) {
+        val resolvedToken = token ?: this.token
+        val resolvedApiKey = apiKey ?: this.apiKey
+        val resolvedLocationId = locationId ?: this.locationId ?: ""
+        val resolvedOptions = options ?: emptyMap()
+
+        ApiManager().billOfLadingApiCallAsync(
+            apiKey = resolvedApiKey,
+            token = resolvedToken,
+            locationId = resolvedLocationId.takeIf { it.isNotEmpty() },
+            options = resolvedOptions,
+            bitmap = bitmap,
+            barcodeList = list,
+            onScanResult = this,
+            shouldResizeImage = shouldResizeImage
+        )
+    }
+
+    private fun getPredictionItemLabelCloud(args: ReadableArray?) {
+        try {
+            val image = args?.getString(0)
+            this.imagePath = image ?: ""
+            val token = args?.getString(1)
+            val apiKey = args?.getString(2)
+            val shouldResizeImage = if (args != null && args.size() > 3 && !args.isNull(3)) {
+                args.getBoolean(3)
+            } else {
+                true
+            }
+
+            uriToBitmap(context!!, Uri.parse(image)) { bitmap ->
+                bitmap?.let {
+                    performItemLabelCloudPrediction(it, token, apiKey, shouldResizeImage)
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Exception in getPredictionItemLabelCloud: ${e.message}", e)
+        }
+    }
+
+    private fun performItemLabelCloudPrediction(
+        bitmap: Bitmap,
+        token: String?,
+        apiKey: String?,
+        shouldResizeImage: Boolean
+    ) {
+        val resolvedToken = token ?: this.token
+        val resolvedApiKey = apiKey ?: this.apiKey
+
+        ApiManager().itemLabelApiCallAsync(
+            apiKey = resolvedApiKey,
+            token = resolvedToken,
+            bitmap = bitmap,
+            shouldResizeImage = shouldResizeImage,
+            onScanResult = this
+        )
+    }
+
+    private fun getPredictionDocumentClassificationCloud(args: ReadableArray?) {
+        try {
+            val image = args?.getString(0)
+            this.imagePath = image ?: ""
+            val token = args?.getString(1)
+            val apiKey = args?.getString(2)
+            val shouldResizeImage = if (args != null && args.size() > 3 && !args.isNull(3)) {
+                args.getBoolean(3)
+            } else {
+                true
+            }
+
+            uriToBitmap(context!!, Uri.parse(image)) { bitmap ->
+                bitmap?.let {
+                    performDocumentClassificationCloudPrediction(it, token, apiKey, shouldResizeImage)
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Exception in getPredictionDocumentClassificationCloud: ${e.message}", e)
+        }
+    }
+
+    private fun performDocumentClassificationCloudPrediction(
+        bitmap: Bitmap,
+        token: String?,
+        apiKey: String?,
+        shouldResizeImage: Boolean
+    ) {
+        val resolvedToken = token ?: this.token
+        val resolvedApiKey = apiKey ?: this.apiKey
+
+        ApiManager().documentClassificationApiCallAsync(
+            apiKey = resolvedApiKey,
+            token = resolvedToken,
+            bitmap = bitmap,
+            onScanResult = this,
+            shouldResizeImage = shouldResizeImage
+        )
+    }
+
+    // MARK: - Report Error Command
+
+    private fun reportError(args: ReadableArray?) {
+        try {
+            val data = args?.getMap(0)
+            val token = args?.getString(1)
+            val apiKey = args?.getString(2)
+
+            val resolvedToken = token ?: this.token
+            val resolvedApiKey = apiKey ?: this.apiKey
+
+            if (data == null) {
+                Log.e(TAG, "reportError: Data is null")
+                return
+            }
+
+            // Extension function to safely convert Any to Map<String, Any?>
+            fun Any?.asStringMap(): Map<String, Any?>? {
+                return if (this is Map<*, *>) {
+                    this.entries
+                        .filter { it.key is String }
+                        .associate { it.key as String to it.value }
+                } else {
+                    null
+                }
+            }
+
+            // Convert ReadableMap to a Kotlin Map
+            val parsedData = data.toHashMap()
+
+            // Extract properties with default values
+            val reportText = parsedData["reportText"] as? String ?: "No Report Text"
+            val modelType = parsedData["type"] as? String ?: "shipping_label"
+            val modelSizeStr = parsedData["size"] as? String ?: "large"
+            val imagePath = parsedData["image"] as? String
+
+            // Safely handle 'response' as Map<String, Any?> or null
+            val response = parsedData["response"]?.asStringMap()
+
+            val errorFlags: Map<String, Boolean> = parsedData["errorFlags"]?.asStringMap()?.mapValues {
+                it.value as? Boolean ?: false
+            } ?: emptyMap()
+
+            val modelToReport = when (modelType.lowercase().replace("-", "_")) {
+                "shipping_label" -> {
+                    SLModelToReport(
+                        this.modelSize,
+                        trackingNo = errorFlags["trackingNo"] ?: false,
+                        courierName = errorFlags["courierName"] ?: false,
+                        weight = errorFlags["weight"] ?: false,
+                        dimensions = errorFlags["dimensions"] ?: false,
+                        receiverName = errorFlags["receiverName"] ?: false,
+                        receiverAddress = errorFlags["receiverAddress"] ?: false,
+                        senderName = errorFlags["senderName"] ?: false,
+                        senderAddress = errorFlags["senderAddress"] ?: false
+                    )
+                }
+                "item_label" -> {
+                    ILModelToReport(
+                        this.modelSize,
+                        supplierName = errorFlags["supplierName"] ?: false,
+                        itemName = errorFlags["itemName"] ?: false,
+                        itemSKU = errorFlags["itemSKU"] ?: false,
+                        weight = errorFlags["weight"] ?: false,
+                        dimensions = errorFlags["dimensions"] ?: false
+                    )
+                }
+                "bill_of_lading" -> {
+                    BOLModelToReport(
+                        this.modelSize,
+                        referenceNo = errorFlags["referenceNo"] ?: false,
+                        loadNumber = errorFlags["loadNumber"] ?: false,
+                        purchaseOrderNumber = errorFlags["purchaseOrderNumber"] ?: false,
+                        invoiceNumber = errorFlags["invoiceNumber"] ?: false,
+                        customerPurchaseOrderNumber = errorFlags["customerPurchaseOrderNumber"] ?: false,
+                        orderNumber = errorFlags["orderNumber"] ?: false,
+                        billOfLading = errorFlags["billOfLading"] ?: false,
+                        masterBillOfLading = errorFlags["masterBillOfLading"] ?: false,
+                        lineBillOfLading = errorFlags["lineBillOfLading"] ?: false,
+                        houseBillOfLading = errorFlags["houseBillOfLading"] ?: false,
+                        shippingId = errorFlags["shippingId"] ?: false,
+                        shippingDate = errorFlags["shippingDate"] ?: false,
+                        date = errorFlags["date"] ?: false
+                    )
+                }
+                "document_classification" -> {
+                    DCModelToReport(
+                        this.modelSize,
+                        documentClass = errorFlags["documentClass"] ?: false
+                    )
+                }
+                else -> {
+                    Log.e(TAG, "reportError: Unknown model type")
+                    return
+                }
+            }
+
+            Log.d(TAG, """
+                Report Error:
+                - Report Text: $reportText
+                - Model Type: $modelType
+                - Model Size: $modelSizeStr
+                - Image Path: $imagePath
+                - Response: $response
+            """.trimIndent())
+
+            // Convert image path to Base64 if available
+            val base64Image = imagePath?.takeIf { it.isNotBlank() }?.let { convertImageToBase64(it) }
+
+            // API call
+            ApiManager().reportAnIssueAsync(
+                context = appContext,
+                apiKey = resolvedApiKey,
+                token = resolvedToken,
+                platformType = PlatformType.ReactNative,
+                modelToReport = modelToReport,
+                report = reportText,
+                customData = response,
+                base64ImageToReportOn = base64Image,
+                onComplete = { result ->
+                    Log.d(TAG, "Report completed with result: $result")
+                }
+            )
+        } catch (e: Exception) {
+            Log.e(TAG, "ERROR REPORTING ERROR: ", e)
+        }
+    }
+
+    private fun convertImageToBase64(inputPath: String): String? {
+        return try {
+            Log.d(TAG, "Input path: $inputPath")
+
+            // Check if the input path is a URL
+            val uri = Uri.parse(inputPath)
+            val bitmap = if (uri.scheme == "http" || uri.scheme == "https") {
+                // Handle remote URL
+                val url = java.net.URL(inputPath)
+                android.graphics.BitmapFactory.decodeStream(url.openConnection().getInputStream())
+            } else {
+                // Handle local file path
+                val file = File(uri.path ?: inputPath)
+                if (!file.exists()) {
+                    Log.e(TAG, "File does not exist: ${file.absolutePath}")
+                    return null
+                }
+                val inputStream = FileInputStream(file)
+                android.graphics.BitmapFactory.decodeStream(inputStream)
+            }
+
+            if (bitmap == null) {
+                Log.e(TAG, "Failed to decode bitmap")
+                return null
+            }
+
+            // Convert bitmap to Base64
+            val byteArrayOutputStream = java.io.ByteArrayOutputStream()
+            bitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 100, byteArrayOutputStream)
+            val byteArray = byteArrayOutputStream.toByteArray()
+            Base64.encodeToString(byteArray, Base64.NO_WRAP)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error converting image to Base64: ${e.message}", e)
+            null
+        }
     }
 
     private fun setModelSize(size: String) {

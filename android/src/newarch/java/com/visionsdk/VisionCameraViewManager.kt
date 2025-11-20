@@ -41,7 +41,19 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
     private var currentCallback: ViewCallback? = null
     private var isCameraReady = false
     private var pendingScanArea: com.facebook.react.bridge.ReadableMap? = null
+    private var hasScanAreaBeenSet = false // Track if scanArea prop was explicitly set
+    private var currentDetectionMode: DetectionMode = DetectionMode.Photo // Track current detection mode
     private val density = appContext.resources.displayMetrics.density
+
+    // Event throttling - timestamps for last emitted events
+    private var lastRecognitionUpdateTime = 0L
+    private var lastBoundingBoxesUpdateTime = 0L
+    private var lastSharpnessScoreUpdateTime = 0L
+
+    // Throttle intervals in milliseconds
+    private val RECOGNITION_UPDATE_THROTTLE_MS = 100L // 10 FPS
+    private val BOUNDING_BOXES_UPDATE_THROTTLE_MS = 150L // ~6.7 FPS (heavier payload)
+    private val SHARPNESS_SCORE_UPDATE_THROTTLE_MS = 200L // 5 FPS
 
     override fun getName(): String = REACT_CLASS
 
@@ -59,9 +71,9 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
             android.view.ViewGroup.LayoutParams.MATCH_PARENT
         )
 
-        // Initialize with default settings - match oldarch configuration
+        // Initialize with default settings
         newView.configure(
-            isMultipleScanEnabled = true,
+            isMultipleScanEnabled = false,
             detectionMode = DetectionMode.Photo,
             scanningMode = ScanningMode.Manual
         )
@@ -136,6 +148,17 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
         }
     }
 
+    /**
+     * Check if enough time has passed since the last event emission to throttle high-frequency events
+     * @param lastTime The timestamp of the last emission
+     * @param throttleMs The throttle interval in milliseconds
+     * @return true if the event should be emitted, false if it should be skipped
+     */
+    private fun shouldEmitThrottledEvent(lastTime: Long, throttleMs: Long): Boolean {
+        val currentTime = System.currentTimeMillis()
+        return (currentTime - lastTime) >= throttleMs
+    }
+
     override fun getExportedCustomDirectEventTypeConstants(): MutableMap<String, Any> {
         return mutableMapOf(
             "onCapture" to mapOf("registrationName" to "onCapture"),
@@ -172,6 +195,7 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
             "barcodeorqrcode" -> DetectionMode.BarcodeOrQRCode
             else -> DetectionMode.Barcode
         }
+        currentDetectionMode = detectionMode // Track current mode
         view.setDetectionMode(detectionMode)
     }
 
@@ -223,6 +247,7 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
 
         // Store the scanArea for later application
         pendingScanArea = scanArea
+        hasScanAreaBeenSet = true // Mark that scanArea has been explicitly set
 
         // Only apply if camera is ready
         if (!isCameraReady) {
@@ -235,6 +260,12 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
 
     private fun applyScanArea(view: VisionCameraView, scanArea: com.facebook.react.bridge.ReadableMap?) {
         try {
+            // Skip FocusSettings only for Photo mode (OCR mode works fine with scan areas)
+            if (currentDetectionMode == DetectionMode.Photo) {
+                Log.d(TAG, "Skipping scan area application in Photo mode")
+                return
+            }
+
             if (scanArea != null) {
                 // When scan area is defined, disable multiple scan mode
                 view.setMultipleScanEnabled(false)
@@ -322,7 +353,10 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
     }
 
     private fun capture(view: VisionCameraView) {
-        Log.d(TAG, "capture called")
+        Log.d(TAG, "capture called (mode: $currentDetectionMode)")
+
+        // In Photo mode, just capture directly - don't call rescan
+        // The camera is already running and ready to capture
         view.capture()
     }
 
@@ -423,6 +457,12 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
             textDetected: Boolean,
             documentDetected: Boolean
         ) {
+            // Throttle recognition updates to avoid overwhelming the JS bridge
+            if (!shouldEmitThrottledEvent(lastRecognitionUpdateTime, RECOGNITION_UPDATE_THROTTLE_MS)) {
+                return
+            }
+            lastRecognitionUpdateTime = System.currentTimeMillis()
+
             Log.d(TAG, "onIndications - barcode: $barcodeDetected, qr: $qrCodeDetected, text: $textDetected, doc: $documentDetected")
             val event = Arguments.createMap()
             event.putBoolean("text", textDetected)
@@ -437,6 +477,12 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
             qrCodeBoundingBoxes: List<ScannedCodeResult>,
             documentBoundingBox: android.graphics.Rect?
         ) {
+            // Throttle bounding box updates (heavier payload, more processing)
+            if (!shouldEmitThrottledEvent(lastBoundingBoxesUpdateTime, BOUNDING_BOXES_UPDATE_THROTTLE_MS)) {
+                return
+            }
+            lastBoundingBoxesUpdateTime = System.currentTimeMillis()
+
             Log.d(TAG, "onIndicationsBoundingBoxes - barcodes: ${barcodeBoundingBoxes.size}, qrCodes: ${qrCodeBoundingBoxes.size}, document: ${documentBoundingBox != null}")
             val event = Arguments.createMap()
 
@@ -458,10 +504,12 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
                 }
 
                 boxMap.putMap("boundingBox", Arguments.createMap().apply {
-                    putInt("x", code.boundingBox.left.toDp(density))
-                    putInt("y", code.boundingBox.top.toDp(density))
-                    putInt("width", code.boundingBox.width().toDp(density))
-                    putInt("height", code.boundingBox.height().toDp(density))
+                    code.boundingBox?.let { box ->
+                        putInt("x", box.left.toDp(density))
+                        putInt("y", box.top.toDp(density))
+                        putInt("width", box.width().toDp(density))
+                        putInt("height", box.height().toDp(density))
+                    }
                 })
                 barcodeBoxesArray.pushMap(boxMap)
             }
@@ -485,10 +533,12 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
                 }
 
                 boxMap.putMap("boundingBox", Arguments.createMap().apply {
-                    putInt("x", code.boundingBox.left.toDp(density))
-                    putInt("y", code.boundingBox.top.toDp(density))
-                    putInt("width", code.boundingBox.width().toDp(density))
-                    putInt("height", code.boundingBox.height().toDp(density))
+                    code.boundingBox?.let { box ->
+                        putInt("x", box.left.toDp(density))
+                        putInt("y", box.top.toDp(density))
+                        putInt("width", box.width().toDp(density))
+                        putInt("height", box.height().toDp(density))
+                    }
                 })
                 qrCodeBoxesArray.pushMap(boxMap)
             }
@@ -516,6 +566,12 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
         }
 
         override fun onImageSharpnessScore(imageSharpnessScore: Double) {
+            // Throttle sharpness score updates
+            if (!shouldEmitThrottledEvent(lastSharpnessScoreUpdateTime, SHARPNESS_SCORE_UPDATE_THROTTLE_MS)) {
+                return
+            }
+            lastSharpnessScoreUpdateTime = System.currentTimeMillis()
+
             Log.d(TAG, "onImageSharpnessScore called: $imageSharpnessScore")
             val event = Arguments.createMap()
             event.putDouble("sharpnessScore", imageSharpnessScore)
@@ -568,26 +624,14 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
                 sendEvent("onCapture", event)
 
                 // Automatically restart scanning after image capture
-                // Re-apply FocusSettings before rescan to prevent YuvCropper crash
-                try {
-                    applyScanArea(view, pendingScanArea)
-                    visionCameraView?.rescan()
-                } catch (e: Exception) {
-                    Log.e(TAG, "Error during rescan: ${e.message}", e)
-                }
+                visionCameraView?.rescan()
             } catch (e: Exception) {
                 val event = Arguments.createMap()
                 event.putString("message", "Failed to save image: ${e.message}")
                 sendEvent("onError", event)
 
                 // Restart scanning after error
-                // Re-apply FocusSettings before rescan to prevent YuvCropper crash
-                try {
-                    applyScanArea(view, pendingScanArea)
-                    visionCameraView?.rescan()
-                } catch (rescanException: Exception) {
-                    Log.e(TAG, "Error during rescan after error: ${rescanException.message}", rescanException)
-                }
+                visionCameraView?.rescan()
             }
         }
 
@@ -600,9 +644,12 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
             Log.d(TAG, "✅ Camera started successfully")
             isCameraReady = true
 
-            // Apply pending scanArea if it exists
-            if (pendingScanArea != null || pendingScanArea == null) {
+            // Only apply scan area if it was explicitly set via props
+            if (hasScanAreaBeenSet) {
+                Log.d(TAG, "Applying pending scan area settings")
                 applyScanArea(view, pendingScanArea)
+            } else {
+                Log.d(TAG, "No scan area set, skipping focus settings application")
             }
         }
 

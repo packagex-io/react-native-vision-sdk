@@ -20,11 +20,12 @@ const VisionCameraExample = ({ navigation }) => {
   const [flashEnabled, setFlashEnabled] = useState(false);
   const [zoomLevel, setZoomLevel] = useState(1.0);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
-  const [scanMode, setScanMode] = useState<VisionCameraScanMode>('barcode');
-  const [currentMode, setCurrentMode] = useState<VisionCameraScanMode | 'barcode-focused' | 'qrcode-focused'>('barcode-focused');
+  const [scanMode, setScanMode] = useState<VisionCameraScanMode>('photo');
+  const [scanAreaEnabled, setScanAreaEnabled] = useState(false);
   const [autoCapture, setAutoCapture] = useState(false);
   const [recognitionData, setRecognitionData] = useState({ text: false, barcode: false, qrcode: false, document: false });
   const [sharpness, setSharpness] = useState(0);
+  const [modeDropdownOpen, setModeDropdownOpen] = useState(false);
   const [barcodeResults, setBarcodeResults] = useState<any[]>([]);
   const [hasPermission, setHasPermission] = useState(false);
   const [cameraFacing, setCameraFacing] = useState<'back' | 'front'>('back');
@@ -46,61 +47,45 @@ const VisionCameraExample = ({ navigation }) => {
   const lastBoundingBoxUpdate = useRef<number>(0);
   const boundingBoxThrottleMs = 300;
 
-  const scanModes: { label: string; value: VisionCameraScanMode | 'barcode-focused' | 'qrcode-focused' }[] = [
+  const scanModes: { label: string; value: VisionCameraScanMode }[] = [
     { label: '📷 Photo', value: 'photo' },
     { label: '📊 Barcode', value: 'barcode' },
-    { label: '🎯 Barcode (Focused)', value: 'barcode-focused' },
     { label: '🔲 QR Code', value: 'qrcode' },
-    { label: '🎯 QR Code (Focused)', value: 'qrcode-focused' },
     { label: '🔍 OCR', value: 'ocr' },
   ];
 
-  const handleScanModeChange = (mode: VisionCameraScanMode | 'barcode-focused' | 'qrcode-focused') => {
-    setCurrentMode(mode);
-    if (mode === 'barcode-focused') {
-      setScanMode('barcode');
-    } else if (mode === 'qrcode-focused') {
-      setScanMode('qrcode');
-    } else {
-      setScanMode(mode);
-    }
+  const handleScanModeChange = (mode: VisionCameraScanMode) => {
+    setScanMode(mode);
     setAutoCapture(false);
   };
 
   // State to store camera view dimensions
   const [cameraViewSize, setCameraViewSize] = useState({ width: 0, height: 0 });
 
-  // Calculate centered scan area for barcode-focused mode
-  const getCenteredScanArea = () => {
-    // Use camera view dimensions if available, otherwise fallback to screen width
+  // Get scan area based on current scan mode (when enabled)
+  const getScanArea = () => {
+    if (!scanAreaEnabled) return undefined;
+
     const { width: screenWidth } = Dimensions.get('window');
     const viewWidth = cameraViewSize.width || screenWidth;
-    const viewHeight = cameraViewSize.height || 600; // Reasonable fallback
+    const viewHeight = cameraViewSize.height || 600;
 
-    // Centered rectangle: 300dp wide, 100dp tall
-    const width = 300;
-    const height = 100;
-    const x = (viewWidth - width) / 2;
-    const y = (viewHeight - height) / 2;
+    if (scanMode === 'barcode') {
+      // Barcode: horizontal rectangle 300dp x 100dp
+      const width = 300;
+      const height = 100;
+      const x = (viewWidth - width) / 2;
+      const y = (viewHeight - height) / 2;
+      return { x, y, width, height };
+    } else if (scanMode === 'qrcode') {
+      // QR Code: square 250dp x 250dp
+      const size = 250;
+      const x = (viewWidth - size) / 2;
+      const y = (viewHeight - size) / 2;
+      return { x, y, width: size, height: size };
+    }
 
-    const scanArea = { x, y, width, height };
-    return scanArea;
-  };
-
-  // Calculate centered square scan area for qrcode-focused mode
-  const getQRCodeScanArea = () => {
-    // Use camera view dimensions if available, otherwise fallback to screen width
-    const { width: screenWidth } = Dimensions.get('window');
-    const viewWidth = cameraViewSize.width || screenWidth;
-    const viewHeight = cameraViewSize.height || 600; // Reasonable fallback
-
-    // Centered square: 250dp x 250dp
-    const size = 250;
-    const x = (viewWidth - size) / 2;
-    const y = (viewHeight - size) / 2;
-
-    const scanArea = { x, y, width: size, height: size };
-    return scanArea;
+    return undefined;
   };
 
   const requestCameraPermission = async () => {
@@ -230,13 +215,7 @@ const VisionCameraExample = ({ navigation }) => {
             scanMode={scanMode}
             autoCapture={autoCapture}
             cameraFacing={cameraFacing}
-            scanArea={
-              currentMode === 'barcode-focused'
-                ? getCenteredScanArea()
-                : currentMode === 'qrcode-focused'
-                  ? getQRCodeScanArea()
-                  : undefined
-            }
+            scanArea={getScanArea()}
             onCapture={handleCapture}
             onError={handleError}
             onRecognitionUpdate={handleRecognitionUpdate}
@@ -262,30 +241,21 @@ const VisionCameraExample = ({ navigation }) => {
           </View>
         )}
 
-        {/* Scan Area Overlay (for barcode-focused mode) */}
-        {currentMode === 'barcode-focused' && (
+        {/* Scan Area Overlay */}
+        {scanAreaEnabled && getScanArea() && (
           <View style={styles.scanAreaOverlay} pointerEvents="none">
-            <View style={[styles.scanAreaRect, {
-              left: getCenteredScanArea().x,
-              top: getCenteredScanArea().y,
-              width: getCenteredScanArea().width,
-              height: getCenteredScanArea().height,
-            }]}>
-              <Text style={styles.scanAreaLabel}>Scan Area - Only barcodes in this region will be detected</Text>
-            </View>
-          </View>
-        )}
-
-        {/* Scan Area Overlay (for qrcode-focused mode) */}
-        {currentMode === 'qrcode-focused' && (
-          <View style={styles.scanAreaOverlay} pointerEvents="none">
-            <View style={[styles.qrScanAreaRect, {
-              left: getQRCodeScanArea().x,
-              top: getQRCodeScanArea().y,
-              width: getQRCodeScanArea().width,
-              height: getQRCodeScanArea().height,
-            }]}>
-              <Text style={styles.scanAreaLabel}>Position QR Code Here</Text>
+            <View style={[
+              scanMode === 'qrcode' ? styles.qrScanAreaRect : styles.scanAreaRect,
+              {
+                left: getScanArea()!.x,
+                top: getScanArea()!.y,
+                width: getScanArea()!.width,
+                height: getScanArea()!.height,
+              }
+            ]}>
+              <Text style={styles.scanAreaLabel}>
+                {scanMode === 'barcode' ? 'Barcode Scan Area' : 'QR Code Scan Area'}
+              </Text>
             </View>
           </View>
         )}
@@ -375,7 +345,7 @@ const VisionCameraExample = ({ navigation }) => {
           )}
         </View>
 
-        {/* Recognition Status Overlay */}
+        {/* Recognition Status Overlay - Top Left */}
         <View style={styles.recognitionOverlay}>
           <View style={styles.recognitionItem}>
             <Text style={styles.recognitionLabel}>📝 Text: </Text>
@@ -398,115 +368,147 @@ const VisionCameraExample = ({ navigation }) => {
             <Text style={styles.sharpnessValue}>{sharpness.toFixed(2)}</Text>
           </View>
         </View>
-      </View>
 
-      {/* Scan Mode Selector */}
-      <View style={styles.modeSelector}>
-        <Text style={styles.modeSelectorTitle}>Scan Mode:</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.modeScrollView}>
-          {scanModes.map((mode) => (
-            <TouchableOpacity
-              key={mode.value}
-              style={[
-                styles.modeButton,
-                currentMode === mode.value && styles.modeButtonActive,
-              ]}
-              onPress={() => handleScanModeChange(mode.value)}
-            >
-              <Text
-                style={[
-                  styles.modeButtonText,
-                  currentMode === mode.value && styles.modeButtonTextActive,
-                ]}
-              >
-                {mode.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      </View>
-
-      {capturedImage && (
-        <View style={styles.previewContainer}>
-          <Text style={styles.previewTitle}>Last Captured:</Text>
-          <Image
-            source={{ uri: `file://${capturedImage}` }}
-            style={styles.previewImage}
-            resizeMode="cover"
-          />
-        </View>
-      )}
-
-      {barcodeResults.length > 0 && (
-        <View style={styles.barcodeResultsContainer}>
-          <Text style={styles.barcodeResultsTitle}>Barcodes ({barcodeResults.length}):</Text>
-          <ScrollView style={styles.barcodeResultsScroll}>
-            {barcodeResults.map((barcode, index) => (
-              <View key={index} style={styles.barcodeItem}>
-                <Text style={styles.barcodeCode}>{barcode.scannedCode}</Text>
-                <Text style={styles.barcodeSymbology}>{barcode.symbology}</Text>
-              </View>
-            ))}
-          </ScrollView>
-        </View>
-      )}
-
-      <View style={styles.controls}>
-        <View style={styles.controlRow}>
+        {/* Scan Mode Dropdown - Below Recognition Status */}
+        <View style={styles.modeDropdownOverlay}>
           <TouchableOpacity
-            style={[styles.controlButton, styles.flashButton]}
+            style={styles.modeDropdownButton}
+            onPress={() => setModeDropdownOpen(!modeDropdownOpen)}
+          >
+            <Text style={styles.modeDropdownButtonText}>
+              {scanModes.find(m => m.value === scanMode)?.label || 'Photo'}
+            </Text>
+            <Text style={styles.modeDropdownArrow}>{modeDropdownOpen ? '▲' : '▼'}</Text>
+          </TouchableOpacity>
+
+          {modeDropdownOpen && (
+            <View style={styles.modeDropdownMenu}>
+              {scanModes.map((mode) => (
+                <TouchableOpacity
+                  key={mode.value}
+                  style={[
+                    styles.modeDropdownItem,
+                    scanMode === mode.value && styles.modeDropdownItemActive,
+                  ]}
+                  onPress={() => {
+                    handleScanModeChange(mode.value);
+                    setModeDropdownOpen(false);
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.modeDropdownItemText,
+                      scanMode === mode.value && styles.modeDropdownItemTextActive,
+                    ]}
+                  >
+                    {mode.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+        </View>
+
+        {/* Control Buttons - Top Right */}
+        <View style={styles.controlsOverlay}>
+          <TouchableOpacity
+            style={styles.controlButtonOverlay}
             onPress={onToggleFlash}
           >
-            <Text style={styles.controlButtonText}>
-              {flashEnabled ? '⚡ Flash ON' : '⚡ Flash OFF'}
+            <Text style={styles.controlButtonTextOverlay}>
+              {flashEnabled ? '⚡' : '⚡'}
             </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.controlButton, styles.cameraFlipButton]}
+            style={styles.controlButtonOverlay}
             onPress={onToggleCameraFacing}
           >
-            <Text style={styles.controlButtonText}>
-              {cameraFacing === 'back' ? '📷 Back' : '🤳 Front'}
+            <Text style={styles.controlButtonTextOverlay}>
+              {cameraFacing === 'back' ? '📷' : '🤳'}
             </Text>
           </TouchableOpacity>
 
-          {(scanMode === 'ocr' || scanMode === 'barcode' || scanMode === 'qrcode' || scanMode === 'barcodeorqrcode') && (
+          <View style={styles.zoomControlsOverlay}>
             <TouchableOpacity
-              style={[styles.controlButton, styles.autoCaptureButton]}
-              onPress={() => setAutoCapture(!autoCapture)}
-            >
-              <Text style={styles.controlButtonText}>
-                {autoCapture ? '🤖 Auto ON' : '👆 Manual'}
-              </Text>
-            </TouchableOpacity>
-          )}
-
-          <View style={styles.zoomControls}>
-            <TouchableOpacity
-              style={styles.zoomButton}
-              onPress={onZoomOut}
-              disabled={zoomLevel <= 1.0}
-            >
-              <Text style={styles.zoomButtonText}>-</Text>
-            </TouchableOpacity>
-            <Text style={styles.zoomText}>{zoomLevel.toFixed(1)}x</Text>
-            <TouchableOpacity
-              style={styles.zoomButton}
+              style={styles.zoomButtonOverlay}
               onPress={onZoomIn}
               disabled={zoomLevel >= 5.0}
             >
-              <Text style={styles.zoomButtonText}>+</Text>
+              <Text style={[styles.zoomButtonTextOverlay, zoomLevel >= 5.0 && styles.zoomButtonDisabled]}>+</Text>
+            </TouchableOpacity>
+            <Text style={styles.zoomTextOverlay}>{zoomLevel.toFixed(1)}x</Text>
+            <TouchableOpacity
+              style={styles.zoomButtonOverlay}
+              onPress={onZoomOut}
+              disabled={zoomLevel <= 1.0}
+            >
+              <Text style={[styles.zoomButtonTextOverlay, zoomLevel <= 1.0 && styles.zoomButtonDisabled]}>-</Text>
             </TouchableOpacity>
           </View>
         </View>
 
+        {/* Bottom Controls - Auto Capture & Scan Area */}
+        {scanMode !== 'photo' && (
+          <View style={styles.bottomControlsOverlay}>
+            {(scanMode === 'barcode' || scanMode === 'qrcode') && (
+              <TouchableOpacity
+                style={styles.bottomControlButton}
+                onPress={() => setScanAreaEnabled(!scanAreaEnabled)}
+              >
+                <Text style={styles.bottomControlButtonText}>
+                  {scanAreaEnabled ? '🎯 Area' : '📍 Area'}
+                </Text>
+              </TouchableOpacity>
+            )}
+
+            <TouchableOpacity
+              style={styles.bottomControlButton}
+              onPress={() => setAutoCapture(!autoCapture)}
+            >
+              <Text style={styles.bottomControlButtonText}>
+                {autoCapture ? '🤖 Auto' : '👆 Manual'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Capture Button - Bottom Center */}
         <TouchableOpacity
-          style={styles.captureButton}
+          style={styles.captureButtonOverlay}
           onPress={onCapturePress}
         >
           <View style={styles.captureButtonInner} />
         </TouchableOpacity>
+
+        {/* Results Overlay - Bottom Left */}
+        {(capturedImage || barcodeResults.length > 0) && (
+          <View style={styles.resultsOverlay}>
+            {capturedImage && (
+              <View style={styles.previewOverlayContainer}>
+                <Text style={styles.previewOverlayTitle}>Last:</Text>
+                <Image
+                  source={{ uri: `file://${capturedImage}` }}
+                  style={styles.previewOverlayImage}
+                  resizeMode="cover"
+                />
+              </View>
+            )}
+
+            {barcodeResults.length > 0 && (
+              <View style={styles.barcodeOverlayContainer}>
+                <Text style={styles.barcodeOverlayTitle}>Codes: {barcodeResults.length}</Text>
+                <ScrollView style={styles.barcodeOverlayScroll} nestedScrollEnabled>
+                  {barcodeResults.slice(0, 3).map((barcode, index) => (
+                    <Text key={index} style={styles.barcodeOverlayText} numberOfLines={1}>
+                      {barcode.scannedCode}
+                    </Text>
+                  ))}
+                </ScrollView>
+              </View>
+            )}
+          </View>
+        )}
       </View>
     </SafeAreaView>
   );
@@ -671,107 +673,131 @@ const styles = StyleSheet.create({
     color: '#aaa',
     fontSize: 11,
   },
-  modeSelector: {
-    backgroundColor: '#1a1a1a',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#333',
+  // Mode Dropdown (below recognition status)
+  modeDropdownOverlay: {
+    position: 'absolute',
+    top: 160,
+    left: 16,
   },
-  modeSelectorTitle: {
+  modeDropdownButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: 'rgba(51, 51, 51, 0.9)',
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(68, 68, 68, 0.9)',
+    minWidth: 115,
+  },
+  modeDropdownButtonText: {
     color: '#fff',
     fontSize: 12,
     fontWeight: '600',
-    marginBottom: 8,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
   },
-  modeScrollView: {
-    flexGrow: 0,
+  modeDropdownArrow: {
+    color: '#fff',
+    fontSize: 10,
+    marginLeft: 8,
   },
-  modeButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 20,
-    backgroundColor: '#333',
-    marginRight: 8,
+  modeDropdownMenu: {
+    backgroundColor: 'rgba(26, 26, 26, 0.95)',
+    borderRadius: 8,
+    marginTop: 4,
     borderWidth: 1,
-    borderColor: '#444',
+    borderColor: 'rgba(68, 68, 68, 0.9)',
+    overflow: 'hidden',
   },
-  modeButtonActive: {
-    backgroundColor: '#007bff',
-    borderColor: '#007bff',
-  },
-  modeButtonText: {
-    color: '#aaa',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  modeButtonTextActive: {
-    color: '#fff',
-  },
-  controls: {
-    paddingHorizontal: 20,
-    paddingVertical: 20,
-    backgroundColor: '#1a1a1a',
-  },
-  controlRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  controlButton: {
+  modeDropdownItem: {
     paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    backgroundColor: '#333',
+    paddingHorizontal: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(68, 68, 68, 0.5)',
   },
-  flashButton: {
-    flex: 1,
-    marginRight: 10,
+  modeDropdownItemActive: {
+    backgroundColor: 'rgba(0, 123, 255, 0.3)',
   },
-  cameraFlipButton: {
-    flex: 1,
-    marginRight: 10,
-  },
-  autoCaptureButton: {
-    flex: 1,
-    marginRight: 10,
-  },
-  controlButtonText: {
-    color: '#fff',
-    fontSize: 14,
+  modeDropdownItemText: {
+    color: '#aaa',
+    fontSize: 12,
     fontWeight: '600',
-    textAlign: 'center',
   },
-  zoomControls: {
-    flexDirection: 'row',
+  modeDropdownItemTextActive: {
+    color: '#fff',
+  },
+  controlsOverlay: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
+    alignItems: 'flex-end',
+  },
+  controlButtonOverlay: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(51, 51, 51, 0.9)',
     alignItems: 'center',
-    backgroundColor: '#333',
-    borderRadius: 8,
-    paddingHorizontal: 8,
+    justifyContent: 'center',
+    marginBottom: 12,
   },
-  zoomButton: {
+  controlButtonTextOverlay: {
+    fontSize: 22,
+  },
+  zoomControlsOverlay: {
+    flexDirection: 'column',
+    alignItems: 'center',
+    backgroundColor: 'rgba(51, 51, 51, 0.9)',
+    borderRadius: 24,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  },
+  zoomButtonOverlay: {
     width: 32,
     height: 32,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  zoomButtonText: {
+  zoomButtonTextOverlay: {
     color: '#fff',
     fontSize: 20,
     fontWeight: 'bold',
   },
-  zoomText: {
+  zoomButtonDisabled: {
+    color: '#666',
+  },
+  zoomTextOverlay: {
     color: '#fff',
-    fontSize: 14,
+    fontSize: 11,
     fontWeight: '600',
-    marginHorizontal: 12,
-    minWidth: 40,
+    marginVertical: 4,
     textAlign: 'center',
   },
-  captureButton: {
+  bottomControlsOverlay: {
+    position: 'absolute',
+    bottom: 100,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 12,
+  },
+  bottomControlButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 20,
+    backgroundColor: 'rgba(51, 51, 51, 0.9)',
+    borderWidth: 1,
+    borderColor: 'rgba(68, 68, 68, 0.9)',
+  },
+  bottomControlButtonText: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  captureButtonOverlay: {
+    position: 'absolute',
+    bottom: 20,
     alignSelf: 'center',
     width: 70,
     height: 70,
@@ -789,6 +815,49 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderWidth: 2,
     borderColor: '#333',
+  },
+  resultsOverlay: {
+    position: 'absolute',
+    bottom: 20,
+    left: 16,
+    maxWidth: 180,
+  },
+  previewOverlayContainer: {
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    borderRadius: 8,
+    padding: 8,
+    marginBottom: 8,
+  },
+  previewOverlayTitle: {
+    color: '#fff',
+    fontSize: 11,
+    fontWeight: '600',
+    marginBottom: 6,
+  },
+  previewOverlayImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 6,
+  },
+  barcodeOverlayContainer: {
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    borderRadius: 8,
+    padding: 8,
+  },
+  barcodeOverlayTitle: {
+    color: '#fff',
+    fontSize: 11,
+    fontWeight: '600',
+    marginBottom: 6,
+  },
+  barcodeOverlayScroll: {
+    maxHeight: 60,
+  },
+  barcodeOverlayText: {
+    color: '#4CAF50',
+    fontSize: 11,
+    fontWeight: '600',
+    marginBottom: 3,
   },
   scanAreaOverlay: {
     position: 'absolute',
