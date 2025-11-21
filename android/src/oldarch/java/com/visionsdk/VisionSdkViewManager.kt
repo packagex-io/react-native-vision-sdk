@@ -366,15 +366,16 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
   private fun reportError(args: ReadableArray?) {
 
     try {
-      val data = args?.getMap(0)
+      // In old architecture, data comes as a JSON string (already converted by JS side)
+      val dataString = args?.getString(0)
       val token = args?.getString(1)  // Retrieve token from the third element of the array
       val apiKey = args?.getString(2) // Retrieve API key from the fourth element
 
       val resolvedToken = token ?: this.token
       val resolvedApiKey = apiKey ?: this.apiKey
 
-      if (data == null) {
-        Log.e(TAG, "reportError: Data is null")
+      if (dataString == null || dataString == "null" || dataString.isBlank()) {
+        Log.e(TAG, "reportError: Data is null or empty")
         return
       }
 
@@ -389,8 +390,12 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
         }
       }
 
-      // Convert ReadableMap to a Kotlin Map
-      val parsedData = data.toHashMap()
+      // Parse JSON string to Map
+      val parsedData = JSONObject(dataString).let { json ->
+        json.keys().asSequence().associateWith { key ->
+          json.get(key)
+        }
+      }
 
       // Extract properties with default values
       val reportText = parsedData["reportText"] as? String ?: "No Report Text"
@@ -398,10 +403,14 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
       val modelSize = parsedData["size"] as? String ?: "large"
       val imagePath = parsedData["image"] as? String
 
-      // Safely handle 'response' as Map<String, Any?> or null
-      val response = parsedData["response"]?.asStringMap()
+      // Parse nested JSON objects
+      val response = (parsedData["response"] as? JSONObject)?.let { json ->
+        json.keys().asSequence().associateWith { key -> json.get(key) }
+      }
 
-      val errorFlags: Map<String, Boolean> = parsedData["errorFlags"]?.asStringMap()?.mapValues { it.value as? Boolean ?: false } ?: emptyMap()
+      val errorFlags: Map<String, Boolean> = (parsedData["errorFlags"] as? JSONObject)?.let { json ->
+        json.keys().asSequence().associateWith { key -> json.getBoolean(key) }
+      } ?: emptyMap()
 
 
       val modelToReport = when (modelType) {
@@ -1165,14 +1174,14 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
       0 -> captureImage()  // Command to capture an image.
       1 -> stopScanning()  // Command to stop scanning.
       2 -> startCamera()   // Command to start the camera.
-      3 -> setMetaData(args?.getMap(0))  // Command to set metadata.
-      4 -> setRecipient(args?.getMap(0)) // Command to set recipient information.
-      5 -> setSender(args?.getMap(0))    // Command to set sender information.
+      3 -> setMetaData(args?.getString(0))  // Command to set metadata (JSON string in old arch).
+      4 -> setRecipient(args?.getString(0)) // Command to set recipient information (JSON string in old arch).
+      5 -> setSender(args?.getString(0))    // Command to set sender information (JSON string in old arch).
       6 -> configureOnDeviceModel(args) // Command to configure on-device model.
       7 -> restartScanning()  // Command to restart scanning.
-      8 -> configureFocusSettings(args?.getMap(0).toString())  // Command to configure camera focus.
-      9 -> setObjectDetectionSettings(args?.getMap(0).toString())  // Command to configure object detection.
-      10 -> setCameraSettings(args?.getMap(0).toString())  // Command to configure camera settings.
+      8 -> configureFocusSettings(args?.getString(0))  // Command to configure camera focus (JSON string in old arch).
+      9 -> setObjectDetectionSettings(args?.getString(0))  // Command to configure object detection (JSON string in old arch).
+      10 -> setCameraSettings(args?.getString(0))  // Command to configure camera settings (JSON string in old arch).
       11 -> handleDevicePrediction(args)  // Command to handle image prediction.
       12 -> handleDevicePredictionWithCloudTransformations(args)  // Command to handle cloud-based prediction.
       13 -> handleCloudPrediction(args) // Command for shipping label prediction.
@@ -1211,28 +1220,47 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
   }
 
   // Set metadata for scanning
-  private fun setMetaData(metaData: ReadableMap?) {
-    Log.d(TAG, "metaData: $metaData")
-    this.metaData = metaData?.toHashMap() as Map<String, Any>? // do not remove this typecase, required for latest AGP
+  private fun setMetaData(metaDataString: String?) {
+    Log.d(TAG, "metaData: $metaDataString")
+    // In old architecture, data comes as a JSON string
+    this.metaData = if (metaDataString != null && metaDataString.isNotBlank()) {
+      JSONObject(metaDataString).let { json ->
+        json.keys().asSequence().associateWith { key ->
+          json.get(key)
+        }
+      }
+    } else {
+      null
+    }
   }
 
   // Set recipient information for scanning
-  private fun setRecipient(recipient: ReadableMap?) {
-    Log.d(TAG, "recipient: $recipient")
-    if (recipient == null) {
-      this.recipient = emptyMap()
+  private fun setRecipient(recipientString: String?) {
+    Log.d(TAG, "recipient: $recipientString")
+    // In old architecture, data comes as a JSON string
+    this.recipient = if (recipientString != null && recipientString.isNotBlank()) {
+      JSONObject(recipientString).let { json ->
+        json.keys().asSequence().associateWith { key ->
+          json.get(key)
+        }
+      }
     } else {
-      this.recipient = recipient.toHashMap() as Map<String, Any>? // do not remove this typecast, required for latest AGP
+      emptyMap()
     }
   }
 
   // Set sender information for scanning
-  private fun setSender(sender: ReadableMap?) {
-    Log.d(TAG, "sender: $sender")
-    if (sender == null) {
-      this.sender = emptyMap()
+  private fun setSender(senderString: String?) {
+    Log.d(TAG, "sender: $senderString")
+    // In old architecture, data comes as a JSON string
+    this.sender = if (senderString != null && senderString.isNotBlank()) {
+      JSONObject(senderString).let { json ->
+        json.keys().asSequence().associateWith { key ->
+          json.get(key)
+        }
+      }
     } else {
-      this.sender = sender.toHashMap() as Map<String, Any>? //do not remove this typecast, required for latest AGP
+      emptyMap()
     }
   }
 
@@ -1279,7 +1307,8 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
   // Configure the on-device model for OCR (Optical Character Recognition)
   private fun configureOnDeviceModel(args: ReadableArray?) {
 
-   val onDeviceConfigs =  args?.getMap(0).toString()
+   // In old architecture, the config comes as a JSON string (already converted by JS side)
+   val onDeviceConfigs =  args?.getString(0) ?: "null"
     Log.d(TAG, "configureOnDeviceModel: $onDeviceConfigs")
     val argToken = args?.getString(1)  // Retrieve token from the third element of the array
     val argApiKey = args?.getString(2) // Retrieve API key from the fourth element

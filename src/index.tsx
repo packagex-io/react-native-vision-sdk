@@ -31,10 +31,23 @@ import { correctOcrEvent } from './utils';
 
 // Import Fabric commands for new architecture
 let FabricCommands: any = null;
-try {
-  FabricCommands = require('./specs/VisionSdkViewNativeComponent').Commands;
-} catch (e) {
-  // Not using Fabric, will fall back to UIManager
+let isFabricEnabled = false;
+
+// Check if running in bridgeless mode (new architecture)
+// @ts-ignore
+const isBridgeless = global.RN$Bridgeless === true;
+
+if (isBridgeless) {
+  try {
+    const spec = require('./specs/VisionSdkViewNativeComponent');
+    if (spec && spec.Commands) {
+      FabricCommands = spec.Commands;
+      isFabricEnabled = true;
+    }
+  } catch (e) {
+    // Not using Fabric, will fall back to UIManager
+    isFabricEnabled = false;
+  }
 }
 
 export * from './types';
@@ -151,7 +164,7 @@ const Camera = forwardRef<VisionSdkRefProps, VisionSdkProps>(
 
         // Try to use Fabric commands first (new architecture) - Android only for now
         // iOS still uses the RCT_EXTERN_METHOD pattern which works via UIManager
-        if (Platform.OS === 'android' && FabricCommands && FabricCommands[commandName]) {
+        if (Platform.OS === 'android' && isFabricEnabled && FabricCommands && FabricCommands[commandName]) {
           console.log(`📤 Dispatching Fabric command: ${commandName}`);
           FabricCommands[commandName](VisionSDKViewRef.current, ...processedParams);
           return;

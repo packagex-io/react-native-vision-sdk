@@ -9,20 +9,24 @@ const LINKING_ERROR =
 
 const ComponentName = 'VisionSdkView';
 
-// Try to import the Fabric (codegen) component first
-// Falls back to legacy component if not available
+// Check if running in bridgeless mode (new architecture)
+// @ts-ignore
+const isBridgeless = global.RN$Bridgeless === true;
+
 let VisionSdkViewNative;
 
-try {
-  // Try to import the codegen spec (New Architecture)
-  VisionSdkViewNative = require('./specs/VisionSdkViewNativeComponent').default;
-} catch (e) {
-  // Fall back to legacy requireNativeComponent (Old Architecture)
-  VisionSdkViewNative = UIManager.getViewManagerConfig(ComponentName) != null
-    ? requireNativeComponent<VisionSdkViewProps>(ComponentName)
-    : () => {
-        throw new Error(LINKING_ERROR);
-      };
+if (isBridgeless) {
+  // Use Fabric component (New Architecture)
+  try {
+    VisionSdkViewNative = require('./specs/VisionSdkViewNativeComponent').default;
+    console.log('✅ VisionSdkView: Using Fabric component (New Architecture)');
+  } catch (e) {
+    throw new Error(LINKING_ERROR);
+  }
+} else {
+  // Use legacy requireNativeComponent (Old Architecture)
+  VisionSdkViewNative = requireNativeComponent<VisionSdkViewProps>(ComponentName);
+  console.log('✅ VisionSdkView: Using Legacy component (Old Architecture)');
 }
 
 export const VisionSdkView = VisionSdkViewNative;

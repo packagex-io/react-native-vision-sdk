@@ -168,12 +168,8 @@ const App: React.FC<{ route: any }> = ({ route }) => {
         nthFrameToProcess: 10
       });
 
-
-
-      setTimeout(() => {
-        visionSdk?.current?.startRunningHandler();
-        visionSdk?.current?.getAllTemplates()
-      }, 0)
+      // Don't start camera here - let useFocusEffect handle it to avoid race conditions
+      visionSdk?.current?.getAllTemplates()
 
       setLoading(false);
     }
@@ -182,8 +178,22 @@ const App: React.FC<{ route: any }> = ({ route }) => {
 
 
   useFocusEffect(useCallback(() => {
-    requestCameraPermission()
+    let timer: NodeJS.Timeout | null = null;
+
+    // Request permission first, then start camera
+    requestCameraPermission().then(() => {
+      // Only restart camera after permission is granted and a short delay
+      timer = setTimeout(() => {
+        if (visionSdk?.current) {
+          visionSdk.current.startRunningHandler();
+        }
+      }, 300); // Increased delay to ensure permission flow completes
+    });
+
     return () => {
+      if (timer) {
+        clearTimeout(timer);
+      }
       visionSdk?.current?.stopRunningHandler();
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current)
@@ -234,6 +244,8 @@ const App: React.FC<{ route: any }> = ({ route }) => {
   const testReportError = (type: String) => {
     try {
       setReportErrorStatus('idle');
+      console.log('🧪 Testing reportError for type:', type);
+
       switch (type) {
         case 'shipping_label':
           visionSdk.current?.reportError({
@@ -253,6 +265,7 @@ const App: React.FC<{ route: any }> = ({ route }) => {
               senderAddres: false
             }
           }, "", apiKey)
+          console.log('✅ reportError command dispatched');
           break;
 
       case 'item_label':
@@ -360,7 +373,7 @@ const App: React.FC<{ route: any }> = ({ route }) => {
     visionSdk?.current?.configureOnDeviceModel({
       type,
       size,
-    });
+    }, null, apiKey);
   }, [])
 
   const onReportError = useCallback((response) => {

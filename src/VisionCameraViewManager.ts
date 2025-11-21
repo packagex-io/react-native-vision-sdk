@@ -10,24 +10,25 @@ const LINKING_ERROR =
 
 const ComponentName = 'VisionCameraView';
 
-// Try to import the Fabric (codegen) component first
-// Falls back to legacy component if not available
-let VisionCameraViewNative;
-let isFabric = false;
+// Check if running in bridgeless mode (new architecture)
+// @ts-ignore
+const isBridgeless = global.RN$Bridgeless === true;
 
-try {
-  // Try to import the codegen spec (New Architecture)
-  VisionCameraViewNative = require('./specs/VisionCameraViewNativeComponent').default;
-  isFabric = true;
-  console.log('✅ VisionCameraView: Using Fabric component');
-} catch (e) {
-  // Fall back to legacy requireNativeComponent (Old Architecture)
-  VisionCameraViewNative = UIManager.getViewManagerConfig(ComponentName) != null
-    ? requireNativeComponent<VisionCameraViewProps>(ComponentName)
-    : () => {
-        throw new Error(LINKING_ERROR);
-      };
-  console.log('✅ VisionCameraView: Using Legacy component');
+let VisionCameraViewNative;
+let isFabric = isBridgeless;
+
+if (isBridgeless) {
+  // Use Fabric component (New Architecture)
+  try {
+    VisionCameraViewNative = require('./specs/VisionCameraViewNativeComponent').default;
+    console.log('✅ VisionCameraView: Using Fabric component (New Architecture)');
+  } catch (e) {
+    throw new Error(LINKING_ERROR);
+  }
+} else {
+  // Use legacy requireNativeComponent (Old Architecture)
+  VisionCameraViewNative = requireNativeComponent<VisionCameraViewProps>(ComponentName);
+  console.log('✅ VisionCameraView: Using Legacy component (Old Architecture)');
 }
 
 // Wrapper component to handle prop conversion for Fabric
