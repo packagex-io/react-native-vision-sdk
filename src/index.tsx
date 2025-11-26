@@ -426,9 +426,46 @@ const Camera = forwardRef<VisionSdkRefProps, VisionSdkProps>(
       [onDetected]
     );
 
-    const onBoundingBoxesDetectedHandler = useCallback((event: BoundingBoxesDetectedResult) => onBoundingBoxesDetected(parseNativeEvent<BoundingBoxesDetectedResult>(event)), [
-      onBoundingBoxesDetected
-    ])
+    const onBoundingBoxesDetectedHandler = useCallback((event: any) => {
+      let boundingBoxEvent = parseNativeEvent<BoundingBoxesDetectedResult>(event);
+
+      // Handle Fabric architecture - parse JSON strings if present
+      if (boundingBoxEvent.barcodeBoundingBoxesJson !== undefined) {
+        if (typeof boundingBoxEvent.barcodeBoundingBoxesJson === 'string' && boundingBoxEvent.barcodeBoundingBoxesJson.length > 0) {
+          try {
+            boundingBoxEvent.barcodeBoundingBoxes = JSON.parse(boundingBoxEvent.barcodeBoundingBoxesJson);
+          } catch (error) {
+            console.warn("Failed to parse barcodeBoundingBoxesJson:", error);
+            boundingBoxEvent.barcodeBoundingBoxes = [];
+          }
+        }
+        // Remove the internal JSON field
+        delete (boundingBoxEvent as any).barcodeBoundingBoxesJson;
+      }
+
+      if (boundingBoxEvent.qrCodeBoundingBoxesJson !== undefined) {
+        if (typeof boundingBoxEvent.qrCodeBoundingBoxesJson === 'string' && boundingBoxEvent.qrCodeBoundingBoxesJson.length > 0) {
+          try {
+            boundingBoxEvent.qrCodeBoundingBoxes = JSON.parse(boundingBoxEvent.qrCodeBoundingBoxesJson);
+          } catch (error) {
+            console.warn("Failed to parse qrCodeBoundingBoxesJson:", error);
+            boundingBoxEvent.qrCodeBoundingBoxes = [];
+          }
+        }
+        // Remove the internal JSON field
+        delete (boundingBoxEvent as any).qrCodeBoundingBoxesJson;
+      }
+
+      // Ensure arrays exist (for backward compatibility)
+      if (!boundingBoxEvent.barcodeBoundingBoxes || !Array.isArray(boundingBoxEvent.barcodeBoundingBoxes)) {
+        boundingBoxEvent.barcodeBoundingBoxes = [];
+      }
+      if (!boundingBoxEvent.qrCodeBoundingBoxes || !Array.isArray(boundingBoxEvent.qrCodeBoundingBoxes)) {
+        boundingBoxEvent.qrCodeBoundingBoxes = [];
+      }
+
+      onBoundingBoxesDetected(boundingBoxEvent);
+    }, [onBoundingBoxesDetected])
 
     const onErrorHandler = useCallback((event: any) =>
       onError(parseNativeEvent<ErrorResult>(event)), [onError])

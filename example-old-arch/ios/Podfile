@@ -5,7 +5,19 @@ require Pod::Executable.execute_command('node', ['-p',
     {paths: [process.argv[1]]},
   )', __dir__]).strip
 
-platform :ios, min_ios_version_supported
+# react-native-permissions setup
+def node_require(script)
+  # Resolve script with node to allow for hoisting
+  require Pod::Executable.execute_command('node', ['-p',
+    "require.resolve(
+      '#{script}',
+      {paths: [process.argv[1]]},
+    )", __dir__]).strip
+end
+
+node_require('react-native-permissions/scripts/setup.rb')
+
+platform :ios, '16.0'
 prepare_react_native_project!
 
 linkage = ENV['USE_FRAMEWORKS']
@@ -17,10 +29,20 @@ end
 target 'VisionSDKExampleOldArch' do
   config = use_native_modules!
 
+  # Add Vision SDK from parent directory
+  pod 'react-native-vision-sdk', :path => '../../'
+
+  # react-native-permissions
+  setup_permissions([
+    'Camera',
+  ])
+
   use_react_native!(
     :path => config[:reactNativePath],
     # An absolute path to your application root.
-    :app_path => "#{Pod::Config.instance.installation_root}/.."
+    :app_path => "#{Pod::Config.instance.installation_root}/..",
+    # Explicitly disable Fabric (New Architecture)
+    :fabric_enabled => false
   )
 
   target 'VisionSDKExampleOldArchTests' do
@@ -36,5 +58,49 @@ target 'VisionSDKExampleOldArch' do
       :mac_catalyst_enabled => false,
       # :ccache_enabled => true
     )
+
+    # Remove Fabric headers from umbrella header for old architecture
+    umbrella_header = File.join(installer.sandbox.root, 'Target Support Files/react-native-vision-sdk/react-native-vision-sdk-umbrella.h')
+    if File.exist?(umbrella_header)
+      content = File.read(umbrella_header)
+      # Remove Fabric component view imports
+      content.gsub!(/#import "VisionCameraViewComponentView.h"\n/, '')
+      content.gsub!(/#import "VisionSdkViewComponentView.h"\n/, '')
+      File.write(umbrella_header, content)
+      puts "Removed Fabric headers from react-native-vision-sdk umbrella header"
+    end
+
+    # Remove Fabric source files for old architecture
+    installer.pods_project.targets.each do |target|
+      # Remove Fabric codegen generated files from RNScreens, RNSVG, and RNSafeAreaContext
+      if ['RNScreens', 'RNSVG', 'RNSafeAreaContext'].include?(target.name)
+        puts "Removing Fabric codegen files from #{target.name}"
+        target.source_build_phase.files.reject! do |file|
+          file_path = file.file_ref&.real_path.to_s
+          should_remove = file_path.include?('-generated.mm') ||
+                         file_path.include?('JSI-generated.cpp') ||
+                         file_path.include?('ShadowNodes.cpp') ||
+                         file_path.include?('States.cpp')
+          if should_remove
+            puts "  Removed #{File.basename(file_path)}"
+          end
+          should_remove
+        end
+      end
+
+      # Remove Fabric files from react-native-vision-sdk
+      if target.name == 'react-native-vision-sdk'
+        puts "Removing Fabric files from react-native-vision-sdk"
+        target.source_build_phase.files.reject! do |file|
+          file_path = file.file_ref&.real_path.to_s
+          should_remove = file_path.include?('Fabric/VisionCameraViewComponentView.mm') ||
+                         file_path.include?('Fabric/VisionSdkViewComponentView.mm')
+          if should_remove
+            puts "  Removed #{File.basename(file_path)}"
+          end
+          should_remove
+        end
+      end
+    end
   end
 end

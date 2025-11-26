@@ -10,8 +10,9 @@ import {
   Image,
   Clipboard
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { VisionCore } from 'react-native-vision-sdk';
+import { VisionCore } from '../../src/index';
 import { useFocusEffect } from '@react-navigation/native';
 
 
@@ -297,8 +298,9 @@ const HomeScreen = ({ navigation }) => {
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.scrollContainer}>
-      <Text style={styles.title}>VisionCore Standalone Prediction Examples</Text>
+    <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
+      <ScrollView style={styles.container} contentContainerStyle={styles.scrollContainer}>
+        <Text style={styles.title}>VisionCore Standalone Prediction Examples</Text>
       <Text style={styles.subtitle}>Demonstrate headless OCR predictions without camera</Text>
 
       {/* Model Configuration */}
@@ -510,11 +512,16 @@ const HomeScreen = ({ navigation }) => {
       >
         <Text style={styles.primaryButtonText}>🎥 Open Vision Camera (New)</Text>
       </TouchableOpacity>
-    </ScrollView>
+      </ScrollView>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#f8f9fa'
+  },
   container: {
     flex: 1,
     backgroundColor: '#f8f9fa'

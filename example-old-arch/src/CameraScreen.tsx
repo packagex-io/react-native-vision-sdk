@@ -7,7 +7,7 @@ import VisionSdkView, {
   OCRConfig,
   BoundingBoxesDetectedResult,
   VisionCore
-} from 'react-native-vision-sdk';
+} from '../../src/index';
 import CameraFooterView from './Components/CameraFooterView';
 import DownloadingProgressView from './Components/DownloadingProgressView';
 import CameraHeaderView from './Components/CameraHeaderView';
@@ -59,14 +59,15 @@ const App: React.FC<{ route: any }> = ({ route }) => {
   const visionSdk = useRef<VisionSdkRefProps>(null);
   const [captureMode, setCaptureMode] = useState<'manual' | 'auto'>('manual');
   const timeoutRef = useRef<any>(null)
+  const boundingBoxTimeoutRef = useRef<any>(null);
+  const BOUNDING_BOX_AUTO_CLEAR_DELAY = 2000; // 2 seconds
   const [detectionSettings, setDetectionSettings] = useState({
     isTextIndicationOn: true,
     isBarCodeOrQRCodeIndicationOn: true,
     isDocumentIndicationOn: true,
     codeDetectionConfidence: 0.5,
     documentDetectionConfidence: 0.5,
-    secondsToWaitBeforeDocumentCapture: 2.0,
-    selectedTemplate: ''
+    secondsToWaitBeforeDocumentCapture: 2
   })
   const [detectedBoundingBoxes, setDetectedBoundingBoxes] = useState<BoundingBoxesDetectedResult>({
     barcodeBoundingBoxes: [],
@@ -161,9 +162,19 @@ const App: React.FC<{ route: any }> = ({ route }) => {
         focusImageRect: { x: scannerX, y: scannerY, width: scannerWidth, height: scannerHeight },
 
       }
-      visionSdk?.current?.setFocusSettings(focusSettings);
-      // console.log("SETTING DETECTION SETTING TO: ", detectionSettings)
-      visionSdk?.current?.setObjectDetectionSettings(detectionSettings);
+      // visionSdk?.current?.setFocusSettings(focusSettings);
+
+      // Clean the detection settings object - remove any undefined/null/empty string values
+      const cleanedSettings = Object.entries(detectionSettings).reduce((acc, [key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+          acc[key] = value;
+        }
+        return acc;
+      }, {} as any);
+
+      console.log("SETTING DETECTION SETTINGS TO: ", cleanedSettings);
+      visionSdk?.current?.setObjectDetectionSettings(cleanedSettings);
+
       visionSdk?.current?.setCameraSettings({
         nthFrameToProcess: 10
       });
@@ -198,6 +209,9 @@ const App: React.FC<{ route: any }> = ({ route }) => {
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current)
       }
+      if (boundingBoxTimeoutRef.current) {
+        clearTimeout(boundingBoxTimeoutRef.current);
+      }
     }
   }, []))
 
@@ -215,6 +229,9 @@ const App: React.FC<{ route: any }> = ({ route }) => {
   }, [ocrConfig])
 
   useEffect(() => {
+    // Note: Temporarily disabled due to type issues with old architecture
+    // This should be re-enabled and fixed properly for template support
+    /*
     let updatedDetectionSettings = detectionSettings
     if (selectedTemplate?.name) {
       updatedDetectionSettings = {
@@ -226,18 +243,32 @@ const App: React.FC<{ route: any }> = ({ route }) => {
       updatedDetectionSettings = rest
     }
     setDetectionSettings(updatedDetectionSettings)
+    */
   }, [selectedTemplate])
 
-  useEffect(() => {
-    visionSdk.current?.setObjectDetectionSettings(detectionSettings);
-  }, [detectionSettings])
+  // Commented out to prevent type conversion errors in old architecture
+  // The settings are still applied in requestCameraPermission (line 167)
+  // useEffect(() => {
+  //   visionSdk.current?.setObjectDetectionSettings(detectionSettings);
+  // }, [detectionSettings])
 
   // Capture photo when the button is pressed
   const handlePressCapture = useCallback(() => {
     visionSdk?.current?.cameraCaptureHandler();
   }, [])
 
-
+  // Clear bounding boxes helper function
+  const clearBoundingBoxes = useCallback(() => {
+    if (boundingBoxTimeoutRef.current) {
+      clearTimeout(boundingBoxTimeoutRef.current);
+      boundingBoxTimeoutRef.current = null;
+    }
+    setDetectedBoundingBoxes({
+      barcodeBoundingBoxes: [],
+      qrCodeBoundingBoxes: [],
+      documentBoundingBox: { x: 0, y: 0, width: 0, height: 0 }
+    });
+  }, []);
 
 
 
@@ -370,11 +401,16 @@ const App: React.FC<{ route: any }> = ({ route }) => {
   const handlePressOnDeviceOcr = useCallback((type: ModuleType = 'shipping_label',
     size: ModuleSize = 'large') => {
     setLoading(true);
-    visionSdk?.current?.configureOnDeviceModel({
-      type,
-      size,
-    }, null, apiKey);
-  }, [])
+
+    // Clean the config object - ensure all values are valid
+    const cleanConfig = {
+      type: type || 'shipping_label',
+      size: size || 'large'
+    };
+
+    console.log("Configuring on-device model with:", cleanConfig);
+    visionSdk?.current?.configureOnDeviceModel(cleanConfig, null, apiKey);
+  }, [apiKey])
 
   const onReportError = useCallback((response) => {
     visionSdk.current?.reportError({
@@ -403,7 +439,20 @@ const App: React.FC<{ route: any }> = ({ route }) => {
     setLoading(false);
     console.log("BARCODE SCAN RESULT: ", JSON.stringify(event))
 
-    visionSdk.current?.restartScanningHandler();
+    const codes = event.codes || [];
+    if (codes.length > 0) {
+      const barcodeInfo = codes.map((code: any, index: number) =>
+        `${index + 1}. ${code.value || code.scannedCode || 'Unknown'} (${code.type || code.symbology || 'Unknown type'})`
+      ).join('\n');
+
+      Alert.alert(
+        'Barcode Scanned',
+        `Found ${codes.length} barcode${codes.length > 1 ? 's' : ''}:\n\n${barcodeInfo}`,
+        [{ text: 'OK', onPress: () => visionSdk.current?.restartScanningHandler() }]
+      );
+    } else {
+      visionSdk.current?.restartScanningHandler();
+    }
   }, [])
 
 
@@ -521,10 +570,36 @@ const App: React.FC<{ route: any }> = ({ route }) => {
     visionSdk?.current?.deleteAllTemplates()
   }
 
-  const handleBoundingBoxesDetected = (args) => {
-    // console.log("BOUNDING BOXES DETECTED: ", args)
-    setDetectedBoundingBoxes(args)
-  }
+  const handleBoundingBoxesDetected = useCallback((args) => {
+    // Clear any existing timeout
+    if (boundingBoxTimeoutRef.current) {
+      clearTimeout(boundingBoxTimeoutRef.current);
+    }
+
+    // Update bounding boxes state
+    setDetectedBoundingBoxes(prev => {
+      const hasChanges =
+        JSON.stringify(prev.barcodeBoundingBoxes) !== JSON.stringify(args.barcodeBoundingBoxes) ||
+        JSON.stringify(prev.qrCodeBoundingBoxes) !== JSON.stringify(args.qrCodeBoundingBoxes) ||
+        JSON.stringify(prev.documentBoundingBox) !== JSON.stringify(args.documentBoundingBox);
+
+      if (hasChanges) {
+        console.log("📦 Bounding boxes updated:", {
+          barcodes: args.barcodeBoundingBoxes?.length || 0,
+          qrCodes: args.qrCodeBoundingBoxes?.length || 0,
+          hasDocument: args.documentBoundingBox?.width > 0
+        });
+      }
+
+      return args;
+    });
+
+    // Set timeout to auto-clear bounding boxes after delay
+    boundingBoxTimeoutRef.current = setTimeout(() => {
+      console.log(`⏰ Auto-clearing bounding boxes after ${BOUNDING_BOX_AUTO_CLEAR_DELAY}ms of inactivity`);
+      clearBoundingBoxes();
+    }, BOUNDING_BOX_AUTO_CLEAR_DELAY);
+  }, [clearBoundingBoxes, BOUNDING_BOX_AUTO_CLEAR_DELAY])
 
   const handlePriceTagDetected = useCallback((args) => {
     setDetectedPriceTag({
@@ -734,7 +809,8 @@ const App: React.FC<{ route: any }> = ({ route }) => {
 const styles = StyleSheet.create({
   mainContainer: {
     flex: 1,
-    position: 'relative'
+    position: 'relative',
+    backgroundColor: 'black'
   },
 });
 export default App;

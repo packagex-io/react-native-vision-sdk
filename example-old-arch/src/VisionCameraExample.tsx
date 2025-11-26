@@ -12,8 +12,8 @@ import {
   Dimensions,
 } from 'react-native';
 import { PERMISSIONS, RESULTS, request } from 'react-native-permissions';
-import { VisionCamera, VisionCameraRefProps, VisionCameraCaptureEvent, VisionCameraScanMode } from '../../';
-import { VisionCore } from 'react-native-vision-sdk';
+import { VisionCamera, VisionCameraRefProps, VisionCameraCaptureEvent, VisionCameraScanMode } from '../../src/VisionCamera';
+import { VisionCore } from '../../src';
 
 const VisionCameraExample = ({ navigation }) => {
   const cameraRef = useRef<VisionCameraRefProps>(null);

@@ -157,18 +157,55 @@ using namespace facebook::react;
     }
 
     self.contentView = _codeScannerView;
+
+    // Ensure user interaction is enabled
+    self.userInteractionEnabled = YES;
+    _codeScannerView.userInteractionEnabled = YES;
   }
 
   return self;
 }
 
+// MARK: - Touch Handling
+
+- (UIView *)hitTest:(CGPoint)point withEvent:(UIEvent *)event
+{
+  // Let touches pass through to buttons/controls on top of camera
+  UIView *hitView = [super hitTest:point withEvent:event];
+
+  // If hit view is this container, return nil to pass touch through
+  if (hitView == self) {
+    return nil;
+  }
+
+  return hitView;
+}
+
 // MARK: - Lifecycle methods
+
+- (void)didMoveToWindow
+{
+  [super didMoveToWindow];
+  NSLog(@"[VisionSdkViewComponentView] didMoveToWindow: %@", self.window);
+}
 
 - (void)prepareForRecycle
 {
   [super prepareForRecycle];
 
-  NSLog(@"[VisionSdkViewComponentView] prepareForRecycle - stopping camera");
+  NSLog(@"[VisionSdkViewComponentView] prepareForRecycle - stopping camera and clearing touch state");
+
+  // Force resign first responder to clear responder chain
+  if ([_codeScannerView isFirstResponder]) {
+    [_codeScannerView resignFirstResponder];
+  }
+  if ([self isFirstResponder]) {
+    [self resignFirstResponder];
+  }
+
+  // Clear any pending touch/gesture state
+  self.userInteractionEnabled = NO;
+  self.userInteractionEnabled = YES;
 
   // Stop camera when view is recycled
   [self stopRunning];
@@ -177,6 +214,14 @@ using namespace facebook::react;
 - (void)dealloc
 {
   NSLog(@"[VisionSdkViewComponentView] dealloc - cleaning up camera");
+
+  // Resign first responder before dealloc
+  if ([_codeScannerView isFirstResponder]) {
+    [_codeScannerView resignFirstResponder];
+  }
+  if ([self isFirstResponder]) {
+    [self resignFirstResponder];
+  }
 
   // Stop camera on deallocation
   SEL getter = NSSelectorFromString(@"codeScannerView");
@@ -403,7 +448,7 @@ using namespace facebook::react;
 // Implement command handlers using objc_msgSend for dynamic Swift class
 - (void)captureImage
 {
-  // Access the codeScannerView property using objc_msgSend (not KVC)
+  // Don't use dispatch_async for user-triggered actions - execute immediately for responsiveness
   SEL getter = NSSelectorFromString(@"codeScannerView");
   if ([_codeScannerView respondsToSelector:getter]) {
     id codeScannerView = ((id (*)(id, SEL))objc_msgSend)(_codeScannerView, getter);
@@ -418,54 +463,52 @@ using namespace facebook::react;
 
 - (void)stopRunning
 {
-  NSLog(@"[VisionSdkViewComponentView] stopRunning called on _codeScannerView: %@", _codeScannerView);
-  SEL getter = NSSelectorFromString(@"codeScannerView");
-  if ([_codeScannerView respondsToSelector:getter]) {
-    id codeScannerView = ((id (*)(id, SEL))objc_msgSend)(_codeScannerView, getter);
-    NSLog(@"[VisionSdkViewComponentView] Got nested codeScannerView: %@", codeScannerView);
-    if (codeScannerView) {
-      SEL stopRunning = NSSelectorFromString(@"stopRunning");
-      if ([codeScannerView respondsToSelector:stopRunning]) {
-        NSLog(@"[VisionSdkViewComponentView] Calling stopRunning on nested codeScannerView");
-        ((void (*)(id, SEL))objc_msgSend)(codeScannerView, stopRunning);
-        NSLog(@"[VisionSdkViewComponentView] stopRunning called successfully");
-      } else {
-        NSLog(@"[VisionSdkViewComponentView] codeScannerView does not respond to stopRunning");
+  NSLog(@"[VisionSdkViewComponentView] ⏱️ stopRunning: Dispatching to main queue");
+
+  // Dispatch to main queue asynchronously
+  dispatch_async(dispatch_get_main_queue(), ^{
+    SEL getter = NSSelectorFromString(@"codeScannerView");
+    if ([self->_codeScannerView respondsToSelector:getter]) {
+      id codeScannerView = ((id (*)(id, SEL))objc_msgSend)(self->_codeScannerView, getter);
+      if (codeScannerView) {
+        SEL stopRunning = NSSelectorFromString(@"stopRunning");
+        if ([codeScannerView respondsToSelector:stopRunning]) {
+          ((void (*)(id, SEL))objc_msgSend)(codeScannerView, stopRunning);
+          NSLog(@"[VisionSdkViewComponentView] stopRunning completed");
+        }
       }
-    } else {
-      NSLog(@"[VisionSdkViewComponentView] codeScannerView is nil");
     }
-  } else {
-    NSLog(@"[VisionSdkViewComponentView] _codeScannerView does not respond to codeScannerView getter");
-  }
+  });
 }
 
 - (void)startRunning
 {
-  NSLog(@"[VisionSdkViewComponentView] startRunning called on _codeScannerView: %@", _codeScannerView);
-  SEL getter = NSSelectorFromString(@"codeScannerView");
-  if ([_codeScannerView respondsToSelector:getter]) {
-    id codeScannerView = ((id (*)(id, SEL))objc_msgSend)(_codeScannerView, getter);
-    NSLog(@"[VisionSdkViewComponentView] Got nested codeScannerView: %@", codeScannerView);
-    if (codeScannerView) {
-      SEL startRunning = NSSelectorFromString(@"startRunning");
-      if ([codeScannerView respondsToSelector:startRunning]) {
-        NSLog(@"[VisionSdkViewComponentView] Calling startRunning on nested codeScannerView");
-        ((void (*)(id, SEL))objc_msgSend)(codeScannerView, startRunning);
-        NSLog(@"[VisionSdkViewComponentView] startRunning called successfully");
-      } else {
-        NSLog(@"[VisionSdkViewComponentView] codeScannerView does not respond to startRunning");
+  NSLog(@"[VisionSdkViewComponentView] ⏱️ startRunning called - dispatching to background queue");
+
+  // Dispatch to main queue asynchronously to prevent blocking UI
+  dispatch_async(dispatch_get_main_queue(), ^{
+    CFAbsoluteTime startTime = CFAbsoluteTimeGetCurrent();
+    NSLog(@"[VisionSdkViewComponentView] ⏱️ startRunning executing on main queue");
+
+    SEL getter = NSSelectorFromString(@"codeScannerView");
+    if ([self->_codeScannerView respondsToSelector:getter]) {
+      id codeScannerView = ((id (*)(id, SEL))objc_msgSend)(self->_codeScannerView, getter);
+      if (codeScannerView) {
+        SEL startRunning = NSSelectorFromString(@"startRunning");
+        if ([codeScannerView respondsToSelector:startRunning]) {
+          ((void (*)(id, SEL))objc_msgSend)(codeScannerView, startRunning);
+
+          CFAbsoluteTime endTime = CFAbsoluteTimeGetCurrent();
+          NSLog(@"[VisionSdkViewComponentView] ⏱️ startRunning completed in %.3f seconds", endTime - startTime);
+        }
       }
-    } else {
-      NSLog(@"[VisionSdkViewComponentView] codeScannerView is nil");
     }
-  } else {
-    NSLog(@"[VisionSdkViewComponentView] _codeScannerView does not respond to codeScannerView getter");
-  }
+  });
 }
 
 - (void)restartScanning
 {
+  // Don't use dispatch_async for user-triggered actions - execute immediately
   SEL getter = NSSelectorFromString(@"codeScannerView");
   if ([_codeScannerView respondsToSelector:getter]) {
     id codeScannerView = ((id (*)(id, SEL))objc_msgSend)(_codeScannerView, getter);
@@ -549,134 +592,156 @@ using namespace facebook::react;
 
 - (void)configureOnDeviceModel:(NSString *)onDeviceConfigsJson token:(NSString *)token apiKey:(NSString *)apiKey
 {
-  NSLog(@"[VisionSdkViewComponentView] configureOnDeviceModel called with JSON: %@, token: %@, apiKey: %@", onDeviceConfigsJson, token, apiKey);
+  NSLog(@"[VisionSdkViewComponentView] ⏱️ configureOnDeviceModel: Dispatching to main queue (heavy operation - model download)");
 
-  NSData *data = [onDeviceConfigsJson dataUsingEncoding:NSUTF8StringEncoding];
-  if (data) {
-    NSDictionary *onDeviceConfigs = [NSJSONSerialization JSONObjectWithData:data options:0 error:nil];
-    NSLog(@"[VisionSdkViewComponentView] Parsed onDeviceConfigs: %@", onDeviceConfigs);
+  // Dispatch to main queue asynchronously - this can take several seconds to download models
+  dispatch_async(dispatch_get_main_queue(), ^{
+    CFAbsoluteTime startTime = CFAbsoluteTimeGetCurrent();
 
-    if (onDeviceConfigs) {
-      NSString *modelType = onDeviceConfigs[@"type"];
-      NSString *modelSize = onDeviceConfigs[@"size"];
-      NSLog(@"[VisionSdkViewComponentView] modelType: %@, modelSize: %@", modelType, modelSize);
+    NSData *data = [onDeviceConfigsJson dataUsingEncoding:NSUTF8StringEncoding];
+    if (data) {
+      NSDictionary *onDeviceConfigs = [NSJSONSerialization JSONObjectWithData:data options:0 error:nil];
 
-      // configureOnDeviceModel is implemented on RNCodeScannerView, not on nested codeScannerView
-      SEL configureMethod = NSSelectorFromString(@"configureOnDeviceModelWithModelType:modelSize:token:apiKey:");
-      NSLog(@"[VisionSdkViewComponentView] Does _codeScannerView respond to configureOnDeviceModelWithModelType:modelSize:token:apiKey:? %d", [_codeScannerView respondsToSelector:configureMethod]);
+      if (onDeviceConfigs) {
+        NSString *modelType = onDeviceConfigs[@"type"];
+        NSString *modelSize = onDeviceConfigs[@"size"];
 
-      if ([_codeScannerView respondsToSelector:configureMethod]) {
-        NSLog(@"[VisionSdkViewComponentView] Calling configureOnDeviceModel on _codeScannerView with type=%@, size=%@, token=%@, apiKey=%@", modelType, modelSize, token, apiKey);
-        ((void (*)(id, SEL, id, id, id, id))objc_msgSend)(_codeScannerView, configureMethod, modelType, modelSize, token, apiKey);
-        NSLog(@"[VisionSdkViewComponentView] configureOnDeviceModel called successfully");
-      } else {
-        NSLog(@"[VisionSdkViewComponentView] ERROR: _codeScannerView does not respond to configureOnDeviceModelWithModelType:modelSize:token:apiKey:");
+        SEL configureMethod = NSSelectorFromString(@"configureOnDeviceModelWithModelType:modelSize:token:apiKey:");
+        if ([self->_codeScannerView respondsToSelector:configureMethod]) {
+          ((void (*)(id, SEL, id, id, id, id))objc_msgSend)(self->_codeScannerView, configureMethod, modelType, modelSize, token, apiKey);
+
+          CFAbsoluteTime endTime = CFAbsoluteTimeGetCurrent();
+          NSLog(@"[VisionSdkViewComponentView] ⏱️ configureOnDeviceModel: Completed in %.3f seconds", endTime - startTime);
+        }
       }
     }
-  }
+  });
 }
 
 - (void)setFocusSettings:(NSString *)focusSettingsJson
 {
-  NSLog(@"[VisionSdkViewComponentView] setFocusSettings called");
+  NSLog(@"[VisionSdkViewComponentView] ⏱️ setFocusSettings: Dispatching to main queue");
 
-  NSData *data = [focusSettingsJson dataUsingEncoding:NSUTF8StringEncoding];
-  if (data) {
-    NSDictionary *focusSettings = [NSJSONSerialization JSONObjectWithData:data options:0 error:nil];
-    if (focusSettings) {
-      SEL applyMethod = NSSelectorFromString(@"applyFocusSettings:");
-      if ([_codeScannerView respondsToSelector:applyMethod]) {
-        ((void (*)(id, SEL, id))objc_msgSend)(_codeScannerView, applyMethod, focusSettings);
-        NSLog(@"[VisionSdkViewComponentView] applyFocusSettings called successfully");
+  // Dispatch to main queue asynchronously to prevent blocking UI
+  dispatch_async(dispatch_get_main_queue(), ^{
+    NSData *data = [focusSettingsJson dataUsingEncoding:NSUTF8StringEncoding];
+    if (data) {
+      NSDictionary *focusSettings = [NSJSONSerialization JSONObjectWithData:data options:0 error:nil];
+      if (focusSettings) {
+        SEL applyMethod = NSSelectorFromString(@"applyFocusSettings:");
+        if ([self->_codeScannerView respondsToSelector:applyMethod]) {
+          ((void (*)(id, SEL, id))objc_msgSend)(self->_codeScannerView, applyMethod, focusSettings);
+          NSLog(@"[VisionSdkViewComponentView] applyFocusSettings completed");
+        }
       }
     }
-  }
+  });
 }
 
 - (void)setObjectDetectionSettings:(NSString *)objectDetectionSettingsJson
 {
-  NSLog(@"[VisionSdkViewComponentView] setObjectDetectionSettings called");
+  NSLog(@"[VisionSdkViewComponentView] ⏱️ setObjectDetectionSettings: Dispatching to main queue");
 
-  NSData *data = [objectDetectionSettingsJson dataUsingEncoding:NSUTF8StringEncoding];
-  if (data) {
-    NSDictionary *objectDetectionSettings = [NSJSONSerialization JSONObjectWithData:data options:0 error:nil];
-    if (objectDetectionSettings) {
-      SEL applyMethod = NSSelectorFromString(@"applyObjectDetectionSettings:");
-      if ([_codeScannerView respondsToSelector:applyMethod]) {
-        ((void (*)(id, SEL, id))objc_msgSend)(_codeScannerView, applyMethod, objectDetectionSettings);
-        NSLog(@"[VisionSdkViewComponentView] applyObjectDetectionSettings called successfully");
+  // Dispatch to main queue asynchronously to prevent blocking UI
+  dispatch_async(dispatch_get_main_queue(), ^{
+    NSData *data = [objectDetectionSettingsJson dataUsingEncoding:NSUTF8StringEncoding];
+    if (data) {
+      NSDictionary *objectDetectionSettings = [NSJSONSerialization JSONObjectWithData:data options:0 error:nil];
+      if (objectDetectionSettings) {
+        SEL applyMethod = NSSelectorFromString(@"applyObjectDetectionSettings:");
+        if ([self->_codeScannerView respondsToSelector:applyMethod]) {
+          ((void (*)(id, SEL, id))objc_msgSend)(self->_codeScannerView, applyMethod, objectDetectionSettings);
+          NSLog(@"[VisionSdkViewComponentView] applyObjectDetectionSettings completed");
+        }
       }
     }
-  }
+  });
 }
 
 - (void)setCameraSettings:(NSString *)cameraSettingsJson
 {
-  NSLog(@"[VisionSdkViewComponentView] setCameraSettings called");
+  NSLog(@"[VisionSdkViewComponentView] ⏱️ setCameraSettings: Dispatching to main queue");
 
-  NSData *data = [cameraSettingsJson dataUsingEncoding:NSUTF8StringEncoding];
-  if (data) {
-    NSDictionary *cameraSettings = [NSJSONSerialization JSONObjectWithData:data options:0 error:nil];
-    if (cameraSettings) {
-      SEL applyMethod = NSSelectorFromString(@"applyCameraSettings:");
-      if ([_codeScannerView respondsToSelector:applyMethod]) {
-        ((void (*)(id, SEL, id))objc_msgSend)(_codeScannerView, applyMethod, cameraSettings);
-        NSLog(@"[VisionSdkViewComponentView] applyCameraSettings called successfully");
+  // Dispatch to main queue asynchronously to prevent blocking UI
+  dispatch_async(dispatch_get_main_queue(), ^{
+    CFAbsoluteTime startTime = CFAbsoluteTimeGetCurrent();
+
+    NSData *data = [cameraSettingsJson dataUsingEncoding:NSUTF8StringEncoding];
+    if (data) {
+      NSDictionary *cameraSettings = [NSJSONSerialization JSONObjectWithData:data options:0 error:nil];
+      if (cameraSettings) {
+        SEL applyMethod = NSSelectorFromString(@"applyCameraSettings:");
+        if ([self->_codeScannerView respondsToSelector:applyMethod]) {
+          ((void (*)(id, SEL, id))objc_msgSend)(self->_codeScannerView, applyMethod, cameraSettings);
+
+          CFAbsoluteTime endTime = CFAbsoluteTimeGetCurrent();
+          NSLog(@"[VisionSdkViewComponentView] ⏱️ setCameraSettings: Completed in %.3f seconds", endTime - startTime);
+        }
       }
     }
-  }
+  });
 }
 
 - (void)createTemplate
 {
-  NSLog(@"[VisionSdkViewComponentView] createTemplate called");
+  NSLog(@"[VisionSdkViewComponentView] ⏱️ createTemplate: Dispatching to main queue");
 
-  SEL createTemplateMethod = NSSelectorFromString(@"createTemplate");
-  if ([_codeScannerView respondsToSelector:createTemplateMethod]) {
-    ((void (*)(id, SEL))objc_msgSend)(_codeScannerView, createTemplateMethod);
-    NSLog(@"[VisionSdkViewComponentView] createTemplate called successfully");
-  } else {
-    NSLog(@"[VisionSdkViewComponentView] ERROR: _codeScannerView does not respond to createTemplate");
-  }
+  // Dispatch to main queue asynchronously - involves file I/O
+  dispatch_async(dispatch_get_main_queue(), ^{
+    SEL createTemplateMethod = NSSelectorFromString(@"createTemplate");
+    if ([self->_codeScannerView respondsToSelector:createTemplateMethod]) {
+      ((void (*)(id, SEL))objc_msgSend)(self->_codeScannerView, createTemplateMethod);
+      NSLog(@"[VisionSdkViewComponentView] createTemplate completed");
+    }
+  });
 }
 
 - (void)getAllTemplates
 {
-  NSLog(@"[VisionSdkViewComponentView] getAllTemplates called");
+  NSLog(@"[VisionSdkViewComponentView] ⏱️ getAllTemplates: Dispatching to background queue");
 
-  SEL getAllTemplatesMethod = NSSelectorFromString(@"getAllTemplates");
-  if ([_codeScannerView respondsToSelector:getAllTemplatesMethod]) {
-    ((void (*)(id, SEL))objc_msgSend)(_codeScannerView, getAllTemplatesMethod);
-    NSLog(@"[VisionSdkViewComponentView] getAllTemplates called successfully");
-  } else {
-    NSLog(@"[VisionSdkViewComponentView] ERROR: _codeScannerView does not respond to getAllTemplates");
-  }
+  // Dispatch to main queue asynchronously to prevent blocking UI
+  dispatch_async(dispatch_get_main_queue(), ^{
+    CFAbsoluteTime startTime = CFAbsoluteTimeGetCurrent();
+
+    SEL getAllTemplatesMethod = NSSelectorFromString(@"getAllTemplates");
+    if ([self->_codeScannerView respondsToSelector:getAllTemplatesMethod]) {
+      ((void (*)(id, SEL))objc_msgSend)(self->_codeScannerView, getAllTemplatesMethod);
+
+      CFAbsoluteTime endTime = CFAbsoluteTimeGetCurrent();
+      NSLog(@"[VisionSdkViewComponentView] ⏱️ getAllTemplates: Completed in %.3f seconds", endTime - startTime);
+    } else {
+      NSLog(@"[VisionSdkViewComponentView] ERROR: _codeScannerView does not respond to getAllTemplates");
+    }
+  });
 }
 
 - (void)deleteTemplateWithId:(NSString *)templateId
 {
-  NSLog(@"[VisionSdkViewComponentView] deleteTemplateWithId called with id: %@", templateId);
+  NSLog(@"[VisionSdkViewComponentView] ⏱️ deleteTemplateWithId: Dispatching to main queue");
 
-  SEL deleteTemplateMethod = NSSelectorFromString(@"deleteTemplateWithId:");
-  if ([_codeScannerView respondsToSelector:deleteTemplateMethod]) {
-    ((void (*)(id, SEL, id))objc_msgSend)(_codeScannerView, deleteTemplateMethod, templateId);
-    NSLog(@"[VisionSdkViewComponentView] deleteTemplateWithId called successfully");
-  } else {
-    NSLog(@"[VisionSdkViewComponentView] ERROR: _codeScannerView does not respond to deleteTemplateWithId:");
-  }
+  // Dispatch to main queue asynchronously - involves file I/O
+  dispatch_async(dispatch_get_main_queue(), ^{
+    SEL deleteTemplateMethod = NSSelectorFromString(@"deleteTemplateWithId:");
+    if ([self->_codeScannerView respondsToSelector:deleteTemplateMethod]) {
+      ((void (*)(id, SEL, id))objc_msgSend)(self->_codeScannerView, deleteTemplateMethod, templateId);
+      NSLog(@"[VisionSdkViewComponentView] deleteTemplateWithId completed");
+    }
+  });
 }
 
 - (void)deleteAllTemplates
 {
-  NSLog(@"[VisionSdkViewComponentView] deleteAllTemplates called");
+  NSLog(@"[VisionSdkViewComponentView] ⏱️ deleteAllTemplates: Dispatching to main queue");
 
-  SEL deleteAllTemplatesMethod = NSSelectorFromString(@"deleteAllTemplates");
-  if ([_codeScannerView respondsToSelector:deleteAllTemplatesMethod]) {
-    ((void (*)(id, SEL))objc_msgSend)(_codeScannerView, deleteAllTemplatesMethod);
-    NSLog(@"[VisionSdkViewComponentView] deleteAllTemplates called successfully");
-  } else {
-    NSLog(@"[VisionSdkViewComponentView] ERROR: _codeScannerView does not respond to deleteAllTemplates");
-  }
+  // Dispatch to main queue asynchronously - involves file I/O
+  dispatch_async(dispatch_get_main_queue(), ^{
+    SEL deleteAllTemplatesMethod = NSSelectorFromString(@"deleteAllTemplates");
+    if ([self->_codeScannerView respondsToSelector:deleteAllTemplatesMethod]) {
+      ((void (*)(id, SEL))objc_msgSend)(self->_codeScannerView, deleteAllTemplatesMethod);
+      NSLog(@"[VisionSdkViewComponentView] deleteAllTemplates completed");
+    }
+  });
 }
 
 // MARK: - Cloud Prediction Commands
@@ -704,24 +769,27 @@ using namespace facebook::react;
 
 - (void)getPrediction:(NSString *)image barcodeJson:(NSString *)barcodeJson
 {
-  NSLog(@"[VisionSdkViewComponentView] getPrediction called with image: %@", image);
+  NSLog(@"[VisionSdkViewComponentView] ⏱️ getPrediction: Dispatching to main queue");
 
-  // Parse barcode JSON to array
-  NSArray *barcodeArray = @[];
-  if (barcodeJson && barcodeJson.length > 0) {
-    NSData *jsonData = [barcodeJson dataUsingEncoding:NSUTF8StringEncoding];
-    if (jsonData) {
-      barcodeArray = [NSJSONSerialization JSONObjectWithData:jsonData options:0 error:nil];
+  // Dispatch to main queue asynchronously - image loading may be synchronous
+  dispatch_async(dispatch_get_main_queue(), ^{
+    // Parse barcode JSON to array
+    NSArray *barcodeArray = @[];
+    if (barcodeJson && barcodeJson.length > 0) {
+      NSData *jsonData = [barcodeJson dataUsingEncoding:NSUTF8StringEncoding];
+      if (jsonData) {
+        barcodeArray = [NSJSONSerialization JSONObjectWithData:jsonData options:0 error:nil];
+      }
     }
-  }
 
-  // Call the manager method which handles image loading and barcode transformation
-  id manager = [self getManager];
-  SEL selector = NSSelectorFromString(@"getPrediction:image:barcode:");
-  if (manager && [manager respondsToSelector:selector]) {
-    NSNumber *tagNumber = @(self.tag);
-    ((void (*)(id, SEL, id, id, id))objc_msgSend)(manager, selector, tagNumber, image, barcodeArray);
-  }
+    // Call the manager method which handles image loading and barcode transformation
+    id manager = [self getManager];
+    SEL selector = NSSelectorFromString(@"getPrediction:image:barcode:");
+    if (manager && [manager respondsToSelector:selector]) {
+      NSNumber *tagNumber = @(self.tag);
+      ((void (*)(id, SEL, id, id, id))objc_msgSend)(manager, selector, tagNumber, image, barcodeArray);
+    }
+  });
 }
 
 - (void)getPredictionWithCloudTransformations:(NSString *)image
@@ -735,60 +803,63 @@ using namespace facebook::react;
                                   senderJson:(NSString *)senderJson
                            shouldResizeImage:(BOOL)shouldResizeImage
 {
-  NSLog(@"[VisionSdkViewComponentView] getPredictionWithCloudTransformations called");
+  NSLog(@"[VisionSdkViewComponentView] ⏱️ getPredictionWithCloudTransformations: Dispatching to main queue");
 
-  // Parse JSON strings
-  NSArray *barcodeArray = @[];
-  NSDictionary *options = nil;
-  NSDictionary *metadata = nil;
-  NSDictionary *recipient = nil;
-  NSDictionary *sender = nil;
+  // Dispatch to main queue asynchronously - lots of JSON parsing + image loading
+  dispatch_async(dispatch_get_main_queue(), ^{
+    // Parse JSON strings
+    NSArray *barcodeArray = @[];
+    NSDictionary *options = nil;
+    NSDictionary *metadata = nil;
+    NSDictionary *recipient = nil;
+    NSDictionary *sender = nil;
 
-  if (barcodeJson && barcodeJson.length > 0) {
-    NSData *jsonData = [barcodeJson dataUsingEncoding:NSUTF8StringEncoding];
-    if (jsonData) {
-      barcodeArray = [NSJSONSerialization JSONObjectWithData:jsonData options:0 error:nil];
+    if (barcodeJson && barcodeJson.length > 0) {
+      NSData *jsonData = [barcodeJson dataUsingEncoding:NSUTF8StringEncoding];
+      if (jsonData) {
+        barcodeArray = [NSJSONSerialization JSONObjectWithData:jsonData options:0 error:nil];
+      }
     }
-  }
 
-  if (optionsJson && optionsJson.length > 0) {
-    NSData *jsonData = [optionsJson dataUsingEncoding:NSUTF8StringEncoding];
-    if (jsonData) {
-      options = [NSJSONSerialization JSONObjectWithData:jsonData options:0 error:nil];
+    if (optionsJson && optionsJson.length > 0) {
+      NSData *jsonData = [optionsJson dataUsingEncoding:NSUTF8StringEncoding];
+      if (jsonData) {
+        options = [NSJSONSerialization JSONObjectWithData:jsonData options:0 error:nil];
+      }
     }
-  }
 
-  if (metadataJson && metadataJson.length > 0) {
-    NSData *jsonData = [metadataJson dataUsingEncoding:NSUTF8StringEncoding];
-    if (jsonData) {
-      metadata = [NSJSONSerialization JSONObjectWithData:jsonData options:0 error:nil];
+    if (metadataJson && metadataJson.length > 0) {
+      NSData *jsonData = [metadataJson dataUsingEncoding:NSUTF8StringEncoding];
+      if (jsonData) {
+        metadata = [NSJSONSerialization JSONObjectWithData:jsonData options:0 error:nil];
+      }
     }
-  }
 
-  if (recipientJson && recipientJson.length > 0) {
-    NSData *jsonData = [recipientJson dataUsingEncoding:NSUTF8StringEncoding];
-    if (jsonData) {
-      recipient = [NSJSONSerialization JSONObjectWithData:jsonData options:0 error:nil];
+    if (recipientJson && recipientJson.length > 0) {
+      NSData *jsonData = [recipientJson dataUsingEncoding:NSUTF8StringEncoding];
+      if (jsonData) {
+        recipient = [NSJSONSerialization JSONObjectWithData:jsonData options:0 error:nil];
+      }
     }
-  }
 
-  if (senderJson && senderJson.length > 0) {
-    NSData *jsonData = [senderJson dataUsingEncoding:NSUTF8StringEncoding];
-    if (jsonData) {
-      sender = [NSJSONSerialization JSONObjectWithData:jsonData options:0 error:nil];
+    if (senderJson && senderJson.length > 0) {
+      NSData *jsonData = [senderJson dataUsingEncoding:NSUTF8StringEncoding];
+      if (jsonData) {
+        sender = [NSJSONSerialization JSONObjectWithData:jsonData options:0 error:nil];
+      }
     }
-  }
 
-  id manager = [self getManager];
-  SEL selector = NSSelectorFromString(@"getPredictionWithCloudTransformations:image:barcode:token:apiKey:locationId:options:metadata:recipient:sender:shouldResizeImage:");
-  if (manager && [manager respondsToSelector:selector]) {
-    NSNumber *tagNumber = @(self.tag);
-    NSNumber *shouldResize = @(shouldResizeImage);
-    ((void (*)(id, SEL, id, id, id, id, id, id, id, id, id, id, id))objc_msgSend)(
-      manager, selector, tagNumber, image, barcodeArray, token, apiKey, locationId,
-      options, metadata, recipient, sender, shouldResize
-    );
-  }
+    id manager = [self getManager];
+    SEL selector = NSSelectorFromString(@"getPredictionWithCloudTransformations:image:barcode:token:apiKey:locationId:options:metadata:recipient:sender:shouldResizeImage:");
+    if (manager && [manager respondsToSelector:selector]) {
+      NSNumber *tagNumber = @(self.tag);
+      NSNumber *shouldResize = @(shouldResizeImage);
+      ((void (*)(id, SEL, id, id, id, id, id, id, id, id, id, id, id))objc_msgSend)(
+        manager, selector, tagNumber, image, barcodeArray, token, apiKey, locationId,
+        options, metadata, recipient, sender, shouldResize
+      );
+    }
+  });
 }
 
 - (void)getPredictionShippingLabelCloud:(NSString *)image
@@ -802,46 +873,48 @@ using namespace facebook::react;
                             senderJson:(NSString *)senderJson
                      shouldResizeImage:(BOOL)shouldResizeImage
 {
-  NSLog(@"[VisionSdkViewComponentView] getPredictionShippingLabelCloud called");
+  NSLog(@"[VisionSdkViewComponentView] ⏱️ getPredictionShippingLabelCloud: Dispatching to main queue");
 
-  // Parse JSON strings (same as above)
-  NSArray *barcodeArray = @[];
-  NSDictionary *options = nil;
-  NSDictionary *metadata = nil;
-  NSDictionary *recipient = nil;
-  NSDictionary *sender = nil;
+  dispatch_async(dispatch_get_main_queue(), ^{
+    // Parse JSON strings
+    NSArray *barcodeArray = @[];
+    NSDictionary *options = nil;
+    NSDictionary *metadata = nil;
+    NSDictionary *recipient = nil;
+    NSDictionary *sender = nil;
 
-  if (barcodeJson && barcodeJson.length > 0) {
-    NSData *jsonData = [barcodeJson dataUsingEncoding:NSUTF8StringEncoding];
-    if (jsonData) barcodeArray = [NSJSONSerialization JSONObjectWithData:jsonData options:0 error:nil];
-  }
-  if (optionsJson && optionsJson.length > 0) {
-    NSData *jsonData = [optionsJson dataUsingEncoding:NSUTF8StringEncoding];
-    if (jsonData) options = [NSJSONSerialization JSONObjectWithData:jsonData options:0 error:nil];
-  }
-  if (metadataJson && metadataJson.length > 0) {
-    NSData *jsonData = [metadataJson dataUsingEncoding:NSUTF8StringEncoding];
-    if (jsonData) metadata = [NSJSONSerialization JSONObjectWithData:jsonData options:0 error:nil];
-  }
-  if (recipientJson && recipientJson.length > 0) {
-    NSData *jsonData = [recipientJson dataUsingEncoding:NSUTF8StringEncoding];
-    if (jsonData) recipient = [NSJSONSerialization JSONObjectWithData:jsonData options:0 error:nil];
-  }
-  if (senderJson && senderJson.length > 0) {
-    NSData *jsonData = [senderJson dataUsingEncoding:NSUTF8StringEncoding];
-    if (jsonData) sender = [NSJSONSerialization JSONObjectWithData:jsonData options:0 error:nil];
-  }
+    if (barcodeJson && barcodeJson.length > 0) {
+      NSData *jsonData = [barcodeJson dataUsingEncoding:NSUTF8StringEncoding];
+      if (jsonData) barcodeArray = [NSJSONSerialization JSONObjectWithData:jsonData options:0 error:nil];
+    }
+    if (optionsJson && optionsJson.length > 0) {
+      NSData *jsonData = [optionsJson dataUsingEncoding:NSUTF8StringEncoding];
+      if (jsonData) options = [NSJSONSerialization JSONObjectWithData:jsonData options:0 error:nil];
+    }
+    if (metadataJson && metadataJson.length > 0) {
+      NSData *jsonData = [metadataJson dataUsingEncoding:NSUTF8StringEncoding];
+      if (jsonData) metadata = [NSJSONSerialization JSONObjectWithData:jsonData options:0 error:nil];
+    }
+    if (recipientJson && recipientJson.length > 0) {
+      NSData *jsonData = [recipientJson dataUsingEncoding:NSUTF8StringEncoding];
+      if (jsonData) recipient = [NSJSONSerialization JSONObjectWithData:jsonData options:0 error:nil];
+    }
+    if (senderJson && senderJson.length > 0) {
+      NSData *jsonData = [senderJson dataUsingEncoding:NSUTF8StringEncoding];
+      if (jsonData) sender = [NSJSONSerialization JSONObjectWithData:jsonData options:0 error:nil];
+    }
 
-  id manager = [self getManager];
-  SEL selector = NSSelectorFromString(@"getPredictionShippingLabelCloud:image:barcode:token:apiKey:locationId:options:metadata:recipient:sender:shouldResizeImage:");
-  if (manager && [manager respondsToSelector:selector]) {
-    NSNumber *tagNumber = @(self.tag);
-    NSNumber *shouldResize = @(shouldResizeImage);
-    ((void (*)(id, SEL, id, id, id, id, id, id, id, id, id, id, id))objc_msgSend)(
-      manager, selector, tagNumber, image, barcodeArray, token, apiKey, locationId,
-      options, metadata, recipient, sender, shouldResize
-    );
-  }
+    id manager = [self getManager];
+    SEL selector = NSSelectorFromString(@"getPredictionShippingLabelCloud:image:barcode:token:apiKey:locationId:options:metadata:recipient:sender:shouldResizeImage:");
+    if (manager && [manager respondsToSelector:selector]) {
+      NSNumber *tagNumber = @(self.tag);
+      NSNumber *shouldResize = @(shouldResizeImage);
+      ((void (*)(id, SEL, id, id, id, id, id, id, id, id, id, id, id))objc_msgSend)(
+        manager, selector, tagNumber, image, barcodeArray, token, apiKey, locationId,
+        options, metadata, recipient, sender, shouldResize
+      );
+    }
+  });
 }
 
 - (void)getPredictionBillOfLadingCloud:(NSString *)image
@@ -852,29 +925,31 @@ using namespace facebook::react;
                           optionsJson:(NSString *)optionsJson
                     shouldResizeImage:(BOOL)shouldResizeImage
 {
-  NSLog(@"[VisionSdkViewComponentView] getPredictionBillOfLadingCloud called");
+  NSLog(@"[VisionSdkViewComponentView] ⏱️ getPredictionBillOfLadingCloud: Dispatching to main queue");
 
-  NSArray *barcodeArray = @[];
-  NSDictionary *options = nil;
+  dispatch_async(dispatch_get_main_queue(), ^{
+    NSArray *barcodeArray = @[];
+    NSDictionary *options = nil;
 
-  if (barcodeJson && barcodeJson.length > 0) {
-    NSData *jsonData = [barcodeJson dataUsingEncoding:NSUTF8StringEncoding];
-    if (jsonData) barcodeArray = [NSJSONSerialization JSONObjectWithData:jsonData options:0 error:nil];
-  }
-  if (optionsJson && optionsJson.length > 0) {
-    NSData *jsonData = [optionsJson dataUsingEncoding:NSUTF8StringEncoding];
-    if (jsonData) options = [NSJSONSerialization JSONObjectWithData:jsonData options:0 error:nil];
-  }
+    if (barcodeJson && barcodeJson.length > 0) {
+      NSData *jsonData = [barcodeJson dataUsingEncoding:NSUTF8StringEncoding];
+      if (jsonData) barcodeArray = [NSJSONSerialization JSONObjectWithData:jsonData options:0 error:nil];
+    }
+    if (optionsJson && optionsJson.length > 0) {
+      NSData *jsonData = [optionsJson dataUsingEncoding:NSUTF8StringEncoding];
+      if (jsonData) options = [NSJSONSerialization JSONObjectWithData:jsonData options:0 error:nil];
+    }
 
-  id manager = [self getManager];
-  SEL selector = NSSelectorFromString(@"getPredictionBillOfLadingCloud:image:barcode:token:apiKey:locationId:options:shouldResizeImage:");
-  if (manager && [manager respondsToSelector:selector]) {
-    NSNumber *tagNumber = @(self.tag);
-    NSNumber *shouldResize = @(shouldResizeImage);
-    ((void (*)(id, SEL, id, id, id, id, id, id, id, id))objc_msgSend)(
-      manager, selector, tagNumber, image, barcodeArray, token, apiKey, locationId, options, shouldResize
-    );
-  }
+    id manager = [self getManager];
+    SEL selector = NSSelectorFromString(@"getPredictionBillOfLadingCloud:image:barcode:token:apiKey:locationId:options:shouldResizeImage:");
+    if (manager && [manager respondsToSelector:selector]) {
+      NSNumber *tagNumber = @(self.tag);
+      NSNumber *shouldResize = @(shouldResizeImage);
+      ((void (*)(id, SEL, id, id, id, id, id, id, id, id))objc_msgSend)(
+        manager, selector, tagNumber, image, barcodeArray, token, apiKey, locationId, options, shouldResize
+      );
+    }
+  });
 }
 
 - (void)getPredictionItemLabelCloud:(NSString *)image
@@ -882,17 +957,19 @@ using namespace facebook::react;
                              apiKey:(NSString *)apiKey
                   shouldResizeImage:(BOOL)shouldResizeImage
 {
-  NSLog(@"[VisionSdkViewComponentView] getPredictionItemLabelCloud called");
+  NSLog(@"[VisionSdkViewComponentView] ⏱️ getPredictionItemLabelCloud: Dispatching to main queue");
 
-  id manager = [self getManager];
-  SEL selector = NSSelectorFromString(@"getPredictionItemLabelCloud:image:token:apiKey:shouldResizeImage:");
-  if (manager && [manager respondsToSelector:selector]) {
-    NSNumber *tagNumber = @(self.tag);
-    NSNumber *shouldResize = @(shouldResizeImage);
-    ((void (*)(id, SEL, id, id, id, id, id))objc_msgSend)(
-      manager, selector, tagNumber, image, token, apiKey, shouldResize
-    );
-  }
+  dispatch_async(dispatch_get_main_queue(), ^{
+    id manager = [self getManager];
+    SEL selector = NSSelectorFromString(@"getPredictionItemLabelCloud:image:token:apiKey:shouldResizeImage:");
+    if (manager && [manager respondsToSelector:selector]) {
+      NSNumber *tagNumber = @(self.tag);
+      NSNumber *shouldResize = @(shouldResizeImage);
+      ((void (*)(id, SEL, id, id, id, id, id))objc_msgSend)(
+        manager, selector, tagNumber, image, token, apiKey, shouldResize
+      );
+    }
+  });
 }
 
 - (void)getPredictionDocumentClassificationCloud:(NSString *)image
@@ -900,96 +977,97 @@ using namespace facebook::react;
                                           apiKey:(NSString *)apiKey
                                shouldResizeImage:(BOOL)shouldResizeImage
 {
-  NSLog(@"[VisionSdkViewComponentView] getPredictionDocumentClassificationCloud called");
+  NSLog(@"[VisionSdkViewComponentView] ⏱️ getPredictionDocumentClassificationCloud: Dispatching to main queue");
 
-  id manager = [self getManager];
-  SEL selector = NSSelectorFromString(@"getPredictionDocumentClassificationCloud:image:token:apiKey:shouldResizeImage:");
-  if (manager && [manager respondsToSelector:selector]) {
-    NSNumber *tagNumber = @(self.tag);
-    NSNumber *shouldResize = @(shouldResizeImage);
-    ((void (*)(id, SEL, id, id, id, id, id))objc_msgSend)(
-      manager, selector, tagNumber, image, token, apiKey, shouldResize
-    );
-  }
+  dispatch_async(dispatch_get_main_queue(), ^{
+    id manager = [self getManager];
+    SEL selector = NSSelectorFromString(@"getPredictionDocumentClassificationCloud:image:token:apiKey:shouldResizeImage:");
+    if (manager && [manager respondsToSelector:selector]) {
+      NSNumber *tagNumber = @(self.tag);
+      NSNumber *shouldResize = @(shouldResizeImage);
+      ((void (*)(id, SEL, id, id, id, id, id))objc_msgSend)(
+        manager, selector, tagNumber, image, token, apiKey, shouldResize
+      );
+    }
+  });
 }
 
 - (void)reportError:(NSString *)dataJson token:(NSString *)token apiKey:(NSString *)apiKey
 {
-  NSLog(@"[VisionSdkViewComponentView] reportError called");
+  NSLog(@"[VisionSdkViewComponentView] ⏱️ reportError: Dispatching to main queue");
 
-  if (!_codeScannerView) {
-    NSLog(@"[VisionSdkViewComponentView] reportError: No code scanner view available");
-    return;
-  }
-
-  NSDictionary *data = nil;
-  if (dataJson && dataJson.length > 0) {
-    NSData *jsonData = [dataJson dataUsingEncoding:NSUTF8StringEncoding];
-    if (jsonData) {
-      data = [NSJSONSerialization JSONObjectWithData:jsonData options:0 error:nil];
+  // Dispatch to main queue asynchronously - network call + image loading
+  dispatch_async(dispatch_get_main_queue(), ^{
+    if (!self->_codeScannerView) {
+      NSLog(@"[VisionSdkViewComponentView] reportError: No code scanner view available");
+      return;
     }
-  }
 
-  if (!data) {
-    NSLog(@"[VisionSdkViewComponentView] reportError: Failed to parse data JSON");
-    return;
-  }
-
-  // Get token from view if not provided
-  SEL tokenSelector = NSSelectorFromString(@"token");
-  NSString *tokenValue = token;
-  if ((!tokenValue || tokenValue.length == 0) && [_codeScannerView respondsToSelector:tokenSelector]) {
-    tokenValue = ((NSString *(*)(id, SEL))objc_msgSend)(_codeScannerView, tokenSelector);
-  }
-
-  // Get apiKey - use provided or fall back to VSDKConstants
-  NSString *apiKeyValue = (apiKey && apiKey.length > 0) ? apiKey : nil;
-  if (!apiKeyValue) {
-    Class constantsClass = NSClassFromString(@"VSDKConstants");
-    if (constantsClass) {
-      SEL apiKeySelector = NSSelectorFromString(@"apiKey");
-      if ([constantsClass respondsToSelector:apiKeySelector]) {
-        apiKeyValue = ((NSString *(*)(id, SEL))objc_msgSend)(constantsClass, apiKeySelector);
+    NSDictionary *data = nil;
+    if (dataJson && dataJson.length > 0) {
+      NSData *jsonData = [dataJson dataUsingEncoding:NSUTF8StringEncoding];
+      if (jsonData) {
+        data = [NSJSONSerialization JSONObjectWithData:jsonData options:0 error:nil];
       }
     }
-  }
 
-  NSLog(@"[VisionSdkViewComponentView] Calling reportError with data: %@", data);
+    if (!data) {
+      NSLog(@"[VisionSdkViewComponentView] reportError: Failed to parse data JSON");
+      return;
+    }
 
-  // Call reportError on the code scanner view
-  SEL reportErrorSelector = NSSelectorFromString(@"reportErrorWithUIImage:reportText:response:modelType:modelSize:errorFlags:token:apiKey:");
-  if ([_codeScannerView respondsToSelector:reportErrorSelector]) {
-    NSString *imagePath = data[@"image"];
-    UIImage *uiImage = nil;
+    // Get token from view if not provided
+    SEL tokenSelector = NSSelectorFromString(@"token");
+    NSString *tokenValue = token;
+    if ((!tokenValue || tokenValue.length == 0) && [self->_codeScannerView respondsToSelector:tokenSelector]) {
+      tokenValue = ((NSString *(*)(id, SEL))objc_msgSend)(self->_codeScannerView, tokenSelector);
+    }
 
-    // Load image if provided
-    if (imagePath && imagePath.length > 0) {
-      // TODO: This is synchronous - ideally should be async like the manager
-      // For now, try to load locally
-      if ([imagePath hasPrefix:@"file://"]) {
-        NSURL *imageURL = [NSURL URLWithString:imagePath];
-        NSData *imageData = [NSData dataWithContentsOfURL:imageURL];
-        if (imageData) {
-          uiImage = [UIImage imageWithData:imageData];
+    // Get apiKey - use provided or fall back to VSDKConstants
+    NSString *apiKeyValue = (apiKey && apiKey.length > 0) ? apiKey : nil;
+    if (!apiKeyValue) {
+      Class constantsClass = NSClassFromString(@"VSDKConstants");
+      if (constantsClass) {
+        SEL apiKeySelector = NSSelectorFromString(@"apiKey");
+        if ([constantsClass respondsToSelector:apiKeySelector]) {
+          apiKeyValue = ((NSString *(*)(id, SEL))objc_msgSend)(constantsClass, apiKeySelector);
         }
       }
     }
 
-    ((void (*)(id, SEL, id, id, id, id, id, id, id, id))objc_msgSend)(
-      _codeScannerView,
-      reportErrorSelector,
-      uiImage,
-      data[@"reportText"] ?: @"",
-      data[@"response"],
-      data[@"type"] ?: @"shipping_label",
-      data[@"size"] ?: @"large",
-      data[@"errorFlags"],
-      tokenValue,
-      apiKeyValue
-    );
-  } else {
-    NSLog(@"[VisionSdkViewComponentView] reportError: Scanner view does not respond to reportError selector");
-  }
+    // Call reportError on the code scanner view
+    SEL reportErrorSelector = NSSelectorFromString(@"reportErrorWithUIImage:reportText:response:modelType:modelSize:errorFlags:token:apiKey:");
+    if ([self->_codeScannerView respondsToSelector:reportErrorSelector]) {
+      NSString *imagePath = data[@"image"];
+      UIImage *uiImage = nil;
+
+      // Load image if provided (synchronous file I/O, but already in async block)
+      if (imagePath && imagePath.length > 0) {
+        if ([imagePath hasPrefix:@"file://"]) {
+          NSURL *imageURL = [NSURL URLWithString:imagePath];
+          NSData *imageData = [NSData dataWithContentsOfURL:imageURL];
+          if (imageData) {
+            uiImage = [UIImage imageWithData:imageData];
+          }
+        }
+      }
+
+      ((void (*)(id, SEL, id, id, id, id, id, id, id, id))objc_msgSend)(
+        self->_codeScannerView,
+        reportErrorSelector,
+        uiImage,
+        data[@"reportText"] ?: @"",
+        data[@"response"],
+        data[@"type"] ?: @"shipping_label",
+        data[@"size"] ?: @"large",
+        data[@"errorFlags"],
+        tokenValue,
+        apiKeyValue
+      );
+    } else {
+      NSLog(@"[VisionSdkViewComponentView] reportError: Scanner view does not respond to reportError selector");
+    }
+  });
 }
 
 // MARK: - Event Emitters

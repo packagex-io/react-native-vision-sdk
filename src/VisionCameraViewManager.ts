@@ -1,5 +1,5 @@
 import React from 'react';
-import { requireNativeComponent, UIManager, Platform } from 'react-native';
+import { requireNativeComponent, Platform } from 'react-native';
 import type { VisionCameraViewProps } from './VisionCameraTypes';
 
 const LINKING_ERROR =

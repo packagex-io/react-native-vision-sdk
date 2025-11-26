@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { StyleSheet, Platform, Alert, Vibration, useWindowDimensions, Text, View, Image, TouchableOpacity } from 'react-native';
+import { StyleSheet, Platform, Alert, Vibration, useWindowDimensions, Text, View, Image, TouchableOpacity, InteractionManager } from 'react-native';
 // import { GestureHandlerRootView } from 'react-native-gesture-handler'
 import VisionSdkView, {
   VisionSdkRefProps,
@@ -13,7 +13,7 @@ import CameraFooterView from './Components/CameraFooterView';
 import DownloadingProgressView from './Components/DownloadingProgressView';
 import CameraHeaderView from './Components/CameraHeaderView';
 import LoaderView from './Components/LoaderView';
-import { PERMISSIONS, RESULTS, request } from 'react-native-permissions';
+import { PERMISSIONS, RESULTS, request, check } from 'react-native-permissions';
 import ResultViewOCR from './Components/ResultViewOCR';
 import { useFocusEffect } from '@react-navigation/native';
 
@@ -56,10 +56,14 @@ interface DetectedDataProps {
 }
 
 
-const App: React.FC<{ route: any }> = ({ route }) => {
+const CameraScreenComponent: React.FC<{ route: any }> = ({ route }) => {
+  // console.log('🏁 CameraScreen: Component render START', Date.now());
+
   const visionSdk = useRef<VisionSdkRefProps>(null);
   const [captureMode, setCaptureMode] = useState<'manual' | 'auto'>('manual');
-  const timeoutRef = useRef<any>(null)
+  const timeoutRef = useRef<any>(null);
+  const boundingBoxTimeoutRef = useRef<any>(null);
+  const BOUNDING_BOX_AUTO_CLEAR_DELAY = 2000; // 2 seconds
   const [detectionSettings, setDetectionSettings] = useState({
     isTextIndicationOn: true,
     isBarCodeOrQRCodeIndicationOn: true,
@@ -131,13 +135,40 @@ const App: React.FC<{ route: any }> = ({ route }) => {
       isReady: false
     });
 
-  const requestCameraPermission = async () => {
+  // Helper function to clear bounding boxes
+  const clearBoundingBoxes = useCallback(() => {
+    console.log('🧹 Clearing bounding boxes');
+
+    // Cancel any pending auto-clear timeout
+    if (boundingBoxTimeoutRef.current) {
+      clearTimeout(boundingBoxTimeoutRef.current);
+      boundingBoxTimeoutRef.current = null;
+    }
+
+    setDetectedBoundingBoxes({
+      barcodeBoundingBoxes: [],
+      qrCodeBoundingBoxes: [],
+      documentBoundingBox: { x: 0, y: 0, width: 0, height: 0 }
+    });
+  }, []);
+
+  const requestCameraPermission = useCallback(async () => {
+    console.log('⏱️ requestCameraPermission: START', Date.now());
     const cameraPermission =
       Platform.OS === 'ios'
         ? PERMISSIONS.IOS.CAMERA
         : PERMISSIONS.ANDROID.CAMERA;
 
-    const result = await request(cameraPermission);
+    // First check if we already have permission (faster than request)
+    let result = await check(cameraPermission);
+    console.log('⏱️ requestCameraPermission: Check complete, result:', result, Date.now());
+
+    // Only request if we don't have permission yet
+    if (result !== RESULTS.GRANTED && result !== RESULTS.LIMITED) {
+      result = await request(cameraPermission);
+      console.log('⏱️ requestCameraPermission: Request complete, result:', result, Date.now());
+    }
+
     if (result !== RESULTS.GRANTED) {
       Alert.alert(
         'Camera Permission Error',
@@ -162,35 +193,65 @@ const App: React.FC<{ route: any }> = ({ route }) => {
         focusImageRect: { x: scannerX, y: scannerY, width: scannerWidth, height: scannerHeight },
 
       }
+
+      console.log('⏱️ requestCameraPermission: Setting focus/detection/camera settings', Date.now());
       visionSdk?.current?.setFocusSettings(focusSettings);
-      // console.log("SETTING DETECTION SETTING TO: ", detectionSettings)
       visionSdk?.current?.setObjectDetectionSettings(detectionSettings);
       visionSdk?.current?.setCameraSettings({
         nthFrameToProcess: 10
       });
 
+      // Start camera immediately
+      visionSdk?.current?.startRunningHandler();
+      console.log('⏱️ requestCameraPermission: Camera started', Date.now());
 
+      // Defer getAllTemplates to prevent blocking UI thread
+      // This call is heavy (~900ms) and not critical for initial render
 
-      setTimeout(() => {
-        visionSdk?.current?.startRunningHandler();
-        visionSdk?.current?.getAllTemplates()
-      }, 0)
+      console.log('⏱️ requestCameraPermission: Calling getAllTemplates (deferred)', Date.now());
+      visionSdk?.current?.getAllTemplates();
+
 
       setLoading(false);
     }
-  };
+  }, [scannerX, scannerY, scannerWidth, scannerHeight, detectionSettings]);
 
 
 
   useFocusEffect(useCallback(() => {
-    requestCameraPermission()
+    console.log('🎯 useFocusEffect: Called', Date.now());
+
+    // Use InteractionManager to wait for animations/transitions to complete
+    // This prevents camera init from blocking navigation animations
+    const interactionPromise = InteractionManager.runAfterInteractions(() => {
+      console.log('🎬 InteractionManager: Animations complete, starting camera', Date.now());
+      requestCameraPermission()
+    });
+
     return () => {
+      console.log('🧹 useFocusEffect: Cleanup START', Date.now());
+
+      // IMPORTANT: Cancel the interaction promise first
+      interactionPromise.cancel();
+
+      // Stop camera immediately - don't wait for anything
       visionSdk?.current?.stopRunningHandler();
+
+      // Clear bounding boxes when navigating away
+      clearBoundingBoxes();
+
+      // Clear all timeouts
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current)
       }
+      if (boundingBoxTimeoutRef.current) {
+        clearTimeout(boundingBoxTimeoutRef.current);
+        boundingBoxTimeoutRef.current = null;
+      }
+
+      console.log('🧹 useFocusEffect: Cleanup COMPLETE', Date.now());
     }
-  }, []))
+  }, [requestCameraPermission, clearBoundingBoxes]))
 
 
   useEffect(() => {
@@ -199,6 +260,12 @@ const App: React.FC<{ route: any }> = ({ route }) => {
     }
   }, [modelDownloadingProgress]);
 
+  // Clear bounding boxes when mode changes
+  useEffect(() => {
+    console.log('📸 Mode changed to:', mode);
+    clearBoundingBoxes();
+  }, [mode, clearBoundingBoxes]);
+
   useEffect(() => {
     if (['on-device', 'on_device'].includes(ocrConfig.mode)) {
       handlePressOnDeviceOcr(ocrConfig.type, ocrConfig.size)
@@ -206,22 +273,38 @@ const App: React.FC<{ route: any }> = ({ route }) => {
   }, [ocrConfig])
 
   useEffect(() => {
-    let updatedDetectionSettings = detectionSettings
-    if (selectedTemplate?.name) {
-      updatedDetectionSettings = {
-        ...detectionSettings,
-        selectedTemplateId: selectedTemplate.name
-      }
-    } else {
-      const { selectedTemplateId, ...rest } = detectionSettings
-      updatedDetectionSettings = rest
-    }
-    setDetectionSettings(updatedDetectionSettings)
-  }, [selectedTemplate])
+    // Combine both effects to avoid circular dependency
+    const updatedDetectionSettings: any = { ...detectionSettings }
+    const newTemplateId = (selectedTemplate as any)?.name;
+    const currentTemplateId = (detectionSettings as any).selectedTemplateId;
 
-  useEffect(() => {
-    visionSdk.current?.setObjectDetectionSettings(detectionSettings);
-  }, [detectionSettings])
+    console.log("🔄 Template change detected:", {
+      newTemplate: newTemplateId,
+      currentTemplate: currentTemplateId,
+      selectedTemplate
+    });
+
+    if (newTemplateId) {
+      updatedDetectionSettings.selectedTemplateId = newTemplateId;
+    } else {
+      delete updatedDetectionSettings.selectedTemplateId;
+    }
+
+    // Check if there's an actual change by comparing with current state
+    const hasChanged = newTemplateId !== currentTemplateId;
+
+    if (hasChanged) {
+      console.log("✅ UPDATE DETECTION SETTINGS WITH APPLIED TEMPLATE: ", JSON.stringify(updatedDetectionSettings, null, 2))
+
+      // Clear old bounding boxes when template changes
+      clearBoundingBoxes();
+
+      setDetectionSettings(updatedDetectionSettings)
+      visionSdk.current?.setObjectDetectionSettings(updatedDetectionSettings)
+    } else {
+      console.log("⏭️ Template unchanged, skipping update");
+    }
+  }, [selectedTemplate, clearBoundingBoxes])
 
   // Capture photo when the button is pressed
   const handlePressCapture = useCallback(() => {
@@ -256,84 +339,84 @@ const App: React.FC<{ route: any }> = ({ route }) => {
           }, "", apiKey)
           break;
 
-      case 'item_label':
-        visionSdk.current?.reportError({
-          reportText: 'respose is not correct',
-          type: 'item_label',
-          size: 'large',
-          response: {},
-          image: '',
-          errorFlags: {
-            supplierName: true,
-            itemName: false,
-            itemSKU: true,
-            weight: true,
-            quantity: true,
-            dimensions: true,
-            productionDate: false,
-            supplierAddress: true
-          }
-        }, "", apiKey)
-        break;
+        case 'item_label':
+          visionSdk.current?.reportError({
+            reportText: 'respose is not correct',
+            type: 'item_label',
+            size: 'large',
+            response: {},
+            image: '',
+            errorFlags: {
+              supplierName: true,
+              itemName: false,
+              itemSKU: true,
+              weight: true,
+              quantity: true,
+              dimensions: true,
+              productionDate: false,
+              supplierAddress: true
+            }
+          }, "", apiKey)
+          break;
 
-      case 'BOL':
-        visionSdk.current?.reportError({
-          reportText: 'respose is not correct',
-          type: 'bill_of_lading',
-          size: 'large',
-          response: {},
-          image: '',
-          errorFlags: {
-            referenceNo: true,
-            loadNumber: false,
-            purchaseOrderNumber: true,
-            invoiceNumber: true,
-            customerPurchaseOrderNumber: false,
-            orderNumber: true,
-            billOfLading: false,
-            masterBillOfLading: false,
-            lineBillOfLading: false,
-            houseBillOfLading: true,
-            shippingId: false,
-            shippingDate: true,
-            date: false
-          }
-        }, "", apiKey)
-        break;
+        case 'BOL':
+          visionSdk.current?.reportError({
+            reportText: 'respose is not correct',
+            type: 'bill_of_lading',
+            size: 'large',
+            response: {},
+            image: '',
+            errorFlags: {
+              referenceNo: true,
+              loadNumber: false,
+              purchaseOrderNumber: true,
+              invoiceNumber: true,
+              customerPurchaseOrderNumber: false,
+              orderNumber: true,
+              billOfLading: false,
+              masterBillOfLading: false,
+              lineBillOfLading: false,
+              houseBillOfLading: true,
+              shippingId: false,
+              shippingDate: true,
+              date: false
+            }
+          }, "", apiKey)
+          break;
 
-      case 'DC':
-        visionSdk.current?.reportError({
-          reportText: 'respose is not correct',
-          type: 'document_classification',
-          size: 'large',
-          response: {},
-          image: '',
-          errorFlags: {
-            documentClass: true
-          }
-        }, "", apiKey);
-        break;
-      default:
-        break;
+        case 'DC':
+          visionSdk.current?.reportError({
+            reportText: 'respose is not correct',
+            type: 'document_classification',
+            size: 'large',
+            response: {},
+            image: '',
+            errorFlags: {
+              documentClass: true
+            }
+          }, "", apiKey);
+          break;
+        default:
+          break;
+      }
+
+      // Set success status
+      setReportErrorStatus('success');
+
+      // Reset status after 3 seconds
+      setTimeout(() => {
+        setReportErrorStatus('idle');
+      }, 3000);
+
+    } catch (error) {
+      console.error('Error calling reportError:', error);
+      setReportErrorStatus('error');
+
+      // Reset status after 3 seconds
+      setTimeout(() => {
+        setReportErrorStatus('idle');
+      }, 3000);
     }
-
-    // Set success status
-    setReportErrorStatus('success');
-
-    // Reset status after 3 seconds
-    setTimeout(() => {
-      setReportErrorStatus('idle');
-    }, 3000);
-
-  } catch (error) {
-    console.error('Error calling reportError:', error);
-    setReportErrorStatus('error');
-
-    // Reset status after 3 seconds
-    setTimeout(() => {
-      setReportErrorStatus('idle');
-    }, 3000);
-  }
   }
 
 
@@ -383,15 +466,42 @@ const App: React.FC<{ route: any }> = ({ route }) => {
   }, [])
 
   const handleDetected = useCallback((event) => {
-    // console.log('onDetected', event);
-    setDetectedData(event);
+    // Only update if the data actually changed
+    setDetectedData(prev => {
+      const hasChanged = prev.barcode !== event.barcode ||
+        prev.qrcode !== event.qrcode ||
+        prev.text !== event.text ||
+        prev.document !== event.document;
+
+      if (hasChanged) {
+        console.log('🔍 handleDetected: Data changed, updating', Date.now());
+        return event;
+      }
+
+      // No change, return previous state to prevent re-render
+      return prev;
+    });
   }, [])
 
   const handleBarcodeScan = useCallback((event) => {
     setLoading(false);
     console.log("BARCODE SCAN RESULT: ", JSON.stringify(event))
 
-    visionSdk.current?.restartScanningHandler();
+    // Show alert with barcode scan results
+    const codes = event.codes || [];
+    if (codes.length > 0) {
+      const barcodeInfo = codes.map((code: any, index: number) =>
+        `${index + 1}. ${code.value || code.scannedCode || 'Unknown'} (${code.type || code.symbology || 'Unknown type'})`
+      ).join('\n');
+
+      Alert.alert(
+        'Barcode Scanned',
+        `Found ${codes.length} barcode${codes.length > 1 ? 's' : ''}:\n\n${barcodeInfo}`,
+        [{ text: 'OK', onPress: () => visionSdk.current?.restartScanningHandler() }]
+      );
+    } else {
+      visionSdk.current?.restartScanningHandler();
+    }
   }, [])
 
 
@@ -406,7 +516,7 @@ const App: React.FC<{ route: any }> = ({ route }) => {
         apiKey,
         null,
         null,
-        {meta1: 'metaval1', meta2: 'metaval2'},
+        { meta1: 'metaval1', meta2: 'metaval2' },
         null,
         null,
         true
@@ -428,7 +538,7 @@ const App: React.FC<{ route: any }> = ({ route }) => {
         null,
         apiKey,
         true,
-        {meta1: 'metaval1', meta2: 'metaval2'}
+        { meta1: 'metaval1', meta2: 'metaval2' }
       )
 
       console.log("IL SYNC SUCCESSFUL: ", r)
@@ -451,11 +561,13 @@ const App: React.FC<{ route: any }> = ({ route }) => {
     visionSdk.current?.restartScanningHandler();
   }, [])
 
-  const handleSharpnessScore = useCallback((event) => { 
+  const handleSharpnessScore = useCallback((event) => {
+    console.log("SHARPNESS SCORE RAW: ", event)
     console.log("SHARPNESS SCORE: ", JSON.stringify(event))
   }, [])
 
   const handleModelDownloadProgress = useCallback((event) => {
+    console.log('💾 handleModelDownloadProgress: Setting modelDownloadingProgress', Date.now());
     setModelDownloadingProgress(event);
     if (event.downloadStatus && event.isReady) {
       setLoading(false);
@@ -492,6 +604,7 @@ const App: React.FC<{ route: any }> = ({ route }) => {
   }
 
   const handleGetTemplates = useCallback((args) => {
+    console.log('📋 handleGetTemplates: Setting availableTemplates', Date.now());
     setAvailableTemplates(args?.data?.map(item => ({ name: item })))
   }, [])
 
@@ -509,12 +622,49 @@ const App: React.FC<{ route: any }> = ({ route }) => {
     visionSdk?.current?.deleteAllTemplates()
   }
 
-  const handleBoundingBoxesDetected = (args) => {
-    // console.log("BOUNDING BOXES DETECTED: ", args)
-    setDetectedBoundingBoxes(args)
-  }
+
+  useEffect(() => {
+    console.log("DETECTED BOUNDING BOXES ARE: ", JSON.stringify(detectedBoundingBoxes, null, 2))
+    console.log("Current mode:", mode)
+    console.log("Barcode boxes count:", detectedBoundingBoxes.barcodeBoundingBoxes?.length)
+    console.log("QR boxes count:", detectedBoundingBoxes.qrCodeBoundingBoxes?.length)
+  }, [detectedBoundingBoxes])
+  
+  const handleBoundingBoxesDetected = useCallback((args) => {
+    // Cancel any existing auto-clear timeout
+    if (boundingBoxTimeoutRef.current) {
+      clearTimeout(boundingBoxTimeoutRef.current);
+    }
+
+    // Data is already parsed by the wrapper layer
+    // Only update if the data actually changed
+    setDetectedBoundingBoxes(prev => {
+      const barcodesChanged = JSON.stringify(prev.barcodeBoundingBoxes) !== JSON.stringify(args.barcodeBoundingBoxes);
+      const qrCodesChanged = JSON.stringify(prev.qrCodeBoundingBoxes) !== JSON.stringify(args.qrCodeBoundingBoxes);
+      const documentChanged = JSON.stringify(prev.documentBoundingBox) !== JSON.stringify(args.documentBoundingBox);
+
+      if (barcodesChanged || qrCodesChanged || documentChanged) {
+        console.log('📦 handleBoundingBoxesDetected: Data changed, updating',  Date.now());
+        return {
+          barcodeBoundingBoxes: args.barcodeBoundingBoxes || [],
+          qrCodeBoundingBoxes: args.qrCodeBoundingBoxes || [],
+          documentBoundingBox: args.documentBoundingBox || { x: 0, y: 0, width: 0, height: 0 }
+        };
+      }
+
+      // No change, return previous state to prevent re-render
+      return prev;
+    });
+
+    // Set up auto-clear timeout - clear bounding boxes after delay if no new detections
+    boundingBoxTimeoutRef.current = setTimeout(() => {
+      console.log(`⏰ Auto-clearing bounding boxes after ${BOUNDING_BOX_AUTO_CLEAR_DELAY}ms of inactivity`);
+      clearBoundingBoxes();
+    }, BOUNDING_BOX_AUTO_CLEAR_DELAY);
+  }, [clearBoundingBoxes, BOUNDING_BOX_AUTO_CLEAR_DELAY])
 
   const handlePriceTagDetected = useCallback((args) => {
+    console.log('🏷️ handlePriceTagDetected: Setting detectedPriceTag', Date.now());
     setDetectedPriceTag({
       price: args.price,
       sku: args.sku,
@@ -614,7 +764,7 @@ const App: React.FC<{ route: any }> = ({ route }) => {
           bottom: 150,
           right: 20,
           backgroundColor: reportErrorStatus === 'success' ? '#4CAF50' :
-                           reportErrorStatus === 'error' ? '#f44336' : '#2196F3',
+            reportErrorStatus === 'error' ? '#f44336' : '#2196F3',
           padding: 15,
           borderRadius: 10,
           elevation: 5,
@@ -697,6 +847,35 @@ const App: React.FC<{ route: any }> = ({ route }) => {
         </> : null}
 
 
+      {['ocr', 'photo'].includes(mode) && detectedBoundingBoxes.documentBoundingBox?.width > 0 ?
+        <View
+          style={{
+            position: 'absolute',
+            left: detectedBoundingBoxes.documentBoundingBox.x,
+            top: detectedBoundingBoxes.documentBoundingBox.y,
+            width: detectedBoundingBoxes.documentBoundingBox.width,
+            height: detectedBoundingBoxes.documentBoundingBox.height,
+            borderColor: '#ff0000',
+            borderWidth: 2,
+            backgroundColor: 'rgba(255, 0, 0, 0.1)',
+          }}
+        >
+          <Text style={{
+            color: '#FFFFFF',
+            fontSize: 10,
+            fontWeight: 'bold',
+            backgroundColor: 'rgba(255, 0, 0, 0.8)',
+            padding: 4,
+            borderRadius: 3,
+            position: 'absolute',
+            top: -20,
+            left: 0,
+          }}>
+            Document
+          </Text>
+        </View>
+        : null}
+
       {isPriceTagBoundingBoxVisible && detectedPriceTag.boundingBox.width > 0 ?
         <>
 
@@ -725,4 +904,8 @@ const styles = StyleSheet.create({
     position: 'relative'
   },
 });
+
+// Memoize component to prevent unnecessary re-renders when parent re-renders
+const App = React.memo(CameraScreenComponent);
+
 export default App;

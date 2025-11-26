@@ -1,15 +1,15 @@
-import { NativeModules, NativeEventEmitter, Platform } from 'react-native';
+import { NativeModules, NativeEventEmitter } from 'react-native';
 
 // Try to import TurboModule (New Architecture)
-let VisionSdkModuleNative;
+let VisionSdkModuleNative: any;
 let isTurboModuleEnabled = false;
 
-// Check if running in bridgeless mode (new architecture)
+// Check if TurboModule is available
 // @ts-ignore
-const isBridgeless = global.RN$Bridgeless === true;
+const TurboModuleRegistry = global.__turboModuleProxy;
 
-if (isBridgeless) {
-  // New architecture - use TurboModule
+// Try to use TurboModule first if available
+if (TurboModuleRegistry) {
   try {
     const TurboModuleSpec = require('./specs/NativeVisionSdkModule').default;
     if (TurboModuleSpec) {
@@ -21,7 +21,7 @@ if (isBridgeless) {
     // Fall back to NativeModules
     VisionSdkModuleNative = NativeModules.VisionSdkModule;
     isTurboModuleEnabled = false;
-    console.log('✅ VisionCore: Using Legacy NativeModule fallback');
+    console.log('⚠️ VisionCore: TurboModule failed, using Legacy NativeModule');
   }
 } else {
   // Old architecture - use legacy NativeModule

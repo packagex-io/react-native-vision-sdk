@@ -553,6 +553,9 @@ export interface BoundingBoxesDetectedResult {
   barcodeBoundingBoxes: Array<DetectedCodeBoundingBox>;
   qrCodeBoundingBoxes: Array<DetectedCodeBoundingBox>;
   documentBoundingBox: BoundingBox;
+  // Internal fields used by Fabric architecture (parsed and removed by wrapper)
+  barcodeBoundingBoxesJson?: string;
+  qrCodeBoundingBoxesJson?: string;
 }
 
 export interface PriceTagDetectionResult {

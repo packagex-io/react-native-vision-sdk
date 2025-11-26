@@ -1,4 +1,4 @@
-import { requireNativeComponent, UIManager, Platform } from 'react-native';
+import { requireNativeComponent, Platform } from 'react-native';
 import { VisionSdkViewProps } from './types';
 
 const LINKING_ERROR =

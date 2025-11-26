@@ -10,7 +10,7 @@ import {
 import OCRSelectionView from './OCRSelectionView';
 import CaptureModesView from './CaptureModesView';
 import ModelSizeSelectionView from './ModelSizeSelectionView';
-import { OCRConfig } from 'react-native-vision-sdk';
+import { OCRConfig } from '../../../src/index';
 
 // Define a type for the zoom level
 interface ZoomLevel {

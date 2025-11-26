@@ -14,7 +14,19 @@ Pod::Spec.new do |s|
   s.platforms    = { :ios => "16.0" }
   s.source       = { :git => "https://github.com/packagex-io/react-native-vision-sdk.git", :tag => "#{s.version}" }
 
-  s.source_files = "ios/**/*.{h,m,mm,swift}"
+  # Conditionally include source files based on architecture
+  if ENV['RCT_NEW_ARCH_ENABLED'] == '1'
+    s.source_files = "ios/**/*.{h,m,mm,swift}"
+  else
+    # Exclude Fabric directory for old architecture
+    s.source_files = "ios/**/*.{h,m,mm,swift}"
+    s.exclude_files = "ios/Fabric/**/*.{h,m,mm,swift}"
+    # Explicitly define public headers to exclude Fabric headers from umbrella header
+    s.public_header_files = [
+      "ios/VisionSdk-Bridging-Header.h",
+      "ios/VisionSdkModuleTurboModule.h"
+    ]
+  end
 
   s.dependency "React-Core"
   s.dependency "VisionSDK", "= 2.0.2"

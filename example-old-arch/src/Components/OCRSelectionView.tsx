@@ -1,7 +1,7 @@
 import React, { useCallback } from 'react';
 import { View, StyleSheet, Text, TouchableOpacity, Modal } from 'react-native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
-import { OCRConfig, OCRMode, OCRType } from 'react-native-vision-sdk';
+import { OCRConfig, OCRMode, OCRType } from '../../../src/index';
 
 type OCRSelectionViewProps = {
   setShowOcrTypes: (show: boolean) => void;

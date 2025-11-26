@@ -495,11 +495,14 @@ const HomeScreen = ({ navigation }) => {
       {/* Navigation */}
       <TouchableOpacity
         style={[styles.secondaryButton]}
-        onPress={() => navigation.navigate("CameraScreen", {
-          // modelSize: 'large',
-          // modelType: 'shipping_label',
-          mode: 'barcode'
-        })}
+        onPress={() => {
+          console.log('🔘 Button pressed: Navigating to CameraScreen', Date.now());
+          navigation.navigate("CameraScreen", {
+            // modelSize: 'large',
+            // modelType: 'shipping_label',
+            mode: 'barcode'
+          })
+        }}
       >
         <Text style={styles.secondaryButtonText}>📷 Open Camera View</Text>
       </TouchableOpacity>

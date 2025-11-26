@@ -13,12 +13,9 @@ import { VisionCameraView } from './VisionCameraViewManager';
 import {
   VisionCameraProps,
   VisionCameraRefProps,
-  VisionCameraCaptureEvent,
   VisionCameraErrorResult,
   VisionCameraRecognitionUpdateEvent,
   VisionCameraSharpnessScoreEvent,
-  VisionCameraBarcodeDetectedEvent,
-  VisionCameraBoundingBoxesUpdateEvent,
 } from './VisionCameraTypes';
 
 export * from './VisionCameraTypes';
