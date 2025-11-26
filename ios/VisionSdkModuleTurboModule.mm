@@ -2,8 +2,11 @@
 
 #import "VisionSdkModuleTurboModule.h"
 #import <objc/message.h>
+#import <objc/runtime.h>
 
-@implementation VisionSdkModuleTurboModule
+@implementation VisionSdkModuleTurboModule {
+  id _swiftModule;
+}
 
 RCT_EXPORT_MODULE(VisionSdkModule)
 
@@ -12,9 +15,43 @@ RCT_EXPORT_MODULE(VisionSdkModule)
   return YES;
 }
 
+- (instancetype)init {
+  if (self = [super init]) {
+    _swiftModule = nil;
+  }
+  return self;
+}
+
 - (NSArray<NSString *> *)supportedEvents
 {
   return @[@"onModelDownloadProgress"];
+}
+
+// Helper to get Swift module instance (singleton pattern)
+- (id)getSwiftModule {
+  if (!_swiftModule) {
+    Class moduleClass = NSClassFromString(@"VisionSdkModule");
+    if (moduleClass) {
+      _swiftModule = [[moduleClass alloc] init];
+      NSLog(@"[VisionSDK TurboModule] Created Swift module instance");
+
+      // Set event callback to forward events through TurboModule
+      __weak VisionSdkModuleTurboModule *weakSelf = self;
+      void (^eventCallback)(NSString *, NSDictionary *) = ^(NSString *eventName, NSDictionary *body) {
+        VisionSdkModuleTurboModule *strongSelf = weakSelf;
+        if (strongSelf) {
+          [strongSelf sendEventWithName:eventName body:body];
+        }
+      };
+
+      SEL setCallbackSelector = NSSelectorFromString(@"setEventCallback:");
+      if ([_swiftModule respondsToSelector:setCallbackSelector]) {
+        ((void (*)(id, SEL, id))objc_msgSend)(_swiftModule, setCallbackSelector, eventCallback);
+        NSLog(@"[VisionSDK TurboModule] Set event callback");
+      }
+    }
+  }
+  return _swiftModule;
 }
 
 // MARK: - TurboModule Methods
@@ -22,7 +59,10 @@ RCT_EXPORT_MODULE(VisionSdkModule)
 RCT_EXPORT_METHOD(setEnvironment:(NSString *)environment)
 {
   NSLog(@"[VisionSDK TurboModule] setEnvironment called with: %@", environment);
-  // TODO: Implement using Swift VisionSdkModule when Swift-ObjC++ bridging is set up
+  id swiftModule = [self getSwiftModule];
+  if (swiftModule) {
+    [swiftModule setEnvironment:environment];
+  }
 }
 
 RCT_EXPORT_METHOD(loadOnDeviceModels:(NSString * _Nullable)token
@@ -33,8 +73,21 @@ RCT_EXPORT_METHOD(loadOnDeviceModels:(NSString * _Nullable)token
                   reject:(RCTPromiseRejectBlock)reject)
 {
   NSLog(@"[VisionSDK TurboModule] loadOnDeviceModels called");
-  // TODO: Implement using Swift VisionSdkModule when Swift-ObjC++ bridging is set up
-  resolve(@"Model loading not yet implemented in TurboModule");
+  id swiftModule = [self getSwiftModule];
+  if (swiftModule) {
+    SEL selector = NSSelectorFromString(@"loadOnDeviceModels:apiKey:modelType:modelSize:resolver:rejecter:");
+    if ([swiftModule respondsToSelector:selector]) {
+      NSLog(@"[VisionSDK TurboModule] Calling Swift loadOnDeviceModels");
+      ((void (*)(id, SEL, NSString *, NSString *, NSString *, NSString *, RCTPromiseResolveBlock, RCTPromiseRejectBlock))objc_msgSend)(
+        swiftModule, selector, token, apiKey, modelType, modelSize, resolve, reject
+      );
+    } else {
+      NSLog(@"[VisionSDK TurboModule] loadOnDeviceModels method not found");
+      reject(@"METHOD_NOT_FOUND", @"loadOnDeviceModels method not found on VisionSdkModule", nil);
+    }
+  } else {
+    reject(@"MODULE_NOT_FOUND", @"VisionSdkModule Swift class not found", nil);
+  }
 }
 
 RCT_EXPORT_METHOD(unLoadOnDeviceModels:(NSString * _Nullable)modelType
@@ -42,9 +95,22 @@ RCT_EXPORT_METHOD(unLoadOnDeviceModels:(NSString * _Nullable)modelType
                   resolve:(RCTPromiseResolveBlock)resolve
                   reject:(RCTPromiseRejectBlock)reject)
 {
-  NSLog(@"[VisionSDK TurboModule] unLoadOnDeviceModels called");
-  // TODO: Implement using Swift VisionSdkModule when Swift-ObjC++ bridging is set up
-  resolve(@"Models unloaded successfully");
+  NSLog(@"[VisionSDK TurboModule] unLoadOnDeviceModels called with modelType: %@, shouldDeleteFromDisk: %d", modelType, shouldDeleteFromDisk);
+  id swiftModule = [self getSwiftModule];
+  if (swiftModule) {
+    SEL selector = NSSelectorFromString(@"unLoadOnDeviceModels:shouldDeleteFromDisk:resolver:rejecter:");
+    if ([swiftModule respondsToSelector:selector]) {
+      NSLog(@"[VisionSDK TurboModule] Calling Swift unLoadOnDeviceModels");
+      ((void (*)(id, SEL, NSString *, BOOL, RCTPromiseResolveBlock, RCTPromiseRejectBlock))objc_msgSend)(
+        swiftModule, selector, modelType, shouldDeleteFromDisk, resolve, reject
+      );
+    } else {
+      NSLog(@"[VisionSDK TurboModule] unLoadOnDeviceModels method not found");
+      reject(@"METHOD_NOT_FOUND", @"unLoadOnDeviceModels method not found on VisionSdkModule", nil);
+    }
+  } else {
+    reject(@"MODULE_NOT_FOUND", @"VisionSdkModule Swift class not found", nil);
+  }
 }
 
 RCT_EXPORT_METHOD(logItemLabelDataToPx:(NSString *)imageUri
@@ -138,23 +204,35 @@ RCT_EXPORT_METHOD(predict:(NSString *)imagePath
                   reject:(RCTPromiseRejectBlock)reject)
 {
   NSLog(@"[VisionSDK TurboModule] predict called");
-  // Call the Legacy Swift module using NSInvocation
-  id legacyModule = [self.bridge moduleForName:@"VisionSdkModule"];
+  id swiftModule = [self getSwiftModule];
+  if (swiftModule) {
+    // Try different possible selectors
+    NSArray *possibleSelectors = @[
+      @"predict:barcodes:resolver:rejecter:",
+      @"predictWithBarcodes:resolver:rejecter:",
+      @"predict:withBarcodes:resolver:rejecter:"
+    ];
 
-  if (!legacyModule) {
-    reject(@"MODULE_NOT_FOUND", @"VisionSdkModule not found", nil);
-    return;
-  }
+    SEL foundSelector = nil;
+    for (NSString *selectorString in possibleSelectors) {
+      SEL selector = NSSelectorFromString(selectorString);
+      if ([swiftModule respondsToSelector:selector]) {
+        NSLog(@"[VisionSDK TurboModule] Found working selector: %@", selectorString);
+        foundSelector = selector;
+        break;
+      }
+    }
 
-  SEL selector = NSSelectorFromString(@"predict:barcodes:resolver:rejecter:");
-
-  if ([legacyModule respondsToSelector:selector]) {
-    // Use performSelector for 4 arguments (max supported)
-    ((void (*)(id, SEL, NSString *, NSArray *, RCTPromiseResolveBlock, RCTPromiseRejectBlock))objc_msgSend)(
-      legacyModule, selector, imagePath, barcodes, resolve, reject
-    );
+    if (foundSelector) {
+      ((void (*)(id, SEL, NSString *, NSArray *, RCTPromiseResolveBlock, RCTPromiseRejectBlock))objc_msgSend)(
+        swiftModule, foundSelector, imagePath, barcodes, resolve, reject
+      );
+    } else {
+      NSLog(@"[VisionSDK TurboModule] No matching selector found. Tried: %@", possibleSelectors);
+      reject(@"METHOD_NOT_FOUND", @"predict method not found on VisionSdkModule", nil);
+    }
   } else {
-    reject(@"NOT_IMPLEMENTED", @"predict method not available in legacy module", nil);
+    reject(@"MODULE_NOT_FOUND", @"VisionSdkModule Swift class not found", nil);
   }
 }
 
@@ -172,19 +250,19 @@ RCT_EXPORT_METHOD(predictShippingLabelCloud:(NSString *)imagePath
                   reject:(RCTPromiseRejectBlock)reject)
 {
   NSLog(@"[VisionSDK TurboModule] predictShippingLabelCloud called");
-  id legacyModule = [self.bridge moduleForName:@"VisionSdkModule"];
+  id swiftModule = [self getSwiftModule];
 
-  if (!legacyModule) {
-    reject(@"MODULE_NOT_FOUND", @"VisionSdkModule not found", nil);
+  if (!swiftModule) {
+    reject(@"MODULE_NOT_FOUND", @"VisionSdkModule Swift class not found", nil);
     return;
   }
 
   SEL selector = NSSelectorFromString(@"predictShippingLabelCloud:barcodes:token:apiKey:locationId:options:metadata:recipient:sender:shouldResizeImage:resolver:rejecter:");
 
-  if ([legacyModule respondsToSelector:selector]) {
-    NSInvocation *invocation = [NSInvocation invocationWithMethodSignature:[legacyModule methodSignatureForSelector:selector]];
+  if ([swiftModule respondsToSelector:selector]) {
+    NSInvocation *invocation = [NSInvocation invocationWithMethodSignature:[swiftModule methodSignatureForSelector:selector]];
     [invocation setSelector:selector];
-    [invocation setTarget:legacyModule];
+    [invocation setTarget:swiftModule];
     [invocation setArgument:&imagePath atIndex:2];
     [invocation setArgument:&barcodes atIndex:3];
     [invocation setArgument:&token atIndex:4];
@@ -211,18 +289,18 @@ RCT_EXPORT_METHOD(predictItemLabelCloud:(NSString *)imagePath
                   reject:(RCTPromiseRejectBlock)reject)
 {
   NSLog(@"[VisionSDK TurboModule] predictItemLabelCloud called");
-  id legacyModule = [self.bridge moduleForName:@"VisionSdkModule"];
+  id swiftModule = [self getSwiftModule];
 
-  if (!legacyModule) {
-    reject(@"MODULE_NOT_FOUND", @"VisionSdkModule not found", nil);
+  if (!swiftModule) {
+    reject(@"MODULE_NOT_FOUND", @"VisionSdkModule Swift class not found", nil);
     return;
   }
 
   SEL selector = NSSelectorFromString(@"predictItemLabelCloud:token:apiKey:shouldResizeImage:resolver:rejecter:");
 
-  if ([legacyModule respondsToSelector:selector]) {
+  if ([swiftModule respondsToSelector:selector]) {
     ((void (*)(id, SEL, NSString *, NSString *, NSString *, NSNumber *, RCTPromiseResolveBlock, RCTPromiseRejectBlock))objc_msgSend)(
-      legacyModule, selector, imagePath, token, apiKey, shouldResizeImage, resolve, reject
+      swiftModule, selector, imagePath, token, apiKey, shouldResizeImage, resolve, reject
     );
   } else {
     reject(@"NOT_IMPLEMENTED", @"predictItemLabelCloud method not available", nil);
@@ -240,19 +318,19 @@ RCT_EXPORT_METHOD(predictBillOfLadingCloud:(NSString *)imagePath
                   reject:(RCTPromiseRejectBlock)reject)
 {
   NSLog(@"[VisionSDK TurboModule] predictBillOfLadingCloud called");
-  id legacyModule = [self.bridge moduleForName:@"VisionSdkModule"];
+  id swiftModule = [self getSwiftModule];
 
-  if (!legacyModule) {
-    reject(@"MODULE_NOT_FOUND", @"VisionSdkModule not found", nil);
+  if (!swiftModule) {
+    reject(@"MODULE_NOT_FOUND", @"VisionSdkModule Swift class not found", nil);
     return;
   }
 
   SEL selector = NSSelectorFromString(@"predictBillOfLadingCloud:barcodes:token:apiKey:locationId:options:shouldResizeImage:resolver:rejecter:");
 
-  if ([legacyModule respondsToSelector:selector]) {
-    NSInvocation *invocation = [NSInvocation invocationWithMethodSignature:[legacyModule methodSignatureForSelector:selector]];
+  if ([swiftModule respondsToSelector:selector]) {
+    NSInvocation *invocation = [NSInvocation invocationWithMethodSignature:[swiftModule methodSignatureForSelector:selector]];
     [invocation setSelector:selector];
-    [invocation setTarget:legacyModule];
+    [invocation setTarget:swiftModule];
     [invocation setArgument:&imagePath atIndex:2];
     [invocation setArgument:&barcodes atIndex:3];
     [invocation setArgument:&token atIndex:4];
@@ -276,18 +354,18 @@ RCT_EXPORT_METHOD(predictDocumentClassificationCloud:(NSString *)imagePath
                   reject:(RCTPromiseRejectBlock)reject)
 {
   NSLog(@"[VisionSDK TurboModule] predictDocumentClassificationCloud called");
-  id legacyModule = [self.bridge moduleForName:@"VisionSdkModule"];
+  id swiftModule = [self getSwiftModule];
 
-  if (!legacyModule) {
-    reject(@"MODULE_NOT_FOUND", @"VisionSdkModule not found", nil);
+  if (!swiftModule) {
+    reject(@"MODULE_NOT_FOUND", @"VisionSdkModule Swift class not found", nil);
     return;
   }
 
   SEL selector = NSSelectorFromString(@"predictDocumentClassificationCloud:token:apiKey:shouldResizeImage:resolver:rejecter:");
 
-  if ([legacyModule respondsToSelector:selector]) {
+  if ([swiftModule respondsToSelector:selector]) {
     ((void (*)(id, SEL, NSString *, NSString *, NSString *, NSNumber *, RCTPromiseResolveBlock, RCTPromiseRejectBlock))objc_msgSend)(
-      legacyModule, selector, imagePath, token, apiKey, shouldResizeImage, resolve, reject
+      swiftModule, selector, imagePath, token, apiKey, shouldResizeImage, resolve, reject
     );
   } else {
     reject(@"NOT_IMPLEMENTED", @"predictDocumentClassificationCloud method not available", nil);
@@ -308,19 +386,19 @@ RCT_EXPORT_METHOD(predictWithCloudTransformations:(NSString *)imagePath
                   reject:(RCTPromiseRejectBlock)reject)
 {
   NSLog(@"[VisionSDK TurboModule] predictWithCloudTransformations called");
-  id legacyModule = [self.bridge moduleForName:@"VisionSdkModule"];
+  id swiftModule = [self getSwiftModule];
 
-  if (!legacyModule) {
-    reject(@"MODULE_NOT_FOUND", @"VisionSdkModule not found", nil);
+  if (!swiftModule) {
+    reject(@"MODULE_NOT_FOUND", @"VisionSdkModule Swift class not found", nil);
     return;
   }
 
   SEL selector = NSSelectorFromString(@"predictWithCloudTransformations:barcodes:token:apiKey:locationId:options:metadata:recipient:sender:shouldResizeImage:resolver:rejecter:");
 
-  if ([legacyModule respondsToSelector:selector]) {
-    NSInvocation *invocation = [NSInvocation invocationWithMethodSignature:[legacyModule methodSignatureForSelector:selector]];
+  if ([swiftModule respondsToSelector:selector]) {
+    NSInvocation *invocation = [NSInvocation invocationWithMethodSignature:[swiftModule methodSignatureForSelector:selector]];
     [invocation setSelector:selector];
-    [invocation setTarget:legacyModule];
+    [invocation setTarget:swiftModule];
     [invocation setArgument:&imagePath atIndex:2];
     [invocation setArgument:&barcodes atIndex:3];
     [invocation setArgument:&token atIndex:4];
@@ -342,12 +420,14 @@ RCT_EXPORT_METHOD(predictWithCloudTransformations:(NSString *)imagePath
 // Required for event emitters
 RCT_EXPORT_METHOD(addListener:(NSString *)eventName)
 {
-  // Set up event listeners
+  // Required for RCTEventEmitter - called when JS adds a listener
+  [super addListener:eventName];
 }
 
 RCT_EXPORT_METHOD(removeListeners:(double)count)
 {
-  // Remove event listeners
+  // Required for RCTEventEmitter - called when JS removes listeners
+  [super removeListeners:count];
 }
 
 @end

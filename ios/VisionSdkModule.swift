@@ -3,6 +3,9 @@ import VisionSDK
 
 @objc(VisionSdkModule)
 class VisionSdkModule: RCTEventEmitter {
+   // Callback for sending events (used for TurboModule)
+   private var eventCallback: ((_ eventName: String, _ body: [String: Any]) -> Void)?
+
    override static func moduleName() -> String {
         return "VisionSdkModule"
     }
@@ -13,7 +16,26 @@ class VisionSdkModule: RCTEventEmitter {
 
   @objc override func constantsToExport() -> [AnyHashable: Any]! {
     return [:]
-}
+  }
+
+  // Expose callback setter to Objective-C
+  @objc func setEventCallback(_ callback: @escaping (_ eventName: String, _ body: NSDictionary) -> Void) {
+    self.eventCallback = { eventName, body in
+      callback(eventName, body as NSDictionary)
+    }
+  }
+
+  // Override sendEvent to use callback if available
+  override func sendEvent(withName name: String, body: Any?) {
+    if let callback = eventCallback, let bodyDict = body as? [String: Any] {
+      callback(name, bodyDict)
+    } else {
+      // Only call super if we have a bridge (old architecture)
+      if self.bridge != nil {
+        super.sendEvent(withName: name, body: body)
+      }
+    }
+  }
 
   @objc func setEnvironment(_ environment: String) {
 

@@ -320,11 +320,11 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
 
     override fun getCommandsMap(): Map<String, Int>? {
         return mapOf(
-            "capture" to 1,
-            "stop" to 2,
-            "start" to 3,
-            "toggleFlash" to 4,
-            "setZoom" to 5
+            "capture" to 0,
+            "stop" to 1,
+            "start" to 2,
+            "toggleFlash" to 3,
+            "setZoom" to 4
         )
     }
 
@@ -337,14 +337,14 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
 
         // Handle numeric command IDs (Fabric uses integers)
         when (commandId) {
-            1 -> capture(root)
-            2 -> stop(root)
-            3 -> start(root)
-            4 -> {
+            0 -> capture(root)
+            1 -> stop(root)
+            2 -> start(root)
+            3 -> {
                 val enabled = args?.getBoolean(0) ?: false
                 toggleFlash(root, enabled)
             }
-            5 -> {
+            4 -> {
                 val level = args?.getDouble(0) ?: 1.0
                 setZoomCommand(root, level)
             }

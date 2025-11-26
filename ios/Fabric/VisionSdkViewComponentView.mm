@@ -622,7 +622,7 @@ using namespace facebook::react;
 {
   NSLog(@"[VisionSdkViewComponentView] ⏱️ setFocusSettings: Dispatching to main queue");
 
-  // Dispatch to main queue asynchronously to prevent blocking UI
+  // Dispatch to main queue
   dispatch_async(dispatch_get_main_queue(), ^{
     NSData *data = [focusSettingsJson dataUsingEncoding:NSUTF8StringEncoding];
     if (data) {
@@ -642,7 +642,7 @@ using namespace facebook::react;
 {
   NSLog(@"[VisionSdkViewComponentView] ⏱️ setObjectDetectionSettings: Dispatching to main queue");
 
-  // Dispatch to main queue asynchronously to prevent blocking UI
+  // Dispatch to main queue
   dispatch_async(dispatch_get_main_queue(), ^{
     NSData *data = [objectDetectionSettingsJson dataUsingEncoding:NSUTF8StringEncoding];
     if (data) {
@@ -662,7 +662,7 @@ using namespace facebook::react;
 {
   NSLog(@"[VisionSdkViewComponentView] ⏱️ setCameraSettings: Dispatching to main queue");
 
-  // Dispatch to main queue asynchronously to prevent blocking UI
+  // Dispatch to main queue
   dispatch_async(dispatch_get_main_queue(), ^{
     CFAbsoluteTime startTime = CFAbsoluteTimeGetCurrent();
 

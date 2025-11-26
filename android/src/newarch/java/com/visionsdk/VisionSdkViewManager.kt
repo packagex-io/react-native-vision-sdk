@@ -765,14 +765,14 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
 
     override fun getCommandsMap(): Map<String, Int>? {
         return mapOf(
-            "captureImage" to 1,
-            "stopRunning" to 2,
-            "startRunning" to 3,
-            "setMetaData" to 3,
-            "setRecipient" to 4,
-            "setSender" to 5,
-            "restartScanning" to 4,
-            "configureOnDeviceModel" to 6,
+            "captureImage" to 0,
+            "stopRunning" to 1,
+            "startRunning" to 2,
+            "restartScanning" to 3,
+            "setMetaData" to 4,
+            "setRecipient" to 5,
+            "setSender" to 6,
+            "configureOnDeviceModel" to 7,
             "setFocusSettings" to 8,
             "setObjectDetectionSettings" to 9,
             "setCameraSettings" to 10,
@@ -797,14 +797,14 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
     ) {
         Log.d(TAG, "receiveCommand: commandId=$commandId")
         when (commandId) {
-            "captureImage", "1" -> captureImage(root)
-            "stopRunning", "2" -> stopRunning(root)
-            "startRunning", "3" -> startRunning(root)
-            "setMetaData", "3" -> setMetaData(args)
-            "setRecipient", "4" -> setRecipient(args)
-            "setSender", "5" -> setSender(args)
-            "restartScanning", "4" -> restartScanning(root)
-            "configureOnDeviceModel", "6" -> configureOnDeviceModel(args)
+            "captureImage", "0" -> captureImage(root)
+            "stopRunning", "1" -> stopRunning(root)
+            "startRunning", "2" -> startRunning(root)
+            "restartScanning", "3" -> restartScanning(root)
+            "setMetaData", "4" -> setMetaData(args)
+            "setRecipient", "5" -> setRecipient(args)
+            "setSender", "6" -> setSender(args)
+            "configureOnDeviceModel", "7" -> configureOnDeviceModel(args)
             "setFocusSettings", "8" -> setFocusSettings(root, args)
             "setObjectDetectionSettings", "9" -> setObjectDetectionSettings(root, args)
             "setCameraSettings", "10" -> setCameraSettings(root, args)

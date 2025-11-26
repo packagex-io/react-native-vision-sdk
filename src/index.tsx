@@ -6,8 +6,6 @@ import React, {
   useCallback,
 } from 'react';
 import {
-  UIManager,
-  findNodeHandle,
   StyleSheet,
   DeviceEventEmitter,
   Platform
@@ -29,26 +27,8 @@ import {
 } from './types';
 import { correctOcrEvent } from './utils';
 
-// Import Fabric commands for new architecture
-let FabricCommands: any = null;
-let isFabricEnabled = false;
-
-// Check if running in bridgeless mode (new architecture)
-// @ts-ignore
-const isBridgeless = global.RN$Bridgeless === true;
-
-if (isBridgeless) {
-  try {
-    const spec = require('./specs/VisionSdkViewNativeComponent');
-    if (spec && spec.Commands) {
-      FabricCommands = spec.Commands;
-      isFabricEnabled = true;
-    }
-  } catch (e) {
-    // Not using Fabric, will fall back to UIManager
-    isFabricEnabled = false;
-  }
-}
+// Import Fabric commands (new architecture only)
+import { Commands as FabricCommands } from './specs/VisionSdkViewNativeComponent';
 
 export * from './types';
 export * from './VisionCore';
@@ -162,36 +142,13 @@ const Camera = forwardRef<VisionSdkRefProps, VisionSdkProps>(
           return param;
         });
 
-        // Try to use Fabric commands first (new architecture) - Android only for now
-        // iOS still uses the RCT_EXTERN_METHOD pattern which works via UIManager
-        if (Platform.OS === 'android' && isFabricEnabled && FabricCommands && FabricCommands[commandName]) {
-          console.log(`📤 Dispatching Fabric command: ${commandName}`);
-          FabricCommands[commandName](VisionSDKViewRef.current, ...processedParams);
-          return;
+        // Use Fabric commands (new architecture only)
+        if (!FabricCommands[commandName]) {
+          throw new Error(`Command "${commandName}" not found in VisionSdkView.`);
         }
 
-        // Fallback to UIManager for old architecture
-        const viewHandle = findNodeHandle(VisionSDKViewRef.current);
-        if (!viewHandle) {
-          console.warn(`🚨 No viewHandle for command: ${commandName}`);
-          return;
-        }
-
-        const viewManagerConfig = UIManager.getViewManagerConfig('VisionSdkView');
-        const commandId = viewManagerConfig?.Commands?.[commandName] ?? Commands[commandName];
-
-        if (commandId === undefined) {
-          throw new Error(
-            `Command "${commandName}" not found in VisionSdkView or Commands.`
-          );
-        }
-
-        console.log(`📤 Dispatching UIManager command: ${commandName}, commandId: ${commandId}`);
-        UIManager.dispatchViewManagerCommand(
-          viewHandle,
-          commandId,
-          processedParams
-        );
+        console.log(`📤 Dispatching Fabric command: ${commandName}`);
+        FabricCommands[commandName](VisionSDKViewRef.current, ...processedParams);
       } catch (error: any) {
         console.error(`🚨 Error dispatching command: ${error.message}`);
         onError({ message: error.message });

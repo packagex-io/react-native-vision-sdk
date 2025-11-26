@@ -1,42 +1,16 @@
-import { NativeModules, NativeEventEmitter } from 'react-native';
+import { NativeEventEmitter } from 'react-native';
+import NativeVisionSdkModule from './specs/NativeVisionSdkModule';
 
-// Try to import TurboModule (New Architecture)
-let VisionSdkModuleNative: any;
-let isTurboModuleEnabled = false;
-
-// Check if TurboModule is available
-// @ts-ignore
-const TurboModuleRegistry = global.__turboModuleProxy;
-
-// Try to use TurboModule first if available
-if (TurboModuleRegistry) {
-  try {
-    const TurboModuleSpec = require('./specs/NativeVisionSdkModule').default;
-    if (TurboModuleSpec) {
-      VisionSdkModuleNative = TurboModuleSpec;
-      isTurboModuleEnabled = true;
-      console.log('✅ VisionCore: Using TurboModule (New Architecture)');
-    }
-  } catch (e) {
-    // Fall back to NativeModules
-    VisionSdkModuleNative = NativeModules.VisionSdkModule;
-    isTurboModuleEnabled = false;
-    console.log('⚠️ VisionCore: TurboModule failed, using Legacy NativeModule');
-  }
-} else {
-  // Old architecture - use legacy NativeModule
-  VisionSdkModuleNative = NativeModules.VisionSdkModule;
-  isTurboModuleEnabled = false;
-  console.log('✅ VisionCore: Using Legacy NativeModule (Old Architecture)');
-}
+// New Architecture only - use TurboModule
+const VisionSdkModuleNative = NativeVisionSdkModule;
 
 if (!VisionSdkModuleNative) {
-  console.warn('❌ VisionCore native module (VisionSdkModule) not defined');
+  throw new Error('❌ VisionCore TurboModule (VisionSdkModule) not found. Make sure the native module is properly linked.');
 }
 
 const eventEmitter = new NativeEventEmitter(VisionSdkModuleNative);
 
-// Helper to convert objects to JSON strings for TurboModule compatibility
+// Helper to convert objects to JSON strings for TurboModule
 const toJsonString = (obj: any): string => {
   if (obj === null || obj === undefined) return '';
   if (typeof obj === 'string') return obj;
@@ -125,31 +99,17 @@ export const VisionCore = {
     metadata: { [key: string]: any } | null = {}
   ) => {
     try {
-      if (isTurboModuleEnabled) {
-        // TurboModule expects JSON strings for complex objects
-        const result = await VisionSdkModuleNative.logItemLabelDataToPx(
-          imageUri,
-          barcodes,
-          toJsonString(responseData),
-          token,
-          apiKey,
-          shouldResizeImage,
-          toJsonString(metadata)
-        );
-        return fromJsonString(result);
-      } else {
-        // Legacy module handles objects directly
-        const result = await VisionSdkModuleNative.logItemLabelDataToPx(
-          imageUri,
-          barcodes,
-          responseData,
-          token,
-          apiKey,
-          shouldResizeImage,
-          metadata
-        );
-        return result;
-      }
+      // TurboModule expects JSON strings for complex objects
+      const result = await VisionSdkModuleNative.logItemLabelDataToPx(
+        imageUri,
+        barcodes,
+        toJsonString(responseData),
+        token,
+        apiKey,
+        shouldResizeImage,
+        toJsonString(metadata)
+      );
+      return fromJsonString(result);
     } catch (error) {
       throw error;
     }
@@ -169,37 +129,20 @@ export const VisionCore = {
     shouldResizeImage: boolean = true
   ) => {
     try {
-      if (isTurboModuleEnabled) {
-        const result = await VisionSdkModuleNative.logShippingLabelDataToPx(
-          imageUri,
-          barcodes,
-          toJsonString(responseData),
-          token,
-          apiKey,
-          locationId,
-          toJsonString(options),
-          toJsonString(metadata),
-          toJsonString(recipient),
-          toJsonString(sender),
-          shouldResizeImage
-        );
-        return fromJsonString(result);
-      } else {
-        const result = await VisionSdkModuleNative.logShippingLabelDataToPx(
-          imageUri,
-          barcodes,
-          responseData,
-          token,
-          apiKey,
-          locationId,
-          options,
-          metadata,
-          recipient,
-          sender,
-          shouldResizeImage
-        );
-        return result;
-      }
+      const result = await VisionSdkModuleNative.logShippingLabelDataToPx(
+        imageUri,
+        barcodes,
+        toJsonString(responseData),
+        token,
+        apiKey,
+        locationId,
+        toJsonString(options),
+        toJsonString(metadata),
+        toJsonString(recipient),
+        toJsonString(sender),
+        shouldResizeImage
+      );
+      return fromJsonString(result);
     } catch (error) {
       throw error;
     }
@@ -216,31 +159,17 @@ export const VisionCore = {
     shouldResizeImage: boolean = true
   ) => {
     try {
-      if (isTurboModuleEnabled) {
-        const result = await VisionSdkModuleNative.logBillOfLadingDataToPx(
-          imageUri,
-          barcodes,
-          toJsonString(responseData),
-          token,
-          apiKey,
-          locationId,
-          toJsonString(options),
-          shouldResizeImage
-        );
-        return fromJsonString(result);
-      } else {
-        const result = await VisionSdkModuleNative.logBillOfLadingDataToPx(
-          imageUri,
-          barcodes,
-          responseData,
-          token,
-          apiKey,
-          locationId,
-          options,
-          shouldResizeImage
-        );
-        return result;
-      }
+      const result = await VisionSdkModuleNative.logBillOfLadingDataToPx(
+        imageUri,
+        barcodes,
+        toJsonString(responseData),
+        token,
+        apiKey,
+        locationId,
+        toJsonString(options),
+        shouldResizeImage
+      );
+      return fromJsonString(result);
     } catch (error) {
       throw error;
     }
@@ -254,25 +183,14 @@ export const VisionCore = {
     shouldResizeImage: boolean = true
   ) => {
     try {
-      if (isTurboModuleEnabled) {
-        const result = await VisionSdkModuleNative.logDocumentClassificationDataToPx(
-          imageUri,
-          toJsonString(responseData),
-          token,
-          apiKey,
-          shouldResizeImage
-        );
-        return fromJsonString(result);
-      } else {
-        const result = await VisionSdkModuleNative.logDocumentClassificationDataToPx(
-          imageUri,
-          responseData,
-          token,
-          apiKey,
-          shouldResizeImage
-        );
-        return result;
-      }
+      const result = await VisionSdkModuleNative.logDocumentClassificationDataToPx(
+        imageUri,
+        toJsonString(responseData),
+        token,
+        apiKey,
+        shouldResizeImage
+      );
+      return fromJsonString(result);
     } catch (error) {
       throw error;
     }

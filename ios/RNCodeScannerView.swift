@@ -1544,8 +1544,8 @@ extension RNCodeScannerView {
             updatedFocusSettings.documentBoundryBorderColor = color
         }
 
-        if let colorHex = focusSettings["documentBoundaryFillColor"] as? String {
-            let color = UIColor(hex: colorHex, alpha: 0.4)
+        if let colorHex = focusSettings["documentBoundaryFillColor"] as? String,
+           let color = UIColor(hex: colorHex, alpha: 0.4) {
             updatedFocusSettings.documentBoundryFillColor = color
         }
 
@@ -1560,7 +1560,8 @@ extension RNCodeScannerView {
         }
 
         codeScannerView?.setFocusSettingsTo(updatedFocusSettings)
-        codeScannerView?.rescan()
+        // Note: rescan() is not called here to avoid race conditions with AVCaptureSession
+        // The settings will be applied without restarting the camera session
     }
 
     @objc func applyObjectDetectionSettings(_ objectDetectionSettings: NSDictionary) {
@@ -1605,4 +1606,29 @@ extension RNCodeScannerView {
 // Convert UIImage to CIImage if it doesn't already have one
 func convertToCIImage(from uiImage: UIImage) -> CIImage? {
     return uiImage.ciImage ?? CIImage(image: uiImage)
+}
+
+// MARK: - UIColor Extension
+extension UIColor {
+    convenience init?(hex: String, alpha: CGFloat = 1.0) {
+        var hexFormatted: String = hex.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines).uppercased()
+
+        if hexFormatted.hasPrefix("#") {
+            hexFormatted = String(hexFormatted.dropFirst())
+        }
+
+        guard hexFormatted.count == 6 else {
+            return nil
+        }
+
+        var rgbValue: UInt64 = 0
+        Scanner(string: hexFormatted).scanHexInt64(&rgbValue)
+
+        self.init(
+            red: CGFloat((rgbValue & 0xFF0000) >> 16) / 255.0,
+            green: CGFloat((rgbValue & 0x00FF00) >> 8) / 255.0,
+            blue: CGFloat(rgbValue & 0x0000FF) / 255.0,
+            alpha: alpha
+        )
+    }
 }

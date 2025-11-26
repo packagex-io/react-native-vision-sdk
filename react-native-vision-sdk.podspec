@@ -14,43 +14,12 @@ Pod::Spec.new do |s|
   s.platforms    = { :ios => "16.0" }
   s.source       = { :git => "https://github.com/packagex-io/react-native-vision-sdk.git", :tag => "#{s.version}" }
 
-  # Conditionally include source files based on architecture
-  if ENV['RCT_NEW_ARCH_ENABLED'] == '1'
-    s.source_files = "ios/**/*.{h,m,mm,swift}"
-  else
-    # Exclude Fabric directory for old architecture
-    s.source_files = "ios/**/*.{h,m,mm,swift}"
-    s.exclude_files = "ios/Fabric/**/*.{h,m,mm,swift}"
-    # Explicitly define public headers to exclude Fabric headers from umbrella header
-    s.public_header_files = [
-      "ios/VisionSdk-Bridging-Header.h",
-      "ios/VisionSdkModuleTurboModule.h"
-    ]
-  end
+  # New Architecture only - include all source files
+  s.source_files = "ios/**/*.{h,m,mm,swift}"
 
   s.dependency "React-Core"
   s.dependency "VisionSDK", "= 2.0.2"
 
-  # Use install_modules_dependencies helper for RN >= 0.71
-  # This automatically adds the right dependencies for New Architecture
-  if respond_to?(:install_modules_dependencies, true)
-    install_modules_dependencies(s)
-  else
-    # Fallback for older React Native versions
-    # Don't install the dependencies when we run `pod install` in the old architecture.
-    if ENV['RCT_NEW_ARCH_ENABLED'] == '1' then
-      s.compiler_flags = folly_compiler_flags + " -DRCT_NEW_ARCH_ENABLED=1"
-      s.pod_target_xcconfig    = {
-          "HEADER_SEARCH_PATHS" => "\"$(PODS_ROOT)/boost\"",
-          "OTHER_CPLUSPLUSFLAGS" => "-DFOLLY_NO_CONFIG -DFOLLY_MOBILE=1 -DFOLLY_USE_LIBCPP=1",
-          "CLANG_CXX_LANGUAGE_STANDARD" => "c++17"
-      }
-      s.dependency "React-RCTFabric"
-      s.dependency "React-Codegen"
-      s.dependency "RCT-Folly"
-      s.dependency "RCTRequired"
-      s.dependency "RCTTypeSafety"
-      s.dependency "ReactCommon/turbomodule/core"
-    end
-  end
+  # New Architecture dependencies
+  install_modules_dependencies(s)
 end
