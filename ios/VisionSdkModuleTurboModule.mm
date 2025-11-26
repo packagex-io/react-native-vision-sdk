@@ -65,8 +65,8 @@ RCT_EXPORT_METHOD(setEnvironment:(NSString *)environment)
   }
 }
 
-RCT_EXPORT_METHOD(loadOnDeviceModels:(NSString * _Nullable)token
-                  apiKey:(NSString * _Nullable)apiKey
+RCT_EXPORT_METHOD(loadOnDeviceModels:(NSString *)token
+                  apiKey:(NSString *)apiKey
                   modelType:(NSString *)modelType
                   modelSize:(NSString *)modelSize
                   resolve:(RCTPromiseResolveBlock)resolve
@@ -90,7 +90,7 @@ RCT_EXPORT_METHOD(loadOnDeviceModels:(NSString * _Nullable)token
   }
 }
 
-RCT_EXPORT_METHOD(unLoadOnDeviceModels:(NSString * _Nullable)modelType
+RCT_EXPORT_METHOD(unLoadOnDeviceModels:(NSString *)modelType
                   shouldDeleteFromDisk:(BOOL)shouldDeleteFromDisk
                   resolve:(RCTPromiseResolveBlock)resolve
                   reject:(RCTPromiseRejectBlock)reject)

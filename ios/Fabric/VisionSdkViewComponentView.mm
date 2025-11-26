@@ -592,10 +592,11 @@ using namespace facebook::react;
 
 - (void)configureOnDeviceModel:(NSString *)onDeviceConfigsJson token:(NSString *)token apiKey:(NSString *)apiKey
 {
-  NSLog(@"[VisionSdkViewComponentView] ⏱️ configureOnDeviceModel: Dispatching to main queue (heavy operation - model download)");
+  NSLog(@"[VisionSdkViewComponentView] ⏱️ configureOnDeviceModel: Dispatching to background queue (heavy operation - model download)");
 
-  // Dispatch to main queue asynchronously - this can take several seconds to download models
-  dispatch_async(dispatch_get_main_queue(), ^{
+  // Dispatch to background queue asynchronously - this can take several seconds to download models
+  // Using background queue prevents blocking the UI thread
+  dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), ^{
     CFAbsoluteTime startTime = CFAbsoluteTimeGetCurrent();
 
     NSData *data = [onDeviceConfigsJson dataUsingEncoding:NSUTF8StringEncoding];
@@ -1147,7 +1148,7 @@ using namespace facebook::react;
     auto emitter = std::static_pointer_cast<VisionSdkViewEventEmitter const>(_eventEmitter);
 
     VisionSdkViewEventEmitter::OnSharpnessScore event = {};
-    event.score = [[eventData objectForKey:@"sharpnessScore"] floatValue];
+    event.sharpnessScore = [[eventData objectForKey:@"sharpnessScore"] floatValue];
 
     emitter->onSharpnessScore(event);
   }

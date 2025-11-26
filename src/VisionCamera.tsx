@@ -5,11 +5,10 @@ import React, {
   useCallback,
 } from 'react';
 import {
-  UIManager,
-  findNodeHandle,
   StyleSheet,
 } from 'react-native';
 import { VisionCameraView } from './VisionCameraViewManager';
+import { Commands } from './specs/VisionCameraViewNativeComponent';
 import {
   VisionCameraProps,
   VisionCameraRefProps,
@@ -45,76 +44,43 @@ const Camera = forwardRef<VisionCameraRefProps, VisionCameraProps>(
     // Ref for the Vision Camera View
     const VisionCameraViewRef = useRef(null);
 
-    // Enum for Commands
-    enum Commands {
-      capture = 0,
-      stop,
-      start,
-      toggleFlash,
-      setZoom,
-    }
-
-    /* Command functions using dispatchCommand helper with name and enum fallback */
-    const dispatchCommand = useCallback((
-      commandName: keyof typeof Commands,
-      params: any[] = []
-    ) => {
-      try {
-        console.log(`📤 Dispatching command: ${commandName} with params:`, params);
-
-        // Attempt to retrieve the command from the VisionCameraView's UIManager configuration. If not found, fall back to using the command from the Commands enum.
-        const command =
-          UIManager.getViewManagerConfig('VisionCameraView')?.Commands[
-          commandName
-          ] ?? Commands[commandName];
-
-        console.log(`📋 Command resolved to:`, command);
-
-        // If command is not found in either UIManager or Commands, throw an error.
-        if (command === undefined) {
-          throw new Error(
-            `Command "${commandName}" not found in VisionCameraView or Commands.`
-          );
-        }
-
-        // Dispatch the command with the provided parameters to the native module (VisionCameraView).
-        const viewHandle = findNodeHandle(VisionCameraViewRef.current);
-        console.log(`🎯 View handle:`, viewHandle);
-
-        if (!viewHandle) {
-          console.error('❌ View handle is null, cannot dispatch command');
-          return;
-        }
-
-        console.log(`✅ Dispatching command to native: ${commandName} (${command})`);
-        UIManager.dispatchViewManagerCommand(
-          viewHandle, // Find the native view reference
-          command, // The command to dispatch
-          params // Parameters to pass with the command
-        );
-      } catch (error: any) {
-        console.error(`🚨 Error dispatching command: ${error.message}`);
-        onError({ message: error.message });
-      }
-    }, [onError]);
-
     // Expose handlers via ref to parent components
     useImperativeHandle(ref, () => ({
-      // 0: Captures an image using the 'capture' command
-      capture: () => dispatchCommand('capture'),
+      // Captures an image using Fabric command
+      capture: () => {
+        if (VisionCameraViewRef.current) {
+          Commands.capture(VisionCameraViewRef.current);
+        }
+      },
 
-      // 1: Stops the camera using the 'stop' command
-      stop: () => dispatchCommand('stop'),
+      // Stops the camera using Fabric command
+      stop: () => {
+        if (VisionCameraViewRef.current) {
+          Commands.stop(VisionCameraViewRef.current);
+        }
+      },
 
-      // 2: Starts the camera using the 'start' command
-      start: () => dispatchCommand('start'),
+      // Starts the camera using Fabric command
+      start: () => {
+        if (VisionCameraViewRef.current) {
+          Commands.start(VisionCameraViewRef.current);
+        }
+      },
 
-      // 3: Toggles flash using the 'toggleFlash' command
-      toggleFlash: (enabled: boolean) => dispatchCommand('toggleFlash', [enabled]),
+      // Toggles flash using Fabric command
+      toggleFlash: (enabled: boolean) => {
+        if (VisionCameraViewRef.current) {
+          Commands.toggleFlash(VisionCameraViewRef.current, enabled);
+        }
+      },
 
-      // 4: Sets zoom level using the 'setZoom' command
-      setZoom: (level: number) => dispatchCommand('setZoom', [level]),
-    }), [dispatchCommand]);
+      // Sets zoom level using Fabric command
+      setZoom: (level: number) => {
+        if (VisionCameraViewRef.current) {
+          Commands.setZoom(VisionCameraViewRef.current, level);
+        }
+      },
+    }), []);
 
     // Helper function to handle events
     const parseNativeEvent = useCallback(<T,>(event: any): T => {

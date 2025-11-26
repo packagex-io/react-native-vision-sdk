@@ -10,26 +10,26 @@ export interface Spec extends TurboModule {
 
   /**
    * Loads on-device models without requiring the camera view
-   * @param token - Authentication token (can be null)
-   * @param apiKey - API Key (can be null)
+   * @param token - Authentication token (empty string if not provided)
+   * @param apiKey - API Key (empty string if not provided)
    * @param modelType - Model type ("shipping_label", "bill_of_lading", etc.)
    * @param modelSize - Model size ("nano", "micro", "small", "medium", "large", "xlarge")
    */
   loadOnDeviceModels(
-    token: string | null,
-    apiKey: string | null,
+    token: string,
+    apiKey: string,
     modelType: string,
     modelSize: string
   ): Promise<void>;
 
   /**
    * Unloads on-device models to free up memory
-   * @param modelType - Model type to unload (null to unload all models)
+   * @param modelType - Model type to unload (empty string to unload all models)
    * @param shouldDeleteFromDisk - Whether to delete model files from disk
    * @returns Success message
    */
   unLoadOnDeviceModels(
-    modelType: string | null,
+    modelType: string,
     shouldDeleteFromDisk: boolean
   ): Promise<string>;
 

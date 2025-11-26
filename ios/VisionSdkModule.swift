@@ -98,7 +98,10 @@ class VisionSdkModule: RCTEventEmitter {
       resolver: @escaping RCTPromiseResolveBlock,
       rejecter: @escaping RCTPromiseRejectBlock
   ) {
-    if let modelType = modelType {
+    // Convert empty string to nil
+    let modelTypeValue = (modelType?.isEmpty ?? true) ? nil : modelType
+
+    if let modelType = modelTypeValue {
       let modelClass = getModelType(modelType)
       
       do {
@@ -137,33 +140,41 @@ class VisionSdkModule: RCTEventEmitter {
       let modelClass = getModelType(modelType)
       let modelSizeEnum = getModelSize(modelSize) ?? VSDKModelExternalSize.large
 
-      OnDeviceOCRManager.shared.prepareOfflineOCR(
-        withApiKey: apiKey,
-        andToken: token,
-        forModelClass: modelClass,
-        withModelSize: modelSizeEnum,
-        withProgressTracking: { currentProgress, totalSize, isModelAlreadyDownloaded in
-            let progressData: [String: Any] = [
-                "progress": isModelAlreadyDownloaded ? 1.0 : (currentProgress / totalSize),
-                "downloadStatus": isModelAlreadyDownloaded,
-                "isReady": false
-            ]
-            self.sendEvent(withName: "onModelDownloadProgress", body: progressData)
-        },
-        withCompletion: { error in
-            if let error = error {
-                rejecter("MODEL_LOAD_ERROR", error.localizedDescription, nil)
-            } else {
-                let completionData: [String: Any] = [
-                    "progress": 1.0,
-                    "downloadStatus": true,
-                    "isReady": true
+      // Convert empty strings to nil
+      let tokenValue = (token?.isEmpty ?? true) ? nil : token
+      let apiKeyValue = (apiKey?.isEmpty ?? true) ? nil : apiKey
+
+      // Dispatch to background queue to prevent blocking UI thread
+      // VisionSDK's prepareOfflineOCR does heavy initialization work synchronously
+      DispatchQueue.global(qos: .userInitiated).async {
+          OnDeviceOCRManager.shared.prepareOfflineOCR(
+            withApiKey: apiKeyValue,
+            andToken: tokenValue,
+            forModelClass: modelClass,
+            withModelSize: modelSizeEnum,
+            withProgressTracking: { currentProgress, totalSize, isModelAlreadyDownloaded in
+                let progressData: [String: Any] = [
+                    "progress": isModelAlreadyDownloaded ? 1.0 : (currentProgress / totalSize),
+                    "downloadStatus": isModelAlreadyDownloaded,
+                    "isReady": false  // Will be set to true in completion callback
                 ]
-                self.sendEvent(withName: "onModelDownloadProgress", body: completionData)
-                resolver("Model configured successfully")
+                self.sendEvent(withName: "onModelDownloadProgress", body: progressData)
+            },
+            withCompletion: { error in
+                if let error = error {
+                    rejecter("MODEL_LOAD_ERROR", error.localizedDescription, nil)
+                } else {
+                    let completionData: [String: Any] = [
+                        "progress": 1.0,
+                        "downloadStatus": true,
+                        "isReady": true
+                    ]
+                    self.sendEvent(withName: "onModelDownloadProgress", body: completionData)
+                    resolver("Model configured successfully")
+                }
             }
-        }
-      )
+          )
+      }
   }
   
   

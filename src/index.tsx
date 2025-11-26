@@ -7,8 +7,7 @@ import React, {
 } from 'react';
 import {
   StyleSheet,
-  DeviceEventEmitter,
-  Platform
+  DeviceEventEmitter
 } from 'react-native';
 import { VisionSdkView } from './VisionSdkViewManager';
 import {
@@ -47,7 +46,6 @@ const Camera = forwardRef<VisionSdkRefProps, VisionSdkProps>(
       mode = 'barcode',
       token = '',
       locationId = '',
-      options = {},
       environment = 'prod',
       isMultipleScanEnabled = false,
       flash = false,
@@ -148,7 +146,7 @@ const Camera = forwardRef<VisionSdkRefProps, VisionSdkProps>(
         }
 
         console.log(`📤 Dispatching Fabric command: ${commandName}`);
-        FabricCommands[commandName](VisionSDKViewRef.current, ...processedParams);
+        (FabricCommands[commandName] as any)(VisionSDKViewRef.current, ...processedParams);
       } catch (error: any) {
         console.error(`🚨 Error dispatching command: ${error.message}`);
         onError({ message: error.message });
@@ -343,24 +341,18 @@ const Camera = forwardRef<VisionSdkRefProps, VisionSdkProps>(
     const onBarcodeScanHandler = useCallback((event: any) => {
       let barcodeEvent = parseNativeEvent<BarcodeScanResult>(event);
 
-      // Handle Fabric architecture - parse codesJson if present
-      if (barcodeEvent.codesJson !== undefined) {
-        if (typeof barcodeEvent.codesJson === 'string' && barcodeEvent.codesJson.length > 0) {
-          try {
-            barcodeEvent.codes = JSON.parse(barcodeEvent.codesJson);
-          } catch (error) {
-            console.warn("Failed to parse barcode codesJson:", error);
-            barcodeEvent.codes = [];
-          }
+      // Parse codesJson from Fabric architecture
+      if (typeof barcodeEvent.codesJson === 'string' && barcodeEvent.codesJson.length > 0) {
+        try {
+          barcodeEvent.codes = JSON.parse(barcodeEvent.codesJson);
+        } catch (error) {
+          console.warn("Failed to parse barcode codesJson:", error);
+          barcodeEvent.codes = [];
         }
-        // Remove the internal codesJson field
-        delete barcodeEvent.codesJson;
-      }
-
-      // Ensure codes array exists (for backward compatibility)
-      if (!barcodeEvent.codes || !Array.isArray(barcodeEvent.codes)) {
+      } else {
         barcodeEvent.codes = [];
       }
+      delete barcodeEvent.codesJson;
 
       onBarcodeScan(barcodeEvent);
     }, [onBarcodeScan])
@@ -386,40 +378,31 @@ const Camera = forwardRef<VisionSdkRefProps, VisionSdkProps>(
     const onBoundingBoxesDetectedHandler = useCallback((event: any) => {
       let boundingBoxEvent = parseNativeEvent<BoundingBoxesDetectedResult>(event);
 
-      // Handle Fabric architecture - parse JSON strings if present
-      if (boundingBoxEvent.barcodeBoundingBoxesJson !== undefined) {
-        if (typeof boundingBoxEvent.barcodeBoundingBoxesJson === 'string' && boundingBoxEvent.barcodeBoundingBoxesJson.length > 0) {
-          try {
-            boundingBoxEvent.barcodeBoundingBoxes = JSON.parse(boundingBoxEvent.barcodeBoundingBoxesJson);
-          } catch (error) {
-            console.warn("Failed to parse barcodeBoundingBoxesJson:", error);
-            boundingBoxEvent.barcodeBoundingBoxes = [];
-          }
+      // Parse barcodeBoundingBoxesJson from Fabric architecture
+      if (typeof boundingBoxEvent.barcodeBoundingBoxesJson === 'string' && boundingBoxEvent.barcodeBoundingBoxesJson.length > 0) {
+        try {
+          boundingBoxEvent.barcodeBoundingBoxes = JSON.parse(boundingBoxEvent.barcodeBoundingBoxesJson);
+        } catch (error) {
+          console.warn("Failed to parse barcodeBoundingBoxesJson:", error);
+          boundingBoxEvent.barcodeBoundingBoxes = [];
         }
-        // Remove the internal JSON field
-        delete (boundingBoxEvent as any).barcodeBoundingBoxesJson;
-      }
-
-      if (boundingBoxEvent.qrCodeBoundingBoxesJson !== undefined) {
-        if (typeof boundingBoxEvent.qrCodeBoundingBoxesJson === 'string' && boundingBoxEvent.qrCodeBoundingBoxesJson.length > 0) {
-          try {
-            boundingBoxEvent.qrCodeBoundingBoxes = JSON.parse(boundingBoxEvent.qrCodeBoundingBoxesJson);
-          } catch (error) {
-            console.warn("Failed to parse qrCodeBoundingBoxesJson:", error);
-            boundingBoxEvent.qrCodeBoundingBoxes = [];
-          }
-        }
-        // Remove the internal JSON field
-        delete (boundingBoxEvent as any).qrCodeBoundingBoxesJson;
-      }
-
-      // Ensure arrays exist (for backward compatibility)
-      if (!boundingBoxEvent.barcodeBoundingBoxes || !Array.isArray(boundingBoxEvent.barcodeBoundingBoxes)) {
+      } else {
         boundingBoxEvent.barcodeBoundingBoxes = [];
       }
-      if (!boundingBoxEvent.qrCodeBoundingBoxes || !Array.isArray(boundingBoxEvent.qrCodeBoundingBoxes)) {
+      delete (boundingBoxEvent as any).barcodeBoundingBoxesJson;
+
+      // Parse qrCodeBoundingBoxesJson from Fabric architecture
+      if (typeof boundingBoxEvent.qrCodeBoundingBoxesJson === 'string' && boundingBoxEvent.qrCodeBoundingBoxesJson.length > 0) {
+        try {
+          boundingBoxEvent.qrCodeBoundingBoxes = JSON.parse(boundingBoxEvent.qrCodeBoundingBoxesJson);
+        } catch (error) {
+          console.warn("Failed to parse qrCodeBoundingBoxesJson:", error);
+          boundingBoxEvent.qrCodeBoundingBoxes = [];
+        }
+      } else {
         boundingBoxEvent.qrCodeBoundingBoxes = [];
       }
+      delete (boundingBoxEvent as any).qrCodeBoundingBoxesJson;
 
       onBoundingBoxesDetected(boundingBoxEvent);
     }, [onBoundingBoxesDetected])
@@ -432,8 +415,8 @@ const Camera = forwardRef<VisionSdkRefProps, VisionSdkProps>(
       console.log("ON CREATE TEMPLATE HANDLER: ", event)
       let templateEvent = parseNativeEvent<any>(event);
 
-      // Handle Fabric architecture (dataJson) vs Legacy architecture (data)
-      if (templateEvent.dataJson && typeof templateEvent.dataJson === 'string') {
+      // Parse dataJson from Fabric architecture
+      if (typeof templateEvent.dataJson === 'string') {
         try {
           const parsed = JSON.parse(templateEvent.dataJson);
           // If it's an array with a single element (wrapped primitive), unwrap it
@@ -448,24 +431,20 @@ const Camera = forwardRef<VisionSdkRefProps, VisionSdkProps>(
     }, [onCreateTemplate]);
 
     const onGetTemplateHandler = useCallback((event: any) => {
-      console.log("ON GET TEMPLATES HANDLER: ", event)
+      // console.log("ON GET TEMPLATES HANDLER: ", event)
       let templateEvent = parseNativeEvent<any>(event);
 
-      // Handle Fabric architecture (dataJson) vs Legacy architecture (data)
-      if (templateEvent.dataJson && typeof templateEvent.dataJson === 'string') {
+      // Parse dataJson from Fabric architecture
+      if (typeof templateEvent.dataJson === 'string') {
         try {
           const parsed = JSON.parse(templateEvent.dataJson);
-          // Data should already be an array from Swift
-          templateEvent.data = parsed;
+          templateEvent.data = Array.isArray(parsed) ? parsed : [parsed];
         } catch (error) {
           console.warn("Failed to parse template dataJson:", error);
           templateEvent.data = [];
         }
-      }
-
-      // Ensure data is always an array for getAllTemplates
-      if (!Array.isArray(templateEvent.data)) {
-        templateEvent.data = templateEvent.data ? [templateEvent.data] : [];
+      } else {
+        templateEvent.data = [];
       }
 
       onGetTemplates(templateEvent)
@@ -475,8 +454,8 @@ const Camera = forwardRef<VisionSdkRefProps, VisionSdkProps>(
       console.log("ON DELETE TEMPLATE BY ID HANDLER: ", event)
       let templateEvent = parseNativeEvent<any>(event);
 
-      // Handle Fabric architecture (dataJson) vs Legacy architecture (data)
-      if (templateEvent.dataJson && typeof templateEvent.dataJson === 'string') {
+      // Parse dataJson from Fabric architecture
+      if (typeof templateEvent.dataJson === 'string') {
         try {
           const parsed = JSON.parse(templateEvent.dataJson);
           // If it's an array with a single element (wrapped primitive), unwrap it
@@ -494,8 +473,8 @@ const Camera = forwardRef<VisionSdkRefProps, VisionSdkProps>(
       console.log("ON DELETE TEMPLATES HANDLER: ", event)
       let templateEvent = parseNativeEvent<any>(event);
 
-      // Handle Fabric architecture (dataJson) vs Legacy architecture (data)
-      if (templateEvent.dataJson && typeof templateEvent.dataJson === 'string') {
+      // Parse dataJson from Fabric architecture
+      if (typeof templateEvent.dataJson === 'string') {
         try {
           const parsed = JSON.parse(templateEvent.dataJson);
           // If it's an array with a single element (wrapped primitive), unwrap it
@@ -512,26 +491,15 @@ const Camera = forwardRef<VisionSdkRefProps, VisionSdkProps>(
     const onOCRScanHandler = useCallback((event: any) => {
       let ocrEvent = parseNativeEvent<OCRScanResult>(event);
 
-      // Handle Fabric architecture (dataJson) vs Legacy architecture (data)
-      if ((ocrEvent as any).dataJson && typeof (ocrEvent as any).dataJson === 'string') {
+      // Parse dataJson from Fabric architecture
+      if (typeof (ocrEvent as any).dataJson === 'string') {
         try {
-          // Fabric architecture: Parse dataJson string
           const parsedData = JSON.parse((ocrEvent as any).dataJson);
           ocrEvent.data = parsedData?.data ?? parsedData ?? null;
         } catch (error) {
           console.error("Failed to parse dataJson:", error);
           ocrEvent.data = null;
         }
-      } else if (Platform.OS === 'android' && typeof ocrEvent.data === 'string') {
-        // Legacy Android: Parse data if it's a JSON string
-        try {
-          ocrEvent.data = JSON.parse(ocrEvent.data)?.data ?? ocrEvent.data;
-        } catch (error) {
-          ocrEvent.data = ocrEvent.data?.data ?? ocrEvent.data ?? null;
-        }
-      } else {
-        // Legacy iOS and other platforms: Ensure data is in correct format
-        ocrEvent.data = ocrEvent.data?.data ?? ocrEvent.data ?? null;
       }
 
       // Ensure ocrEvent.data exists before setting properties on it
@@ -652,7 +620,6 @@ const Camera = forwardRef<VisionSdkRefProps, VisionSdkProps>(
           shouldResizeImage={shouldResizeImage}
           token={token}
           locationId={locationId}
-          options={options} // ideally this should be passed from variable, that is receiving data from ScannerContainer
           environment={environment}
           flash={flash}
           zoomLevel={zoomLevel}

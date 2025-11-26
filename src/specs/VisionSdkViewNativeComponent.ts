@@ -26,7 +26,7 @@ type ImageCapturedEvent = Readonly<{
 }>;
 
 type SharpnessScoreEvent = Readonly<{
-  score: Float;
+  sharpnessScore: Float;
 }>;
 
 type OCRScanEvent = Readonly<{

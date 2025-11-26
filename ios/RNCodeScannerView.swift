@@ -510,22 +510,27 @@ extension RNCodeScannerView {
             OnDeviceOCRManager.shared.prepareOfflineOCR(withApiKey: apiKeyValue,
                                                         andToken: tokenValue,
                                                         forModelClass: getModelType(modelType),
-                                                        withModelSize: getModelSize(modelSize) ?? VSDKModelExternalSize.micro) { currentProgress, totalSize, isModelAlreadyDownloaded in
+                                                        withModelSize: getModelSize(modelSize) ?? VSDKModelExternalSize.micro) { [weak self] currentProgress, totalSize, isModelAlreadyDownloaded in
+                guard let self = self else {
+                    print("[RNCodeScannerView] View deallocated during model download progress - ignoring callback")
+                    return
+                }
                 // If the model is already downloaded, set progress to 100% and download status to true
                 if isModelAlreadyDownloaded {
                     self.onModelDownloadProgress!(["progress": (1),
                                                    "downloadStatus": true, // Indicate that the model is already downloaded
-                                                   "isReady": false])
+                                                   "isReady": false]) // Will be set to true in completion callback
                 } else {
-                    // Progress tracking and debugging output
-                    debugPrint(String(format: "Download progress: %.2f%%", (currentProgress / totalSize) * 100))
-
                     // Calling the download progress handler
                     self.onModelDownloadProgress!(["progress": ((currentProgress / totalSize)),
                                                    "downloadStatus": false,// Update download status to false during download
                                                    "isReady": false])
                 }
-            } withCompletion: { error in
+            } withCompletion: { [weak self] error in
+                guard let self = self else {
+                    print("[RNCodeScannerView] View deallocated during model download completion - ignoring callback")
+                    return
+                }
                 // Handling download completion
                 if error == nil {
                     // If no error, set progress to 100% and download status to true
@@ -542,22 +547,27 @@ extension RNCodeScannerView {
             print("downloaded without size")
             OnDeviceOCRManager.shared.prepareOfflineOCR(withApiKey: !VSDKConstants.apiKey.isEmpty ? VSDKConstants.apiKey : nil,
                                                         andToken: tokenValue,
-                                                        forModelClass: getModelType(modelType)) { currentProgress, totalSize, isModelAlreadyDownloaded in
+                                                        forModelClass: getModelType(modelType)) { [weak self] currentProgress, totalSize, isModelAlreadyDownloaded in
+                guard let self = self else {
+                    print("[RNCodeScannerView] View deallocated during model download progress - ignoring callback")
+                    return
+                }
                 // If the model is already downloaded, set progress to 100% and download status to true
                 if isModelAlreadyDownloaded {
                     self.onModelDownloadProgress!(["progress": (1),
                                                    "downloadStatus": true,// Indicate that the model is already downloaded
-                                                   "isReady": false])
+                                                   "isReady": false]) // Will be set to true in completion callback
                 } else {
-                    // Progress tracking and debugging output
-                    debugPrint(String(format: "Download progress: %.2f%%", (currentProgress / totalSize) * 100))
-
                     // Calling the download progress handler
                     self.onModelDownloadProgress!(["progress": ((currentProgress / totalSize)),
                                                    "downloadStatus": false,// Update download status to false during download
                                                    "isReady": false])
                 }
-            } withCompletion: { error in
+            } withCompletion: { [weak self] error in
+                guard let self = self else {
+                    print("[RNCodeScannerView] View deallocated during model download completion - ignoring callback")
+                    return
+                }
                 // Handling download completion
                 if error == nil {
                     // If no error, set progress to 100% and download status to true

@@ -121,6 +121,11 @@ const CameraScreenComponent: React.FC<{ route: any }> = ({ route }) => {
     text: false,
     document: false,
   });
+  const [sharpnessScore, setSharpnessScore] = useState<number>(0);
+
+  // Throttle sharpness updates (update at most every 200ms)
+  const lastSharpnessUpdate = useRef<number>(0);
+  const sharpnessThrottleMs = 200;
 
   const { width: screenWidth, height: screenHeight } = useWindowDimensions()
   const scannerWidth = screenWidth * 0.8;
@@ -562,12 +567,17 @@ const CameraScreenComponent: React.FC<{ route: any }> = ({ route }) => {
   }, [])
 
   const handleSharpnessScore = useCallback((event) => {
-    console.log("SHARPNESS SCORE RAW: ", event)
-    console.log("SHARPNESS SCORE: ", JSON.stringify(event))
-  }, [])
+    const now = Date.now();
+    if (now - lastSharpnessUpdate.current >= sharpnessThrottleMs) {
+      lastSharpnessUpdate.current = now;
+      console.log('Sharpness event:', JSON.stringify(event));
+      const sharpness = event.sharpnessScore;
+      console.log('Extracted sharpness value:', sharpness);
+      setSharpnessScore(sharpness);
+    }
+  }, [sharpnessThrottleMs])
 
   const handleModelDownloadProgress = useCallback((event) => {
-    console.log('💾 handleModelDownloadProgress: Setting modelDownloadingProgress', Date.now());
     setModelDownloadingProgress(event);
     if (event.downloadStatus && event.isReady) {
       setLoading(false);
@@ -729,6 +739,7 @@ const CameraScreenComponent: React.FC<{ route: any }> = ({ route }) => {
       {/* <LoaderView visible={loading} /> */}
       <CameraHeaderView
         detectedData={detectedData}
+        sharpnessScore={sharpnessScore}
         toggleFlash={toggleFlash}
         toggleCameraFacing={toggleCameraFacing}
         cameraFacing={cameraFacing}

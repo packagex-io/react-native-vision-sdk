@@ -54,7 +54,12 @@ export const VisionCore = {
     modelSize: string
   ) => {
     try {
-      await VisionSdkModuleNative.loadOnDeviceModels(token, apiKey, modelType, modelSize);
+      await VisionSdkModuleNative.loadOnDeviceModels(
+        token ?? '',
+        apiKey ?? '',
+        modelType,
+        modelSize
+      );
     } catch (error) {
       throw error;
     }
@@ -69,7 +74,7 @@ export const VisionCore = {
   unLoadModel: async (modelType: string | null = null, shouldDeleteFromDisk: boolean = false) => {
     try {
       const result = await VisionSdkModuleNative.unLoadOnDeviceModels(
-        modelType,
+        modelType ?? '',
         shouldDeleteFromDisk
       );
       return result;

@@ -76,7 +76,7 @@ class RNVisionCameraView: UIView {
   // MARK: - Initialization
   override init(frame: CGRect) {
     super.init(frame: frame)
-    setupCamera()
+    // Camera setup is now deferred to layoutSubviews to avoid blocking init
   }
 
   required init?(coder: NSCoder) {
@@ -87,13 +87,22 @@ class RNVisionCameraView: UIView {
   private var isRunning = false
   private var isStopping = false
   private var isDeallocating = false
-  
+  private var isSetupComplete = false
+
   override func layoutSubviews() {
     super.layoutSubviews()
+
+    // Ensure camera is setup and frame is adjusted
+    if !isSetupComplete && bounds.size.width > 0 && bounds.size.height > 0 {
+      // Defer heavy camera setup to avoid blocking initial layout
+      setupCamera()
+      isSetupComplete = true
+    }
+
     cameraView?.frame = self.bounds
 
     // Auto-start camera after first layout
-    if !hasStarted && !isDeallocating && bounds.size.width > 0 && bounds.size.height > 0 {
+    if !hasStarted && !isDeallocating && isSetupComplete {
       hasStarted = true
 
       // IMPORTANT: Apply camera settings BEFORE starting the camera
@@ -103,16 +112,13 @@ class RNVisionCameraView: UIView {
       // Now start the camera with the correct settings
       guard let cameraView = cameraView, !isRunning else { return }
 
-      // IMPORTANT: startRunning() is a blocking call that can take time
-      // Move it to background queue to prevent main thread blocking
-      DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+      // IMPORTANT: startRunning() must be on main thread (accesses UI/AVFoundation layers)
+      // Use asyncAfter with minimal delay to avoid blocking layoutSubviews
+      DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
         guard let self = self, let cameraView = self.cameraView, !self.isDeallocating else { return }
 
         cameraView.startRunning()
-
-        DispatchQueue.main.async {
-          self.isRunning = true
-        }
+        self.isRunning = true
       }
 
       // Apply scan area settings after camera starts
@@ -428,34 +434,28 @@ class RNVisionCameraView: UIView {
     }
 
     // IMPORTANT: Camera position change requires stopping and restarting the camera
-    // Use background queue to prevent main thread blocking
+    // Must run on main thread as both stopRunning() and startRunning() access UI/AVFoundation layers
     if isRunning {
       print("[RNVisionCameraView] Switching camera to \(position == .front ? "front" : "back")...")
-      DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-        guard let self = self, !self.isDeallocating else { return }
 
-        cameraView.stopRunning()
+      // Stop camera on main thread
+      cameraView.stopRunning()
+      print("[RNVisionCameraView] Camera stopped for switch, applying new settings...")
+      self.isRunning = false
 
-        DispatchQueue.main.async {
-          print("[RNVisionCameraView] Camera stopped for switch, applying new settings...")
-          self.isRunning = false
+      // Apply new camera settings
+      let cameraSettings = VisionSDK.CodeScannerView.CameraSettings()
+      cameraSettings.cameraPosition = position
+      cameraSettings.nthFrameToProcess = self.frameSkip?.int64Value ?? 10
+      cameraView.setCameraSettingsTo(cameraSettings)
 
-          let cameraSettings = VisionSDK.CodeScannerView.CameraSettings()
-          cameraSettings.cameraPosition = position
-          cameraSettings.nthFrameToProcess = self.frameSkip?.int64Value ?? 10
+      // Restart camera on main thread with slight delay to avoid blocking
+      DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
+        guard let self = self, let cameraView = self.cameraView, !self.isDeallocating else { return }
 
-          cameraView.setCameraSettingsTo(cameraSettings)
-
-          // Restart camera with new position on background queue
-          DispatchQueue.global(qos: .userInitiated).async {
-            cameraView.startRunning()
-
-            DispatchQueue.main.async {
-              print("[RNVisionCameraView] Camera restarted with new position")
-              self.isRunning = true
-            }
-          }
-        }
+        cameraView.startRunning()
+        print("[RNVisionCameraView] Camera restarted with new position")
+        self.isRunning = true
       }
     }
   }
