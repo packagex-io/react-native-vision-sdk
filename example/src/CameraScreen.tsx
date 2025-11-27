@@ -142,8 +142,6 @@ const CameraScreenComponent: React.FC<{ route: any }> = ({ route }) => {
 
   // Helper function to clear bounding boxes
   const clearBoundingBoxes = useCallback(() => {
-    console.log('🧹 Clearing bounding boxes');
-
     // Cancel any pending auto-clear timeout
     if (boundingBoxTimeoutRef.current) {
       clearTimeout(boundingBoxTimeoutRef.current);
@@ -234,8 +232,6 @@ const CameraScreenComponent: React.FC<{ route: any }> = ({ route }) => {
     });
 
     return () => {
-      console.log('🧹 useFocusEffect: Cleanup START', Date.now());
-
       // IMPORTANT: Cancel the interaction promise first
       interactionPromise.cancel();
 
@@ -253,8 +249,6 @@ const CameraScreenComponent: React.FC<{ route: any }> = ({ route }) => {
         clearTimeout(boundingBoxTimeoutRef.current);
         boundingBoxTimeoutRef.current = null;
       }
-
-      console.log('🧹 useFocusEffect: Cleanup COMPLETE', Date.now());
     }
   }, [requestCameraPermission, clearBoundingBoxes]))
 
@@ -479,7 +473,6 @@ const CameraScreenComponent: React.FC<{ route: any }> = ({ route }) => {
         prev.document !== event.document;
 
       if (hasChanged) {
-        console.log('🔍 handleDetected: Data changed, updating', Date.now());
         return event;
       }
 
@@ -570,9 +563,7 @@ const CameraScreenComponent: React.FC<{ route: any }> = ({ route }) => {
     const now = Date.now();
     if (now - lastSharpnessUpdate.current >= sharpnessThrottleMs) {
       lastSharpnessUpdate.current = now;
-      console.log('Sharpness event:', JSON.stringify(event));
       const sharpness = event.sharpnessScore;
-      console.log('Extracted sharpness value:', sharpness);
       setSharpnessScore(sharpness);
     }
   }, [sharpnessThrottleMs])
@@ -633,13 +624,6 @@ const CameraScreenComponent: React.FC<{ route: any }> = ({ route }) => {
   }
 
 
-  useEffect(() => {
-    console.log("DETECTED BOUNDING BOXES ARE: ", JSON.stringify(detectedBoundingBoxes, null, 2))
-    console.log("Current mode:", mode)
-    console.log("Barcode boxes count:", detectedBoundingBoxes.barcodeBoundingBoxes?.length)
-    console.log("QR boxes count:", detectedBoundingBoxes.qrCodeBoundingBoxes?.length)
-  }, [detectedBoundingBoxes])
-  
   const handleBoundingBoxesDetected = useCallback((args) => {
     // Cancel any existing auto-clear timeout
     if (boundingBoxTimeoutRef.current) {
@@ -654,7 +638,6 @@ const CameraScreenComponent: React.FC<{ route: any }> = ({ route }) => {
       const documentChanged = JSON.stringify(prev.documentBoundingBox) !== JSON.stringify(args.documentBoundingBox);
 
       if (barcodesChanged || qrCodesChanged || documentChanged) {
-        console.log('📦 handleBoundingBoxesDetected: Data changed, updating',  Date.now());
         return {
           barcodeBoundingBoxes: args.barcodeBoundingBoxes || [],
           qrCodeBoundingBoxes: args.qrCodeBoundingBoxes || [],
@@ -668,7 +651,6 @@ const CameraScreenComponent: React.FC<{ route: any }> = ({ route }) => {
 
     // Set up auto-clear timeout - clear bounding boxes after delay if no new detections
     boundingBoxTimeoutRef.current = setTimeout(() => {
-      console.log(`⏰ Auto-clearing bounding boxes after ${BOUNDING_BOX_AUTO_CLEAR_DELAY}ms of inactivity`);
       clearBoundingBoxes();
     }, BOUNDING_BOX_AUTO_CLEAR_DELAY);
   }, [clearBoundingBoxes, BOUNDING_BOX_AUTO_CLEAR_DELAY])
@@ -706,7 +688,7 @@ const CameraScreenComponent: React.FC<{ route: any }> = ({ route }) => {
         options={{}}
         isEnableAutoOcrResponseWithImage={true}
         locationId=""
-        token=""
+        token={null}
         apiKey={apiKey}
         flash={flash}
         zoomLevel={zoomLevel}
@@ -798,6 +780,7 @@ const CameraScreenComponent: React.FC<{ route: any }> = ({ route }) => {
           {detectedBoundingBoxes.barcodeBoundingBoxes.map((code, index) => (
             <View
               key={index}
+              pointerEvents="none"
               style={{
                 position: 'absolute',
                 left: code.boundingBox.x,
@@ -830,6 +813,7 @@ const CameraScreenComponent: React.FC<{ route: any }> = ({ route }) => {
           {detectedBoundingBoxes.qrCodeBoundingBoxes.map((code, index) => (
             <View
               key={index}
+              pointerEvents="none"
               style={{
                 position: 'absolute',
                 left: code.boundingBox.x,
@@ -860,6 +844,7 @@ const CameraScreenComponent: React.FC<{ route: any }> = ({ route }) => {
 
       {['ocr', 'photo'].includes(mode) && detectedBoundingBoxes.documentBoundingBox?.width > 0 ?
         <View
+          pointerEvents="none"
           style={{
             position: 'absolute',
             left: detectedBoundingBoxes.documentBoundingBox.x,
@@ -891,7 +876,7 @@ const CameraScreenComponent: React.FC<{ route: any }> = ({ route }) => {
         <>
 
           <View
-
+            pointerEvents="none"
             style={{
               position: 'absolute',
               left: detectedPriceTag.boundingBox.x,

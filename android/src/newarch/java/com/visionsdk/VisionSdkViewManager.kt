@@ -202,81 +202,83 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
         lastBoundingBoxEventTime = currentTime
 
         try {
+            // Build barcode bounding boxes JSON array
+            val barcodeRectsJsonArray = org.json.JSONArray()
+            if (barcodeBoundingBoxes.isNotEmpty()) {
+                barcodeBoundingBoxes.forEach { code ->
+                    val codeObj = org.json.JSONObject().apply {
+                        put("scannedCode", code.scannedCode)
+                        put("symbology", code.symbology.toString())
+
+                        // Add GS1 extracted info if available
+                        if (!code.gs1ExtractedInfo.isNullOrEmpty()) {
+                            val gs1Map = org.json.JSONObject()
+                            code.gs1ExtractedInfo?.forEach { (key, value) ->
+                                gs1Map.put(key, value)
+                            }
+                            put("gs1ExtractedInfo", gs1Map)
+                        } else {
+                            put("gs1ExtractedInfo", org.json.JSONObject())
+                        }
+
+                        val boundingBox = org.json.JSONObject()
+                        code.boundingBox?.let { box ->
+                            boundingBox.put("x", box.left.toDp(density))
+                            boundingBox.put("y", box.top.toDp(density))
+                            boundingBox.put("width", box.width().toDp(density))
+                            boundingBox.put("height", box.height().toDp(density))
+                        }
+                        put("boundingBox", boundingBox)
+                    }
+                    barcodeRectsJsonArray.put(codeObj)
+                }
+            }
+
+            // Build QR code bounding boxes JSON array
+            val qrCodeRectsJsonArray = org.json.JSONArray()
+            if (qrCodeBoundingBoxes.isNotEmpty()) {
+                qrCodeBoundingBoxes.forEach { code ->
+                    val codeObj = org.json.JSONObject().apply {
+                        put("scannedCode", code.scannedCode)
+                        put("symbology", code.symbology.toString())
+
+                        // Add GS1 extracted info if available
+                        if (!code.gs1ExtractedInfo.isNullOrEmpty()) {
+                            val gs1Map = org.json.JSONObject()
+                            code.gs1ExtractedInfo?.forEach { (key, value) ->
+                                gs1Map.put(key, value)
+                            }
+                            put("gs1ExtractedInfo", gs1Map)
+                        } else {
+                            put("gs1ExtractedInfo", org.json.JSONObject())
+                        }
+
+                        val boundingBox = org.json.JSONObject()
+                        code.boundingBox?.let { box ->
+                            boundingBox.put("x", box.left.toDp(density))
+                            boundingBox.put("y", box.top.toDp(density))
+                            boundingBox.put("width", box.width().toDp(density))
+                            boundingBox.put("height", box.height().toDp(density))
+                        }
+                        put("boundingBox", boundingBox)
+                    }
+                    qrCodeRectsJsonArray.put(codeObj)
+                }
+            }
+
+            // Build event with JSON strings for arrays
             val event = Arguments.createMap().apply {
-                val barcodeRectsArray = Arguments.createArray()
-                val qrCodeRectsArray = Arguments.createArray()
+                putString("barcodeBoundingBoxesJson", barcodeRectsJsonArray.toString())
+                putString("qrCodeBoundingBoxesJson", qrCodeRectsJsonArray.toString())
+
+                // Document bounding box can remain as object
                 val documentsRect = Arguments.createMap()
-
-                // Convert barcode bounding boxes with full metadata
-                if (barcodeBoundingBoxes.isNotEmpty()) {
-                    barcodeBoundingBoxes.forEach { code ->
-                        barcodeRectsArray.pushMap(Arguments.createMap().apply {
-                            putString("scannedCode", code.scannedCode)
-                            putString("symbology", code.symbology.toString())
-
-                            // Add GS1 extracted info if available
-                            if (!code.gs1ExtractedInfo.isNullOrEmpty()) {
-                                val gs1Map = Arguments.createMap()
-                                code.gs1ExtractedInfo?.forEach { (key, value) ->
-                                    gs1Map.putString(key, value)
-                                }
-                                putMap("gs1ExtractedInfo", gs1Map)
-                            } else {
-                                putMap("gs1ExtractedInfo", Arguments.createMap())
-                            }
-
-                            putMap("boundingBox", Arguments.createMap().apply {
-                                code.boundingBox?.let { box ->
-                                    putInt("x", box.left.toDp(density))
-                                    putInt("y", box.top.toDp(density))
-                                    putInt("width", box.width().toDp(density))
-                                    putInt("height", box.height().toDp(density))
-                                }
-                            })
-                        })
-                    }
-                }
-
-                // Convert QR code bounding boxes with full metadata
-                if (qrCodeBoundingBoxes.isNotEmpty()) {
-                    qrCodeBoundingBoxes.forEach { code ->
-                        qrCodeRectsArray.pushMap(Arguments.createMap().apply {
-                            putString("scannedCode", code.scannedCode)
-                            putString("symbology", code.symbology.toString())
-
-                            // Add GS1 extracted info if available
-                            if (!code.gs1ExtractedInfo.isNullOrEmpty()) {
-                                val gs1Map = Arguments.createMap()
-                                code.gs1ExtractedInfo?.forEach { (key, value) ->
-                                    gs1Map.putString(key, value)
-                                }
-                                putMap("gs1ExtractedInfo", gs1Map)
-                            } else {
-                                putMap("gs1ExtractedInfo", Arguments.createMap())
-                            }
-
-                            putMap("boundingBox", Arguments.createMap().apply {
-                                code.boundingBox?.let { box ->
-                                    putInt("x", box.left.toDp(density))
-                                    putInt("y", box.top.toDp(density))
-                                    putInt("width", box.width().toDp(density))
-                                    putInt("height", box.height().toDp(density))
-                                }
-                            })
-                        })
-                    }
-                }
-
-                // Convert document bounding box
                 if (documentBoundingBox != null) {
                     documentsRect.putInt("x", documentBoundingBox.left.toDp(density))
                     documentsRect.putInt("y", documentBoundingBox.top.toDp(density))
                     documentsRect.putInt("width", documentBoundingBox.width().toDp(density))
                     documentsRect.putInt("height", documentBoundingBox.height().toDp(density))
                 }
-
-                putArray("barcodeBoundingBoxes", barcodeRectsArray)
-                putArray("qrCodeBoundingBoxes", qrCodeRectsArray)
                 putMap("documentBoundingBox", documentsRect)
             }
 
@@ -330,35 +332,37 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
         }
 
         try {
-            val event = Arguments.createMap().apply {
-                val codesArray = Arguments.createArray()
+            // Build codes array
+            val codesArray = org.json.JSONArray()
 
-                barcodeList.forEach { code ->
-                    val codeMap = Arguments.createMap().apply {
-                        putString("scannedCode", code.scannedCode)
-                        putString("symbology", code.symbology.toString())
+            barcodeList.forEach { code ->
+                val codeObj = org.json.JSONObject().apply {
+                    put("scannedCode", code.scannedCode)
+                    put("symbology", code.symbology.toString())
 
-                        val boundingBox = Arguments.createMap()
-                        code.boundingBox?.let { box ->
-                            boundingBox.putInt("x", box.left)
-                            boundingBox.putInt("y", box.top)
-                            boundingBox.putInt("width", box.width())
-                            boundingBox.putInt("height", box.height())
-                        }
-                        putMap("boundingBox", boundingBox)
-
-                        code.gs1ExtractedInfo?.let { gs1Info ->
-                            val gs1Map = Arguments.createMap()
-                            gs1Info.forEach { (key, value) ->
-                                gs1Map.putString(key, value)
-                            }
-                            putMap("gs1ExtractedInfo", gs1Map)
-                        }
+                    val boundingBox = org.json.JSONObject()
+                    code.boundingBox?.let { box ->
+                        boundingBox.put("x", box.left)
+                        boundingBox.put("y", box.top)
+                        boundingBox.put("width", box.width())
+                        boundingBox.put("height", box.height())
                     }
-                    codesArray.pushMap(codeMap)
-                }
+                    put("boundingBox", boundingBox)
 
-                putArray("codes", codesArray)
+                    code.gs1ExtractedInfo?.let { gs1Info ->
+                        val gs1Map = org.json.JSONObject()
+                        gs1Info.forEach { (key, value) ->
+                            gs1Map.put(key, value)
+                        }
+                        put("gs1ExtractedInfo", gs1Map)
+                    }
+                }
+                codesArray.put(codeObj)
+            }
+
+            // Send as JSON string for Fabric architecture
+            val event = Arguments.createMap().apply {
+                putString("codesJson", codesArray.toString())
             }
             sendEvent("onBarcodeScan", event)
         } catch (e: Exception) {
@@ -472,12 +476,15 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
             emptyMap()
         }
 
+        // Convert empty string to null for API compatibility
+        val normalizedLocationId = if (locationId.isNullOrEmpty()) null else locationId
+
         ApiManager().shippingLabelApiCallAsync(
             apiKey = apiKey,
             token = token,
             bitmap = bitmap,
             barcodeList = barcodes,
-            locationId = locationId,
+            locationId = normalizedLocationId,
             options = optionsMap,
             metadata = emptyMap(),
             recipient = null,
@@ -515,12 +522,15 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
             emptyMap()
         }
 
+        // Convert empty string to null for API compatibility
+        val normalizedLocationId = if (locationId.isNullOrEmpty()) null else locationId
+
         ApiManager().billOfLadingApiCallAsync(
             apiKey = apiKey,
             token = token,
             bitmap = bitmap,
             barcodeList = barcodes,
-            locationId = locationId,
+            locationId = normalizedLocationId,
             options = optionsMap,
             onScanResult = this,
             shouldResizeImage = shouldResizeImage
@@ -609,14 +619,18 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
     override fun onOCRResponse(response: String) {
         Log.d(TAG, "onOCRResponse: ${response.take(100)}...")
         val event = Arguments.createMap().apply {
-            putString("data", response)
+            // Response is already a JSON string from the SDK, send as dataJson for Fabric
+            putString("dataJson", response)
             putString("imagePath", imagePath)
         }
         sendEvent("onOCRScan", event)
     }
 
     override fun onOCRResponseFailed(exception: VisionSDKException) {
-        Log.e(TAG, "onOCRResponseFailed: ${exception.message}")
+        Log.e(TAG, "onOCRResponseFailed: ${exception.message}", exception)
+        Log.e(TAG, "Error code: ${exception.errorCode}")
+        Log.e(TAG, "Error type: ${exception.javaClass.simpleName}")
+        Log.e(TAG, "Stack trace:", exception)
         val event = Arguments.createMap().apply {
             putString("message", exception.message ?: "OCR failed")
             putInt("code", exception.errorCode ?: -1)

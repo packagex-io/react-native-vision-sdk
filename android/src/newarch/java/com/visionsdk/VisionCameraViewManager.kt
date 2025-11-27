@@ -318,33 +318,23 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
 
     // MARK: - Commands
 
-    override fun getCommandsMap(): Map<String, Int>? {
-        return mapOf(
-            "capture" to 0,
-            "stop" to 1,
-            "start" to 2,
-            "toggleFlash" to 3,
-            "setZoom" to 4
-        )
-    }
-
     override fun receiveCommand(
         root: VisionCameraView,
-        commandId: Int,
+        commandId: String,
         args: ReadableArray?
     ) {
-        Log.d(TAG, "receiveCommand called with commandId: $commandId, args: $args")
+        Log.d(TAG, "receiveCommand called with commandId: '$commandId', view id: ${root.id}")
 
-        // Handle numeric command IDs (Fabric uses integers)
+        // Handle string command names (Fabric codegen)
         when (commandId) {
-            0 -> capture(root)
-            1 -> stop(root)
-            2 -> start(root)
-            3 -> {
+            "capture" -> capture(root)
+            "stop" -> stop(root)
+            "start" -> start(root)
+            "toggleFlash" -> {
                 val enabled = args?.getBoolean(0) ?: false
                 toggleFlash(root, enabled)
             }
-            4 -> {
+            "setZoom" -> {
                 val level = args?.getDouble(0) ?: 1.0
                 setZoomCommand(root, level)
             }
@@ -353,10 +343,7 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
     }
 
     private fun capture(view: VisionCameraView) {
-        Log.d(TAG, "capture called (mode: $currentDetectionMode)")
-
-        // In Photo mode, just capture directly - don't call rescan
-        // The camera is already running and ready to capture
+        Log.d(TAG, "capture called")
         view.capture()
     }
 
@@ -388,51 +375,46 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
 
         private fun sendEvent(eventName: String, params: com.facebook.react.bridge.WritableMap) {
             if (view.isAttachedToWindow) {
-                Log.d(TAG, "Sending event: $eventName to view ${view.id}")
                 try {
                     context.getJSModule(RCTEventEmitter::class.java)
                         .receiveEvent(view.id, eventName, params)
                 } catch (e: Exception) {
                     Log.e(TAG, "Error sending event $eventName: ${e.message}")
                 }
-            } else {
-                Log.w(TAG, "Cannot send event $eventName - view is not attached")
             }
         }
 
         // ScannerCallback implementation
         override fun onScanResult(barcodeList: List<ScannedCodeResult>) {
-            Log.d(TAG, "onScanResult called with ${barcodeList.size} codes")
-            val event = Arguments.createMap()
-            val codesArray = Arguments.createArray()
-
+            // Build codes array as JSON for Fabric
+            val codesArray = org.json.JSONArray()
             for (code in barcodeList) {
-                Log.d(TAG, "Barcode detected: ${code.scannedCode}, symbology: ${code.symbology}")
-                val codeMap = Arguments.createMap()
-                codeMap.putString("scannedCode", code.scannedCode)
-                codeMap.putString("symbology", code.symbology.toString())
+                val codeObj = org.json.JSONObject().apply {
+                    put("scannedCode", code.scannedCode)
+                    put("symbology", code.symbology.toString())
 
-                val boundingBox = Arguments.createMap()
-                code.boundingBox?.let { box ->
-                    boundingBox.putDouble("x", box.left.toDouble())
-                    boundingBox.putDouble("y", box.top.toDouble())
-                    boundingBox.putDouble("width", box.width().toDouble())
-                    boundingBox.putDouble("height", box.height().toDouble())
-                }
-                codeMap.putMap("boundingBox", boundingBox)
-
-                if (!code.gs1ExtractedInfo.isNullOrEmpty()) {
-                    val gs1Map = Arguments.createMap()
-                    code.gs1ExtractedInfo?.forEach { (key, value) ->
-                        gs1Map.putString(key, value)
+                    code.boundingBox?.let { box ->
+                        put("boundingBox", org.json.JSONObject().apply {
+                            put("x", box.left.toDouble())
+                            put("y", box.top.toDouble())
+                            put("width", box.width().toDouble())
+                            put("height", box.height().toDouble())
+                        })
                     }
-                    codeMap.putMap("gs1ExtractedInfo", gs1Map)
-                }
 
-                codesArray.pushMap(codeMap)
+                    if (!code.gs1ExtractedInfo.isNullOrEmpty()) {
+                        val gs1Obj = org.json.JSONObject()
+                        code.gs1ExtractedInfo?.forEach { (key, value) ->
+                            gs1Obj.put(key, value)
+                        }
+                        put("gs1ExtractedInfo", gs1Obj)
+                    }
+                }
+                codesArray.put(codeObj)
             }
 
-            event.putArray("codes", codesArray)
+            val event = Arguments.createMap()
+            event.putString("codesJson", codesArray.toString())
             sendEvent("onBarcodeDetected", event)
 
             // Automatically restart scanning after barcode detection
@@ -463,7 +445,6 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
             }
             lastRecognitionUpdateTime = System.currentTimeMillis()
 
-            Log.d(TAG, "onIndications - barcode: $barcodeDetected, qr: $qrCodeDetected, text: $textDetected, doc: $documentDetected")
             val event = Arguments.createMap()
             event.putBoolean("text", textDetected)
             event.putBoolean("barcode", barcodeDetected)
@@ -483,68 +464,65 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
             }
             lastBoundingBoxesUpdateTime = System.currentTimeMillis()
 
-            Log.d(TAG, "onIndicationsBoundingBoxes - barcodes: ${barcodeBoundingBoxes.size}, qrCodes: ${qrCodeBoundingBoxes.size}, document: ${documentBoundingBox != null}")
-            val event = Arguments.createMap()
-
-            // Convert barcode bounding boxes
-            val barcodeBoxesArray = Arguments.createArray()
+            // Build barcode bounding boxes JSON array
+            val barcodeRectsJsonArray = org.json.JSONArray()
             barcodeBoundingBoxes.forEach { code ->
-                val boxMap = Arguments.createMap()
-                boxMap.putString("scannedCode", code.scannedCode)
-                boxMap.putString("symbology", code.symbology.toString())
+                val boxObj = org.json.JSONObject().apply {
+                    put("scannedCode", code.scannedCode)
+                    put("symbology", code.symbology.toString())
 
-                if (!code.gs1ExtractedInfo.isNullOrEmpty()) {
-                    val gs1Map = Arguments.createMap()
-                    code.gs1ExtractedInfo?.forEach { (key, value) ->
-                        gs1Map.putString(key, value)
+                    if (!code.gs1ExtractedInfo.isNullOrEmpty()) {
+                        val gs1Obj = org.json.JSONObject()
+                        code.gs1ExtractedInfo?.forEach { (key, value) ->
+                            gs1Obj.put(key, value)
+                        }
+                        put("gs1ExtractedInfo", gs1Obj)
                     }
-                    boxMap.putMap("gs1ExtractedInfo", gs1Map)
-                } else {
-                    boxMap.putMap("gs1ExtractedInfo", Arguments.createMap())
-                }
 
-                boxMap.putMap("boundingBox", Arguments.createMap().apply {
                     code.boundingBox?.let { box ->
-                        putInt("x", box.left.toDp(density))
-                        putInt("y", box.top.toDp(density))
-                        putInt("width", box.width().toDp(density))
-                        putInt("height", box.height().toDp(density))
+                        put("boundingBox", org.json.JSONObject().apply {
+                            put("x", box.left.toDp(density))
+                            put("y", box.top.toDp(density))
+                            put("width", box.width().toDp(density))
+                            put("height", box.height().toDp(density))
+                        })
                     }
-                })
-                barcodeBoxesArray.pushMap(boxMap)
+                }
+                barcodeRectsJsonArray.put(boxObj)
             }
-            event.putArray("barcodeBoundingBoxes", barcodeBoxesArray)
 
-            // Convert QR code bounding boxes
-            val qrCodeBoxesArray = Arguments.createArray()
+            // Build QR code bounding boxes JSON array
+            val qrCodeRectsJsonArray = org.json.JSONArray()
             qrCodeBoundingBoxes.forEach { code ->
-                val boxMap = Arguments.createMap()
-                boxMap.putString("scannedCode", code.scannedCode)
-                boxMap.putString("symbology", code.symbology.toString())
+                val boxObj = org.json.JSONObject().apply {
+                    put("scannedCode", code.scannedCode)
+                    put("symbology", code.symbology.toString())
 
-                if (!code.gs1ExtractedInfo.isNullOrEmpty()) {
-                    val gs1Map = Arguments.createMap()
-                    code.gs1ExtractedInfo?.forEach { (key, value) ->
-                        gs1Map.putString(key, value)
+                    if (!code.gs1ExtractedInfo.isNullOrEmpty()) {
+                        val gs1Obj = org.json.JSONObject()
+                        code.gs1ExtractedInfo?.forEach { (key, value) ->
+                            gs1Obj.put(key, value)
+                        }
+                        put("gs1ExtractedInfo", gs1Obj)
                     }
-                    boxMap.putMap("gs1ExtractedInfo", gs1Map)
-                } else {
-                    boxMap.putMap("gs1ExtractedInfo", Arguments.createMap())
-                }
 
-                boxMap.putMap("boundingBox", Arguments.createMap().apply {
                     code.boundingBox?.let { box ->
-                        putInt("x", box.left.toDp(density))
-                        putInt("y", box.top.toDp(density))
-                        putInt("width", box.width().toDp(density))
-                        putInt("height", box.height().toDp(density))
+                        put("boundingBox", org.json.JSONObject().apply {
+                            put("x", box.left.toDp(density))
+                            put("y", box.top.toDp(density))
+                            put("width", box.width().toDp(density))
+                            put("height", box.height().toDp(density))
+                        })
                     }
-                })
-                qrCodeBoxesArray.pushMap(boxMap)
+                }
+                qrCodeRectsJsonArray.put(boxObj)
             }
-            event.putArray("qrCodeBoundingBoxes", qrCodeBoxesArray)
 
-            // Convert document bounding box
+            val event = Arguments.createMap()
+            event.putString("barcodeBoundingBoxesJson", barcodeRectsJsonArray.toString())
+            event.putString("qrCodeBoundingBoxesJson", qrCodeRectsJsonArray.toString())
+
+            // Convert document bounding box (this stays as object)
             documentBoundingBox?.let { box ->
                 val boxMap = Arguments.createMap()
                 boxMap.putInt("x", box.left.toDp(density))
@@ -572,7 +550,6 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
             }
             lastSharpnessScoreUpdateTime = System.currentTimeMillis()
 
-            Log.d(TAG, "onImageSharpnessScore called: $imageSharpnessScore")
             val event = Arguments.createMap()
             event.putDouble("sharpnessScore", imageSharpnessScore)
             sendEvent("onSharpnessScoreUpdate", event)
@@ -588,38 +565,38 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
                     bitmap.compress(Bitmap.CompressFormat.JPEG, 90, output)
                 }
 
+                // Build barcodes array as JSON for Fabric
+                val barcodesArray = org.json.JSONArray()
+                scannedCodeResults.forEach { code ->
+                    val codeObj = org.json.JSONObject().apply {
+                        put("scannedCode", code.scannedCode)
+                        put("symbology", code.symbology.toString())
+
+                        code.boundingBox?.let { box ->
+                            put("boundingBox", org.json.JSONObject().apply {
+                                put("x", box.left.toDouble())
+                                put("y", box.top.toDouble())
+                                put("width", box.width().toDouble())
+                                put("height", box.height().toDouble())
+                            })
+                        }
+
+                        if (!code.gs1ExtractedInfo.isNullOrEmpty()) {
+                            val gs1Obj = org.json.JSONObject()
+                            code.gs1ExtractedInfo?.forEach { (key, value) ->
+                                gs1Obj.put(key, value)
+                            }
+                            put("gs1ExtractedInfo", gs1Obj)
+                        }
+                    }
+                    barcodesArray.put(codeObj)
+                }
+
                 val event = Arguments.createMap()
                 event.putString("image", file.absolutePath)
                 event.putString("nativeImage", file.toURI().toString())
                 event.putDouble("sharpnessScore", imageSharpnessScore.toDouble())
-
-                // Add barcodes array
-                val barcodesArray = Arguments.createArray()
-                scannedCodeResults.forEach { code ->
-                    val barcodeMap = Arguments.createMap()
-                    barcodeMap.putString("scannedCode", code.scannedCode)
-                    barcodeMap.putString("symbology", code.symbology.toString())
-
-                    val boundingBox = Arguments.createMap()
-                    code.boundingBox?.let { box ->
-                        boundingBox.putDouble("x", box.left.toDouble())
-                        boundingBox.putDouble("y", box.top.toDouble())
-                        boundingBox.putDouble("width", box.width().toDouble())
-                        boundingBox.putDouble("height", box.height().toDouble())
-                    }
-                    barcodeMap.putMap("boundingBox", boundingBox)
-
-                    if (!code.gs1ExtractedInfo.isNullOrEmpty()) {
-                        val gs1Map = Arguments.createMap()
-                        code.gs1ExtractedInfo?.forEach { (key, value) ->
-                            gs1Map.putString(key, value)
-                        }
-                        barcodeMap.putMap("gs1ExtractedInfo", gs1Map)
-                    }
-
-                    barcodesArray.pushMap(barcodeMap)
-                }
-                event.putArray("barcodes", barcodesArray)
+                event.putString("barcodesJson", barcodesArray.toString())
 
                 sendEvent("onCapture", event)
 
