@@ -8,18 +8,16 @@ import com.facebook.react.uimanager.ViewManager
 /**
  * New Architecture Package
  *
- * In Fabric (New Architecture), TurboModules are auto-registered by Codegen,
- * but ViewManagers still need to be manually registered.
+ * In Fabric (New Architecture), both TurboModules and ViewManagers
+ * need to be manually registered via this Package class.
  */
 class VisionSdkPackage : ReactPackage {
   override fun createNativeModules(reactContext: ReactApplicationContext): List<NativeModule> {
-    // TurboModules are auto-registered by Codegen in New Architecture
-    // We still need to return the module here for backward compatibility during transition
+    // TurboModules still need manual registration in Fabric
     return listOf(VisionSdkModule(reactContext))
   }
 
   override fun createViewManagers(reactContext: ReactApplicationContext): List<ViewManager<*, *>> {
-    // Fabric ViewManagers
     return listOf(
       VisionSdkViewManager(reactContext),
       VisionCameraViewManager(reactContext)
