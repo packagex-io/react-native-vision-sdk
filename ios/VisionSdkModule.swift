@@ -253,17 +253,17 @@ class VisionSdkModule: RCTEventEmitter {
       }
       // Ensure barcodes is a non-nil array
       let barcodeList = barcodes ?? []
-      
+
       // Convert responseData dictionary to JSON Data
       guard JSONSerialization.isValidJSONObject(responseData),
             let responseDataJson = try? JSONSerialization.data(withJSONObject: responseData) else {
         rejecter("invalid_response_data", "Failed to convert responseData to JSON", nil)
         return
       }
-      
+
       let shouldResize = shouldResizeImage.boolValue
 
-      
+
       VisionAPIManager.shared.callItemLabelsMatchingAPIWith(
         image,
         andBarcodes: barcodeList,
@@ -281,9 +281,9 @@ class VisionSdkModule: RCTEventEmitter {
             resolver("Logged successfully")
           }
       }
-      
+
     }
-    
+
 
   }
 
@@ -502,7 +502,6 @@ class VisionSdkModule: RCTEventEmitter {
     resolver: @escaping RCTPromiseResolveBlock,
     rejecter: @escaping RCTPromiseRejectBlock
   ) {
-    // Bill of Lading uses the same scan API as shipping labels
     loadImage(from: imagePath) { image in
       guard let image = image else {
         rejecter("IMAGE_LOAD_ERROR", "Failed to load image from path: \(imagePath)", nil)
@@ -512,24 +511,41 @@ class VisionSdkModule: RCTEventEmitter {
       let barcodeList = barcodes ?? []
       let shouldResize = shouldResizeImage?.boolValue ?? true
 
-      VisionAPIManager.shared.callScanAPIWith(
-        image,
-        andBarcodes: barcodeList,
-        andApiKey: apiKey,
-        andToken: token,
-        andLocationId: locationId ?? "",
-        andOptions: options ?? [:],
-        andMetaData: [:],
-        andRecipient: [:],
-        andSender: [:],
-        withImageResizing: shouldResize
-      ) { data, error in
-        if let error = error {
-          rejecter("API_ERROR", "Bill of lading prediction failed", error)
-        } else if let data = data {
-          resolver(String(data: data, encoding: .utf8) ?? "")
-        } else {
-          rejecter("UNKNOWN_ERROR", "Unknown error occurred", nil)
+      // Use the correct Bill of Lading API method
+      if let validLocationId = locationId, !validLocationId.isEmpty {
+        VisionAPIManager.shared.getPredictionBillOfLadingCloud(
+          image,
+          andBarcodes: barcodeList,
+          andApiKey: apiKey,
+          andToken: token,
+          andLocationId: validLocationId,
+          andOptions: options ?? [:],
+          withImageResizing: shouldResize
+        ) { data, error in
+          if let error = error {
+            rejecter("API_ERROR", "Bill of lading prediction failed", error)
+          } else if let data = data {
+            resolver(String(data: data, encoding: .utf8) ?? "")
+          } else {
+            rejecter("UNKNOWN_ERROR", "Unknown error occurred", nil)
+          }
+        }
+      } else {
+        VisionAPIManager.shared.getPredictionBillOfLadingCloud(
+          image,
+          andBarcodes: barcodeList,
+          andApiKey: apiKey,
+          andToken: token,
+          andOptions: options ?? [:],
+          withImageResizing: shouldResize
+        ) { data, error in
+          if let error = error {
+            rejecter("API_ERROR", "Bill of lading prediction failed", error)
+          } else if let data = data {
+            resolver(String(data: data, encoding: .utf8) ?? "")
+          } else {
+            rejecter("UNKNOWN_ERROR", "Unknown error occurred", nil)
+          }
         }
       }
     }

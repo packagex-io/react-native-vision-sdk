@@ -55,7 +55,7 @@ buildscript {
     minSdkVersion = 29  // Minimum version required by Vision SDK
     compileSdkVersion = 35
     targetSdkVersion = 35
-    ndkVersion = "27.1.12297006"
+    ndkVersion = "28.0.13004108"
     kotlinVersion = "1.9.0"
   }
 }

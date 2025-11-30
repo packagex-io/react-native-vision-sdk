@@ -55,6 +55,7 @@ import io.packagex.visionsdk.ui.views.VisionCameraView
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import org.json.JSONArray
 import org.json.JSONObject
 import android.net.Uri
 import android.util.Base64
@@ -981,7 +982,6 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
 
     private fun setObjectDetectionSettings(view: VisionCameraView, args: ReadableArray?) {
         val settingsJson = args?.getString(0) ?: "{}"
-        Log.d(TAG, "setObjectDetectionSettings: $settingsJson")
 
         try {
             val json = JSONObject(settingsJson)
@@ -994,9 +994,27 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
             )
 
             view.setObjectDetectionConfiguration(detectionConfig)
-            Log.d(TAG, "Object detection settings applied successfully")
+
+            // Apply selected template
+            if (json.has("selectedTemplateId")) {
+                val selectedTemplateId = json.optString("selectedTemplateId", "")
+
+                if (selectedTemplateId.isNotEmpty()) {
+                    val templateManager = TemplateManager()
+                    val templates = templateManager.getAllBarcodeTemplates()
+                    val templateToApply = templates.firstOrNull { it.name == selectedTemplateId }
+
+                    if (templateToApply != null) {
+                        view.applyBarcodeTemplate(templateToApply)
+                    } else {
+                        Log.w(TAG, "Template not found: $selectedTemplateId")
+                    }
+                } else {
+                    view.removeBarcodeTemplate()
+                }
+            }
         } catch (e: Exception) {
-            Log.e(TAG, "Error applying object detection settings: ${e.message}")
+            Log.e(TAG, "Error applying object detection settings: ${e.message}", e)
         }
     }
 
@@ -1019,7 +1037,6 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
     }
 
     private fun createTemplate(view: VisionCameraView) {
-        Log.d(TAG, "createTemplate called")
         view.stopCamera()
 
         val activity = appContext.currentActivity as? FragmentActivity
@@ -1046,16 +1063,15 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
     }
 
     private fun getAllTemplates(view: VisionCameraView) {
-        Log.d(TAG, "getAllTemplates called")
         val templateManager = TemplateManager()
         val templates = templateManager.getAllBarcodeTemplates()
 
-        val arr = Arguments.createArray().apply {
-            templates.forEach { pushString(it.name) }
-        }
+        // Convert to JSON array string (Fabric requires JSON string, not array)
+        val templateNames = templates.map { it.name }
+        val dataJson = JSONArray(templateNames).toString()
 
         val event = Arguments.createMap().apply {
-            putArray("data", arr)
+            putString("dataJson", dataJson)
         }
         sendEvent("onGetTemplates", event)
     }
@@ -1063,7 +1079,6 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
     private fun deleteTemplateWithId(args: ReadableArray?) {
         val templateManager = TemplateManager()
         val id = args?.getString(0)
-        Log.d(TAG, "deleteTemplateWithId called: $id")
 
         val allTemplates = templateManager.getAllBarcodeTemplates()
         val templateToDelete = allTemplates.firstOrNull { template -> template.name == id }
@@ -1078,7 +1093,6 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
     }
 
     private fun deleteAllTemplates() {
-        Log.d(TAG, "deleteAllTemplates called")
         val templateManager = TemplateManager()
         val allTemplates = templateManager.getAllBarcodeTemplates()
 
