@@ -277,24 +277,17 @@ const CameraScreenComponent: React.FC<{ route: any }> = ({ route }) => {
     const newTemplateId = (selectedTemplate as any)?.name;
     const currentTemplateId = (detectionSettings as any).selectedTemplateId;
 
-    console.log("🔄 Template change detected:", {
-      newTemplate: newTemplateId,
-      currentTemplate: currentTemplateId,
-      selectedTemplate
-    });
-
     if (newTemplateId) {
       updatedDetectionSettings.selectedTemplateId = newTemplateId;
     } else {
-      delete updatedDetectionSettings.selectedTemplateId;
+      // Send empty string to trigger template removal on native side
+      updatedDetectionSettings.selectedTemplateId = "";
     }
 
     // Check if there's an actual change by comparing with current state
     const hasChanged = newTemplateId !== currentTemplateId;
 
     if (hasChanged) {
-      console.log("✅ UPDATE DETECTION SETTINGS WITH APPLIED TEMPLATE: ", JSON.stringify(updatedDetectionSettings, null, 2))
-
       // Clear old bounding boxes when template changes
       clearBoundingBoxes();
 
@@ -498,6 +491,7 @@ const CameraScreenComponent: React.FC<{ route: any }> = ({ route }) => {
         [{ text: 'OK', onPress: () => visionSdk.current?.restartScanningHandler() }]
       );
     } else {
+      Alert.alert("No Barcode Found")
       visionSdk.current?.restartScanningHandler();
     }
   }, [])
@@ -605,8 +599,21 @@ const CameraScreenComponent: React.FC<{ route: any }> = ({ route }) => {
   }
 
   const handleGetTemplates = useCallback((args) => {
-    console.log('📋 handleGetTemplates: Setting availableTemplates', Date.now());
-    setAvailableTemplates(args?.data?.map(item => ({ name: item })))
+    // Parse dataJson (Fabric uses JSON string due to codegen limitations)
+    let templateNames: string[] = [];
+    try {
+      if (args?.dataJson) {
+        templateNames = JSON.parse(args.dataJson);
+      } else if (args?.data) {
+        // Fallback for old architecture compatibility
+        templateNames = args.data;
+      }
+    } catch (error) {
+      console.error('Failed to parse template names:', error);
+    }
+
+    const templates = templateNames.map(item => ({ name: item }));
+    setAvailableTemplates(templates);
   }, [])
 
   const handlePressCreateTemplate = () => {

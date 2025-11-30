@@ -1606,7 +1606,8 @@ extension RNCodeScannerView {
         }
 
         if let selectedTemplateId = objectDetectionSettings["selectedTemplateId"] as? String {
-            detectionSettings.selectedTemplateId = selectedTemplateId
+            // Set to nil if empty string (removes template), otherwise apply the template
+            detectionSettings.selectedTemplateId = selectedTemplateId.isEmpty ? nil : selectedTemplateId
         }
 
         codeScannerView?.setObjectDetectionConfigurationTo(detectionSettings)

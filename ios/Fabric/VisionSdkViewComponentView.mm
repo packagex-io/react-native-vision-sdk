@@ -8,7 +8,6 @@
 #import <react/renderer/components/VisionSdkView/RCTComponentViewHelpers.h>
 
 #import "RCTFabricComponentsPlugins.h"
-#import "react_native_vision_sdk-Swift.h"
 #import <objc/message.h>
 
 using namespace facebook::react;
