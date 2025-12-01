@@ -3122,7 +3122,7 @@ SPEC CHECKSUMS:
   React-Mapbuffer: 06d59c448da7e34eb05b3fb2189e12f6a30fec57
   React-microtasksnativemodule: d1ee999dc9052e23f6488b730fa2d383a4ea40e5
   react-native-safe-area-context: c00143b4823773bba23f2f19f85663ae89ceb460
-  react-native-vision-sdk: b31f5495911af68029e7809956ded581659ba335
+  react-native-vision-sdk: fe8e69196d0778c0b92d271f61f88aea23d8c9db
   React-NativeModulesApple: 46690a0fe94ec28fc6fc686ec797b911d251ded0
   React-oscompat: 95875e81f5d4b3c7b2c888d5bd2c9d83450d8bdb
   React-perflogger: 2e229bf33e42c094fd64516d89ec1187a2b79b5b
