@@ -15,7 +15,7 @@ import { VisionCore } from '../../src/index';
 import { useFocusEffect } from '@react-navigation/native';
 
 
-const api_key = "key_00203c5642F9SYnJkKyi9dRw1eeteeUwXhbEfGuPZ4NML8l2bAfysni4ZpcZEBKn0gnbcOZYwIaJnOyp" // Add your PackageX API key here
+const api_key = "" // Add your PackageX API key here
 const HomeScreen = ({ navigation }) => {
   const [selectedModelType, setSelectedModelType] = useState<string>('shipping_label');
   const [selectedModelSize, setSelectedModelSize] = useState<string>('large');
