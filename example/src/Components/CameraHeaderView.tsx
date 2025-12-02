@@ -14,6 +14,7 @@ import TemplateSelectionView from './TemplateSelectionView';
 
 function CameraHeaderView({
    detectedData,
+   sharpnessScore = 0,
    toggleFlash,
    toggleCameraFacing,
    cameraFacing,
@@ -68,6 +69,10 @@ function CameraHeaderView({
             size={20}
             color={checkIconColor(detectedData?.document)}
           />
+        </View>
+        <View style={styles.sharpnessContainer}>
+          <Text style={styles.sharpnessLabel}>🎯</Text>
+          <Text style={styles.sharpnessValue}>{sharpnessScore.toFixed(2)}</Text>
         </View>
       </View>
 
@@ -183,6 +188,21 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 15,
     borderRadius: 10,
+  },
+  sharpnessContainer: {
+    padding: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sharpnessLabel: {
+    fontSize: 14,
+    marginRight: 4,
+  },
+  sharpnessValue: {
+    color: '#4FBF67',
+    fontSize: 12,
+    fontWeight: 'bold',
   },
 });
 export default CameraHeaderView

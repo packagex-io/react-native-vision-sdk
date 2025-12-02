@@ -17,6 +17,21 @@ Some key features of the VisionSDK Integration include:
 
 ## ![Example1](ReadMeContent/Videos/Sample/VisionSDKSample.gif)
 
+## Requirements
+
+**React Native New Architecture Required:**
+- This package requires React Native **0.74.0+** with the **New Architecture (Fabric + TurboModules)** enabled
+- The old architecture is no longer supported
+
+**iOS Development Requirements:**
+- **iOS**: 16.0+
+- **Xcode**: 14.0 or newer
+- VisionSDK is automatically linked via CocoaPods (no manual installation needed)
+
+**Android Development Requirements:**
+- **minSdkVersion**: 29+
+- **Kotlin**: 1.9.0+
+
 ## Installation
 
 Install the Vision SDK for React Native using either `npm` or `yarn`:
@@ -27,26 +42,21 @@ npm install --save react-native-vision-sdk
 yarn add react-native-vision-sdk
 ```
 
-### Manual Installation
+### iOS Setup
 
-#### iOS
-
-1. Open your `ios/Podfile` and add the following line to ensure compatibility:
-   ```ruby
-   platform :ios, '16.0'  # Vision SDK requires at least iOS 15.0 or higher
-   pod 'VisionSDK', "1.9.8"
+1. Navigate to the iOS folder and install pods:
+   ```sh
+   cd ios && pod install && cd ..
    ```
-2. Run `pod install` to install necessary dependencies.
 
-**iOS Development Requirements:**
+2. Ensure your `ios/Podfile` has the correct platform version:
+   ```ruby
+   platform :ios, '16.0'  # Vision SDK requires iOS 16.0+
+   ```
 
-- **iOS**: 15.0+
-- **Swift**: 5.7
-- **Xcode**: 13.0 or newer
+### Android Setup
 
-#### Android
-
-Edit your `android/build.gradle` file to set the `minSdkVersion` to 29 or higher:
+Ensure your `android/build.gradle` file has the minimum required versions:
 
 ```gradle
 buildscript {
@@ -55,25 +65,13 @@ buildscript {
     minSdkVersion = 29  // Minimum version required by Vision SDK
     compileSdkVersion = 35
     targetSdkVersion = 35
-    ndkVersion = "26.1.10909125"
+    ndkVersion = "28.0.13004108"
     kotlinVersion = "1.9.0"
   }
 }
 ```
 
-## Android Setup
-
-In the `build.gradle` file of your Android project, add the following dependencies for Android integration:
-
-```gradle
-dependencies {
-    // Existing dependencies
-    implementation 'com.github.packagexlabs:vision-sdk-android:v2.4.26'
-    implementation 'com.github.asadullahilyas:HandyUtils:1.1.6'
-}
-```
-
-After making these changes, sync the project to download the necessary libraries.
+The Vision SDK dependencies are automatically linked via autolinking - no manual dependency configuration needed!
 
 ---
 
@@ -194,12 +192,12 @@ const HeadlessOCRExample = () => {
         }
       });
 
-      await VisionCore.loadModel({
-        token: 'your-auth-token',
-        apiKey: 'your-api-key',
-        modelType: 'shipping_label', // shipping_label, item_label, bill_of_lading, document_classification
-        modelSize: 'large' // nano, micro, small, medium, large, xlarge
-      });
+      await VisionCore.loadModel(
+        'your-auth-token',
+        'your-api-key',
+        'shipping_label', // shipping_label, item_label, bill_of_lading, document_classification
+        'large' // nano, micro, small, medium, large, xlarge
+      );
     } catch (error) {
       console.error('Failed to load model:', error);
       Alert.alert('Error', 'Failed to load model');
@@ -831,12 +829,12 @@ import { VisionCore } from 'react-native-vision-sdk';
 
 // First, set your environment and load a model
 VisionCore.setEnvironment('sandbox'); // or 'prod'
-await VisionCore.loadModel({
-  token: 'your-token',
-  apiKey: 'your-api-key',
-  modelType: 'shipping_label',
-  modelSize: 'large'
-});
+await VisionCore.loadModel(
+  'your-token',
+  'your-api-key',
+  'shipping_label',
+  'large'
+);
 
 // Now you can make predictions on any image
 const result = await VisionCore.predict('/path/to/image.jpg', ['barcode1', 'barcode2']);

@@ -3,6 +3,9 @@ import VisionSDK
 
 @objc(VisionSdkModule)
 class VisionSdkModule: RCTEventEmitter {
+   // Callback for sending events (used for TurboModule)
+   private var eventCallback: ((_ eventName: String, _ body: [String: Any]) -> Void)?
+
    override static func moduleName() -> String {
         return "VisionSdkModule"
     }
@@ -13,7 +16,26 @@ class VisionSdkModule: RCTEventEmitter {
 
   @objc override func constantsToExport() -> [AnyHashable: Any]! {
     return [:]
-}
+  }
+
+  // Expose callback setter to Objective-C
+  @objc func setEventCallback(_ callback: @escaping (_ eventName: String, _ body: NSDictionary) -> Void) {
+    self.eventCallback = { eventName, body in
+      callback(eventName, body as NSDictionary)
+    }
+  }
+
+  // Override sendEvent to use callback if available
+  override func sendEvent(withName name: String, body: Any?) {
+    if let callback = eventCallback, let bodyDict = body as? [String: Any] {
+      callback(name, bodyDict)
+    } else {
+      // Only call super if we have a bridge (old architecture)
+      if self.bridge != nil {
+        super.sendEvent(withName: name, body: body)
+      }
+    }
+  }
 
   @objc func setEnvironment(_ environment: String) {
 
@@ -76,7 +98,10 @@ class VisionSdkModule: RCTEventEmitter {
       resolver: @escaping RCTPromiseResolveBlock,
       rejecter: @escaping RCTPromiseRejectBlock
   ) {
-    if let modelType = modelType {
+    // Convert empty string to nil
+    let modelTypeValue = (modelType?.isEmpty ?? true) ? nil : modelType
+
+    if let modelType = modelTypeValue {
       let modelClass = getModelType(modelType)
       
       do {
@@ -115,33 +140,41 @@ class VisionSdkModule: RCTEventEmitter {
       let modelClass = getModelType(modelType)
       let modelSizeEnum = getModelSize(modelSize) ?? VSDKModelExternalSize.large
 
-      OnDeviceOCRManager.shared.prepareOfflineOCR(
-        withApiKey: apiKey,
-        andToken: token,
-        forModelClass: modelClass,
-        withModelSize: modelSizeEnum,
-        withProgressTracking: { currentProgress, totalSize, isModelAlreadyDownloaded in
-            let progressData: [String: Any] = [
-                "progress": isModelAlreadyDownloaded ? 1.0 : (currentProgress / totalSize),
-                "downloadStatus": isModelAlreadyDownloaded,
-                "isReady": false
-            ]
-            self.sendEvent(withName: "onModelDownloadProgress", body: progressData)
-        },
-        withCompletion: { error in
-            if let error = error {
-                rejecter("MODEL_LOAD_ERROR", error.localizedDescription, nil)
-            } else {
-                let completionData: [String: Any] = [
-                    "progress": 1.0,
-                    "downloadStatus": true,
-                    "isReady": true
+      // Convert empty strings to nil
+      let tokenValue = (token?.isEmpty ?? true) ? nil : token
+      let apiKeyValue = (apiKey?.isEmpty ?? true) ? nil : apiKey
+
+      // Dispatch to background queue to prevent blocking UI thread
+      // VisionSDK's prepareOfflineOCR does heavy initialization work synchronously
+      DispatchQueue.global(qos: .userInitiated).async {
+          OnDeviceOCRManager.shared.prepareOfflineOCR(
+            withApiKey: apiKeyValue,
+            andToken: tokenValue,
+            forModelClass: modelClass,
+            withModelSize: modelSizeEnum,
+            withProgressTracking: { currentProgress, totalSize, isModelAlreadyDownloaded in
+                let progressData: [String: Any] = [
+                    "progress": isModelAlreadyDownloaded ? 1.0 : (currentProgress / totalSize),
+                    "downloadStatus": isModelAlreadyDownloaded,
+                    "isReady": false  // Will be set to true in completion callback
                 ]
-                self.sendEvent(withName: "onModelDownloadProgress", body: completionData)
-                resolver("Model configured successfully")
+                self.sendEvent(withName: "onModelDownloadProgress", body: progressData)
+            },
+            withCompletion: { error in
+                if let error = error {
+                    rejecter("MODEL_LOAD_ERROR", error.localizedDescription, nil)
+                } else {
+                    let completionData: [String: Any] = [
+                        "progress": 1.0,
+                        "downloadStatus": true,
+                        "isReady": true
+                    ]
+                    self.sendEvent(withName: "onModelDownloadProgress", body: completionData)
+                    resolver("Model configured successfully")
+                }
             }
-        }
-      )
+          )
+      }
   }
   
   
@@ -220,17 +253,17 @@ class VisionSdkModule: RCTEventEmitter {
       }
       // Ensure barcodes is a non-nil array
       let barcodeList = barcodes ?? []
-      
+
       // Convert responseData dictionary to JSON Data
       guard JSONSerialization.isValidJSONObject(responseData),
             let responseDataJson = try? JSONSerialization.data(withJSONObject: responseData) else {
         rejecter("invalid_response_data", "Failed to convert responseData to JSON", nil)
         return
       }
-      
+
       let shouldResize = shouldResizeImage.boolValue
 
-      
+
       VisionAPIManager.shared.callItemLabelsMatchingAPIWith(
         image,
         andBarcodes: barcodeList,
@@ -248,9 +281,9 @@ class VisionSdkModule: RCTEventEmitter {
             resolver("Logged successfully")
           }
       }
-      
+
     }
-    
+
 
   }
 
@@ -469,7 +502,6 @@ class VisionSdkModule: RCTEventEmitter {
     resolver: @escaping RCTPromiseResolveBlock,
     rejecter: @escaping RCTPromiseRejectBlock
   ) {
-    // Bill of Lading uses the same scan API as shipping labels
     loadImage(from: imagePath) { image in
       guard let image = image else {
         rejecter("IMAGE_LOAD_ERROR", "Failed to load image from path: \(imagePath)", nil)
@@ -479,24 +511,41 @@ class VisionSdkModule: RCTEventEmitter {
       let barcodeList = barcodes ?? []
       let shouldResize = shouldResizeImage?.boolValue ?? true
 
-      VisionAPIManager.shared.callScanAPIWith(
-        image,
-        andBarcodes: barcodeList,
-        andApiKey: apiKey,
-        andToken: token,
-        andLocationId: locationId ?? "",
-        andOptions: options ?? [:],
-        andMetaData: [:],
-        andRecipient: [:],
-        andSender: [:],
-        withImageResizing: shouldResize
-      ) { data, error in
-        if let error = error {
-          rejecter("API_ERROR", "Bill of lading prediction failed", error)
-        } else if let data = data {
-          resolver(String(data: data, encoding: .utf8) ?? "")
-        } else {
-          rejecter("UNKNOWN_ERROR", "Unknown error occurred", nil)
+      // Use the correct Bill of Lading API method
+      if let validLocationId = locationId, !validLocationId.isEmpty {
+        VisionAPIManager.shared.getPredictionBillOfLadingCloud(
+          image,
+          andBarcodes: barcodeList,
+          andApiKey: apiKey,
+          andToken: token,
+          andLocationId: validLocationId,
+          andOptions: options ?? [:],
+          withImageResizing: shouldResize
+        ) { data, error in
+          if let error = error {
+            rejecter("API_ERROR", "Bill of lading prediction failed", error)
+          } else if let data = data {
+            resolver(String(data: data, encoding: .utf8) ?? "")
+          } else {
+            rejecter("UNKNOWN_ERROR", "Unknown error occurred", nil)
+          }
+        }
+      } else {
+        VisionAPIManager.shared.getPredictionBillOfLadingCloud(
+          image,
+          andBarcodes: barcodeList,
+          andApiKey: apiKey,
+          andToken: token,
+          andOptions: options ?? [:],
+          withImageResizing: shouldResize
+        ) { data, error in
+          if let error = error {
+            rejecter("API_ERROR", "Bill of lading prediction failed", error)
+          } else if let data = data {
+            resolver(String(data: data, encoding: .utf8) ?? "")
+          } else {
+            rejecter("UNKNOWN_ERROR", "Unknown error occurred", nil)
+          }
         }
       }
     }

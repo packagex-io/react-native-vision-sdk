@@ -3,6 +3,7 @@ import VisionSDK
 import AVFoundation
 
 @available(iOS 13.0, *)
+@objc(RNVisionCameraView)
 class RNVisionCameraView: UIView {
   
   // MARK: - Events
@@ -16,6 +17,7 @@ class RNVisionCameraView: UIView {
   // MARK: - Properties
   @objc var enableFlash: Bool = false {
     didSet {
+      print("[RNVisionCameraView] enableFlash changed from \(oldValue) to \(enableFlash)")
       updateFlash()
     }
   }
@@ -34,6 +36,7 @@ class RNVisionCameraView: UIView {
   
   @objc var autoCapture: Bool = false {
     didSet {
+      print("[RNVisionCameraView] autoCapture changed from \(oldValue) to \(autoCapture)")
       updateCaptureMode()
     }
   }
@@ -73,7 +76,7 @@ class RNVisionCameraView: UIView {
   // MARK: - Initialization
   override init(frame: CGRect) {
     super.init(frame: frame)
-    setupCamera()
+    // Camera setup is now deferred to layoutSubviews to avoid blocking init
   }
 
   required init?(coder: NSCoder) {
@@ -82,14 +85,24 @@ class RNVisionCameraView: UIView {
 
   private var hasStarted = false
   private var isRunning = false
+  private var isStopping = false
   private var isDeallocating = false
-  
+  private var isSetupComplete = false
+
   override func layoutSubviews() {
     super.layoutSubviews()
+
+    // Ensure camera is setup and frame is adjusted
+    if !isSetupComplete && bounds.size.width > 0 && bounds.size.height > 0 {
+      // Defer heavy camera setup to avoid blocking initial layout
+      setupCamera()
+      isSetupComplete = true
+    }
+
     cameraView?.frame = self.bounds
 
     // Auto-start camera after first layout
-    if !hasStarted && !isDeallocating && bounds.size.width > 0 && bounds.size.height > 0 {
+    if !hasStarted && !isDeallocating && isSetupComplete {
       hasStarted = true
 
       // IMPORTANT: Apply camera settings BEFORE starting the camera
@@ -99,16 +112,13 @@ class RNVisionCameraView: UIView {
       // Now start the camera with the correct settings
       guard let cameraView = cameraView, !isRunning else { return }
 
-      // IMPORTANT: startRunning() is a blocking call that can take time
-      // Move it to background queue to prevent main thread blocking
-      DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+      // IMPORTANT: startRunning() must be on main thread (accesses UI/AVFoundation layers)
+      // Use asyncAfter with minimal delay to avoid blocking layoutSubviews
+      DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
         guard let self = self, let cameraView = self.cameraView, !self.isDeallocating else { return }
 
         cameraView.startRunning()
-
-        DispatchQueue.main.async {
-          self.isRunning = true
-        }
+        self.isRunning = true
       }
 
       // Apply scan area settings after camera starts
@@ -188,7 +198,17 @@ class RNVisionCameraView: UIView {
 
   @objc func stop() {
     guard let cameraView = cameraView else { return }
-    guard isRunning else { return }
+    guard isRunning else {
+      print("[RNVisionCameraView] stop() called but camera not running")
+      return
+    }
+    guard !isStopping else {
+      print("[RNVisionCameraView] stop() already in progress, skipping")
+      return
+    }
+
+    print("[RNVisionCameraView] Stopping camera...")
+    isStopping = true
 
     // IMPORTANT: stopRunning() is a blocking call that can take time
     // Move it to background queue to prevent main thread blocking
@@ -196,7 +216,11 @@ class RNVisionCameraView: UIView {
       cameraView.stopRunning()
 
       DispatchQueue.main.async {
+        print("[RNVisionCameraView] Camera stopped successfully")
         self?.isRunning = false
+        self?.isStopping = false
+        // Reset hasStarted so camera can auto-start again when view is shown
+        self?.hasStarted = false
       }
     }
   }
@@ -216,18 +240,37 @@ class RNVisionCameraView: UIView {
   }
   
   private func updateFlash() {
-    guard let videoDevice = try? cameraView?.videoDevice else { return }
-    
-    DispatchQueue.main.async {
-      if videoDevice.isTorchAvailable {
-        try? videoDevice.lockForConfiguration()
-        if self.enableFlash {
-          try? videoDevice.setTorchModeOn(level: 1.0)
+    guard let cameraView = cameraView else {
+      print("[RNVisionCameraView] updateFlash: cameraView is nil")
+      return
+    }
+
+    do {
+      let videoDevice = try cameraView.videoDevice
+      print("[RNVisionCameraView] updateFlash: Got video device, enableFlash=\(enableFlash)")
+
+      DispatchQueue.main.async {
+        if videoDevice.isTorchAvailable {
+          print("[RNVisionCameraView] updateFlash: Torch is available")
+          do {
+            try videoDevice.lockForConfiguration()
+            if self.enableFlash {
+              try videoDevice.setTorchModeOn(level: 1.0)
+              print("[RNVisionCameraView] updateFlash: Torch turned ON")
+            } else {
+              videoDevice.torchMode = .off
+              print("[RNVisionCameraView] updateFlash: Torch turned OFF")
+            }
+            videoDevice.unlockForConfiguration()
+          } catch {
+            print("[RNVisionCameraView] updateFlash: Error setting torch: \(error)")
+          }
         } else {
-          videoDevice.torchMode = .off
+          print("[RNVisionCameraView] updateFlash: Torch not available on this device")
         }
-        videoDevice.unlockForConfiguration()
       }
+    } catch {
+      print("[RNVisionCameraView] updateFlash: Error getting video device: \(error)")
     }
   }
   
@@ -251,21 +294,29 @@ class RNVisionCameraView: UIView {
   }
   
   private func updateCaptureMode() {
-    guard let cameraView = cameraView else { return }
-    
+    guard let cameraView = cameraView else {
+      print("[RNVisionCameraView] updateCaptureMode: cameraView is nil")
+      return
+    }
+
     let newCaptureMode: CaptureMode = autoCapture ? .auto : .manual
+    print("[RNVisionCameraView] updateCaptureMode: Setting capture mode to \(newCaptureMode == .auto ? "auto" : "manual")")
     currentCaptureMode = newCaptureMode
     cameraView.setCaptureModeTo(newCaptureMode)
   }
   
   private func updateScanArea() {
-    guard let cameraView = cameraView else { return }
-    
+    guard let cameraView = cameraView else {
+      print("[RNVisionCameraView] updateScanArea: cameraView is nil")
+      return
+    }
+
     // If no scan area provided, enable multiple scan and disable default SDK boxes
     guard let scanArea = scanArea else {
+      print("[RNVisionCameraView] updateScanArea: No scan area, using multiple capture")
       captureType = .multiple
       cameraView.setCaptureTypeTo(captureType)
-      
+
       let focusSettings = VisionSDK.CodeScannerView.FocusSettings()
       focusSettings.shouldDisplayFocusImage = false
       focusSettings.shouldScanInFocusImageRect = false
@@ -274,26 +325,30 @@ class RNVisionCameraView: UIView {
       cameraView.setFocusSettingsTo(focusSettings)
       return
     }
-    
+
     // When scan area is defined, use single capture mode
     captureType = .single
     cameraView.setCaptureTypeTo(captureType)
-    
+
     let x = scanArea["x"] as? CGFloat ?? 0
     let y = scanArea["y"] as? CGFloat ?? 0
     let width = scanArea["width"] as? CGFloat ?? 0
     let height = scanArea["height"] as? CGFloat ?? 0
-    
+
     let focusRect = CGRect(x: x, y: y, width: width, height: height)
-    
+
+    print("[RNVisionCameraView] updateScanArea: Setting scan area to \(focusRect)")
+
     let focusSettings = VisionSDK.CodeScannerView.FocusSettings()
     focusSettings.shouldDisplayFocusImage = false
     focusSettings.shouldScanInFocusImageRect = true
     focusSettings.focusImageRect = focusRect
     focusSettings.showCodeBoundariesInMultipleScan = false
     focusSettings.showDocumentBoundries = false
-    
+
     cameraView.setFocusSettingsTo(focusSettings)
+
+    print("[RNVisionCameraView] updateScanArea: Applied focus settings, calling rescan()")
     cameraView.rescan()
   }
   
@@ -348,6 +403,11 @@ class RNVisionCameraView: UIView {
       cameraView.setScanModeTo(.barCode)
       currentScanMode = .barCode
     }
+
+    // Reapply scan area after changing scan mode
+    // Scan mode changes can reset focus settings
+    print("[RNVisionCameraView] updateScanMode: Reapplying scan area after mode change")
+    updateScanArea()
   }
 
   /// Updates camera position dynamically when cameraFacing prop changes.
@@ -360,6 +420,12 @@ class RNVisionCameraView: UIView {
     // Check if camera has started - if not, settings will be applied by applyInitialCameraSettings()
     if !hasStarted { return }
 
+    // Don't try to switch camera while stop is in progress
+    if isStopping {
+      print("[RNVisionCameraView] Cannot switch camera while stop is in progress")
+      return
+    }
+
     let position: VisionSDK.CameraPosition
     if let facingString = cameraFacing?.lowercased {
       position = facingString == "front" ? .front : .back
@@ -368,31 +434,28 @@ class RNVisionCameraView: UIView {
     }
 
     // IMPORTANT: Camera position change requires stopping and restarting the camera
-    // Use background queue to prevent main thread blocking
+    // Must run on main thread as both stopRunning() and startRunning() access UI/AVFoundation layers
     if isRunning {
-      DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-        guard let self = self, !self.isDeallocating else { return }
+      print("[RNVisionCameraView] Switching camera to \(position == .front ? "front" : "back")...")
 
-        cameraView.stopRunning()
+      // Stop camera on main thread
+      cameraView.stopRunning()
+      print("[RNVisionCameraView] Camera stopped for switch, applying new settings...")
+      self.isRunning = false
 
-        DispatchQueue.main.async {
-          self.isRunning = false
+      // Apply new camera settings
+      let cameraSettings = VisionSDK.CodeScannerView.CameraSettings()
+      cameraSettings.cameraPosition = position
+      cameraSettings.nthFrameToProcess = self.frameSkip?.int64Value ?? 10
+      cameraView.setCameraSettingsTo(cameraSettings)
 
-          let cameraSettings = VisionSDK.CodeScannerView.CameraSettings()
-          cameraSettings.cameraPosition = position
-          cameraSettings.nthFrameToProcess = self.frameSkip?.int64Value ?? 10
+      // Restart camera on main thread with slight delay to avoid blocking
+      DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
+        guard let self = self, let cameraView = self.cameraView, !self.isDeallocating else { return }
 
-          cameraView.setCameraSettingsTo(cameraSettings)
-
-          // Restart camera with new position on background queue
-          DispatchQueue.global(qos: .userInitiated).async {
-            cameraView.startRunning()
-
-            DispatchQueue.main.async {
-              self.isRunning = true
-            }
-          }
-        }
+        cameraView.startRunning()
+        print("[RNVisionCameraView] Camera restarted with new position")
+        self.isRunning = true
       }
     }
   }

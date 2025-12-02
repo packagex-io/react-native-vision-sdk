@@ -90,6 +90,15 @@ android {
     targetSdkVersion rootProject.ext.targetSdkVersion
     versionCode 1
     versionName "1.0"
+        // This block is different from the one you use to link Gradle
+    // to your CMake or ndk-build script.
+    externalNativeBuild {
+        // For ndk-build, instead use the ndkBuild block.
+        cmake {
+            // Passes optional arguments to CMake.
+            arguments "-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON"
+        }
+    }
   }
   signingConfigs {
     debug {

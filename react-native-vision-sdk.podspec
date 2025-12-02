@@ -1,7 +1,6 @@
 require "json"
 
 package = JSON.parse(File.read(File.join(__dir__, "package.json")))
-folly_compiler_flags = '-DFOLLY_NO_CONFIG -DFOLLY_MOBILE=1 -DFOLLY_USE_LIBCPP=1 -Wno-comma -Wno-shorten-64-to-32'
 
 Pod::Spec.new do |s|
   s.name         = "react-native-vision-sdk"
@@ -14,24 +13,32 @@ Pod::Spec.new do |s|
   s.platforms    = { :ios => "16.0" }
   s.source       = { :git => "https://github.com/packagex-io/react-native-vision-sdk.git", :tag => "#{s.version}" }
 
+  # Explicitly set module name to ensure Swift bridging header matches
+  s.module_name  = "react_native_vision_sdk"
+
+  # Static framework configuration for Swift/ObjC interop
+  s.static_framework = true
+
+  # New Architecture only - include all source files
   s.source_files = "ios/**/*.{h,m,mm,swift}"
 
-  s.dependency "React-Core"
-  s.dependency "VisionSDK", "= 2.0.2"
+  # Compiler flags to ensure Swift bridging header is found
+  s.pod_target_xcconfig = {
+    'DEFINES_MODULE' => 'YES',
+    'SWIFT_OBJC_INTERFACE_HEADER_NAME' => 'react_native_vision_sdk-Swift.h',
+    'SWIFT_COMPILATION_MODE' => 'wholemodule',
+    'CLANG_ENABLE_MODULES' => 'YES'
+  }
 
-  # Don't install the dependencies when we run `pod install` in the old architecture.
-  if ENV['RCT_NEW_ARCH_ENABLED'] == '1' then
-    s.compiler_flags = folly_compiler_flags + " -DRCT_NEW_ARCH_ENABLED=1"
-    s.pod_target_xcconfig    = {
-        "HEADER_SEARCH_PATHS" => "\"$(PODS_ROOT)/boost\"",
-        "OTHER_CPLUSPLUSFLAGS" => "-DFOLLY_NO_CONFIG -DFOLLY_MOBILE=1 -DFOLLY_USE_LIBCPP=1",
-        "CLANG_CXX_LANGUAGE_STANDARD" => "c++17"
-    }
-    s.dependency "React-RCTFabric"
-    s.dependency "React-Codegen"
-    s.dependency "RCT-Folly"
-    s.dependency "RCTRequired"
-    s.dependency "RCTTypeSafety"
-    s.dependency "ReactCommon/turbomodule/core"
-  end
+  # Preserve paths for tarball installation
+  s.preserve_paths = [
+    'ios/**/*',
+    'src/**/*'
+  ]
+
+  s.dependency "React-Core"
+  s.dependency "VisionSDK", "= 2.0.3"
+
+  # New Architecture dependencies
+  install_modules_dependencies(s)
 end

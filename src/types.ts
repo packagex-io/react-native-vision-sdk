@@ -487,6 +487,12 @@ export interface BarcodeScanResult {
    * @description An array of scanned barcode results, where each result contains detailed information.
    */
   codes: BarcodeResult[];
+  /**
+   * @type {string}
+   * @description JSON string containing the codes array (used internally for Fabric architecture)
+   * @internal
+   */
+  codesJson?: string;
 }
 
 export interface BarcodeResult {
@@ -547,6 +553,9 @@ export interface BoundingBoxesDetectedResult {
   barcodeBoundingBoxes: Array<DetectedCodeBoundingBox>;
   qrCodeBoundingBoxes: Array<DetectedCodeBoundingBox>;
   documentBoundingBox: BoundingBox;
+  // Internal fields used by Fabric architecture (parsed and removed by wrapper)
+  barcodeBoundingBoxesJson?: string;
+  qrCodeBoundingBoxesJson?: string;
 }
 
 export interface PriceTagDetectionResult {

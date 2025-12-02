@@ -15,16 +15,9 @@ buildscript {
   }
 }
 
-def isNewArchitectureEnabled() {
-  return rootProject.hasProperty("newArchEnabled") && rootProject.getProperty("newArchEnabled") == "true"
-}
-
 apply plugin: 'com.android.library'
 apply plugin: 'kotlin-android'
-
-if (isNewArchitectureEnabled()) {
-  apply plugin: 'com.facebook.react'
-}
+apply plugin: 'com.facebook.react'
 
 def getExtOrDefault(name) {
   return rootProject.ext.has(name) ? rootProject.ext.get(name) : project.properties['VisionSdk_' + name]
@@ -41,7 +34,16 @@ android {
   defaultConfig {
     minSdkVersion getExtOrIntegerDefault('minSdkVersion')
     targetSdkVersion getExtOrIntegerDefault('targetSdkVersion')
-    buildConfigField "boolean", "IS_NEW_ARCHITECTURE_ENABLED", isNewArchitectureEnabled().toString()
+
+    // This block is different from the one you use to link Gradle
+    // to your CMake or ndk-build script.
+    externalNativeBuild {
+        // For ndk-build, instead use the ndkBuild block.
+        cmake {
+            // Passes optional arguments to CMake.
+            arguments "-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON"
+        }
+    }
   }
   buildTypes {
     release {
@@ -59,6 +61,13 @@ android {
   compileOptions {
     sourceCompatibility JavaVersion.VERSION_11
     targetCompatibility JavaVersion.VERSION_11
+  }
+
+  // New Architecture source sets
+  sourceSets {
+    main {
+      java.srcDirs += ['src/newarch/java']
+    }
   }
 
 }
@@ -140,14 +149,12 @@ dependencies {
   implementation "com.facebook.react:react-native:+"
   implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
 // From node_modules
-  implementation 'com.github.packagexlabs:vision-sdk-android:v2.4.26'
+  implementation 'com.github.packagexlabs:vision-sdk-android:v2.4.29'
   implementation 'com.github.asadullahilyas:HandyUtils:1.1.6'
 }
 
-if (isNewArchitectureEnabled()) {
-  react {
-    jsRootDir = file("../src/")
-    libraryName = "VisionSdkView"
-    codegenJavaPackageName = "com.visionsdk"
-  }
+react {
+  jsRootDir = file("../src/")
+  libraryName = "VisionSdkView"
+  codegenJavaPackageName = "com.visionsdk"
 }

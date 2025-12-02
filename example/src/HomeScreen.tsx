@@ -155,7 +155,7 @@ const HomeScreen = ({ navigation }) => {
       // Step 3: Make ON-DEVICE prediction using our new standalone method
       const result = await VisionCore.predict(sampleImageUrl, []);
 
-      console.log("PREDICTION RESULT IS: ", result)
+      // console.log("PREDICTION RESULT IS: ", result)
 
       setPredictionResult(result);
       setShowPredictionExample(true);
@@ -209,27 +209,64 @@ const HomeScreen = ({ navigation }) => {
       const sampleImageUrl = getSampleImageForModelType(selectedModelType);
 
       let result;
-      const apiOptions = {
-        apiKey: api_key,
-        shouldResizeImage: true
-      };
 
       // Call appropriate cloud prediction method based on selected model type
+      // Each method has different parameters based on VisionCoreWrapper signatures
       switch (selectedModelType) {
         case 'shipping_label':
-          result = await VisionCore.predictShippingLabelCloud(sampleImageUrl, [], apiOptions);
+          result = await VisionCore.predictShippingLabelCloud(
+            sampleImageUrl,
+            [], // barcodes
+            null, // token
+            api_key, // apiKey
+            null, // locationId
+            null, // options
+            null, // metadata
+            null, // recipient
+            null, // sender
+            true // shouldResizeImage
+          );
           break;
         case 'item_label':
-          result = await VisionCore.predictItemLabelCloud(sampleImageUrl, apiOptions);
+          result = await VisionCore.predictItemLabelCloud(
+            sampleImageUrl,
+            null, // token
+            api_key, // apiKey
+            true // shouldResizeImage
+          );
           break;
         case 'bill_of_lading':
-          result = await VisionCore.predictBillOfLadingCloud(sampleImageUrl, [], apiOptions);
+          result = await VisionCore.predictBillOfLadingCloud(
+            sampleImageUrl,
+            [], // barcodes
+            null, // token
+            api_key, // apiKey
+            null, // locationId
+            null, // options
+            true // shouldResizeImage
+          );
           break;
         case 'document_classification':
-          result = await VisionCore.predictDocumentClassificationCloud(sampleImageUrl, apiOptions);
+          result = await VisionCore.predictDocumentClassificationCloud(
+            sampleImageUrl,
+            null, // token
+            api_key, // apiKey
+            true // shouldResizeImage
+          );
           break;
         default:
-          result = await VisionCore.predictShippingLabelCloud(sampleImageUrl, [], apiOptions);
+          result = await VisionCore.predictShippingLabelCloud(
+            sampleImageUrl,
+            [],
+            null,
+            api_key,
+            null,
+            null,
+            null,
+            null,
+            null,
+            true
+          );
       }
 
       setPredictionResult(result);
@@ -409,7 +446,7 @@ const HomeScreen = ({ navigation }) => {
             </Text>
           </TouchableOpacity>
         </View>
-{/* 
+
         <TouchableOpacity
           style={[styles.cloudButton, isPredicting && styles.disabledButton]}
           onPress={handleCloudOnlyPrediction}
@@ -418,7 +455,7 @@ const HomeScreen = ({ navigation }) => {
           <Text style={styles.buttonText}>
             ☁️ Cloud-Only Prediction (No Model Download)
           </Text>
-        </TouchableOpacity> */}
+        </TouchableOpacity>
 
         {isModelReady && (
           <>
@@ -495,11 +532,14 @@ const HomeScreen = ({ navigation }) => {
       {/* Navigation */}
       <TouchableOpacity
         style={[styles.secondaryButton]}
-        onPress={() => navigation.navigate("CameraScreen", {
-          // modelSize: 'large',
-          // modelType: 'shipping_label',
-          mode: 'barcode'
-        })}
+        onPress={() => {
+          console.log('🔘 Button pressed: Navigating to CameraScreen', Date.now());
+          navigation.navigate("CameraScreen", {
+            // modelSize: 'large',
+            // modelType: 'shipping_label',
+            mode: 'barcode'
+          })
+        }}
       >
         <Text style={styles.secondaryButtonText}>📷 Open Camera View</Text>
       </TouchableOpacity>
@@ -656,6 +696,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: 10,
     alignItems: 'center',
+    marginTop: 20,
     marginBottom: 10
   },
   buttonText: {
