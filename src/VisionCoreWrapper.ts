@@ -1,4 +1,4 @@
-import { NativeEventEmitter } from 'react-native';
+import { NativeEventEmitter, Platform } from 'react-native';
 import NativeVisionSdkModule from './specs/NativeVisionSdkModule';
 
 // New Architecture only - use TurboModule
@@ -213,7 +213,21 @@ export const VisionCore = {
   ) => {
     try {
       const result = await VisionSdkModuleNative.predict(imagePath, barcodes);
-      return fromJsonString(result);
+      const parsedResult = fromJsonString(result);
+
+      // Transform extended_response for Android item label only
+      if (
+        Platform.OS === 'android' &&
+        parsedResult?.data?.object === 'item_label_inference' &&
+        parsedResult?.extended_response &&
+        Array.isArray(parsedResult.extended_response)
+      ) {
+        parsedResult.extended_response = {
+          raw_response: parsedResult.extended_response
+        };
+      }
+
+      return parsedResult;
     } catch (error) {
       throw error;
     }
