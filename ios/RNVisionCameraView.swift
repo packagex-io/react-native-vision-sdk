@@ -109,6 +109,14 @@ class RNVisionCameraView: UIView {
       // This ensures initial camera position (front/back) is set correctly
       applyInitialCameraSettings()
 
+      // Apply settings that may have been set before camera was initialized
+      updateScanMode()
+      updateCaptureMode()
+      updateDetectionConfig()
+      updateFrameSkip()
+      updateFlash()
+      updateZoom()
+
       // Now start the camera with the correct settings
       guard let cameraView = cameraView, !isRunning else { return }
 
