@@ -20,7 +20,7 @@ const VisionCameraExample = ({ navigation }) => {
   const [flashEnabled, setFlashEnabled] = useState(false);
   const [zoomLevel, setZoomLevel] = useState(1.0);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
-  const [scanMode, setScanMode] = useState<VisionCameraScanMode>('photo');
+  const [scanMode, setScanMode] = useState<VisionCameraScanMode>('ocr');
   const [scanAreaEnabled, setScanAreaEnabled] = useState(false);
   const [autoCapture, setAutoCapture] = useState(false);
   const [recognitionData, setRecognitionData] = useState({ text: false, barcode: false, qrcode: false, document: false });
@@ -215,7 +215,7 @@ const VisionCameraExample = ({ navigation }) => {
             scanMode={scanMode}
             autoCapture={autoCapture}
             cameraFacing={cameraFacing}
-            scanArea={getScanArea()}
+            // scanArea={getScanArea()}
             onCapture={handleCapture}
             onError={handleError}
             onRecognitionUpdate={handleRecognitionUpdate}
@@ -225,8 +225,10 @@ const VisionCameraExample = ({ navigation }) => {
               text: true,
               barcode: true,
               document: true,
+              documentConfidence: 0.4,  // Lower threshold for easier detection
+              documentCaptureDelay: 0.5,  // Reduce delay from 2s to 0.5s for faster capture
             }}
-            frameSkip={15}
+            // frameSkip={15}
             onBoundingBoxesUpdate={handleBoundingBoxesUpdate}
           />
         ) : (
