@@ -155,8 +155,6 @@ const HomeScreen = ({ navigation }) => {
       // Step 3: Make ON-DEVICE prediction using our new standalone method
       const result = await VisionCore.predict(sampleImageUrl, []);
 
-      // console.log("PREDICTION RESULT IS: ", result)
-
       setPredictionResult(result);
       setShowPredictionExample(true);
 
@@ -164,7 +162,6 @@ const HomeScreen = ({ navigation }) => {
 
     } catch (error) {
       Alert.alert('Error', `Workflow failed: ${error.message}`);
-      console.error('Prediction workflow error:', error);
     } finally {
       setIsPredicting(false);
       setIsLoading(false);
@@ -192,7 +189,6 @@ const HomeScreen = ({ navigation }) => {
 
     } catch (error) {
       Alert.alert('Error', `On-device prediction failed: ${error.message}`);
-      console.error('On-device prediction error:', error);
     } finally {
       setIsPredicting(false);
     }
@@ -276,7 +272,6 @@ const HomeScreen = ({ navigation }) => {
 
     } catch (error) {
       Alert.alert('Error', `Cloud prediction failed: ${error.message}`);
-      console.error('Cloud prediction error:', error);
     } finally {
       setIsPredicting(false);
     }
@@ -304,7 +299,6 @@ const HomeScreen = ({ navigation }) => {
 
     } catch (error) {
       Alert.alert('Error', `Hybrid prediction failed: ${error.message}`);
-      console.error('Hybrid prediction error:', error);
     } finally {
       setIsPredicting(false);
     }
@@ -313,24 +307,53 @@ const HomeScreen = ({ navigation }) => {
   const handleUnloadCurrentModel = async () => {
     try {
       const modelTypeLabel = modelTypes.find(t => t.value === selectedModelType)?.label || selectedModelType;
-      const result = await VisionCore.unLoadModel(selectedModelType, true);
-      setIsModelReady(false);
-      Alert.alert('Success! 🗑️', `Unloaded ${modelTypeLabel} model: ${result}`);
+      const unloaded = await VisionCore.unloadModel({
+        type: selectedModelType as any,
+        size: selectedModelSize as any,
+      });
+
+      if (unloaded) {
+        setIsModelReady(false);
+        Alert.alert('Success! ✅', `${modelTypeLabel} (${selectedModelSize}) unloaded from memory`);
+      } else {
+        Alert.alert('Notice ⚠️', `${modelTypeLabel} (${selectedModelSize}) was not loaded`);
+      }
     } catch (error) {
       Alert.alert('Error', `Failed to unload model: ${error.message}`);
-      console.error('Unload model error:', error);
     }
   };
 
-  const handleUnloadAllModels = async () => {
-    try {
-      const result = await VisionCore.unLoadModel(null, true);
-      setIsModelReady(false);
-      Alert.alert('Success! 🗑️', `Unloaded all models: ${result}`);
-    } catch (error) {
-      Alert.alert('Error', `Failed to unload all models: ${error.message}`);
-      console.error('Unload all models error:', error);
-    }
+  const handleDeleteCurrentModel = async () => {
+    const modelTypeLabel = modelTypes.find(t => t.value === selectedModelType)?.label || selectedModelType;
+
+    Alert.alert(
+      'Confirm Delete',
+      `Delete ${modelTypeLabel} (${selectedModelSize}) from disk?\n\nThis will remove the model file permanently.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const deleted = await VisionCore.deleteModel({
+                type: selectedModelType as any,
+                size: selectedModelSize as any,
+              });
+
+              if (deleted) {
+                setIsModelReady(false);
+                Alert.alert('Success! 🗑️', `${modelTypeLabel} (${selectedModelSize}) deleted from disk`);
+              } else {
+                Alert.alert('Notice ⚠️', `${modelTypeLabel} (${selectedModelSize}) was not found on disk`);
+              }
+            } catch (error) {
+              Alert.alert('Error', `Failed to delete model: ${error.message}`);
+            }
+          },
+        },
+      ]
+    );
   };
 
   return (
@@ -426,23 +449,23 @@ const HomeScreen = ({ navigation }) => {
           </Text>
         </TouchableOpacity>
 
-        {/* Model Unload Buttons */}
+        {/* Model Management Buttons */}
         <View style={styles.unloadButtonsRow}>
           <TouchableOpacity
             style={[styles.unloadButton]}
             onPress={handleUnloadCurrentModel}
           >
             <Text style={styles.unloadButtonText}>
-              🗑️ Unload Current Model
+              ⚪ Unload Current Model
             </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.unloadButton]}
-            onPress={handleUnloadAllModels}
+            style={[styles.deleteButton]}
+            onPress={handleDeleteCurrentModel}
           >
-            <Text style={styles.unloadButtonText}>
-              🗑️ Unload All Models
+            <Text style={styles.deleteButtonText}>
+              🗑️ Delete Current Model
             </Text>
           </TouchableOpacity>
         </View>
@@ -531,9 +554,17 @@ const HomeScreen = ({ navigation }) => {
 
       {/* Navigation */}
       <TouchableOpacity
+        style={[styles.primaryButton, { marginBottom: 12 }]}
+        onPress={() => {
+          navigation.navigate("ModelManagementScreen");
+        }}
+      >
+        <Text style={styles.primaryButtonText}>🔧 Model Management API (New)</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
         style={[styles.secondaryButton]}
         onPress={() => {
-          console.log('🔘 Button pressed: Navigating to CameraScreen', Date.now());
           navigation.navigate("CameraScreen", {
             // modelSize: 'large',
             // modelType: 'shipping_label',
@@ -826,6 +857,24 @@ const styles = StyleSheet.create({
   },
   unloadButton: {
     flex: 1,
+    backgroundColor: '#fd7e14',
+    paddingVertical: 12,
+    borderRadius: 10,
+    alignItems: 'center',
+    shadowColor: '#fd7e14',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3
+  },
+  unloadButtonText: {
+    fontSize: 14,
+    color: '#fff',
+    fontWeight: '600',
+    textAlign: 'center'
+  },
+  deleteButton: {
+    flex: 1,
     backgroundColor: '#dc3545',
     paddingVertical: 12,
     borderRadius: 10,
@@ -836,7 +885,7 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3
   },
-  unloadButtonText: {
+  deleteButtonText: {
     fontSize: 14,
     color: '#fff',
     fontWeight: '600',

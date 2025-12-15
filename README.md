@@ -166,7 +166,7 @@ const ScannerView = () => {
 
 ## Headless OCR Example
 
-Here's a complete example demonstrating how to use the new headless OCR functionality:
+Here's a complete example demonstrating how to use headless OCR with the new Model Management API:
 
 ```typescript
 import React, { useState } from 'react';
@@ -176,35 +176,54 @@ import { VisionCore } from 'react-native-vision-sdk';
 const HeadlessOCRExample = () => {
   const [isModelLoaded, setIsModelLoaded] = useState(false);
   const [prediction, setPrediction] = useState('');
+  const [downloadProgress, setDownloadProgress] = useState(0);
 
-  // Step 1: Initialize and load model
+  const module = {
+    type: 'shipping_label',
+    size: 'large'
+  };
+
+  // Step 1: Download and load model
   const loadModel = async () => {
     try {
       // Set environment first
-      VisionCore.setEnvironment('sandbox'); // Use 'prod' for production
+      VisionCore.setEnvironment('sandbox'); // Use 'production' for production
 
-      // Load on-device model with progress tracking
-      VisionCore.addListener('onModelDownloadProgress', (progress) => {
-        console.log('Download progress:', progress);
-        if (progress.isReady) {
-          setIsModelLoaded(true);
-          Alert.alert('Success', 'Model loaded and ready!');
-        }
+      // Initialize model manager (REQUIRED on Android, not needed on iOS)
+      // iOS: This is a no-op, exists only for API consistency
+      VisionCore.initializeModelManager({
+        maxConcurrentDownloads: 2,
+        enableLogging: true
       });
 
-      await VisionCore.loadModel(
-        'your-auth-token',
+      // Download model with progress tracking
+      await VisionCore.downloadModel(
+        module,
         'your-api-key',
-        'shipping_label', // shipping_label, item_label, bill_of_lading, document_classification
-        'large' // nano, micro, small, medium, large, xlarge
+        'your-auth-token',
+        (progress) => {
+          const percent = (progress.progress * 100).toFixed(1);
+          setDownloadProgress(progress.progress);
+          console.log(`Download: ${percent}%`);
+        }
       );
+
+      // Load into memory
+      await VisionCore.loadOCRModel(
+        module,
+        'your-api-key',
+        'your-auth-token'
+      );
+
+      setIsModelLoaded(true);
+      Alert.alert('Success', 'Model loaded and ready!');
     } catch (error) {
       console.error('Failed to load model:', error);
-      Alert.alert('Error', 'Failed to load model');
+      Alert.alert('Error', `Failed to load model: ${error.message}`);
     }
   };
 
-  // Step 2: Make predictions
+  // Step 2: Make predictions with specific model
   const runPrediction = async () => {
     if (!isModelLoaded) {
       Alert.alert('Warning', 'Please load model first');
@@ -216,22 +235,12 @@ const HeadlessOCRExample = () => {
       const barcodes = ['1234567890']; // Optional barcode data
 
       // On-device prediction (fast, offline)
-      const result = await VisionCore.predict(imagePath, barcodes);
-      setPrediction(result);
-
-      // Alternative: Cloud prediction with more accuracy
-      // const cloudResult = await VisionCore.predictShippingLabelCloud(
-      //   imagePath,
-      //   barcodes,
-      //   {
-      //     token: 'your-token',
-      //     apiKey: 'your-api-key',
-      //     locationId: 'optional-location-id',
-      //     shouldResizeImage: true,
-      //     options: { customParam: 'value' },
-      //     metadata: { source: 'mobile-app' }
-      //   }
-      // );
+      const result = await VisionCore.predictWithModule(
+        module,
+        imagePath,
+        barcodes
+      );
+      setPrediction(JSON.stringify(result, null, 2));
 
     } catch (error) {
       console.error('Prediction failed:', error);
@@ -239,36 +248,68 @@ const HeadlessOCRExample = () => {
     }
   };
 
-  // Step 3: Hybrid prediction (on-device + cloud enhancement)
-  const runHybridPrediction = async () => {
+  // Step 3: Cloud-only prediction (no model download required)
+  const runCloudPrediction = async () => {
     try {
       const imagePath = 'path/to/your/image.jpg';
       const barcodes = ['1234567890'];
 
-      // Gets on-device prediction then enhances it with cloud processing
-      const enhancedResult = await VisionCore.predictWithCloudTransformations(
+      // Cloud prediction with more accuracy
+      const cloudResult = await VisionCore.predictShippingLabelCloud(
         imagePath,
         barcodes,
-        {
-          token: 'your-token',
-          apiKey: 'your-api-key',
-          locationId: 'optional-location-id',
-          shouldResizeImage: true
-        }
+        'your-auth-token',
+        'your-api-key',
+        'optional-location-id',
+        { /* options */ },
+        { /* metadata */ },
+        { /* recipient */ },
+        { /* sender */ },
+        true // shouldResizeImage
       );
-      setPrediction(enhancedResult);
+      setPrediction(JSON.stringify(cloudResult, null, 2));
     } catch (error) {
-      console.error('Hybrid prediction failed:', error);
+      console.error('Cloud prediction failed:', error);
+      Alert.alert('Error', 'Cloud prediction failed');
+    }
+  };
+
+  // Step 4: Cleanup
+  const unloadModel = async () => {
+    try {
+      const unloaded = await VisionCore.unloadModel(module);
+      if (unloaded) {
+        setIsModelLoaded(false);
+        Alert.alert('Success', 'Model unloaded from memory');
+      }
+    } catch (error) {
+      Alert.alert('Error', `Failed to unload: ${error.message}`);
+    }
+  };
+
+  const deleteModel = async () => {
+    try {
+      const deleted = await VisionCore.deleteModel(module);
+      if (deleted) {
+        setIsModelLoaded(false);
+        Alert.alert('Success', 'Model deleted from disk');
+      }
+    } catch (error) {
+      Alert.alert('Error', `Failed to delete: ${error.message}`);
     }
   };
 
   return (
     <View style={{ padding: 20 }}>
       <Button
-        title="Load Model"
+        title="Download & Load Model"
         onPress={loadModel}
         disabled={isModelLoaded}
       />
+
+      {downloadProgress > 0 && downloadProgress < 1 && (
+        <Text>Download Progress: {(downloadProgress * 100).toFixed(1)}%</Text>
+      )}
 
       <Button
         title="Run On-Device Prediction"
@@ -277,8 +318,19 @@ const HeadlessOCRExample = () => {
       />
 
       <Button
-        title="Run Hybrid Prediction"
-        onPress={runHybridPrediction}
+        title="Run Cloud Prediction"
+        onPress={runCloudPrediction}
+      />
+
+      <Button
+        title="Unload Model"
+        onPress={unloadModel}
+        disabled={!isModelLoaded}
+      />
+
+      <Button
+        title="Delete Model"
+        onPress={deleteModel}
         disabled={!isModelLoaded}
       />
 
@@ -287,8 +339,8 @@ const HeadlessOCRExample = () => {
       </Text>
 
       {prediction ? (
-        <Text style={{ marginTop: 10 }}>
-          Prediction Result: {prediction}
+        <Text style={{ marginTop: 10, fontFamily: 'monospace' }}>
+          {prediction}
         </Text>
       ) : null}
     </View>
@@ -300,60 +352,285 @@ export default HeadlessOCRExample;
 
 ### Key Benefits of Headless OCR
 
-- **🚀 No Camera Dependency**: Process existing images without camera component
-- **⚡ Fast On-Device Processing**: Local ML models for instant predictions
-- **🌐 Cloud Enhancement**: Optional cloud processing for higher accuracy
-- **🔄 Hybrid Workflows**: Combine on-device speed with cloud intelligence
-- **📱 Flexible Integration**: Use in any part of your app, not just camera screens
+- **No Camera Dependency**: Process existing images without camera component
+- **Fast On-Device Processing**: Local ML models for instant predictions
+- **Cloud Enhancement**: Optional cloud processing for higher accuracy
+- **Hybrid Workflows**: Combine on-device speed with cloud intelligence
+- **Flexible Integration**: Use in any part of your app, not just camera screens
 
-### Model Management
+### Model Management API
 
-**NEW**: The Vision SDK now supports unloading on-device models to free up memory and disk space when they're no longer needed.
+**NEW in v2.1.0**: The Vision SDK now includes a comprehensive Model Management API for fine-grained control over on-device ML models. This replaces the deprecated `loadModel()` and `unLoadModel()` methods.
 
-#### Unloading Models
+#### Quick Start
 
 ```typescript
 import { VisionCore } from 'react-native-vision-sdk';
 
-// Unload a specific model type
-const unloadSpecificModel = async () => {
-  try {
-    const result = await VisionCore.unLoadModel(
-      'shipping_label',  // Model type to unload
-      true               // shouldDeleteFromDisk - removes model files from disk
-    );
-    console.log(result); // "Model unloaded successfully"
-  } catch (error) {
-    console.error('Failed to unload model:', error);
-  }
-};
+const module = { type: 'shipping_label', size: 'large' };
 
-// Unload all models
-const unloadAllModels = async () => {
-  try {
-    const result = await VisionCore.unLoadModel(
-      null,  // Pass null to unload all models
-      true   // shouldDeleteFromDisk
-    );
-    console.log(result); // "All models unloaded successfully"
-  } catch (error) {
-    console.error('Failed to unload models:', error);
-  }
-};
+// 1. Initialize (REQUIRED on Android, not needed on iOS - hardcoded no-op)
+VisionCore.initializeModelManager({ maxConcurrentDownloads: 2 });
+
+// 2. Download model with progress tracking
+await VisionCore.downloadModel(
+  module,
+  apiKey,
+  token,
+  (progress) => console.log(`${(progress.progress * 100).toFixed(1)}%`)
+);
+
+// 3. Load into memory
+await VisionCore.loadOCRModel(module, apiKey, token);
+
+// 4. Make predictions
+const result = await VisionCore.predictWithModule(module, imageUri, barcodes);
+
+// 5. Cleanup
+await VisionCore.unloadModel(module);  // From memory
+await VisionCore.deleteModel(module);  // From disk (permanent)
 ```
 
-#### VisionCore.unLoadModel Parameters
+#### Key Methods
 
-| **Parameter** | **Type** | **Required** | **Description** |
-|---------------|----------|--------------|-----------------|
-| `modelType` | `string \| null` | Yes | The type of model to unload (e.g., 'shipping_label', 'bill_of_lading'). Pass `null` to unload all models. |
-| `shouldDeleteFromDisk` | `boolean` | No (default: `false`) | If `true`, deletes model files from disk. If `false`, keeps files for faster reloading. |
+| Method | Arguments | Description |
+|--------|-----------|-------------|
+| `initializeModelManager()` | `config: { maxConcurrentDownloads?, enableLogging? }` | Initialize model manager (**Android only** - iOS is hardcoded no-op) |
+| `isModelManagerInitialized()` | None | Check initialization status (**Android only** - iOS always returns `true`) |
+| `downloadModel()` | `module: OCRModule, apiKey, token, progressCallback?` | Download model to disk with progress tracking → Returns `Promise<void>` |
+| `loadOCRModel()` | `module: OCRModule, apiKey, token, platform?, executionProvider?` | Load model into memory for inference |
+| `unloadModel()` | `module: OCRModule` | Remove from memory (files stay on disk) → Returns `boolean` |
+| `deleteModel()` | `module: OCRModule` | Permanently delete from disk → Returns `boolean` |
+| `isModelLoaded()` | `module: OCRModule` | Check if model is loaded → Returns `boolean` |
+| `getLoadedModelCount()` | None | Count of loaded models → Returns `number` |
+| `findDownloadedModels()` | None | List all downloaded models → Returns `Promise<ModelInfo[]>` |
+| `findDownloadedModel()` | `module: OCRModule` | Find specific model → Returns `Promise<ModelInfo \| null>` |
+| `findLoadedModels()` | None | List loaded models → Returns `Promise<ModelInfo[]>` |
+| `predictWithModule()` | `module: OCRModule, imagePath, barcodes` | Predict with specific model |
+| `cancelDownload()` | `module: OCRModule` | Cancel active download for model → Returns `Promise<boolean>` |
+| `onModelLifecycle()` | `listener: (event) => void` | Listen to lifecycle events → Returns `EmitterSubscription` |
 
-**Use Cases:**
-- Free up memory when switching between different model types
-- Clean up disk space after processing
-- Prepare for app updates or model version changes
-- Optimize app performance by removing unused models
+**Note:** `OCRModule` = `{ type: 'shipping_label' | 'item_label' | 'bill_of_lading' | 'document_classification', size: 'nano' | 'micro' | 'small' | 'medium' | 'large' | 'xlarge' }`
+
+**See [MODEL_MANAGEMENT_API_REFERENCE.md](./MODEL_MANAGEMENT_API_REFERENCE.md) for complete API documentation.**
+
+#### Benefits Over Old API
+
+- **Separation of Concerns**: Download and load are separate operations
+- **Progress Tracking**: Per-download progress callbacks with unique request IDs
+- **Model Caching**: Download once, load multiple times
+- **Memory Control**: Unload without deleting, or delete permanently
+- **Type Safety**: OCRModule type instead of separate strings
+- **Explicit Selection**: Specify exact model for predictions
+
+#### Migration from Deprecated API
+
+**DEPRECATED** (will be removed in v3.0.0):
+```typescript
+// OLD - Don't use
+await VisionCore.loadModel(token, apiKey, 'shipping_label', 'large');
+await VisionCore.unLoadModel('shipping_label', true);
+const result = await VisionCore.predict(imageUri, barcodes);
+```
+
+**New API** (recommended):
+```typescript
+// NEW - Use this
+const module = { type: 'shipping_label', size: 'large' };
+await VisionCore.downloadModel(module, apiKey, token);
+await VisionCore.loadOCRModel(module, apiKey, token);
+const result = await VisionCore.predictWithModule(module, imageUri, barcodes);
+await VisionCore.unloadModel(module);
+await VisionCore.deleteModel(module);
+```
+
+### Advanced Model Management
+
+#### Download Multiple Models Concurrently
+
+```typescript
+const models = [
+  { type: 'shipping_label', size: 'large' },
+  { type: 'item_label', size: 'medium' },
+  { type: 'bill_of_lading', size: 'large' }
+];
+
+// Configure concurrent downloads
+VisionCore.initializeModelManager({ maxConcurrentDownloads: 3 });
+
+// Download all models in parallel with individual progress tracking
+const downloads = models.map(module =>
+  VisionCore.downloadModel(module, apiKey, token, (progress) => {
+    console.log(`${progress.module.type}: ${(progress.progress * 100).toFixed(1)}%`);
+  })
+);
+
+// Wait for all to complete
+await Promise.all(downloads);
+console.log('All downloads complete');
+```
+
+#### Switch Between Models
+
+```typescript
+const model1 = { type: 'shipping_label', size: 'large' };
+const model2 = { type: 'item_label', size: 'medium' };
+
+// Ensure both are downloaded (only need to download once)
+await VisionCore.downloadModel(model1, apiKey, token);
+await VisionCore.downloadModel(model2, apiKey, token);
+
+// Use first model
+await VisionCore.loadOCRModel(model1, apiKey, token);
+const result1 = await VisionCore.predictWithModule(model1, image1, barcodes1);
+
+// Switch to second model (unload first to free memory)
+await VisionCore.unloadModel(model1);
+await VisionCore.loadOCRModel(model2, apiKey, token);
+const result2 = await VisionCore.predictWithModule(model2, image2, barcodes2);
+```
+
+#### Query Model Status
+
+```typescript
+// Check if specific model is downloaded
+const modelInfo = await VisionCore.findDownloadedModel({
+  type: 'shipping_label',
+  size: 'large'
+});
+
+if (modelInfo) {
+  console.log('Model found on disk');
+  console.log('Size:', (modelInfo.sizeInBytes / 1024 / 1024).toFixed(2), 'MB');
+  console.log('Downloaded:', modelInfo.downloadedAt);
+} else {
+  console.log('Model not downloaded');
+}
+
+// List all downloaded models
+const downloaded = await VisionCore.findDownloadedModels();
+console.log(`${downloaded.length} model(s) on disk`);
+
+// List loaded models
+const loaded = await VisionCore.findLoadedModels();
+console.log(`${loaded.length} model(s) in memory`);
+
+// Get count quickly
+const count = VisionCore.getLoadedModelCount();
+```
+
+#### Listen to Model Lifecycle Events
+
+```typescript
+const subscription = VisionCore.onModelLifecycle((event) => {
+  console.log('Event:', event.type);
+  console.log('Module:', `${event.module.type} (${event.module.size})`);
+
+  switch (event.type) {
+    case 'onDownloadStarted':
+      console.log('Download started');
+      break;
+    case 'onDownloadCompleted':
+      console.log('Download completed');
+      break;
+    case 'onModelLoaded':
+      console.log('Model loaded into memory');
+      break;
+    case 'onModelUnloaded':
+      console.log('Model unloaded from memory');
+      break;
+    case 'onModelDeleted':
+      console.log('Model deleted from disk');
+      break;
+  }
+});
+
+// Later: unsubscribe
+subscription.remove();
+```
+
+#### Cancel Downloads
+
+```typescript
+const module = { type: 'shipping_label', size: 'large' };
+
+// Start download
+VisionCore.downloadModel(
+  module,
+  apiKey,
+  token,
+  (progress) => {
+    console.log(`Progress: ${progress.progress * 100}%`);
+
+    // Cancel if progress is too slow
+    if (progress.progress < 0.1) {
+      VisionCore.cancelDownload(module);
+    }
+  }
+);
+
+// Or cancel later by module
+const cancelled = await VisionCore.cancelDownload(module);
+if (cancelled) {
+  console.log('Download cancelled for this model');
+}
+```
+
+#### Best Practices
+
+**1. Initialize Once (Required on Android Only)**
+```typescript
+// At app startup (MUST call on Android before any model operations)
+// iOS: Not needed - hardcoded no-op for API consistency
+VisionCore.initializeModelManager({
+  maxConcurrentDownloads: 2,
+  enableLogging: __DEV__  // Only in development
+});
+
+// Android: Check initialization status
+// iOS: Always returns true (hardcoded)
+if (!VisionCore.isModelManagerInitialized()) {
+  VisionCore.initializeModelManager({ maxConcurrentDownloads: 2 });
+}
+```
+
+**2. Check Before Operations**
+```typescript
+// Avoid unnecessary downloads
+const info = await VisionCore.findDownloadedModel(module);
+if (!info) {
+  await VisionCore.downloadModel(module, apiKey, token);
+}
+
+// Ensure model is loaded before prediction
+if (!VisionCore.isModelLoaded(module)) {
+  await VisionCore.loadOCRModel(module, apiKey, token);
+}
+```
+
+**3. Clean Up Unused Models**
+```typescript
+// When done with a model
+await VisionCore.unloadModel(module);  // Frees memory
+
+// When permanently done
+await VisionCore.deleteModel(module);  // Frees disk space
+```
+
+**4. Handle Errors Gracefully**
+```typescript
+try {
+  await VisionCore.downloadModel(module, apiKey, token);
+} catch (error) {
+  if (error.code === 'NETWORK_ERROR') {
+    Alert.alert('No Connection', 'Please check your internet connection');
+  } else if (error.code === 'STORAGE_FULL') {
+    Alert.alert('Storage Full', 'Please free up some space');
+  } else {
+    Alert.alert('Error', error.message);
+  }
+}
+```
 
 ## VisionCamera - Minimal Camera Component
 
@@ -418,7 +695,7 @@ const SimpleScannerView = () => {
 | `autoCapture` | `boolean` | `false` | Automatically capture when detection is successful |
 | `enableFlash` | `boolean` | `false` | Enable/disable camera flash |
 | `zoomLevel` | `number` | `1.0` | Camera zoom level (device dependent, typically 1.0-5.0) |
-| `cameraFacing` | `'back' \| 'front'` | `'back'` | Camera facing direction - 'back' for rear camera or 'front' for front-facing camera. **iOS**: ✅ Fully supported \| **Android**: 🚧 Placeholder (not yet functional) |
+| `cameraFacing` | `'back' \| 'front'` | `'back'` | Camera facing direction - 'back' for rear camera or 'front' for front-facing camera. **iOS**: Fully supported \| **Android**: Placeholder (not yet functional) |
 | `scanArea` | `{ x: number, y: number, width: number, height: number }` | `undefined` | Restrict scanning to a specific region (coordinates in dp) |
 | `detectionConfig` | `object` | See below | Configure object detection settings |
 | `frameSkip` | `number` | `undefined` | Process every Nth frame for performance optimization |
@@ -592,8 +869,8 @@ const LegacyCameraSwitchExample = () => {
 ```
 
 **Platform Support:**
-- **iOS**: ✅ Fully functional - Switches between front and back cameras seamlessly
-- **Android**: 🚧 Placeholder implementation - Prop/method is accepted but camera switching is not yet functional (awaiting VisionSDK Android support)
+- **iOS**: Fully functional - Switches between front and back cameras seamlessly
+- **Android**: Placeholder implementation - Prop/method is accepted but camera switching is not yet functional (awaiting VisionSDK Android support)
 
 **Type Export:**
 ```typescript
@@ -690,20 +967,20 @@ const styles = StyleSheet.create({
 
 ### When to Use VisionCamera
 
-- ✅ Simple barcode or QR code scanning
-- ✅ On-device OCR (when coupled with `VisionCore` for predictions)
-- ✅ No cloud OCR needed
-- ✅ Want minimal setup
-- ✅ Building a lightweight scanner
-- ✅ Custom UI overlays for scanning region
+- Simple barcode or QR code scanning
+- On-device OCR (when coupled with `VisionCore` for predictions)
+- No cloud OCR needed
+- Want minimal setup
+- Building a lightweight scanner
+- Custom UI overlays for scanning region
 
 ### When to Use VisionSDK (Full Component)
 
-- ✅ Need OCR for shipping labels, bills of lading
-- ✅ Cloud prediction API integration
-- ✅ On-device ML model inference
-- ✅ Complex document processing workflows
-- ✅ Template management
+- Need OCR for shipping labels, bills of lading
+- Cloud prediction API integration
+- On-device ML model inference
+- Complex document processing workflows
+- Template management
 
 ---
 
@@ -713,7 +990,7 @@ While we strive to maintain feature parity across iOS and Android, certain limit
 
 ### Android Improvements
 
-#### 1. ✅ Bounding Box Metadata - **FULL PARITY ACHIEVED** (Android VisionSDK v2.4.23+)
+#### 1. Bounding Box Metadata - **FULL PARITY ACHIEVED** (Android VisionSDK v2.4.23+)
 
 **Affected Events:** `onBoundingBoxesUpdate`, `onIndicationsBoundingBoxes`
 
@@ -724,9 +1001,9 @@ As of Android VisionSDK v2.4.23, the Android platform now provides **full barcod
 {
   barcodeBoundingBoxes: [
     {
-      scannedCode: "1234567890",      // ✅ Available on both platforms
-      symbology: "CODE_128",          // ✅ Available on both platforms
-      gs1ExtractedInfo: { /* ... */ }, // ✅ Available on both platforms
+      scannedCode: "1234567890",      // Available on both platforms
+      symbology: "CODE_128",          // Available on both platforms
+      gs1ExtractedInfo: { /* ... */ }, // Available on both platforms
       boundingBox: { x: 10, y: 20, width: 100, height: 50 }
     }
   ]
@@ -749,6 +1026,20 @@ Some detection config options are iOS-only:
 
 These options are accepted on Android but have no effect.
 
+### Model Management Platform Notes
+
+Both iOS and Android support:
+- Granular model unloading (unload specific models)
+- Concurrent model downloads
+- Model switching without re-download
+- Full lifecycle event tracking
+
+Platform-specific differences:
+- **Android**: Requires `initializeModelManager()` before operations
+- **Android**: Supports execution provider selection (CPU, NNAPI, XNNPACK)
+- **iOS**: Initialization methods are optional (no-ops)
+- **iOS**: Execution provider not exposed
+
 ### iOS Limitations
 
 #### 1. Error Code Filtering
@@ -770,30 +1061,30 @@ onError={(error) => {
 | Feature | iOS | Android |
 |---------|-----|---------|
 | Implementation | `OnDeviceOCRManager` | `OnDeviceOCRManagerSingleton` |
-| Unload specific model | ✅ Supported | ⚠️ Destroys all models |
-| Unload all models | ✅ Supported | ✅ Supported |
-| Delete from disk | ✅ Supported | ⚠️ Limited |
-
-**Android Note:** Due to the singleton pattern, calling `VisionCore.unLoadModel()` with a specific model type will still destroy the entire singleton instance, effectively unloading all models.
+| Unload specific model | Supported | Supported |
+| Unload all models | Supported | Supported |
+| Delete from disk | Supported | Supported |
+| Initialization required | Optional (no-op) | Required |
+| Execution provider | Not exposed | CPU, NNAPI, XNNPACK |
 
 ### Feature Parity Table
 
 | Feature | iOS | Android (v2.4.23+) |
 |---------|-----|---------|
-| Barcode Detection | ✅ Full support | ✅ Full support |
-| Bounding Boxes (coordinates) | ✅ Full support | ✅ Full support |
-| Bounding Boxes (metadata) | ✅ Full metadata | ✅ **Full metadata** |
-| Camera Switching (Front/Back) | ✅ Full support | 🚧 Placeholder |
-| Error codes | ✅ With filtering | ✅ Full support |
-| Sharpness score | ✅ Supported | ✅ Supported |
-| GS1 extraction | ✅ Supported | ✅ Supported |
-| Model management | ✅ Granular | ⚠️ All-or-nothing |
-| Detection config | ✅ Full support | ⚠️ Partial support |
+| Barcode Detection | Full support | Full support |
+| Bounding Boxes (coordinates) | Full support | Full support |
+| Bounding Boxes (metadata) | Full metadata | **Full metadata** |
+| Camera Switching (Front/Back) | Full support | Placeholder |
+| Error codes | With filtering | Full support |
+| Sharpness score | Supported | Supported |
+| GS1 extraction | Supported | Supported |
+| Model management | Full support | Full support |
+| Detection config | Full support | Partial support |
 
 **Legend:**
-- ✅ Fully supported
-- ⚠️ Limited or different behavior
-- ❌ Not available
+- Full support/Supported - Feature is fully functional
+- Partial support - Feature has limitations
+- Placeholder - Feature not yet functional
 
 **Major Improvement:** As of Android VisionSDK v2.4.23, bounding box metadata is now fully supported on both platforms!
 
@@ -904,7 +1195,7 @@ visionSdk?.current?.setCameraSettings({
 
 **Parameters:**
 - `nthFrameToProcess` (number): Process every Nth frame for performance optimization (default: 10)
-- `cameraPosition` (number): Camera position - `1` for back camera, `2` for front camera. **iOS**: ✅ Fully supported | **Android**: 🚧 Placeholder (not yet functional)
+- `cameraPosition` (number): Camera position - `1` for back camera, `2` for front camera. **iOS**: Fully supported | **Android**: Placeholder (not yet functional)
 
 #### Configure On-Device Model
 

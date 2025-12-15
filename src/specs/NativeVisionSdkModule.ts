@@ -22,16 +22,17 @@ export interface Spec extends TurboModule {
     modelSize: string
   ): Promise<void>;
 
-  /**
-   * Unloads on-device models to free up memory
-   * @param modelType - Model type to unload (empty string to unload all models)
-   * @param shouldDeleteFromDisk - Whether to delete model files from disk
-   * @returns Success message
-   */
-  unLoadOnDeviceModels(
-    modelType: string,
-    shouldDeleteFromDisk: boolean
-  ): Promise<string>;
+  // DEPRECATED - Use unloadModel() or deleteModel() instead
+  // /**
+  //  * Unloads on-device models to free up memory
+  //  * @param modelType - Model type to unload (empty string to unload all models)
+  //  * @param shouldDeleteFromDisk - Whether to delete model files from disk
+  //  * @returns Success message
+  //  */
+  // unLoadOnDeviceModels(
+  //   modelType: string,
+  //   shouldDeleteFromDisk: boolean
+  // ): Promise<string>;
 
   /**
    * Logs item label data to PackageX
@@ -237,6 +238,143 @@ export interface Spec extends TurboModule {
     recipient: string,
     sender: string,
     shouldResizeImage: boolean
+  ): Promise<string>;
+
+  // ============================================================================
+  // MODEL MANAGEMENT METHODS
+  // ============================================================================
+
+  /**
+   * Initialize the ModelManager singleton
+   * @param configJson - Serialized ModelManagerConfig as JSON string
+   */
+  initializeModelManager(configJson: string): void;
+
+  /**
+   * Check if ModelManager is initialized
+   * @returns true if initialized, false otherwise
+   */
+  isModelManagerInitialized(): boolean;
+
+  /**
+   * Download a model from server to disk
+   * @param moduleJson - Serialized OCRModule as JSON string
+   * @param apiKey - API key for authentication (can be null)
+   * @param token - Authentication token (can be null)
+   * @param platformType - Platform identifier (e.g., 'react_native')
+   * @param requestId - Unique request ID for progress tracking
+   */
+  downloadModel(
+    moduleJson: string,
+    apiKey: string | null,
+    token: string | null,
+    platformType: string,
+    requestId: string
+  ): Promise<void>;
+
+  /**
+   * Cancel an active model download
+   * @param moduleJson - Serialized OCRModule as JSON string
+   * @returns true if download was cancelled, false if no active download
+   */
+  cancelDownload(moduleJson: string): Promise<boolean>;
+
+  // NOT AVAILABLE IN iOS SDK - COMMENTED OUT FOR API CONSISTENCY
+  // /**
+  //  * Get the number of currently active downloads
+  //  * @returns Number of active downloads
+  //  */
+  // getActiveDownloadCount(): number;
+
+  /**
+   * Load a model into ONNX Runtime memory
+   * @param moduleJson - Serialized OCRModule as JSON string
+   * @param apiKey - API key for authentication (can be null)
+   * @param token - Authentication token (can be null)
+   * @param platformType - Platform identifier (e.g., 'react_native')
+   * @param executionProvider - ONNX execution provider (can be null, Android only)
+   */
+  loadOCRModel(
+    moduleJson: string,
+    apiKey: string | null,
+    token: string | null,
+    platformType: string,
+    executionProvider: string | null
+  ): Promise<void>;
+
+  /**
+   * Unload a model from memory (file remains on disk)
+   * @param moduleJson - Serialized OCRModule as JSON string
+   * @returns true if model was unloaded, false if not loaded
+   */
+  unloadModel(moduleJson: string): boolean;
+
+  /**
+   * Check if a model is currently loaded in memory
+   * @param moduleJson - Serialized OCRModule as JSON string
+   * @returns true if loaded, false otherwise
+   */
+  isModelLoaded(moduleJson: string): boolean;
+
+  /**
+   * Get the number of models currently loaded in memory
+   * @returns Number of loaded models
+   */
+  getLoadedModelCount(): number;
+
+  /**
+   * Find all downloaded models by scanning the file system
+   * @returns JSON string containing array of ModelInfo objects
+   */
+  findDownloadedModels(): Promise<string>;
+
+  /**
+   * Find a specific downloaded model
+   * @param moduleJson - Serialized OCRModule as JSON string
+   * @returns JSON string containing ModelInfo object or null
+   */
+  findDownloadedModel(moduleJson: string): Promise<string>;
+
+  /**
+   * Find all models currently loaded in memory
+   * @returns JSON string containing array of ModelInfo objects
+   */
+  findLoadedModels(): Promise<string>;
+
+  // NOT AVAILABLE IN iOS SDK - COMMENTED OUT FOR API CONSISTENCY
+  // /**
+  //  * Check if a newer model version is available on the server
+  //  * @param moduleJson - Serialized OCRModule as JSON string
+  //  * @param apiKey - API key for authentication (can be null)
+  //  * @param token - Authentication token (can be null)
+  //  * @param platformType - Platform identifier (e.g., 'react_native')
+  //  * @returns JSON string containing ModelUpdateInfo object
+  //  */
+  // checkModelUpdates(
+  //   moduleJson: string,
+  //   apiKey: string | null,
+  //   token: string | null,
+  //   platformType: string
+  // ): Promise<string>;
+
+  /**
+   * Delete a model from disk (unloads from memory first if loaded)
+   * @param moduleJson - Serialized OCRModule as JSON string
+   * @returns true if model was deleted, false if not downloaded
+   */
+  deleteModel(moduleJson: string): Promise<boolean>;
+
+  /**
+   * Perform on-device OCR prediction with explicit module selection
+   * @param moduleJson - Serialized OCRModule as JSON string
+   * @param imagePath - Local file path or remote URL to the image
+   * @param barcodes - Array of barcode objects
+   * @returns Prediction result as JSON string
+   */
+  predictWithModule(
+    moduleJson: string,
+    imagePath: string,
+    barcodes: any[]
   ): Promise<string>;
 
   /**

@@ -37,7 +37,7 @@ Pod::Spec.new do |s|
   ]
 
   s.dependency "React-Core"
-  s.dependency "VisionSDK", "= 2.0.3"
+  s.dependency "VisionSDK", "= 2.0.6"
 
   # New Architecture dependencies
   install_modules_dependencies(s)

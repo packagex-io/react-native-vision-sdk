@@ -1,13 +1,17 @@
 package com.visionsdk
 
+import android.graphics.Bitmap
+import android.graphics.Rect
 import android.net.Uri
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
+import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.Promise
 import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.ReactMethod
 import com.facebook.react.module.annotations.ReactModule
+import com.facebook.react.modules.core.DeviceEventManagerModule
 import com.visionsdk.NativeVisionSdkModuleSpec
 import io.packagex.visionsdk.Environment
 import io.packagex.visionsdk.ApiManager
@@ -21,6 +25,20 @@ import com.visionsdk.utils.uriToBitmap
 import com.visionsdk.utils.getModelType
 import org.json.JSONArray
 import org.json.JSONObject
+import io.packagex.visionsdk.modelmanagement.api.ModelManager
+import io.packagex.visionsdk.modelmanagement.api.ModelLifecycleListener
+import io.packagex.visionsdk.modelmanagement.error.ModelException
+import io.packagex.visionsdk.modelmanagement.model.DownloadProgress
+import io.packagex.visionsdk.modelmanagement.model.ModelInfo
+import io.packagex.visionsdk.modelmanagement.model.ModelUpdateInfo
+import io.packagex.visionsdk.ocr.ml.core.enums.ExecutionProvider
+import io.packagex.visionsdk.ocr.ml.core.enums.OCRModule
+import io.packagex.visionsdk.ocr.ml.core.enums.PlatformType
+import io.packagex.visionsdk.ocr.ml.core.OnDeviceOCRManager
+import io.packagex.visionsdk.dto.ScannedCodeResult
+import io.packagex.visionsdk.dto.BarcodeSymbology
+import io.packagex.visionsdk.ocr.ml.core.model_options.BillOfLadingOptions
+import io.packagex.visionsdk.ocr.ml.core.model_options.ItemLabelOptions
 
 /**
  * TurboModule implementation for VisionCore (New Architecture)
@@ -60,9 +78,314 @@ class VisionSdkModule(reactContext: ReactApplicationContext) :
         }
     }
 
+    // ============================================================================
+    // MODEL MANAGEMENT HELPER FUNCTIONS
+    // ============================================================================
+
+    /**
+     * Parses JSON string to OCRModule
+     */
+    private fun parseOCRModule(moduleJson: String): OCRModule {
+        val json = JSONObject(moduleJson)
+        val type = json.getString("type")
+        val sizeStr = json.optString("size", "large")
+        val modelSize = getModelSize(sizeStr)
+
+        val options = json.optJSONObject("options")
+        val enableAdditionalAttributes = options?.optBoolean("enableAdditionalAttributes", false) ?: false
+
+        return when (type.lowercase()) {
+            "shipping_label", "shipping-label" -> OCRModule.ShippingLabel(modelSize)
+            "bill_of_lading", "bill-of-lading" -> {
+                val bolOptions = BillOfLadingOptions(enableAdditionalAttributes)
+                OCRModule.BillOfLading(modelSize, bolOptions)
+            }
+            "item_label", "item-label" -> {
+                val ilOptions = ItemLabelOptions(enableAdditionalAttributes)
+                OCRModule.ItemLabel(modelSize, ilOptions)
+            }
+            "document_classification", "document-classification" -> OCRModule.DocumentClassification(modelSize)
+            else -> OCRModule.ShippingLabel(modelSize)
+        }
+    }
+
+    /**
+     * Parses string to PlatformType enum
+     */
+    private fun parsePlatformType(platformTypeStr: String): PlatformType {
+        return when (platformTypeStr.lowercase()) {
+            "native" -> PlatformType.Native
+            "flutter" -> PlatformType.Flutter
+            "react_native", "reactnative" -> PlatformType.ReactNative
+            else -> PlatformType.ReactNative // Default for React Native
+        }
+    }
+
+    /**
+     * Parses string to ExecutionProvider enum
+     */
+    private fun parseExecutionProvider(providerStr: String?): ExecutionProvider {
+        return when (providerStr?.uppercase()) {
+            "CPU" -> ExecutionProvider.CPU
+            "NNAPI" -> ExecutionProvider.NNAPI
+            "XNNPACK" -> ExecutionProvider.XNNPACK
+            else -> ExecutionProvider.CPU // Default to CPU for maximum compatibility
+        }
+    }
+
+    /**
+     * Serializes ModelInfo to JSON string
+     */
+    private fun modelInfoToJson(modelInfo: ModelInfo): String {
+        val moduleJson = JSONObject().apply {
+            // Serialize OCRModule
+            val moduleType = when (modelInfo.module) {
+                is OCRModule.ShippingLabel -> "shipping_label"
+                is OCRModule.BillOfLading -> "bill_of_lading"
+                is OCRModule.ItemLabel -> "item_label"
+                is OCRModule.DocumentClassification -> "document_classification"
+                else -> "shipping_label"
+            }
+            put("type", moduleType)
+
+            modelInfo.module.modelSize?.let { size ->
+                put("size", size.value)
+            }
+
+            // Add options if applicable
+            when (modelInfo.module) {
+                is OCRModule.BillOfLading -> {
+                    val bolModule = modelInfo.module as OCRModule.BillOfLading
+                    if (bolModule.billOfLadingOptions.enableAdditionalAttributes) {
+                        put("options", JSONObject().apply {
+                            put("enableAdditionalAttributes", true)
+                        })
+                    }
+                }
+                is OCRModule.ItemLabel -> {
+                    val ilModule = modelInfo.module as OCRModule.ItemLabel
+                    if (ilModule.itemLabelOptions.enableAdditionalAttributes) {
+                        put("options", JSONObject().apply {
+                            put("enableAdditionalAttributes", true)
+                        })
+                    }
+                }
+                else -> {}
+            }
+        }
+
+        return JSONObject().apply {
+            put("module", moduleJson)
+            put("version", modelInfo.version)
+            put("versionId", modelInfo.versionId)
+            put("dateString", modelInfo.dateString)
+            put("isLoaded", modelInfo.isLoaded)
+        }.toString()
+    }
+
+    /**
+     * Serializes list of ModelInfo to JSON array string
+     */
+    private fun modelInfoListToJson(modelInfoList: List<ModelInfo>): String {
+        val jsonArray = JSONArray()
+        modelInfoList.forEach { modelInfo ->
+            jsonArray.put(JSONObject(modelInfoToJson(modelInfo)))
+        }
+        return jsonArray.toString()
+    }
+
+    /**
+     * Converts ModelInfo to module JSON string (just the module part)
+     */
+    /**
+     * Converts ModelInfo to JSONObject (for use in nested objects)
+     */
+    private fun modelInfoToModuleJsonObject(modelInfo: ModelInfo): JSONObject {
+        val moduleType = when (modelInfo.module) {
+            is OCRModule.ShippingLabel -> "shipping_label"
+            is OCRModule.BillOfLading -> "bill_of_lading"
+            is OCRModule.ItemLabel -> "item_label"
+            is OCRModule.DocumentClassification -> "document_classification"
+            else -> "shipping_label"
+        }
+
+        return JSONObject().apply {
+            put("type", moduleType)
+
+            modelInfo.module.modelSize?.let { size ->
+                put("size", size.value)
+            }
+
+            // Add options if applicable
+            when (modelInfo.module) {
+                is OCRModule.BillOfLading -> {
+                    val bolModule = modelInfo.module as OCRModule.BillOfLading
+                    if (bolModule.billOfLadingOptions.enableAdditionalAttributes) {
+                        put("options", JSONObject().apply {
+                            put("enableAdditionalAttributes", true)
+                        })
+                    }
+                }
+                is OCRModule.ItemLabel -> {
+                    val ilModule = modelInfo.module as OCRModule.ItemLabel
+                    if (ilModule.itemLabelOptions.enableAdditionalAttributes) {
+                        put("options", JSONObject().apply {
+                            put("enableAdditionalAttributes", true)
+                        })
+                    }
+                }
+                else -> {}
+            }
+        }
+    }
+
+    /**
+     * Converts ModelInfo to JSON string (for use as top-level response)
+     */
+    private fun modelInfoToModuleJson(modelInfo: ModelInfo): String {
+        return modelInfoToModuleJsonObject(modelInfo).toString()
+    }
+
+
+    /**
+     * Serializes ModelUpdateInfo to JSON string
+     */
+    private fun modelUpdateInfoToJson(updateInfo: ModelUpdateInfo): String {
+        val moduleJson = JSONObject().apply {
+            val moduleType = when (updateInfo.module) {
+                is OCRModule.ShippingLabel -> "shipping_label"
+                is OCRModule.BillOfLading -> "bill_of_lading"
+                is OCRModule.ItemLabel -> "item_label"
+                is OCRModule.DocumentClassification -> "document_classification"
+                else -> "shipping_label"
+            }
+            put("type", moduleType)
+
+            updateInfo.module.modelSize?.let { size ->
+                put("size", size.value)
+            }
+        }
+
+        return JSONObject().apply {
+            put("module", moduleJson)
+            put("currentVersion", updateInfo.currentVersion)
+            put("latestVersion", updateInfo.latestVersion)
+            put("updateAvailable", updateInfo.updateAvailable)
+            put("message", updateInfo.message)
+        }.toString()
+    }
+
+    /**
+     * Sends model download progress event with requestId
+     */
+    private fun sendDownloadProgressEvent(
+        requestId: String,
+        progress: DownloadProgress
+    ) {
+        val event = Arguments.createMap().apply {
+            putDouble("progress", progress.progress.toDouble())
+            putString("requestId", requestId)
+
+            // Serialize module
+            val moduleMap = Arguments.createMap().apply {
+                val moduleType = when (progress.module) {
+                    is OCRModule.ShippingLabel -> "shipping_label"
+                    is OCRModule.BillOfLading -> "bill_of_lading"
+                    is OCRModule.ItemLabel -> "item_label"
+                    is OCRModule.DocumentClassification -> "document_classification"
+                    else -> "shipping_label"
+                }
+                putString("type", moduleType)
+
+                progress.module.modelSize?.let { size ->
+                    putString("size", size.value)
+                }
+            }
+            putMap("module", moduleMap)
+        }
+
+        reactApplicationContext
+            .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
+            .emit("onModelDownloadProgress", event)
+    }
+
+    // ============================================================================
+    // MODEL MANAGEMENT LIFECYCLE LISTENER
+    // ============================================================================
+    // TODO: Uncomment when using unobfuscated SDK version
+    /*
+    private val modelLifecycleListener = object : ModelLifecycleListener {
+        override fun onDownloadStarted(module: OCRModule) {
+            Log.d(TAG, "⬇️ Download started: $module")
+            sendModelLifecycleEvent("onDownloadStarted", module)
+        }
+
+        override fun onDownloadCompleted(module: OCRModule) {
+            Log.d(TAG, "✅ Download completed: $module")
+            sendModelLifecycleEvent("onDownloadCompleted", module)
+        }
+
+        override fun onDownloadFailed(module: OCRModule, exception: ModelException) {
+            Log.e(TAG, "❌ Download failed: $module", exception)
+            sendModelLifecycleEvent("onDownloadFailed", module, exception.message)
+        }
+
+        override fun onDownloadCancelled(module: OCRModule) {
+            Log.d(TAG, "🚫 Download cancelled: $module")
+            sendModelLifecycleEvent("onDownloadCancelled", module)
+        }
+
+        override fun onModelLoaded(module: OCRModule) {
+            Log.d(TAG, "🟢 Model loaded: $module")
+            sendModelLifecycleEvent("onModelLoaded", module)
+        }
+
+        override fun onModelUnloaded(module: OCRModule) {
+            Log.d(TAG, "⚪ Model unloaded: $module")
+            sendModelLifecycleEvent("onModelUnloaded", module)
+        }
+
+        override fun onModelDeleted(module: OCRModule) {
+            Log.d(TAG, "🗑️ Model deleted: $module")
+            sendModelLifecycleEvent("onModelDeleted", module)
+        }
+    }
+
+    private fun sendModelLifecycleEvent(
+        eventName: String,
+        module: OCRModule,
+        errorMessage: String? = null
+    ) {
+        val event = Arguments.createMap().apply {
+            val moduleMap = Arguments.createMap().apply {
+                val moduleType = when (module) {
+                    is OCRModule.ShippingLabel -> "shipping_label"
+                    is OCRModule.BillOfLading -> "bill_of_lading"
+                    is OCRModule.ItemLabel -> "item_label"
+                    is OCRModule.DocumentClassification -> "document_classification"
+                    else -> "shipping_label"
+                }
+                putString("type", moduleType)
+
+                module.modelSize?.let { size ->
+                    putString("size", size.value)
+                }
+            }
+            putMap("module", moduleMap)
+
+            errorMessage?.let {
+                putString("error", it)
+            }
+        }
+
+        reactApplicationContext
+            .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
+            .emit(eventName, event)
+    }
+    */
+
     @ReactMethod
     override fun setEnvironment(environment: String) {
-        Log.d(TAG, "🔄 Setting Environment to: $environment")
         val env = getEnvironment(environment)
         VisionSdkSingleton.initializeSdk(reactApplicationContext, env)
     }
@@ -75,8 +398,6 @@ class VisionSdkModule(reactContext: ReactApplicationContext) :
         modelSize: String,
         promise: Promise
     ) {
-        Log.d(TAG, "🔹 Loading On-Device Model: $modelType with size: $modelSize")
-
         // Validate Model Type & Size
         val modelSizeEnum = getModelSize(modelSize)
         val resolvedModelType = getModelType(modelType, modelSizeEnum)
@@ -86,7 +407,6 @@ class VisionSdkModule(reactContext: ReactApplicationContext) :
         val isModelAlreadyDownloaded = onDeviceOCRManager.isModelAlreadyDownloaded()
 
         if (OnDeviceOCRManagerSingleton.isModelConfigured(resolvedModelType)) {
-            Log.d(TAG, "✅ Model '$modelType' (Size: $modelSize) is already configured, skipping setup")
             EventUtils.sendModelDownloadProgressEvent(reactApplicationContext, progress = 1.0, downloadStatus = true, isReady = true)
             promise.resolve("Model is already configured and ready")
             return
@@ -113,36 +433,37 @@ class VisionSdkModule(reactContext: ReactApplicationContext) :
         }
     }
 
-    @ReactMethod
-    override fun unLoadOnDeviceModels(
-        modelType: String?,
-        shouldDeleteFromDisk: Boolean,
-        promise: Promise
-    ) {
-        Log.d(TAG, "🗑️ Unloading model: $modelType, deleteFromDisk: $shouldDeleteFromDisk")
-
-        try {
-            if (modelType == null) {
-                // Unload all models
-                OnDeviceOCRManagerSingleton.destroy()
-                promise.resolve("All models unloaded successfully")
-            } else {
-                // Check if requested model matches current model
-                val modelSizeEnum = ModelSize.Large // Default size for comparison
-                val requestedModelType = getModelType(modelType, modelSizeEnum)
-
-                if (OnDeviceOCRManagerSingleton.isModelConfigured(requestedModelType)) {
-                    OnDeviceOCRManagerSingleton.destroy()
-                    promise.resolve("Model '$modelType' unloaded successfully")
-                } else {
-                    promise.resolve("Model '$modelType' is not currently loaded")
-                }
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "❌ Error unloading model", e)
-            promise.reject("MODEL_UNLOAD_ERROR", "Failed to unload model: ${e.message}", e)
-        }
-    }
+    // DEPRECATED - Use unloadModel() or deleteModel() instead
+    // @ReactMethod
+    // override fun unLoadOnDeviceModels(
+    //     modelType: String?,
+    //     shouldDeleteFromDisk: Boolean,
+    //     promise: Promise
+    // ) {
+    //     Log.d(TAG, "🗑️ Unloading model: $modelType, deleteFromDisk: $shouldDeleteFromDisk")
+    //
+    //     try {
+    //         if (modelType == null) {
+    //             // Unload all models
+    //             OnDeviceOCRManagerSingleton.destroy()
+    //             promise.resolve("All models unloaded successfully")
+    //         } else {
+    //             // Check if requested model matches current model
+    //             val modelSizeEnum = ModelSize.Large // Default size for comparison
+    //             val requestedModelType = getModelType(modelType, modelSizeEnum)
+    //
+    //             if (OnDeviceOCRManagerSingleton.isModelConfigured(requestedModelType)) {
+    //                 OnDeviceOCRManagerSingleton.destroy()
+    //                 promise.resolve("Model '$modelType' unloaded successfully")
+    //             } else {
+    //                 promise.resolve("Model '$modelType' is not currently loaded")
+    //             }
+    //         }
+    //     } catch (e: Exception) {
+    //         Log.e(TAG, "❌ Error unloading model", e)
+    //         promise.reject("MODEL_UNLOAD_ERROR", "Failed to unload model: ${e.message}", e)
+    //     }
+    // }
 
     @ReactMethod
     override fun logItemLabelDataToPx(
@@ -391,7 +712,6 @@ class VisionSdkModule(reactContext: ReactApplicationContext) :
         shouldResizeImage: Boolean,
         promise: Promise
     ) {
-        Log.d(TAG, "logDocumentClassificationDataToPx called")
 
         val uri = Uri.parse(imageUri)
         uriToBitmap(reactApplicationContext, uri) { bitmap ->
@@ -589,7 +909,6 @@ class VisionSdkModule(reactContext: ReactApplicationContext) :
         shouldResizeImage: Boolean,
         promise: Promise
     ) {
-        Log.d(TAG, "🔹 Standalone Cloud Item Label Prediction for: $imagePath")
 
         val uri = Uri.parse(imagePath)
         uriToBitmap(reactApplicationContext, uri) { bitmap ->
@@ -691,7 +1010,6 @@ class VisionSdkModule(reactContext: ReactApplicationContext) :
         shouldResizeImage: Boolean,
         promise: Promise
     ) {
-        Log.d(TAG, "🔹 Standalone Cloud Document Classification Prediction for: $imagePath")
 
         val uri = Uri.parse(imagePath)
         uriToBitmap(reactApplicationContext, uri) { bitmap ->
@@ -849,6 +1167,451 @@ class VisionSdkModule(reactContext: ReactApplicationContext) :
             } catch (e: Exception) {
                 Log.e(TAG, "Exception in predictWithCloudTransformations", e)
                 promise.reject("PROCESSING_FAILED", "Error during hybrid prediction: ${e.message}", e)
+            }
+        }
+    }
+
+    // ============================================================================
+    // MODEL MANAGEMENT API METHODS
+    // ============================================================================
+
+    @ReactMethod
+    override fun initializeModelManager(configJson: String) {
+        try {
+            val config = JSONObject(configJson)
+            val maxConcurrentDownloads = config.optInt("maxConcurrentDownloads", 2)
+            val enableLogging = config.optBoolean("enableLogging", true)
+
+            Log.d(TAG, "🔹 Initializing ModelManager with maxConcurrentDownloads=$maxConcurrentDownloads, enableLogging=$enableLogging")
+
+            ModelManager.initialize(reactApplicationContext) {
+                maxConcurrentDownloads(maxConcurrentDownloads)
+                enableLogging(enableLogging)
+                // Lifecycle listener will be added in Phase 2
+            }
+
+            Log.d(TAG, "✅ ModelManager initialized successfully")
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ Failed to initialize ModelManager", e)
+            throw e
+        }
+    }
+
+    @ReactMethod
+    override fun isModelManagerInitialized(): Boolean {
+        val isInitialized = ModelManager.isInitialized()
+        Log.d(TAG, "🔹 ModelManager.isInitialized() = $isInitialized")
+        return isInitialized
+    }
+
+    @ReactMethod
+    override fun downloadModel(
+        moduleJson: String,
+        apiKey: String?,
+        token: String?,
+        platformType: String,
+        requestId: String,
+        promise: Promise
+    ) {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val module = parseOCRModule(moduleJson)
+                val platform = parsePlatformType(platformType)
+                val modelManager = ModelManager.getInstance()
+
+                Log.d(TAG, "🔹 Starting download for module: $module")
+
+                modelManager.downloadModel(
+                    module = module,
+                    apiKey = apiKey,
+                    token = token,
+                    platformType = platform,
+                    progressListener = { progress ->
+                        // Emit progress event to React Native
+                        val event = Arguments.createMap().apply {
+                            putString("module", moduleJson)
+                            putDouble("progress", progress.progress.toDouble())
+                            putString("requestId", requestId)
+                        }
+                        reactApplicationContext
+                            .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
+                            .emit("onModelDownloadProgress", event)
+                    }
+                )
+
+                Log.d(TAG, "✅ Download completed for module: $module")
+                promise.resolve(null)
+            } catch (e: Exception) {
+                Log.e(TAG, "❌ Download failed", e)
+                promise.reject("DOWNLOAD_FAILED", e.message, e)
+            }
+        }
+    }
+
+    @ReactMethod
+    override fun cancelDownload(moduleJson: String, promise: Promise) {
+        try {
+            val module = parseOCRModule(moduleJson)
+            val modelManager = ModelManager.getInstance()
+
+            val cancelled = modelManager.cancelDownload(module)
+            Log.d(TAG, "🔹 cancelDownload for $module: $cancelled")
+
+            promise.resolve(cancelled)
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ cancelDownload failed", e)
+            promise.reject("CANCEL_FAILED", e.message, e)
+        }
+    }
+
+    // NOT AVAILABLE IN iOS SDK - COMMENTED OUT FOR API CONSISTENCY
+    // @ReactMethod
+    // override fun getActiveDownloadCount(): Double {
+    //     return try {
+    //         val modelManager = ModelManager.getInstance()
+    //         val count = modelManager.activeDownloadCount()
+    //         Log.d(TAG, "🔹 Active download count: $count")
+    //         count.toDouble()
+    //     } catch (e: Exception) {
+    //         Log.e(TAG, "❌ getActiveDownloadCount failed", e)
+    //         0.0
+    //     }
+    // }
+
+    @ReactMethod
+    override fun loadOCRModel(
+        moduleJson: String,
+        apiKey: String?,
+        token: String?,
+        platformType: String,
+        executionProvider: String?,
+        promise: Promise
+    ) {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val module = parseOCRModule(moduleJson)
+                val platform = parsePlatformType(platformType)
+                val provider = parseExecutionProvider(executionProvider)
+                val modelManager = ModelManager.getInstance()
+
+                Log.d(TAG, "🔹 Loading model: $module with provider: $provider")
+
+                modelManager.loadModel(
+                    module = module,
+                    apiKey = apiKey,
+                    token = token,
+                    platformType = platform,
+                    executionProvider = provider
+                )
+
+                Log.d(TAG, "✅ Model loaded: $module")
+                promise.resolve(null)
+            } catch (e: Exception) {
+                Log.e(TAG, "❌ Load model failed", e)
+                promise.reject("LOAD_FAILED", e.message, e)
+            }
+        }
+    }
+
+    @ReactMethod
+    override fun unloadModel(moduleJson: String): Boolean {
+        return try {
+            val module = parseOCRModule(moduleJson)
+            val modelManager = ModelManager.getInstance()
+
+            val unloaded = modelManager.unloadModel(module)
+            Log.d(TAG, "🔹 unloadModel for $module: $unloaded")
+
+            unloaded
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ unloadModel failed", e)
+            false
+        }
+    }
+
+    @ReactMethod
+    override fun isModelLoaded(moduleJson: String): Boolean {
+        return try {
+            val module = parseOCRModule(moduleJson)
+            val modelManager = ModelManager.getInstance()
+
+            val isLoaded = modelManager.isModelLoaded(module)
+            Log.d(TAG, "🔹 isModelLoaded for $module: $isLoaded")
+
+            isLoaded
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ isModelLoaded failed", e)
+            false
+        }
+    }
+
+    @ReactMethod
+    override fun getLoadedModelCount(): Double {
+        return try {
+            val modelManager = ModelManager.getInstance()
+            val count = modelManager.loadedModelCount()
+            Log.d(TAG, "🔹 Loaded model count: $count")
+            count.toDouble()
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ getLoadedModelCount failed", e)
+            0.0
+        }
+    }
+
+    @ReactMethod
+    override fun findDownloadedModels(promise: Promise) {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val modelManager = ModelManager.getInstance()
+                val models = modelManager.findDownloadedModels()
+
+                val jsonArray = JSONArray()
+                models.forEach { modelInfo ->
+                    val jsonObject = JSONObject().apply {
+                        put("module", modelInfoToModuleJsonObject(modelInfo))
+                        put("version", modelInfo.version)
+                        put("versionId", modelInfo.versionId)
+                        put("dateString", modelInfo.dateString)
+                        put("isLoaded", modelInfo.isLoaded)
+                    }
+                    jsonArray.put(jsonObject)
+                }
+
+                Log.d(TAG, "🔹 findDownloadedModels: ${models.size} models")
+                promise.resolve(jsonArray.toString())
+            } catch (e: Exception) {
+                Log.e(TAG, "❌ findDownloadedModels failed", e)
+                promise.reject("QUERY_FAILED", e.message, e)
+            }
+        }
+    }
+
+    @ReactMethod
+    override fun findDownloadedModel(moduleJson: String, promise: Promise) {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val module = parseOCRModule(moduleJson)
+                val modelManager = ModelManager.getInstance()
+                val modelInfo = modelManager.findDownloadedModel(module)
+
+                if (modelInfo != null) {
+                    val jsonObject = JSONObject().apply {
+                        put("module", modelInfoToModuleJsonObject(modelInfo))
+                        put("version", modelInfo.version)
+                        put("versionId", modelInfo.versionId)
+                        put("dateString", modelInfo.dateString)
+                        put("isLoaded", modelInfo.isLoaded)
+                    }
+                    Log.d(TAG, "🔹 findDownloadedModel: found $module")
+                    promise.resolve(jsonObject.toString())
+                } else {
+                    Log.d(TAG, "🔹 findDownloadedModel: not found $module")
+                    promise.resolve("null")
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "❌ findDownloadedModel failed", e)
+                promise.reject("QUERY_FAILED", e.message, e)
+            }
+        }
+    }
+
+    @ReactMethod
+    override fun findLoadedModels(promise: Promise) {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val modelManager = ModelManager.getInstance()
+                val models = modelManager.findLoadedModels()
+
+                val jsonArray = JSONArray()
+                models.forEach { modelInfo ->
+                    val jsonObject = JSONObject().apply {
+                        put("module", modelInfoToModuleJsonObject(modelInfo))
+                        put("version", modelInfo.version)
+                        put("versionId", modelInfo.versionId)
+                        put("dateString", modelInfo.dateString)
+                        put("isLoaded", modelInfo.isLoaded)
+                    }
+                    jsonArray.put(jsonObject)
+                }
+
+                Log.d(TAG, "🔹 findLoadedModels: ${models.size} models")
+                promise.resolve(jsonArray.toString())
+            } catch (e: Exception) {
+                Log.e(TAG, "❌ findLoadedModels failed", e)
+                promise.reject("QUERY_FAILED", e.message, e)
+            }
+        }
+    }
+
+    // NOT AVAILABLE IN iOS SDK - COMMENTED OUT FOR API CONSISTENCY
+    // @ReactMethod
+    // override fun checkModelUpdates(
+    //     moduleJson: String,
+    //     apiKey: String?,
+    //     token: String?,
+    //     platformType: String,
+    //     promise: Promise
+    // ) {
+    //     CoroutineScope(Dispatchers.IO).launch {
+    //         try {
+    //             val module = parseOCRModule(moduleJson)
+    //             val platform = parsePlatformType(platformType)
+    //             val modelManager = ModelManager.getInstance()
+    //
+    //             Log.d(TAG, "🔹 Checking model updates for: $module")
+    //
+    //             val updateInfo = modelManager.checkModelUpdates(
+    //                 module = module,
+    //                 apiKey = apiKey,
+    //                 token = token,
+    //                 platformType = platform
+    //             )
+    //
+    //             val jsonObject = JSONObject().apply {
+    //                 put("module", modelInfoToModuleJson(io.packagex.visionsdk.modelmanagement.model.ModelInfo(
+    //                     module = updateInfo.module,
+    //                     version = updateInfo.latestVersion,
+    //                     versionId = "",
+    //                     dateString = updateInfo.latestVersion,
+    //                     isLoaded = false
+    //                 )))
+    //                 put("currentVersion", updateInfo.currentVersion ?: JSONObject.NULL)
+    //                 put("latestVersion", updateInfo.latestVersion)
+    //                 put("updateAvailable", updateInfo.updateAvailable)
+    //                 put("message", updateInfo.message)
+    //             }
+    //
+    //             Log.d(TAG, "✅ Update check complete: updateAvailable=${updateInfo.updateAvailable}")
+    //             promise.resolve(jsonObject.toString())
+    //         } catch (e: Exception) {
+    //             Log.e(TAG, "❌ checkModelUpdates failed", e)
+    //             promise.reject("UPDATE_CHECK_FAILED", e.message, e)
+    //         }
+    //     }
+    // }
+
+    @ReactMethod
+    override fun deleteModel(moduleJson: String, promise: Promise) {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val module = parseOCRModule(moduleJson)
+                val modelManager = ModelManager.getInstance()
+
+                Log.d(TAG, "🔹 Deleting model: $module")
+
+                val deleted = modelManager.deleteModel(module)
+
+                Log.d(TAG, if (deleted) "✅ Model deleted: $module" else "⚠️ Model not found: $module")
+                promise.resolve(deleted)
+            } catch (e: Exception) {
+                Log.e(TAG, "❌ deleteModel failed", e)
+                promise.reject("DELETE_FAILED", e.message, e)
+            }
+        }
+    }
+
+    @ReactMethod
+    override fun predictWithModule(
+        moduleJson: String,
+        imagePath: String,
+        barcodes: com.facebook.react.bridge.ReadableArray,
+        promise: Promise
+    ) {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val module = parseOCRModule(moduleJson)
+                val uri = Uri.parse(imagePath)
+
+                Log.d(TAG, "🔹 predictWithModule: module=$module, loading image from: $imagePath")
+
+                // Load bitmap from URI using uriToBitmap utility (synchronous version for suspend function)
+                var bitmap: Bitmap? = null
+                uriToBitmap(reactApplicationContext, uri) { loadedBitmap ->
+                    bitmap = loadedBitmap
+                }
+
+                // Wait for bitmap to load (uriToBitmap is async for remote URLs)
+                var attempts = 0
+                while (bitmap == null && attempts < 50) { // Wait max 5 seconds
+                    kotlinx.coroutines.delay(100)
+                    attempts++
+                }
+
+                if (bitmap == null) {
+                    throw IllegalArgumentException("Failed to load image from path: $imagePath")
+                }
+
+                // Parse barcodes to ScannedCodeResult list
+                val scannedCodes = mutableListOf<ScannedCodeResult>()
+                for (i in 0 until barcodes.size()) {
+                    val barcodeMap = barcodes.getMap(i)
+                    if (barcodeMap != null) {
+                        val value = barcodeMap.getString("value") ?: ""
+                        val symbology = barcodeMap.getString("symbology") ?: "CODE_128"
+                        val boundsMap = barcodeMap.getMap("bounds")
+
+                        val rect = if (boundsMap != null) {
+                            Rect(
+                                boundsMap.getInt("left"),
+                                boundsMap.getInt("top"),
+                                boundsMap.getInt("right"),
+                                boundsMap.getInt("bottom")
+                            )
+                        } else {
+                            Rect(0, 0, 0, 0)
+                        }
+
+                        // Convert symbology string to BarcodeSymbology enum
+                        val barcodeSymbology = when (symbology.lowercase()) {
+                            "code_128", "code128" -> BarcodeSymbology.code128
+                            "qr_code", "qr" -> BarcodeSymbology.qr
+                            "ean_13", "ean13" -> BarcodeSymbology.ean13
+                            "ean_8", "ean8" -> BarcodeSymbology.ean8
+                            "upc_a", "upca" -> BarcodeSymbology.upca
+                            "upc_e", "upce" -> BarcodeSymbology.upce
+                            "code_39", "code39" -> BarcodeSymbology.code39
+                            "code_93", "code93" -> BarcodeSymbology.code93
+                            "pdf417" -> BarcodeSymbology.pdf417
+                            "aztec" -> BarcodeSymbology.aztec
+                            "codabar" -> BarcodeSymbology.codabar
+                            "data_matrix", "datamatrix" -> BarcodeSymbology.dataMatrix
+                            "i2of5" -> BarcodeSymbology.I2of5
+                            else -> BarcodeSymbology.unknown
+                        }
+
+                        scannedCodes.add(
+                            ScannedCodeResult(
+                                scannedCode = value,
+                                symbology = barcodeSymbology,
+                                boundingBox = rect
+                            )
+                        )
+                    }
+                }
+
+                Log.d(TAG, "🔹 predictWithModule: parsed ${scannedCodes.size} barcodes, creating OCR manager")
+
+                // Get immutable reference to bitmap to avoid smart cast issues
+                val loadedBitmap = bitmap ?: throw IllegalArgumentException("Bitmap is null after loading")
+
+                // Create OnDeviceOCRManager and perform prediction
+                val ocrManager = OnDeviceOCRManager(
+                    context = reactApplicationContext,
+                    ocrModule = module
+                )
+
+                // Use the explicit module overload
+                val result = ocrManager.makePrediction(
+                    ocrModule = module,
+                    bitmap = loadedBitmap,
+                    scannedCodeResults = scannedCodes
+                )
+
+                Log.d(TAG, "✅ predictWithModule completed successfully")
+                promise.resolve(result)
+            } catch (e: Exception) {
+                Log.e(TAG, "❌ predictWithModule failed", e)
+                promise.reject("PREDICTION_FAILED", e.message, e)
             }
         }
     }
