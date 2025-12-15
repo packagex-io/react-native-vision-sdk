@@ -463,7 +463,6 @@ export const VisionCore = {
 
     if (progressListener) {
       let lastProgressTime = 0;
-      let lastProgress: DownloadProgress | null = null;
       const THROTTLE_MS = 250; // ~4 updates per second
 
       subscription = eventEmitter.addListener(
@@ -490,11 +489,7 @@ export const VisionCore = {
             timeSinceLastUpdate >= THROTTLE_MS
           ) {
             lastProgressTime = now;
-            lastProgress = null;
             progressListener(progress);
-          } else {
-            // Store latest progress but don't send yet
-            lastProgress = progress;
           }
         }
       );
