@@ -92,41 +92,42 @@ class VisionSdkModule: RCTEventEmitter {
   }
 
 
-  @objc func unLoadOnDeviceModels(
-      _ modelType: String?,
-      shouldDeleteFromDisk: Bool,
-      resolver: @escaping RCTPromiseResolveBlock,
-      rejecter: @escaping RCTPromiseRejectBlock
-  ) {
-    // Convert empty string to nil
-    let modelTypeValue = (modelType?.isEmpty ?? true) ? nil : modelType
-
-    if let modelType = modelTypeValue {
-      let modelClass = getModelType(modelType)
-      
-      do {
-        try OnDeviceOCRManager.shared.deconfigureOfflineOCR(for: modelClass, shouldDeleteFromDisk: shouldDeleteFromDisk)
-      }
-      catch(let error) {
-        rejecter("MODEL_UNLOAD_ERROR", error.localizedDescription, nil)
-      }
-      
-      resolver("Model unloaded successfully")
-      
-    }
-    else {
-      do {
-        try OnDeviceOCRManager.shared.deconfigureOfflineOCR(shouldDeleteFromDisk: shouldDeleteFromDisk)
-      }
-      catch(let error) {
-        
-        rejecter("MODEL_UNLOAD_ERROR", error.localizedDescription, nil)
-      }
-      
-      resolver("Model unloaded successfully")
-    }
-    
-  }
+  // DEPRECATED - Use unloadModel() or deleteModel() instead
+  // @objc func unLoadOnDeviceModels(
+  //     _ modelType: String?,
+  //     shouldDeleteFromDisk: Bool,
+  //     resolver: @escaping RCTPromiseResolveBlock,
+  //     rejecter: @escaping RCTPromiseRejectBlock
+  // ) {
+  //   // Convert empty string to nil
+  //   let modelTypeValue = (modelType?.isEmpty ?? true) ? nil : modelType
+  //
+  //   if let modelType = modelTypeValue {
+  //     let modelClass = getModelType(modelType)
+  //
+  //     do {
+  //       try OnDeviceOCRManager.shared.deconfigureOfflineOCR(for: modelClass, shouldDeleteFromDisk: shouldDeleteFromDisk)
+  //     }
+  //     catch(let error) {
+  //       rejecter("MODEL_UNLOAD_ERROR", error.localizedDescription, nil)
+  //     }
+  //
+  //     resolver("Model unloaded successfully")
+  //
+  //   }
+  //   else {
+  //     do {
+  //       try OnDeviceOCRManager.shared.deconfigureOfflineOCR(shouldDeleteFromDisk: shouldDeleteFromDisk)
+  //     }
+  //     catch(let error) {
+  //
+  //       rejecter("MODEL_UNLOAD_ERROR", error.localizedDescription, nil)
+  //     }
+  //
+  //     resolver("Model unloaded successfully")
+  //   }
+  //
+  // }
   
   
   @objc func loadOnDeviceModels(
@@ -225,7 +226,6 @@ class VisionSdkModule: RCTEventEmitter {
         withImageResizing: shouldResize
       ) {data, error in
         if let error = error {
-          print(error)
           rejecter("sdk_error", "SDK call failed", error)
         } else {
           resolver("Logged successfully")
@@ -274,7 +274,6 @@ class VisionSdkModule: RCTEventEmitter {
         andMetaData: metadata ?? [:]
       ){data, error in
           if let error = error {
-            print(error)
           rejecter("sdk_error", "SDK call failed", error)
           return
           } else {
@@ -291,7 +290,6 @@ class VisionSdkModule: RCTEventEmitter {
   
   private func loadImage(from imagePath: String, completion: @escaping (UIImage?) -> Void) {
       guard !imagePath.isEmpty else {
-          print("Image path is empty.")
           completion(nil)
           return
       }
@@ -299,7 +297,6 @@ class VisionSdkModule: RCTEventEmitter {
       if imagePath.hasPrefix("http") {
           // It's a remote URL
           guard let remoteUrl = URL(string: imagePath) else {
-              print("Invalid remote URL.")
               completion(nil)
               return
           }
@@ -326,13 +323,11 @@ class VisionSdkModule: RCTEventEmitter {
           }
 
           guard let localUrl = URL(string: adjustedImagePath) else {
-              print("Invalid local URL.")
               completion(nil)
               return
           }
 
           if !FileManager.default.fileExists(atPath: localUrl.path) {
-              print("File does not exist at path: \(localUrl.path)")
               completion(nil)
               return
           }
@@ -343,7 +338,6 @@ class VisionSdkModule: RCTEventEmitter {
                       completion(image)
                   }
               } else {
-                  print("Failed to load image from local URL.")
                   DispatchQueue.main.async {
                       completion(nil)
                   }
@@ -646,6 +640,449 @@ class VisionSdkModule: RCTEventEmitter {
           } else {
             rejecter("UNKNOWN_ERROR", "Unknown error occurred", nil)
           }
+        }
+      }
+    }
+  }
+
+  // ============================================================================
+  // MODEL MANAGEMENT API - HELPER METHODS
+  // ============================================================================
+
+  /// Parse OCRModule JSON to iOS model class and size
+  private func parseOCRModule(_ moduleJson: String) -> (modelClass: VSDKModelExternalClass, modelSize: VSDKModelExternalSize)? {
+    guard let jsonData = moduleJson.data(using: .utf8),
+          let json = try? JSONSerialization.jsonObject(with: jsonData) as? [String: Any],
+          let typeString = json["type"] as? String else {
+      return nil
+    }
+
+    let sizeString = json["size"] as? String ?? "large"
+
+    let modelClass = stringToModelClass(typeString)
+    let modelSize = stringToModelSize(sizeString)
+
+    return (modelClass, modelSize)
+  }
+
+  /// Convert model class enum to string
+  private func modelClassToString(_ modelClass: VSDKModelExternalClass) -> String {
+    switch modelClass {
+    case .shippingLabel:
+      return "shipping_label"
+    case .itemLabel:
+      return "item_label"
+    case .billOfLading:
+      return "bill_of_lading"
+    case .documentClassification:
+      return "document_classification"
+    @unknown default:
+      return "shipping_label"
+    }
+  }
+
+  /// Convert string to model class enum
+  private func stringToModelClass(_ classString: String) -> VSDKModelExternalClass {
+    switch classString.lowercased() {
+    case "shipping_label", "shipping-label":
+      return .shippingLabel
+    case "item_label", "item-label":
+      return .itemLabel
+    case "bill_of_lading", "bill-of-lading":
+      return .billOfLading
+    case "document_classification", "document-classification":
+      return .documentClassification
+    default:
+      return .shippingLabel
+    }
+  }
+
+  /// Convert model size enum to string
+  private func modelSizeToString(_ modelSize: VSDKModelExternalSize) -> String {
+    switch modelSize {
+    case .nano:
+      return "nano"
+    case .micro:
+      return "micro"
+    case .small:
+      return "small"
+    case .medium:
+      return "medium"
+    case .large:
+      return "large"
+    case .xlarge:
+      return "xlarge"
+    @unknown default:
+      return "large"
+    }
+  }
+
+  /// Convert string to model size enum
+  private func stringToModelSize(_ sizeString: String) -> VSDKModelExternalSize {
+    switch sizeString.lowercased() {
+    case "nano":
+      return .nano
+    case "micro":
+      return .micro
+    case "small":
+      return .small
+    case "medium":
+      return .medium
+    case "large":
+      return .large
+    case "xlarge":
+      return .xlarge
+    default:
+      return .large
+    }
+  }
+
+  /// Convert iOS DownloadedModelData to ModelInfo JSON string
+  private func downloadedModelDataToJson(_ modelData: DownloadedModelData, isLoaded: Bool) -> String {
+    let moduleDict: [String: Any] = [
+      "type": modelData.modelClass ?? "shipping_label",
+      "size": modelData.modelSize ?? "large"
+    ]
+
+    let modelInfoDict: [String: Any] = [
+      "module": moduleDict,
+      "version": modelData.modelVersion ?? "",
+      "versionId": modelData.modelVersionId ?? "",
+      "dateString": modelData.modelVersion ?? "",
+      "isLoaded": isLoaded
+    ]
+
+    guard let jsonData = try? JSONSerialization.data(withJSONObject: modelInfoDict),
+          let jsonString = String(data: jsonData, encoding: .utf8) else {
+      return "{}"
+    }
+
+    return jsonString
+  }
+
+  // ============================================================================
+  // MODEL MANAGEMENT API METHODS
+  // ============================================================================
+
+  /// Initialize ModelManager - NO-OP on iOS (no initialization needed)
+  @objc func initializeModelManager(_ configJson: String) {
+    // NO-OP - iOS OnDeviceOCRManager doesn't require initialization
+    // This method exists for cross-platform API compatibility
+  }
+
+  /// Check if ModelManager is initialized - Always true on iOS
+  @objc func isModelManagerInitialized() -> Bool {
+    // Always return true - iOS doesn't need initialization
+    return true
+  }
+
+  /// Download a model from server to disk with progress tracking
+  @objc func downloadModel(
+    _ moduleJson: String,
+    apiKey: String?,
+    token: String?,
+    platformType: String,
+    requestId: String,
+    resolver: @escaping RCTPromiseResolveBlock,
+    rejecter: @escaping RCTPromiseRejectBlock
+  ) {
+    guard let (modelClass, modelSize) = parseOCRModule(moduleJson) else {
+      rejecter("PARSE_ERROR", "Failed to parse module JSON", nil)
+      return
+    }
+
+    let apiKeyValue = (apiKey?.isEmpty ?? true) ? nil : apiKey
+    let tokenValue = (token?.isEmpty ?? true) ? nil : token
+
+    OnDeviceOCRManager.shared.downloadModel(
+      withApiKey: apiKeyValue,
+      andToken: tokenValue,
+      forModelClass: modelClass,
+      withModelSize: modelSize,
+      withProgressTracking: { currentProgress, totalSize in
+        let normalizedProgress = totalSize > 0 ? currentProgress / totalSize : 0
+        let progressData: [String: Any] = [
+          "progress": Double(normalizedProgress),
+          "module": moduleJson,
+          "requestId": requestId
+        ]
+        self.sendEvent(withName: "onModelDownloadProgress", body: progressData)
+      },
+      withCompletion: { error in
+        if let error = error {
+          rejecter("DOWNLOAD_FAILED", error.localizedDescription, error)
+        } else {
+          resolver(nil)
+        }
+      }
+    )
+  }
+
+  /// Cancel an active model download
+  @objc func cancelDownload(
+    _ moduleJson: String,
+    resolver: @escaping RCTPromiseResolveBlock,
+    rejecter: @escaping RCTPromiseRejectBlock
+  ) {
+    guard let (modelClass, modelSize) = parseOCRModule(moduleJson) else {
+      rejecter("PARSE_ERROR", "Failed to parse module JSON", nil)
+      return
+    }
+
+    OnDeviceOCRManager.shared.cancelDownload(modelClass, withModelSize: modelSize) { error in
+      if let error = error {
+        rejecter("CANCEL_FAILED", error.localizedDescription, error)
+      } else {
+        resolver(true)
+      }
+    }
+  }
+
+  /// Load a model into memory
+  @objc func loadOCRModel(
+    _ moduleJson: String,
+    apiKey: String?,
+    token: String?,
+    platformType: String,
+    executionProvider: String?,
+    resolver: @escaping RCTPromiseResolveBlock,
+    rejecter: @escaping RCTPromiseRejectBlock
+  ) {
+    guard let (modelClass, modelSize) = parseOCRModule(moduleJson) else {
+      rejecter("PARSE_ERROR", "Failed to parse module JSON", nil)
+      return
+    }
+
+    let apiKeyValue = (apiKey?.isEmpty ?? true) ? nil : apiKey
+    let tokenValue = (token?.isEmpty ?? true) ? nil : token
+    // Note: executionProvider is Android-only, ignored on iOS
+
+    OnDeviceOCRManager.shared.loadModel(
+      withApiKey: apiKeyValue,
+      andToken: tokenValue,
+      forModelClass: modelClass,
+      withModelSize: modelSize,
+      withCompletion: { error in
+        if let error = error {
+          rejecter("LOAD_FAILED", error.localizedDescription, error)
+        } else {
+          resolver(nil)
+        }
+      }
+    )
+  }
+
+  /// Unload a model from memory (file remains on disk)
+  @objc func unloadModel(_ moduleJson: String) -> Bool {
+    guard let (modelClass, modelSize) = parseOCRModule(moduleJson) else {
+      return false
+    }
+
+    OnDeviceOCRManager.shared.unloadModel(modelClass, withModelSize: modelSize)
+    return true
+  }
+
+  /// Check if a model is currently loaded in memory
+  @objc func isModelLoaded(_ moduleJson: String) -> Bool {
+    guard let (modelClass, modelSize) = parseOCRModule(moduleJson) else {
+      return false
+    }
+
+    return OnDeviceOCRManager.shared.isModelLoaded(modelClass, withModelSize: modelSize)
+  }
+
+  /// Get the number of models currently loaded in memory
+  @objc func getLoadedModelCount() -> Double {
+    let loadedModels = OnDeviceOCRManager.shared.getLoadedModels()
+    return Double(loadedModels.count)
+  }
+
+  /// Find all downloaded models by scanning the file system
+  @objc func findDownloadedModels(
+    resolver: @escaping RCTPromiseResolveBlock,
+    rejecter: @escaping RCTPromiseRejectBlock
+  ) {
+    let downloadedModels = OnDeviceOCRManager.shared.getDownloadedModels()
+
+    var modelInfoArray: [[String: Any]] = []
+
+    for modelData in downloadedModels {
+      guard let modelClassStr = modelData.modelClass,
+            let modelSizeStr = modelData.modelSize else {
+        continue
+      }
+
+      let modelClass = stringToModelClass(modelClassStr)
+      let modelSize = stringToModelSize(modelSizeStr)
+      let isLoaded = OnDeviceOCRManager.shared.isModelLoaded(modelClass, withModelSize: modelSize)
+
+      let moduleDict: [String: Any] = [
+        "type": modelClassStr,
+        "size": modelSizeStr
+      ]
+
+      let modelInfoDict: [String: Any] = [
+        "module": moduleDict,
+        "version": modelData.modelVersion ?? "",
+        "versionId": modelData.modelVersionId ?? "",
+        "dateString": modelData.modelVersion ?? "",
+        "isLoaded": isLoaded
+      ]
+
+      modelInfoArray.append(modelInfoDict)
+    }
+
+    guard let jsonData = try? JSONSerialization.data(withJSONObject: modelInfoArray),
+          let jsonString = String(data: jsonData, encoding: .utf8) else {
+      resolver("[]")
+      return
+    }
+
+    resolver(jsonString)
+  }
+
+  /// Find a specific downloaded model
+  @objc func findDownloadedModel(
+    _ moduleJson: String,
+    resolver: @escaping RCTPromiseResolveBlock,
+    rejecter: @escaping RCTPromiseRejectBlock
+  ) {
+    guard let (modelClass, modelSize) = parseOCRModule(moduleJson) else {
+      rejecter("PARSE_ERROR", "Failed to parse module JSON", nil)
+      return
+    }
+
+    if let modelData = OnDeviceOCRManager.shared.getDownloadedModel(modelClass, withModelSize: modelSize) {
+      let isLoaded = OnDeviceOCRManager.shared.isModelLoaded(modelClass, withModelSize: modelSize)
+      let jsonString = downloadedModelDataToJson(modelData, isLoaded: isLoaded)
+      resolver(jsonString)
+    } else {
+      resolver("null")
+    }
+  }
+
+  /// Find all models currently loaded in memory
+  @objc func findLoadedModels(
+    resolver: @escaping RCTPromiseResolveBlock,
+    rejecter: @escaping RCTPromiseRejectBlock
+  ) {
+    let loadedModels = OnDeviceOCRManager.shared.getLoadedModels()
+    let downloadedModels = OnDeviceOCRManager.shared.getDownloadedModels()
+
+    var modelInfoArray: [[String: Any]] = []
+
+    for loadedModel in loadedModels {
+      guard let modelClassStr = loadedModel["class"] as? String,
+            let modelSizeStr = loadedModel["size"] as? String else {
+        continue
+      }
+
+      // Find corresponding downloaded model data
+      let modelClass = stringToModelClass(modelClassStr)
+      let modelSize = stringToModelSize(modelSizeStr)
+
+      if let modelData = downloadedModels.first(where: {
+        $0.modelClass == modelClassStr && $0.modelSize == modelSizeStr
+      }) {
+        let moduleDict: [String: Any] = [
+          "type": modelClassStr,
+          "size": modelSizeStr
+        ]
+
+        let modelInfoDict: [String: Any] = [
+          "module": moduleDict,
+          "version": modelData.modelVersion ?? "",
+          "versionId": modelData.modelVersionId ?? "",
+          "dateString": modelData.modelVersion ?? "",
+          "isLoaded": true
+        ]
+
+        modelInfoArray.append(modelInfoDict)
+      }
+    }
+
+    guard let jsonData = try? JSONSerialization.data(withJSONObject: modelInfoArray),
+          let jsonString = String(data: jsonData, encoding: .utf8) else {
+      resolver("[]")
+      return
+    }
+
+    resolver(jsonString)
+  }
+
+  /// Delete a model from disk (unloads from memory first if loaded)
+  @objc func deleteModel(
+    _ moduleJson: String,
+    resolver: @escaping RCTPromiseResolveBlock,
+    rejecter: @escaping RCTPromiseRejectBlock
+  ) {
+    guard let (modelClass, modelSize) = parseOCRModule(moduleJson) else {
+      rejecter("PARSE_ERROR", "Failed to parse module JSON", nil)
+      return
+    }
+
+    OnDeviceOCRManager.shared.deleteModel(modelClass, withModelSize: modelSize)
+    resolver(true)
+  }
+
+  /// Perform on-device OCR prediction with explicit module selection
+  @objc func predictWithModule(
+    _ moduleJson: String,
+    imagePath: String,
+    barcodes: [[String: Any]]?,
+    resolver: @escaping RCTPromiseResolveBlock,
+    rejecter: @escaping RCTPromiseRejectBlock
+  ) {
+    guard let (modelClass, modelSize) = parseOCRModule(moduleJson) else {
+      rejecter("PARSE_ERROR", "Failed to parse module JSON", nil)
+      return
+    }
+
+    loadImage(from: imagePath) { image in
+      guard let image = image else {
+        rejecter("IMAGE_LOAD_ERROR", "Failed to load image from path: \(imagePath)", nil)
+        return
+      }
+
+      // Convert UIImage to CIImage
+      guard let ciImage = convertToCIImage(from: image) else {
+        rejecter("IMAGE_CONVERSION_ERROR", "Failed to convert UIImage to CIImage", nil)
+        return
+      }
+
+      let barcodeList = barcodes ?? []
+      let allBarcodes: [DetectedCode] = barcodeList.map { barcodeDict in
+        let stringValue: String = (barcodeDict["scannedCode"] as? String) ?? ""
+        let symbology: VisionSDK.BarcodeSymbology = VisionSDK.BarcodeSymbology.value(VNStringValue: (barcodeDict["symbology"] as? String) ?? "")
+        let extractedData: [String: String]? = (barcodeDict["gs1ExtractedInfo"] as? [String: String])
+
+        var finalRect: CGRect = .zero
+        if let boundingBoxRect = barcodeDict["boundingBox"] as? [String: CGFloat] {
+          let x: CGFloat = boundingBoxRect["x"] ?? 0
+          let y: CGFloat = boundingBoxRect["y"] ?? 0
+          let width: CGFloat = boundingBoxRect["width"] ?? 0
+          let height: CGFloat = boundingBoxRect["height"] ?? 0
+          finalRect = CGRect(x: x, y: y, width: width, height: height)
+        }
+
+        return DetectedCode(stringValue: stringValue, symbology: symbology, extractedData: extractedData, boundingBox: finalRect)
+      }
+
+      // Call extractDataFromImageUsing with explicit modelClass and modelSize
+      OnDeviceOCRManager.shared.extractDataFromImageUsing(
+        ciImage,
+        withBarcodes: allBarcodes,
+        checkImageSharpness: false,
+        modelClass: modelClass,
+        withModelSize: modelSize
+      ) { data, error in
+        if let error = error {
+          rejecter("PREDICTION_FAILED", error.localizedDescription, error)
+        } else if let data = data {
+          let responseString = String(data: data, encoding: .utf8) ?? ""
+          resolver(responseString)
+        } else {
+          rejecter("NO_DATA_ERROR", "No data returned from prediction", nil)
         }
       }
     }

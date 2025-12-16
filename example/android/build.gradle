@@ -2,8 +2,8 @@ buildscript {
   ext {
     buildToolsVersion = "35.0.0"
     minSdkVersion = 24
-    compileSdkVersion = 35
-    targetSdkVersion = 35
+    compileSdkVersion = 36
+    targetSdkVersion = 36
     ndkVersion = "28.0.13004108"
     kotlinVersion = "1.9.0"
   }
@@ -13,7 +13,7 @@ buildscript {
     maven { url = uri("https://jitpack.io") }
   }
   dependencies {
-    classpath("com.android.tools.build:gradle")
+    classpath("com.android.tools.build:gradle:8.8.0")
     classpath("com.facebook.react:react-native-gradle-plugin")
     classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.0")
   }

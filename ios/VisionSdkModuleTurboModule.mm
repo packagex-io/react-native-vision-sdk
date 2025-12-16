@@ -4,6 +4,20 @@
 #import <objc/message.h>
 #import <objc/runtime.h>
 
+// Suppress event validation warnings by swizzling RCTLogWarn
+static void SuppressEventWarnings(NSString *format, ...) {
+  // Check if this is the unsupported event warning
+  if ([format containsString:@"is not a supported event type"]) {
+    // Suppress this specific warning
+    return;
+  }
+  // For other warnings, log normally
+  va_list args;
+  va_start(args, format);
+  NSLogv(format, args);
+  va_end(args);
+}
+
 @implementation VisionSdkModuleTurboModule {
   id _swiftModule;
 }
@@ -27,13 +41,24 @@ RCT_EXPORT_MODULE(VisionSdkModule)
   return @[@"onModelDownloadProgress"];
 }
 
+// Override startObserving
+- (void)startObserving
+{
+  // Required by RCTEventEmitter
+}
+
+// Override stopObserving
+- (void)stopObserving
+{
+  // Required by RCTEventEmitter
+}
+
 // Helper to get Swift module instance (singleton pattern)
 - (id)getSwiftModule {
   if (!_swiftModule) {
     Class moduleClass = NSClassFromString(@"VisionSdkModule");
     if (moduleClass) {
       _swiftModule = [[moduleClass alloc] init];
-      NSLog(@"[VisionSDK TurboModule] Created Swift module instance");
 
       // Set event callback to forward events through TurboModule
       __weak VisionSdkModuleTurboModule *weakSelf = self;
@@ -47,7 +72,6 @@ RCT_EXPORT_MODULE(VisionSdkModule)
       SEL setCallbackSelector = NSSelectorFromString(@"setEventCallback:");
       if ([_swiftModule respondsToSelector:setCallbackSelector]) {
         ((void (*)(id, SEL, id))objc_msgSend)(_swiftModule, setCallbackSelector, eventCallback);
-        NSLog(@"[VisionSDK TurboModule] Set event callback");
       }
     }
   }
@@ -58,7 +82,6 @@ RCT_EXPORT_MODULE(VisionSdkModule)
 
 RCT_EXPORT_METHOD(setEnvironment:(NSString *)environment)
 {
-  NSLog(@"[VisionSDK TurboModule] setEnvironment called with: %@", environment);
   id swiftModule = [self getSwiftModule];
   if (swiftModule) {
     [swiftModule setEnvironment:environment];
@@ -72,12 +95,10 @@ RCT_EXPORT_METHOD(loadOnDeviceModels:(NSString *)token
                   resolve:(RCTPromiseResolveBlock)resolve
                   reject:(RCTPromiseRejectBlock)reject)
 {
-  NSLog(@"[VisionSDK TurboModule] loadOnDeviceModels called");
   id swiftModule = [self getSwiftModule];
   if (swiftModule) {
     SEL selector = NSSelectorFromString(@"loadOnDeviceModels:apiKey:modelType:modelSize:resolver:rejecter:");
     if ([swiftModule respondsToSelector:selector]) {
-      NSLog(@"[VisionSDK TurboModule] Calling Swift loadOnDeviceModels");
       ((void (*)(id, SEL, NSString *, NSString *, NSString *, NSString *, RCTPromiseResolveBlock, RCTPromiseRejectBlock))objc_msgSend)(
         swiftModule, selector, token, apiKey, modelType, modelSize, resolve, reject
       );
@@ -95,12 +116,10 @@ RCT_EXPORT_METHOD(unLoadOnDeviceModels:(NSString *)modelType
                   resolve:(RCTPromiseResolveBlock)resolve
                   reject:(RCTPromiseRejectBlock)reject)
 {
-  NSLog(@"[VisionSDK TurboModule] unLoadOnDeviceModels called with modelType: %@, shouldDeleteFromDisk: %d", modelType, shouldDeleteFromDisk);
   id swiftModule = [self getSwiftModule];
   if (swiftModule) {
     SEL selector = NSSelectorFromString(@"unLoadOnDeviceModels:shouldDeleteFromDisk:resolver:rejecter:");
     if ([swiftModule respondsToSelector:selector]) {
-      NSLog(@"[VisionSDK TurboModule] Calling Swift unLoadOnDeviceModels");
       ((void (*)(id, SEL, NSString *, BOOL, RCTPromiseResolveBlock, RCTPromiseRejectBlock))objc_msgSend)(
         swiftModule, selector, modelType, shouldDeleteFromDisk, resolve, reject
       );
@@ -123,7 +142,6 @@ RCT_EXPORT_METHOD(logItemLabelDataToPx:(NSString *)imageUri
                   resolve:(RCTPromiseResolveBlock)resolve
                   reject:(RCTPromiseRejectBlock)reject)
 {
-  NSLog(@"[VisionSDK TurboModule] logItemLabelDataToPx called");
   // TODO: Implement using Swift VisionSdkModule when Swift-ObjC++ bridging is set up
   resolve(@"{\"success\": true}");
 }
@@ -414,6 +432,246 @@ RCT_EXPORT_METHOD(predictWithCloudTransformations:(NSString *)imagePath
     [invocation invoke];
   } else {
     reject(@"NOT_IMPLEMENTED", @"predictWithCloudTransformations method not available", nil);
+  }
+}
+
+// MARK: - Model Management API Methods
+
+RCT_EXPORT_METHOD(initializeModelManager:(NSString *)configJson)
+{
+  id swiftModule = [self getSwiftModule];
+  if (swiftModule) {
+    [swiftModule initializeModelManager:configJson];
+  }
+}
+
+RCT_EXPORT_BLOCKING_SYNCHRONOUS_METHOD(isModelManagerInitialized)
+{
+  id swiftModule = [self getSwiftModule];
+  if (swiftModule) {
+    SEL selector = NSSelectorFromString(@"isModelManagerInitialized");
+    if ([swiftModule respondsToSelector:selector]) {
+      BOOL result = ((BOOL (*)(id, SEL))objc_msgSend)(swiftModule, selector);
+      return @(result);
+    }
+  }
+  return @(NO);
+}
+
+RCT_EXPORT_METHOD(downloadModel:(NSString *)moduleJson
+                  apiKey:(NSString * _Nullable)apiKey
+                  token:(NSString * _Nullable)token
+                  platformType:(NSString *)platformType
+                  requestId:(NSString *)requestId
+                  resolve:(RCTPromiseResolveBlock)resolve
+                  reject:(RCTPromiseRejectBlock)reject)
+{
+  // Convert NSNull to nil for optional parameters
+  NSString *apiKeyValue = ([apiKey isKindOfClass:[NSNull class]] || apiKey == nil || [apiKey length] == 0) ? nil : apiKey;
+  NSString *tokenValue = ([token isKindOfClass:[NSNull class]] || token == nil || [token length] == 0) ? nil : token;
+
+  id swiftModule = [self getSwiftModule];
+  if (swiftModule) {
+    SEL selector = NSSelectorFromString(@"downloadModel:apiKey:token:platformType:requestId:resolver:rejecter:");
+    if ([swiftModule respondsToSelector:selector]) {
+      ((void (*)(id, SEL, NSString *, NSString *, NSString *, NSString *, NSString *, RCTPromiseResolveBlock, RCTPromiseRejectBlock))objc_msgSend)(
+        swiftModule, selector, moduleJson, apiKeyValue, tokenValue, platformType, requestId, resolve, reject
+      );
+    } else {
+      reject(@"METHOD_NOT_FOUND", @"downloadModel method not found", nil);
+    }
+  } else {
+    reject(@"MODULE_NOT_FOUND", @"VisionSdkModule Swift class not found", nil);
+  }
+}
+
+RCT_EXPORT_METHOD(cancelDownload:(NSString *)moduleJson
+                  resolve:(RCTPromiseResolveBlock)resolve
+                  reject:(RCTPromiseRejectBlock)reject)
+{
+  NSLog(@"[VisionSDK TurboModule] cancelDownload called");
+  id swiftModule = [self getSwiftModule];
+  if (swiftModule) {
+    SEL selector = NSSelectorFromString(@"cancelDownload:resolver:rejecter:");
+    if ([swiftModule respondsToSelector:selector]) {
+      ((void (*)(id, SEL, NSString *, RCTPromiseResolveBlock, RCTPromiseRejectBlock))objc_msgSend)(
+        swiftModule, selector, moduleJson, resolve, reject
+      );
+    } else {
+      reject(@"METHOD_NOT_FOUND", @"cancelDownload method not found", nil);
+    }
+  } else {
+    reject(@"MODULE_NOT_FOUND", @"VisionSdkModule Swift class not found", nil);
+  }
+}
+
+RCT_EXPORT_METHOD(loadOCRModel:(NSString *)moduleJson
+                  apiKey:(NSString * _Nullable)apiKey
+                  token:(NSString * _Nullable)token
+                  platformType:(NSString *)platformType
+                  executionProvider:(NSString * _Nullable)executionProvider
+                  resolve:(RCTPromiseResolveBlock)resolve
+                  reject:(RCTPromiseRejectBlock)reject)
+{
+  // Convert NSNull to nil for optional parameters
+  NSString *apiKeyValue = ([apiKey isKindOfClass:[NSNull class]] || apiKey == nil || [apiKey length] == 0) ? nil : apiKey;
+  NSString *tokenValue = ([token isKindOfClass:[NSNull class]] || token == nil || [token length] == 0) ? nil : token;
+  NSString *executionProviderValue = ([executionProvider isKindOfClass:[NSNull class]]) ? nil : executionProvider;
+
+  id swiftModule = [self getSwiftModule];
+  if (swiftModule) {
+    SEL selector = NSSelectorFromString(@"loadOCRModel:apiKey:token:platformType:executionProvider:resolver:rejecter:");
+    if ([swiftModule respondsToSelector:selector]) {
+      ((void (*)(id, SEL, NSString *, NSString *, NSString *, NSString *, NSString *, RCTPromiseResolveBlock, RCTPromiseRejectBlock))objc_msgSend)(
+        swiftModule, selector, moduleJson, apiKeyValue, tokenValue, platformType, executionProviderValue, resolve, reject
+      );
+    } else {
+      reject(@"METHOD_NOT_FOUND", @"loadOCRModel method not found", nil);
+    }
+  } else {
+    reject(@"MODULE_NOT_FOUND", @"VisionSdkModule Swift class not found", nil);
+  }
+}
+
+RCT_EXPORT_BLOCKING_SYNCHRONOUS_METHOD(unloadModel:(NSString *)moduleJson)
+{
+  NSLog(@"[VisionSDK TurboModule] unloadModel called");
+  id swiftModule = [self getSwiftModule];
+  if (swiftModule) {
+    SEL selector = NSSelectorFromString(@"unloadModel:");
+    if ([swiftModule respondsToSelector:selector]) {
+      BOOL result = ((BOOL (*)(id, SEL, NSString *))objc_msgSend)(swiftModule, selector, moduleJson);
+      return @(result);
+    }
+  }
+  return @(NO);
+}
+
+RCT_EXPORT_BLOCKING_SYNCHRONOUS_METHOD(isModelLoaded:(NSString *)moduleJson)
+{
+  NSLog(@"[VisionSDK TurboModule] isModelLoaded called");
+  id swiftModule = [self getSwiftModule];
+  if (swiftModule) {
+    SEL selector = NSSelectorFromString(@"isModelLoaded:");
+    if ([swiftModule respondsToSelector:selector]) {
+      BOOL result = ((BOOL (*)(id, SEL, NSString *))objc_msgSend)(swiftModule, selector, moduleJson);
+      return @(result);
+    }
+  }
+  return @(NO);
+}
+
+RCT_EXPORT_BLOCKING_SYNCHRONOUS_METHOD(getLoadedModelCount)
+{
+  NSLog(@"[VisionSDK TurboModule] getLoadedModelCount called");
+  id swiftModule = [self getSwiftModule];
+  if (swiftModule) {
+    SEL selector = NSSelectorFromString(@"getLoadedModelCount");
+    if ([swiftModule respondsToSelector:selector]) {
+      double result = ((double (*)(id, SEL))objc_msgSend)(swiftModule, selector);
+      return @(result);
+    }
+  }
+  return @(0);
+}
+
+RCT_EXPORT_METHOD(findDownloadedModels:(RCTPromiseResolveBlock)resolve
+                  reject:(RCTPromiseRejectBlock)reject)
+{
+  NSLog(@"[VisionSDK TurboModule] findDownloadedModels called");
+  id swiftModule = [self getSwiftModule];
+  if (swiftModule) {
+    SEL selector = NSSelectorFromString(@"findDownloadedModelsWithResolver:rejecter:");
+    if ([swiftModule respondsToSelector:selector]) {
+      ((void (*)(id, SEL, RCTPromiseResolveBlock, RCTPromiseRejectBlock))objc_msgSend)(
+        swiftModule, selector, resolve, reject
+      );
+    } else {
+      reject(@"METHOD_NOT_FOUND", @"findDownloadedModels method not found", nil);
+    }
+  } else {
+    reject(@"MODULE_NOT_FOUND", @"VisionSdkModule Swift class not found", nil);
+  }
+}
+
+RCT_EXPORT_METHOD(findDownloadedModel:(NSString *)moduleJson
+                  resolve:(RCTPromiseResolveBlock)resolve
+                  reject:(RCTPromiseRejectBlock)reject)
+{
+  NSLog(@"[VisionSDK TurboModule] findDownloadedModel called");
+  id swiftModule = [self getSwiftModule];
+  if (swiftModule) {
+    SEL selector = NSSelectorFromString(@"findDownloadedModel:resolver:rejecter:");
+    if ([swiftModule respondsToSelector:selector]) {
+      ((void (*)(id, SEL, NSString *, RCTPromiseResolveBlock, RCTPromiseRejectBlock))objc_msgSend)(
+        swiftModule, selector, moduleJson, resolve, reject
+      );
+    } else {
+      reject(@"METHOD_NOT_FOUND", @"findDownloadedModel method not found", nil);
+    }
+  } else {
+    reject(@"MODULE_NOT_FOUND", @"VisionSdkModule Swift class not found", nil);
+  }
+}
+
+RCT_EXPORT_METHOD(findLoadedModels:(RCTPromiseResolveBlock)resolve
+                  reject:(RCTPromiseRejectBlock)reject)
+{
+  NSLog(@"[VisionSDK TurboModule] findLoadedModels called");
+  id swiftModule = [self getSwiftModule];
+  if (swiftModule) {
+    SEL selector = NSSelectorFromString(@"findLoadedModelsWithResolver:rejecter:");
+    if ([swiftModule respondsToSelector:selector]) {
+      ((void (*)(id, SEL, RCTPromiseResolveBlock, RCTPromiseRejectBlock))objc_msgSend)(
+        swiftModule, selector, resolve, reject
+      );
+    } else {
+      reject(@"METHOD_NOT_FOUND", @"findLoadedModels method not found", nil);
+    }
+  } else {
+    reject(@"MODULE_NOT_FOUND", @"VisionSdkModule Swift class not found", nil);
+  }
+}
+
+RCT_EXPORT_METHOD(deleteModel:(NSString *)moduleJson
+                  resolve:(RCTPromiseResolveBlock)resolve
+                  reject:(RCTPromiseRejectBlock)reject)
+{
+  NSLog(@"[VisionSDK TurboModule] deleteModel called");
+  id swiftModule = [self getSwiftModule];
+  if (swiftModule) {
+    SEL selector = NSSelectorFromString(@"deleteModel:resolver:rejecter:");
+    if ([swiftModule respondsToSelector:selector]) {
+      ((void (*)(id, SEL, NSString *, RCTPromiseResolveBlock, RCTPromiseRejectBlock))objc_msgSend)(
+        swiftModule, selector, moduleJson, resolve, reject
+      );
+    } else {
+      reject(@"METHOD_NOT_FOUND", @"deleteModel method not found", nil);
+    }
+  } else {
+    reject(@"MODULE_NOT_FOUND", @"VisionSdkModule Swift class not found", nil);
+  }
+}
+
+RCT_EXPORT_METHOD(predictWithModule:(NSString *)moduleJson
+                  imagePath:(NSString *)imagePath
+                  barcodes:(NSArray *)barcodes
+                  resolve:(RCTPromiseResolveBlock)resolve
+                  reject:(RCTPromiseRejectBlock)reject)
+{
+  NSLog(@"[VisionSDK TurboModule] predictWithModule called");
+  id swiftModule = [self getSwiftModule];
+  if (swiftModule) {
+    SEL selector = NSSelectorFromString(@"predictWithModule:imagePath:barcodes:resolver:rejecter:");
+    if ([swiftModule respondsToSelector:selector]) {
+      ((void (*)(id, SEL, NSString *, NSString *, NSArray *, RCTPromiseResolveBlock, RCTPromiseRejectBlock))objc_msgSend)(
+        swiftModule, selector, moduleJson, imagePath, barcodes, resolve, reject
+      );
+    } else {
+      reject(@"METHOD_NOT_FOUND", @"predictWithModule method not found", nil);
+    }
+  } else {
+    reject(@"MODULE_NOT_FOUND", @"VisionSdkModule Swift class not found", nil);
   }
 }
 

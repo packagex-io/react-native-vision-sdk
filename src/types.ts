@@ -1260,3 +1260,218 @@ export interface VisionSdkProps {
 
 
 }
+
+// ============================================================================
+// MODEL MANAGEMENT TYPES
+// ============================================================================
+
+/**
+ * OCR Module specification for model management
+ * @description Specifies which ML model to use for OCR operations
+ */
+export type OCRModule = {
+  /**
+   * Type of OCR module
+   */
+  type: 'shipping_label' | 'bill_of_lading' | 'item_label' | 'document_classification';
+
+  /**
+   * Model size - larger models are more accurate but slower
+   */
+  size: 'nano' | 'micro' | 'small' | 'medium' | 'large' | 'xlarge';
+
+  /**
+   * Optional configuration for specific modules
+   */
+  options?: {
+    /**
+     * Enable additional key-value extraction (bill_of_lading and item_label only)
+     */
+    enableAdditionalAttributes?: boolean;
+  };
+};
+
+/**
+ * Execution provider for ONNX Runtime (Android only)
+ * @description Specifies which hardware acceleration to use
+ * @type {'CPU' | 'NNAPI' | 'XNNPACK'}
+ */
+export type ExecutionProvider = 'CPU' | 'NNAPI' | 'XNNPACK';
+
+/**
+ * Configuration for ModelManager initialization
+ * @interface
+ */
+export interface ModelManagerConfig {
+  /**
+   * Maximum number of simultaneous model downloads
+   * @default 2
+   */
+  maxConcurrentDownloads?: number;
+
+  /**
+   * Enable debug logging for model operations
+   * @default true
+   */
+  enableLogging?: boolean;
+}
+
+/**
+ * Download progress information
+ * @interface
+ */
+export interface DownloadProgress {
+  /**
+   * The module being downloaded
+   */
+  module: OCRModule;
+
+  /**
+   * Download progress from 0.0 to 1.0
+   */
+  progress: number;
+}
+
+/**
+ * Information about a downloaded or loaded model
+ * @interface
+ */
+export interface ModelInfo {
+  /**
+   * The OCR module
+   */
+  module: OCRModule;
+
+  /**
+   * Model version string (date-based, e.g., "2025-05-05")
+   */
+  version: string;
+
+  /**
+   * Unique model version identifier from backend
+   */
+  versionId: string | null;
+
+  /**
+   * Model release date
+   */
+  dateString: string;
+
+  /**
+   * Whether currently loaded in memory
+   */
+  isLoaded: boolean;
+}
+
+/**
+ * Result of checking for model updates
+ * @interface
+ */
+export interface ModelUpdateInfo {
+  /**
+   * The OCR module checked
+   */
+  module: OCRModule;
+
+  /**
+   * Currently downloaded version (null if not downloaded)
+   */
+  currentVersion: string | null;
+
+  /**
+   * Latest version available on server
+   */
+  latestVersion: string;
+
+  /**
+   * Whether a newer version is available
+   */
+  updateAvailable: boolean;
+
+  /**
+   * Human-readable status message
+   */
+  message: string;
+}
+
+/**
+ * Model management exception types
+ * @interface
+ */
+export interface ModelException {
+  /**
+   * Type of exception
+   */
+  type: 'SdkNotInitialized' | 'RootedDevice' | 'NoNetwork' | 'Network' | 'Storage' | 'ModelNotFound' | 'Load';
+
+  /**
+   * Error message
+   */
+  message: string;
+
+  /**
+   * The module that caused the error (if applicable)
+   */
+  module?: OCRModule;
+
+  /**
+   * Underlying cause of the error
+   */
+  cause?: any;
+
+  /**
+   * Required storage space in bytes (StorageException only)
+   */
+  requiredBytes?: number;
+
+  /**
+   * Available storage space in bytes (StorageException only)
+   */
+  availableBytes?: number;
+
+  /**
+   * Reason for the error (ModelNotFoundException only)
+   */
+  reason?: string;
+}
+
+/**
+ * Lifecycle event callbacks for model operations
+ * @interface
+ */
+export interface ModelLifecycleListener {
+  /**
+   * Called when a model download starts
+   */
+  onDownloadStarted?: (module: OCRModule) => void;
+
+  /**
+   * Called when a model download completes successfully
+   */
+  onDownloadCompleted?: (module: OCRModule) => void;
+
+  /**
+   * Called when a model download fails
+   */
+  onDownloadFailed?: (module: OCRModule, error: ModelException) => void;
+
+  /**
+   * Called when a model download is cancelled
+   */
+  onDownloadCancelled?: (module: OCRModule) => void;
+
+  /**
+   * Called when a model is loaded into memory
+   */
+  onModelLoaded?: (module: OCRModule) => void;
+
+  /**
+   * Called when a model is unloaded from memory
+   */
+  onModelUnloaded?: (module: OCRModule) => void;
+
+  /**
+   * Called when a model is deleted from disk
+   */
+  onModelDeleted?: (module: OCRModule) => void;
+}

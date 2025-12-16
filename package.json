@@ -39,7 +39,7 @@
   },
   "codegenConfig": {
     "name": "VisionSdkView",
-    "type": "components",
+    "type": "all",
     "jsSrcsDir": "src/specs",
     "android": {
       "javaPackageName": "com.visionsdk"

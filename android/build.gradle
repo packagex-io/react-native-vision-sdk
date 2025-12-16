@@ -9,7 +9,7 @@ buildscript {
   }
 
   dependencies {
-    classpath 'com.android.tools.build:gradle:8.7.3'
+    classpath 'com.android.tools.build:gradle:8.8.0'
     // noinspection DifferentKotlinGradleVersion
     classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
   }
@@ -149,7 +149,7 @@ dependencies {
   implementation "com.facebook.react:react-native:+"
   implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
 // From node_modules
-  implementation 'com.github.packagexlabs:vision-sdk-android:v2.4.29'
+  implementation 'com.github.packagexlabs:vision-sdk-android:v2.4.31'
   implementation 'com.github.asadullahilyas:HandyUtils:1.1.6'
 }
 

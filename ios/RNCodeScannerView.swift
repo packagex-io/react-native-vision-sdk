@@ -510,7 +510,7 @@ extension RNCodeScannerView {
             OnDeviceOCRManager.shared.prepareOfflineOCR(withApiKey: apiKeyValue,
                                                         andToken: tokenValue,
                                                         forModelClass: getModelType(modelType),
-                                                        withModelSize: getModelSize(modelSize) ?? VSDKModelExternalSize.micro) { [weak self] currentProgress, totalSize, isModelAlreadyDownloaded in
+                                                        withModelSize: getModelSize(modelSize) ?? VSDKModelExternalSize.large) { [weak self] currentProgress, totalSize, isModelAlreadyDownloaded in
                 guard let self = self else {
                     print("[RNCodeScannerView] View deallocated during model download progress - ignoring callback")
                     return
@@ -547,7 +547,8 @@ extension RNCodeScannerView {
             print("downloaded without size")
             OnDeviceOCRManager.shared.prepareOfflineOCR(withApiKey: !VSDKConstants.apiKey.isEmpty ? VSDKConstants.apiKey : nil,
                                                         andToken: tokenValue,
-                                                        forModelClass: getModelType(modelType)) { [weak self] currentProgress, totalSize, isModelAlreadyDownloaded in
+                                                        forModelClass: getModelType(modelType),
+                                                        withModelSize: VSDKModelExternalSize.large) { [weak self] currentProgress, totalSize, isModelAlreadyDownloaded in
                 guard let self = self else {
                     print("[RNCodeScannerView] View deallocated during model download progress - ignoring callback")
                     return
