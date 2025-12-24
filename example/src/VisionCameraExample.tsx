@@ -29,6 +29,7 @@ const VisionCameraExample = ({ navigation }) => {
   const [barcodeResults, setBarcodeResults] = useState<any[]>([]);
   const [hasPermission, setHasPermission] = useState(false);
   const [cameraFacing, setCameraFacing] = useState<'back' | 'front'>('back');
+  const [isCameraRunning, setIsCameraRunning] = useState(true);
   const [boundingBoxes, setBoundingBoxes] = useState<{
     barcodeBoundingBoxes: any[];
     qrCodeBoundingBoxes: any[];
@@ -187,6 +188,16 @@ const VisionCameraExample = ({ navigation }) => {
     setCameraFacing(prevFacing => prevFacing === 'back' ? 'front' : 'back');
   };
 
+  const onStartCamera = () => {
+    setIsCameraRunning(true);
+    cameraRef.current?.start();
+  };
+
+  const onStopCamera = () => {
+    setIsCameraRunning(false);
+    cameraRef.current?.stop();
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -215,7 +226,7 @@ const VisionCameraExample = ({ navigation }) => {
             scanMode={scanMode}
             autoCapture={autoCapture}
             cameraFacing={cameraFacing}
-            // scanArea={getScanArea()}
+            scanArea={getScanArea()}
             onCapture={handleCapture}
             onError={handleError}
             onRecognitionUpdate={handleRecognitionUpdate}
@@ -413,6 +424,18 @@ const VisionCameraExample = ({ navigation }) => {
 
         {/* Control Buttons - Top Right */}
         <View style={styles.controlsOverlay}>
+          <TouchableOpacity
+            style={[
+              styles.controlButtonOverlay,
+              isCameraRunning ? styles.stopButton : styles.startButton
+            ]}
+            onPress={isCameraRunning ? onStopCamera : onStartCamera}
+          >
+            <Text style={styles.controlButtonTextOverlay}>
+              {isCameraRunning ? '⏸️' : '▶️'}
+            </Text>
+          </TouchableOpacity>
+
           <TouchableOpacity
             style={styles.controlButtonOverlay}
             onPress={onToggleFlash}
@@ -906,6 +929,12 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: -20,
     left: 0,
+  },
+  stopButton: {
+    backgroundColor: 'rgba(220, 53, 69, 0.9)', // Red for stop
+  },
+  startButton: {
+    backgroundColor: 'rgba(40, 167, 69, 0.9)', // Green for start
   },
 });
 

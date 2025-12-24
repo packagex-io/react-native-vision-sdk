@@ -17,7 +17,6 @@ class RNVisionCameraView: UIView {
   // MARK: - Properties
   @objc var enableFlash: Bool = false {
     didSet {
-      print("[RNVisionCameraView] enableFlash changed from \(oldValue) to \(enableFlash)")
       updateFlash()
     }
   }
@@ -36,7 +35,6 @@ class RNVisionCameraView: UIView {
   
   @objc var autoCapture: Bool = false {
     didSet {
-      print("[RNVisionCameraView] autoCapture changed from \(oldValue) to \(autoCapture)")
       updateCaptureMode()
     }
   }
@@ -72,7 +70,35 @@ class RNVisionCameraView: UIView {
   private var currentScanMode: CodeScannerMode = .photo
   private var currentCaptureMode: CaptureMode = .manual
   private var captureType: CaptureType = .multiple
-  
+
+  // MARK: - State Management
+  private enum CameraState {
+    case stopped
+    case starting
+    case running
+    case stopping
+  }
+
+  // Three-state system for proper operation coalescing
+  private var actualCameraState: CameraState = .stopped  // Real AVFoundation state
+  private var targetState: CameraState = .stopped         // What user wants
+  private var isTransitioning: Bool = false               // Is an operation in progress
+
+  // Serial queue for camera operations to prevent race conditions
+  private let cameraOperationQueue = DispatchQueue(label: "com.visionSDK.cameraOperations", qos: .userInitiated)
+  private var lastOperationTime: Date = Date.distantPast
+
+  // Minimum interval between camera operations to prevent AVFoundation corruption
+  // This value is conservative to ensure compatibility across all iPhone models
+  // - Older devices (iPhone 8-11): Need more time for camera initialization
+  // - Newer devices (iPhone 12+): Could work with less, but 600ms ensures reliability
+  // - The delay happens on background thread, so UI remains responsive
+  private let minimumOperationInterval: TimeInterval = 0.6
+
+  private var isDeallocating = false
+  private var isSetupComplete = false
+  private var shouldAutoStart = true
+
   // MARK: - Initialization
   override init(frame: CGRect) {
     super.init(frame: frame)
@@ -83,12 +109,6 @@ class RNVisionCameraView: UIView {
     fatalError("init(coder:) has not been implemented")
   }
 
-  private var hasStarted = false
-  private var isRunning = false
-  private var isStopping = false
-  private var isDeallocating = false
-  private var isSetupComplete = false
-
   override func layoutSubviews() {
     super.layoutSubviews()
 
@@ -97,43 +117,53 @@ class RNVisionCameraView: UIView {
       // Defer heavy camera setup to avoid blocking initial layout
       setupCamera()
       isSetupComplete = true
+
+      // Auto-start camera after setup
+      if shouldAutoStart && !isDeallocating {
+        // IMPORTANT: Apply camera settings BEFORE starting the camera
+        applyInitialCameraSettings()
+
+        // Apply settings that may have been set before camera was initialized
+        updateScanMode()
+        updateCaptureMode()
+        updateDetectionConfig()
+        updateFrameSkip()
+        updateFlash()
+        updateZoom()
+
+        // Start camera with slight delay to avoid blocking layoutSubviews
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
+          self?.start()
+        }
+
+        // Apply scan area settings after camera starts
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+          self?.updateScanArea()
+        }
+      }
     }
 
     cameraView?.frame = self.bounds
+  }
 
-    // Auto-start camera after first layout
-    if !hasStarted && !isDeallocating && isSetupComplete {
-      hasStarted = true
+  override func didMoveToWindow() {
+    super.didMoveToWindow()
 
-      // IMPORTANT: Apply camera settings BEFORE starting the camera
-      // This ensures initial camera position (front/back) is set correctly
-      applyInitialCameraSettings()
+    // Only handle window changes after initial setup
+    guard isSetupComplete, !isDeallocating else { return }
 
-      // Apply settings that may have been set before camera was initialized
-      updateScanMode()
-      updateCaptureMode()
-      updateDetectionConfig()
-      updateFrameSkip()
-      updateFlash()
-      updateZoom()
-
-      // Now start the camera with the correct settings
-      guard let cameraView = cameraView, !isRunning else { return }
-
-      // IMPORTANT: startRunning() must be on main thread (accesses UI/AVFoundation layers)
-      // Use asyncAfter with minimal delay to avoid blocking layoutSubviews
-      DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
-        guard let self = self, let cameraView = self.cameraView, !self.isDeallocating else { return }
-
-        cameraView.startRunning()
-        self.isRunning = true
-      }
-
-      // Apply scan area settings after camera starts
-      DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
-        self?.updateScanArea()
+    if window != nil {
+      // View added to window - start camera if stopped
+      if actualCameraState == .stopped {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in
+          guard let self = self, self.window != nil else { return }
+          self.start()
+        }
       }
     }
+    // View removed from window
+    // Don't automatically stop - let the React Native component lifecycle handle it
+    // This prevents issues with modals, alerts, etc.
   }
   
   // MARK: - Camera Setup
@@ -187,49 +217,141 @@ class RNVisionCameraView: UIView {
   
   // MARK: - Camera Control
   @objc func start() {
-    guard !isDeallocating else { return }
-    guard let cameraView = cameraView else { return }
-    guard !isRunning else { return }
+    guard !isDeallocating, cameraView != nil else {
+      return
+    }
 
-    // IMPORTANT: startRunning() is a blocking call that can take time
-    // Move it to background queue to prevent main thread blocking
-    DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+    // Update target state (what user wants)
+    targetState = .running
+
+    // Trigger transition if needed
+    executeTransitionIfNeeded()
+  }
+
+  @objc func stop() {
+    guard !isDeallocating, cameraView != nil else {
+      return
+    }
+
+    // Update target state (what user wants)
+    targetState = .stopped
+
+    // Trigger transition if needed
+    executeTransitionIfNeeded()
+  }
+
+  private func executeTransitionIfNeeded() {
+    // If already transitioning, the completion handler will check again
+    if isTransitioning {
+      return
+    }
+
+    // If already at target state, nothing to do
+    if actualCameraState == targetState {
+      return
+    }
+
+    // Need to transition - determine direction
+    if targetState == .running && actualCameraState == .stopped {
+      performStart()
+    } else if targetState == .stopped && actualCameraState == .running {
+      performStop()
+    }
+  }
+
+  private func performStart() {
+    guard let cameraView = self.cameraView, !isDeallocating else { return }
+
+    isTransitioning = true
+    actualCameraState = .starting
+
+    // Use serial queue to avoid blocking main thread and prevent overlapping operations
+    cameraOperationQueue.async { [weak self] in
       guard let self = self, !self.isDeallocating else { return }
+      guard let cameraView = self.cameraView else {
+        DispatchQueue.main.async { [weak self] in
+          self?.onTransitionComplete(success: false)
+        }
+        return
+      }
 
-      cameraView.startRunning()
+      // Enforce minimum time between operations to prevent camera corruption
+      let timeSinceLastOperation = Date().timeIntervalSince(self.lastOperationTime)
+      if timeSinceLastOperation < self.minimumOperationInterval {
+        let waitTime = self.minimumOperationInterval - timeSinceLastOperation
+        Thread.sleep(forTimeInterval: waitTime)
+      }
 
-      DispatchQueue.main.async {
-        self.isRunning = true
+      // Call startRunning on main thread (required by AVFoundation)
+      DispatchQueue.main.sync {
+        cameraView.startRunning()
+      }
+
+      // AVFoundation's startRunning() is internally async but provides no completion callback
+      // Small delay to let camera hardware initialize
+      Thread.sleep(forTimeInterval: 0.4)
+
+      DispatchQueue.main.async { [weak self] in
+        guard let self = self, !self.isDeallocating else { return }
+        self.lastOperationTime = Date()
+        self.onTransitionComplete(success: true)
       }
     }
   }
 
-  @objc func stop() {
-    guard let cameraView = cameraView else { return }
-    guard isRunning else {
-      print("[RNVisionCameraView] stop() called but camera not running")
-      return
-    }
-    guard !isStopping else {
-      print("[RNVisionCameraView] stop() already in progress, skipping")
-      return
-    }
+  private func performStop() {
+    guard let cameraView = self.cameraView else { return }
 
-    print("[RNVisionCameraView] Stopping camera...")
-    isStopping = true
+    isTransitioning = true
+    actualCameraState = .stopping
 
-    // IMPORTANT: stopRunning() is a blocking call that can take time
-    // Move it to background queue to prevent main thread blocking
-    DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-      cameraView.stopRunning()
-
-      DispatchQueue.main.async {
-        print("[RNVisionCameraView] Camera stopped successfully")
-        self?.isRunning = false
-        self?.isStopping = false
-        // Reset hasStarted so camera can auto-start again when view is shown
-        self?.hasStarted = false
+    // Use serial queue to avoid blocking main thread and prevent overlapping operations
+    cameraOperationQueue.async { [weak self] in
+      guard let self = self else { return }
+      guard let cameraView = self.cameraView else {
+        DispatchQueue.main.async { [weak self] in
+          self?.onTransitionComplete(success: false)
+        }
+        return
       }
+
+      // Enforce minimum time between operations to prevent camera corruption
+      let timeSinceLastOperation = Date().timeIntervalSince(self.lastOperationTime)
+      if timeSinceLastOperation < self.minimumOperationInterval {
+        let waitTime = self.minimumOperationInterval - timeSinceLastOperation
+        Thread.sleep(forTimeInterval: waitTime)
+      }
+
+      // Call stopRunning on main thread (required by AVFoundation)
+      DispatchQueue.main.sync {
+        cameraView.stopRunning()
+      }
+
+      // AVFoundation's stopRunning() is internally async but provides no completion callback
+      // Small delay to let camera hardware shut down
+      Thread.sleep(forTimeInterval: 0.2)
+
+      DispatchQueue.main.async { [weak self] in
+        guard let self = self else { return }
+        self.lastOperationTime = Date()
+        self.onTransitionComplete(success: true)
+      }
+    }
+  }
+
+  private func onTransitionComplete(success: Bool) {
+    // Update actual state based on what operation completed
+    if actualCameraState == .starting {
+      actualCameraState = success ? .running : .stopped
+    } else if actualCameraState == .stopping {
+      actualCameraState = .stopped
+    }
+
+    isTransitioning = false
+
+    // Check if we need another transition
+    if targetState != actualCameraState {
+      executeTransitionIfNeeded()
     }
   }
 
@@ -248,37 +370,28 @@ class RNVisionCameraView: UIView {
   }
   
   private func updateFlash() {
-    guard let cameraView = cameraView else {
-      print("[RNVisionCameraView] updateFlash: cameraView is nil")
-      return
-    }
+    guard let cameraView = cameraView else { return }
 
     do {
       let videoDevice = try cameraView.videoDevice
-      print("[RNVisionCameraView] updateFlash: Got video device, enableFlash=\(enableFlash)")
 
       DispatchQueue.main.async {
         if videoDevice.isTorchAvailable {
-          print("[RNVisionCameraView] updateFlash: Torch is available")
           do {
             try videoDevice.lockForConfiguration()
             if self.enableFlash {
               try videoDevice.setTorchModeOn(level: 1.0)
-              print("[RNVisionCameraView] updateFlash: Torch turned ON")
             } else {
               videoDevice.torchMode = .off
-              print("[RNVisionCameraView] updateFlash: Torch turned OFF")
             }
             videoDevice.unlockForConfiguration()
           } catch {
-            print("[RNVisionCameraView] updateFlash: Error setting torch: \(error)")
+            print("[RNVisionCameraView] Error setting torch: \(error)")
           }
-        } else {
-          print("[RNVisionCameraView] updateFlash: Torch not available on this device")
         }
       }
     } catch {
-      print("[RNVisionCameraView] updateFlash: Error getting video device: \(error)")
+      print("[RNVisionCameraView] Error getting video device: \(error)")
     }
   }
   
@@ -302,26 +415,18 @@ class RNVisionCameraView: UIView {
   }
   
   private func updateCaptureMode() {
-    guard let cameraView = cameraView else {
-      print("[RNVisionCameraView] updateCaptureMode: cameraView is nil")
-      return
-    }
+    guard let cameraView = cameraView else { return }
 
     let newCaptureMode: CaptureMode = autoCapture ? .auto : .manual
-    print("[RNVisionCameraView] updateCaptureMode: Setting capture mode to \(newCaptureMode == .auto ? "auto" : "manual")")
     currentCaptureMode = newCaptureMode
     cameraView.setCaptureModeTo(newCaptureMode)
   }
   
   private func updateScanArea() {
-    guard let cameraView = cameraView else {
-      print("[RNVisionCameraView] updateScanArea: cameraView is nil")
-      return
-    }
+    guard let cameraView = cameraView else { return }
 
     // If no scan area provided, enable multiple scan and disable default SDK boxes
     guard let scanArea = scanArea else {
-      print("[RNVisionCameraView] updateScanArea: No scan area, using multiple capture")
       captureType = .multiple
       cameraView.setCaptureTypeTo(captureType)
 
@@ -345,8 +450,6 @@ class RNVisionCameraView: UIView {
 
     let focusRect = CGRect(x: x, y: y, width: width, height: height)
 
-    print("[RNVisionCameraView] updateScanArea: Setting scan area to \(focusRect)")
-
     let focusSettings = VisionSDK.CodeScannerView.FocusSettings()
     focusSettings.shouldDisplayFocusImage = false
     focusSettings.shouldScanInFocusImageRect = true
@@ -355,8 +458,6 @@ class RNVisionCameraView: UIView {
     focusSettings.showDocumentBoundries = false
 
     cameraView.setFocusSettingsTo(focusSettings)
-
-    print("[RNVisionCameraView] updateScanArea: Applied focus settings, calling rescan()")
     cameraView.rescan()
   }
   
@@ -414,7 +515,6 @@ class RNVisionCameraView: UIView {
 
     // Reapply scan area after changing scan mode
     // Scan mode changes can reset focus settings
-    print("[RNVisionCameraView] updateScanMode: Reapplying scan area after mode change")
     updateScanArea()
   }
 
@@ -424,15 +524,7 @@ class RNVisionCameraView: UIView {
   private func updateCameraPosition() {
     guard let cameraView = cameraView else { return }
     guard !isDeallocating else { return }
-
-    // Check if camera has started - if not, settings will be applied by applyInitialCameraSettings()
-    if !hasStarted { return }
-
-    // Don't try to switch camera while stop is in progress
-    if isStopping {
-      print("[RNVisionCameraView] Cannot switch camera while stop is in progress")
-      return
-    }
+    guard isSetupComplete else { return }
 
     let position: VisionSDK.CameraPosition
     if let facingString = cameraFacing?.lowercased {
@@ -442,28 +534,36 @@ class RNVisionCameraView: UIView {
     }
 
     // IMPORTANT: Camera position change requires stopping and restarting the camera
-    // Must run on main thread as both stopRunning() and startRunning() access UI/AVFoundation layers
-    if isRunning {
-      print("[RNVisionCameraView] Switching camera to \(position == .front ? "front" : "back")...")
-
+    // AVFoundation operations must be on main thread to avoid AutoLayout issues
+    if actualCameraState == .running || actualCameraState == .starting {
       // Stop camera on main thread
-      cameraView.stopRunning()
-      print("[RNVisionCameraView] Camera stopped for switch, applying new settings...")
-      self.isRunning = false
+      DispatchQueue.main.async { [weak self] in
+        guard let self = self, let cameraView = self.cameraView else { return }
 
-      // Apply new camera settings
-      let cameraSettings = VisionSDK.CodeScannerView.CameraSettings()
-      cameraSettings.cameraPosition = position
-      cameraSettings.nthFrameToProcess = self.frameSkip?.int64Value ?? 10
-      cameraView.setCameraSettingsTo(cameraSettings)
+        self.isTransitioning = true
+        self.actualCameraState = .stopping
 
-      // Restart camera on main thread with slight delay to avoid blocking
-      DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
-        guard let self = self, let cameraView = self.cameraView, !self.isDeallocating else { return }
+        cameraView.stopRunning()
+        self.actualCameraState = .stopped
 
-        cameraView.startRunning()
-        print("[RNVisionCameraView] Camera restarted with new position")
-        self.isRunning = true
+        // Apply new camera settings on main thread
+        let cameraSettings = VisionSDK.CodeScannerView.CameraSettings()
+        cameraSettings.cameraPosition = position
+        cameraSettings.nthFrameToProcess = self.frameSkip?.int64Value ?? 10
+        cameraView.setCameraSettingsTo(cameraSettings)
+
+        // Small delay to let camera settle
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { [weak self] in
+          guard let self = self, let cameraView = self.cameraView else { return }
+
+          // Restart camera on main thread
+          self.actualCameraState = .starting
+          cameraView.startRunning()
+
+          self.actualCameraState = .running
+          self.targetState = .running
+          self.isTransitioning = false
+        }
       }
     }
   }
@@ -475,15 +575,16 @@ class RNVisionCameraView: UIView {
   }
   
   deinit {
+    print("[RNVisionCameraView] deinit called")
     // Set flag FIRST to prevent any other operations from executing
     isDeallocating = true
 
     // Stop camera if running
     // Note: In deinit, we must stop synchronously to ensure cleanup completes
     // before the object is deallocated
-    if isRunning {
+    if actualCameraState == .running || actualCameraState == .starting {
       cameraView?.stopRunning()
-      isRunning = false
+      actualCameraState = .stopped
     }
 
     // Clean up camera view reference
