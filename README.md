@@ -360,7 +360,7 @@ export default HeadlessOCRExample;
 
 ### Model Management API
 
-**NEW in v2.1.0**: The Vision SDK now includes a comprehensive Model Management API for fine-grained control over on-device ML models. This replaces the deprecated `loadModel()` and `unLoadModel()` methods.
+**NEW in v2.0.2**: The Vision SDK now includes a comprehensive Model Management API for fine-grained control over on-device ML models. This replaces the deprecated `loadModel()` and `unLoadModel()` methods.
 
 #### Quick Start
 

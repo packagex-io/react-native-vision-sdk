@@ -86,14 +86,6 @@ class RNVisionCameraView: UIView {
 
   // Serial queue for camera operations to prevent race conditions
   private let cameraOperationQueue = DispatchQueue(label: "com.visionSDK.cameraOperations", qos: .userInitiated)
-  private var lastOperationTime: Date = Date.distantPast
-
-  // Minimum interval between camera operations to prevent AVFoundation corruption
-  // This value is conservative to ensure compatibility across all iPhone models
-  // - Older devices (iPhone 8-11): Need more time for camera initialization
-  // - Newer devices (iPhone 12+): Could work with less, but 600ms ensures reliability
-  // - The delay happens on background thread, so UI remains responsive
-  private let minimumOperationInterval: TimeInterval = 0.6
 
   private var isDeallocating = false
   private var isSetupComplete = false
@@ -131,10 +123,8 @@ class RNVisionCameraView: UIView {
         updateFlash()
         updateZoom()
 
-        // Start camera with slight delay to avoid blocking layoutSubviews
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
-          self?.start()
-        }
+        // Start camera immediately - no need to delay
+        self.start()
 
         // Apply scan area settings after camera starts
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
@@ -153,17 +143,34 @@ class RNVisionCameraView: UIView {
     guard isSetupComplete, !isDeallocating else { return }
 
     if window != nil {
-      // View added to window - start camera if stopped
+      // View added to window
+      // Only recreate if camera was stopped (to clear frozen frames)
+      // If camera is already running, no need to recreate
       if actualCameraState == .stopped {
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in
-          guard let self = self, self.window != nil else { return }
-          self.start()
-        }
+        // Recreate camera view to clear any frozen frames from previous session
+        recreateCameraView()
+        self.start()
+      }
+    } else {
+      // View removed from window - stop camera
+      if actualCameraState == .running {
+        stop()
       }
     }
-    // View removed from window
-    // Don't automatically stop - let the React Native component lifecycle handle it
-    // This prevents issues with modals, alerts, etc.
+  }
+
+  private func recreateCameraView() {
+    guard let oldCameraView = cameraView else { return }
+
+    // Stop and remove old camera view
+    oldCameraView.stopRunning()
+    oldCameraView.removeFromSuperview()
+
+    // Create fresh camera view
+    setupCamera()
+
+    // Ensure frame is correct
+    cameraView?.frame = self.bounds
   }
   
   // MARK: - Camera Setup
@@ -275,25 +282,13 @@ class RNVisionCameraView: UIView {
         return
       }
 
-      // Enforce minimum time between operations to prevent camera corruption
-      let timeSinceLastOperation = Date().timeIntervalSince(self.lastOperationTime)
-      if timeSinceLastOperation < self.minimumOperationInterval {
-        let waitTime = self.minimumOperationInterval - timeSinceLastOperation
-        Thread.sleep(forTimeInterval: waitTime)
-      }
-
       // Call startRunning on main thread (required by AVFoundation)
       DispatchQueue.main.sync {
         cameraView.startRunning()
       }
 
-      // AVFoundation's startRunning() is internally async but provides no completion callback
-      // Small delay to let camera hardware initialize
-      Thread.sleep(forTimeInterval: 0.4)
-
       DispatchQueue.main.async { [weak self] in
         guard let self = self, !self.isDeallocating else { return }
-        self.lastOperationTime = Date()
         self.onTransitionComplete(success: true)
       }
     }
@@ -315,25 +310,13 @@ class RNVisionCameraView: UIView {
         return
       }
 
-      // Enforce minimum time between operations to prevent camera corruption
-      let timeSinceLastOperation = Date().timeIntervalSince(self.lastOperationTime)
-      if timeSinceLastOperation < self.minimumOperationInterval {
-        let waitTime = self.minimumOperationInterval - timeSinceLastOperation
-        Thread.sleep(forTimeInterval: waitTime)
-      }
-
       // Call stopRunning on main thread (required by AVFoundation)
       DispatchQueue.main.sync {
         cameraView.stopRunning()
       }
 
-      // AVFoundation's stopRunning() is internally async but provides no completion callback
-      // Small delay to let camera hardware shut down
-      Thread.sleep(forTimeInterval: 0.2)
-
       DispatchQueue.main.async { [weak self] in
         guard let self = self else { return }
-        self.lastOperationTime = Date()
         self.onTransitionComplete(success: true)
       }
     }

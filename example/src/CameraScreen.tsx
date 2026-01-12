@@ -97,6 +97,7 @@ const CameraScreenComponent: React.FC<{ route: any }> = ({ route }) => {
 
   const [isPriceTagBoundingBoxVisible, setIsPriceTagBoundingBoxVisible] = useState(false)
   const [reportErrorStatus, setReportErrorStatus] = useState<'idle' | 'success' | 'error'>('idle')
+  const [isCameraRunning, setIsCameraRunning] = useState(true)
 
   const [shouldResizeImage, setShouldResizeImage] = useState(false)
   const [ocrConfig, setOcrConfig] = useState<OCRConfig>({
@@ -681,6 +682,16 @@ const CameraScreenComponent: React.FC<{ route: any }> = ({ route }) => {
 
   }, [])
 
+  const handlePauseResume = useCallback(() => {
+    if (isCameraRunning) {
+      visionSdk?.current?.stopRunningHandler();
+      setIsCameraRunning(false);
+    } else {
+      visionSdk?.current?.startRunningHandler();
+      setIsCameraRunning(true);
+    }
+  }, [isCameraRunning])
+
   return (
     <View style={styles.mainContainer}>
       <VisionSdkView
@@ -714,6 +725,17 @@ const CameraScreenComponent: React.FC<{ route: any }> = ({ route }) => {
         onPriceTagDetected={handlePriceTagDetected}
         onError={handleError}
       />
+
+      {/* Pause/Resume Button for testing stop/start behavior */}
+      <TouchableOpacity
+        onPress={handlePauseResume}
+        style={styles.pauseResumeButton}
+      >
+        <Text style={styles.pauseResumeText}>
+          {isCameraRunning ? '⏸️ PAUSE' : '▶️ RESUME'}
+        </Text>
+      </TouchableOpacity>
+
       {['ocr', 'photo'].includes(mode) ? (
         <ResultViewOCR
           mode={ocrConfig.mode}
@@ -905,6 +927,21 @@ const styles = StyleSheet.create({
   mainContainer: {
     flex: 1,
     position: 'relative'
+  },
+  pauseResumeButton: {
+    position: 'absolute',
+    top: 100,
+    right: 20,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 25,
+    zIndex: 1000,
+  },
+  pauseResumeText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 });
 
