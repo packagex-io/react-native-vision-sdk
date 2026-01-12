@@ -20,7 +20,7 @@ const VisionCameraExample = ({ navigation }) => {
   const [flashEnabled, setFlashEnabled] = useState(false);
   const [zoomLevel, setZoomLevel] = useState(1.0);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
-  const [scanMode, setScanMode] = useState<VisionCameraScanMode>('ocr');
+  const [scanMode, setScanMode] = useState<VisionCameraScanMode>('barcode');
   const [scanAreaEnabled, setScanAreaEnabled] = useState(false);
   const [autoCapture, setAutoCapture] = useState(false);
   const [recognitionData, setRecognitionData] = useState({ text: false, barcode: false, qrcode: false, document: false });

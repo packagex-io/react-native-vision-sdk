@@ -64,14 +64,13 @@ class RNCodeScannerView: UIView {
 
     //MARK: - Initializer
     init() {
-
         super.init(frame: UIScreen.main.bounds)
 //        codeScannerView?.stopRunning()
         codeScannerView = CodeScannerView(frame: CGRect(x: 0, y: 0, width: UIScreen.main.bounds.width, height: UIScreen.main.bounds.height))
         self.addSubview(codeScannerView!)
         codeScannerView!.configure(delegate: self, sessionPreset: sessionPreset, captureMode: captureMode, captureType: isMultipleScanEnabled, scanMode: scanMode)
 
-      codeScannerView?.stopRunning()
+        codeScannerView?.stopRunning()
     }
 
     required init?(coder aDecoder: NSCoder) {
