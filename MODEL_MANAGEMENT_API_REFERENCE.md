@@ -142,19 +142,18 @@ Download a model from the server to device storage.
 ```typescript
 downloadModel(
   module: OCRModule,
-  apiKey: string | null,
-  token: string | null,
+  apiKey?: string | null,
+  token?: string | null,
   progressCallback?: (progress: DownloadProgress) => void
-): Promise<string>
+): Promise<void>
 ```
 
 **Parameters:**
 - `module` (OCRModule): Model to download
   - `type`: 'shipping_label' | 'item_label' | 'bill_of_lading' | 'document_classification'
   - `size`: 'nano' | 'micro' | 'small' | 'medium' | 'large' | 'xlarge'
-  - `platform?`: 'react_native' (default) | 'android' | 'ios'
-- `apiKey` (string | null): API key for authentication
-- `token` (string | null): Auth token for authentication
+- `apiKey` (string | null, optional): API key for authentication
+- `token` (string | null, optional): Auth token for authentication
 - `progressCallback` (function, optional): Progress updates
 
 **Returns:**
@@ -232,7 +231,7 @@ if (cancelled) {
 
 ## Load/Unload Operations
 
-### `loadOCRModel(module, apiKey, token, platform?, executionProvider?)`
+### `loadOCRModel(module, apiKey, token, executionProvider?)`
 
 Load a model from disk into memory for inference.
 
@@ -240,18 +239,16 @@ Load a model from disk into memory for inference.
 ```typescript
 loadOCRModel(
   module: OCRModule,
-  apiKey: string | null,
-  token: string | null,
-  platform?: string,
+  apiKey?: string | null,
+  token?: string | null,
   executionProvider?: ExecutionProvider
 ): Promise<void>
 ```
 
 **Parameters:**
 - `module` (OCRModule): Model to load
-- `apiKey` (string | null): API key
-- `token` (string | null): Auth token
-- `platform` (string, optional): Platform identifier (default: 'react_native')
+- `apiKey` (string | null, optional): API key
+- `token` (string | null, optional): Auth token
 - `executionProvider` (ExecutionProvider, optional): Android only
   - `'CPU'` (default) - Best compatibility
   - `'NNAPI'` - Android Neural Networks API
@@ -274,7 +271,6 @@ await VisionCore.loadOCRModel(
   { type: 'shipping_label', size: 'large' },
   apiKey,
   token,
-  'react_native',
   'NNAPI'
 );
 ```
@@ -587,77 +583,6 @@ console.log('Prediction:', result);
 
 ---
 
-## Event Listeners
-
-### `onModelLifecycle(listener)`
-
-Listen to global model lifecycle events.
-
-**Signature:**
-```typescript
-onModelLifecycle(
-  listener: (event: ModelLifecycleEvent) => void
-): EmitterSubscription
-```
-
-**Parameters:**
-- `listener` (function): Callback for lifecycle events
-
-**Returns:**
-- `EmitterSubscription` - Subscription object (call `.remove()` to unsubscribe)
-
-**Example:**
-```typescript
-const subscription = VisionCore.onModelLifecycle((event) => {
-  console.log('Lifecycle event:', event.type);
-  console.log('Module:', event.module);
-
-  switch (event.type) {
-    case 'onDownloadStarted':
-      console.log('Download started');
-      break;
-    case 'onDownloadCompleted':
-      console.log('Download completed');
-      break;
-    case 'onDownloadFailed':
-      console.log('Download failed:', event.error);
-      break;
-    case 'onDownloadCancelled':
-      console.log('Download cancelled');
-      break;
-    case 'onModelLoaded':
-      console.log('Model loaded into memory');
-      break;
-    case 'onModelUnloaded':
-      console.log('Model unloaded from memory');
-      break;
-    case 'onModelDeleted':
-      console.log('Model deleted from disk');
-      break;
-  }
-});
-
-// Later: unsubscribe
-subscription.remove();
-```
-
-**Event Types:**
-```typescript
-type ModelLifecycleEvent = {
-  type: 'onDownloadStarted'
-    | 'onDownloadCompleted'
-    | 'onDownloadFailed'
-    | 'onDownloadCancelled'
-    | 'onModelLoaded'
-    | 'onModelUnloaded'
-    | 'onModelDeleted';
-  module: OCRModule;
-  error?: string;  // Only for 'onDownloadFailed'
-};
-```
-
----
-
 ## Types & Interfaces
 
 ### OCRModule
@@ -668,7 +593,6 @@ Represents a specific model configuration.
 type OCRModule = {
   type: 'shipping_label' | 'item_label' | 'bill_of_lading' | 'document_classification';
   size: 'nano' | 'micro' | 'small' | 'medium' | 'large' | 'xlarge';
-  platform?: 'react_native' | 'android' | 'ios';
 };
 ```
 
@@ -676,8 +600,7 @@ type OCRModule = {
 ```typescript
 const module: OCRModule = {
   type: 'shipping_label',
-  size: 'large',
-  platform: 'react_native'
+  size: 'large'
 };
 ```
 
