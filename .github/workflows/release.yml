@@ -2,8 +2,8 @@ name: Release
 
 on:
   push:
-    tags:
-      - "v*"
+    branches:
+      - main
 
   workflow_dispatch:
     inputs:
@@ -24,6 +24,8 @@ permissions:
 jobs:
   release:
     runs-on: ubuntu-latest
+    # Skip release commits to avoid infinite loop
+    if: "!startsWith(github.event.head_commit.message, 'chore: release')"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -36,21 +38,13 @@ jobs:
 
       - name: Configure Git
         run: |
-          git config user.name "${{ github.actor }}"
-          git config user.email "${{ github.actor_id }}+${{ github.actor }}@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
 
       - name: Build package
         run: yarn prepare
 
-      - name: Setup npm for Trusted Publishing
-        run: npm config set //registry.npmjs.org/:_authToken ''
-
-      - name: Release (manual)
-        if: github.event_name == 'workflow_dispatch'
+      - name: Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: yarn release ${{ inputs.release_type }} --ci --npm.skipChecks --npm.provenance
-
-      - name: Publish to npm (tag)
-        if: github.event_name == 'push'
-        run: npm publish --provenance --access public
+        run: yarn release ${{ inputs.release_type || 'patch' }} --ci --npm.provenance
