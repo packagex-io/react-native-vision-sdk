@@ -38,6 +38,7 @@ RCT_EXPORT_MODULE(VisionSdkModule)
 
 - (NSArray<NSString *> *)supportedEvents
 {
+  // NOTE: onModelLifecycleEvent is reserved for future use when native SDKs support it
   return @[@"onModelDownloadProgress"];
 }
 
