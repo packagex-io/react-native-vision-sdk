@@ -1,5 +1,35 @@
 # Release Notes
 
+### v2.0.5 — 2026-01-15
+
+  #### Breaking Changes
+
+  - **Model Management API Simplification**
+    Removed `platformType` parameter from `downloadModel()` and `loadOCRModel()` methods. This parameter is now hardcoded to `'react_native'` internally, as it's unnecessary for a React Native library that will only be consumed in React Native applications.
+
+    **Migration:**
+    ```typescript
+    // Before (v2.0.4 and earlier)
+    await VisionCore.downloadModel(module, apiKey, null, 'react_native', progressCallback);
+    await VisionCore.loadOCRModel(module, apiKey, null, 'react_native', 'CPU');
+
+    // After (v2.0.5+)
+    await VisionCore.downloadModel(module, apiKey, null, progressCallback);
+    await VisionCore.loadOCRModel(module, apiKey, null, 'CPU');
+    ```
+
+  #### Improvements
+
+  - **Cleaner API Surface**
+    Removed `onModelLifecycle` event implementation as the underlying native SDKs (iOS/Android) do not yet support lifecycle listeners. This prevents confusion from exposing non-functional APIs.
+
+  - **Documentation Updates**
+    - Fixed `downloadModel()` return type documentation (was incorrectly listed as `Promise<string>`, now correctly shows `Promise<void>`)
+    - Corrected `OCRModule` type definition (removed non-existent `platform` field)
+    - Updated all code examples to reflect simplified API signatures
+
+---
+
 ### v2.0.4 — 2026-01-12
 
   #### Bug Fixes
@@ -65,7 +95,6 @@
     - `findLoadedModels()` - List currently loaded models
     - `deleteModel()` - Permanently delete from disk
     - `predictWithModule()` - Make predictions with specific model
-    - `onModelLifecycle()` - Subscribe to lifecycle events (download/load/unload/delete)
 
   #### Improvements
 

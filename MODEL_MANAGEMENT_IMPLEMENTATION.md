@@ -43,7 +43,6 @@ This document tracks the implementation of the Model Management API for the Reac
   - `checkModelUpdates()` - Check for updates
   - `deleteModel()` - Delete from disk
   - `predictWithModule()` - Predict with specific model
-  - `onModelLifecycle()` - Global lifecycle events
   - Deprecated: `loadOnDeviceModels()`, `unLoadOnDeviceModels()`, `predict()`
 
 #### Android Native Layer - Complete
@@ -97,8 +96,6 @@ This document tracks the implementation of the Model Management API for the Reac
 
 6. **Model Lifecycle**
    - `deleteModel()` - Permanent deletion from disk
-   - `onModelLifecycle()` - Global lifecycle event listener
-   - Events: Download (start/complete/fail/cancel), Load, Unload, Delete
 
 7. **Prediction with Module Selection**
    - `predictWithModule()` - Predict with specific model
@@ -145,7 +142,6 @@ await VisionCore.loadOCRModel(
   { type: 'shipping_label', size: 'large' },
   apiKey,
   token,
-  'react_native',
   'CPU' // Defaults to CPU if not specified
 );
 
@@ -163,25 +159,6 @@ const result = await VisionCore.predictWithModule(
 );
 ```
 
-### Lifecycle Events
-
-```typescript
-// Listen to all lifecycle events
-VisionCore.onModelLifecycle((event) => {
-  switch(event.type) {
-    case 'onDownloadStarted':
-      console.log('Download started:', event.module);
-      break;
-    case 'onDownloadCompleted':
-      console.log('Download completed:', event.module);
-      break;
-    case 'onModelLoaded':
-      console.log('Model loaded:', event.module);
-      break;
-    // ... other events
-  }
-});
-```
 
 ## Files Changed
 

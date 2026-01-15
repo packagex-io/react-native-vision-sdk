@@ -6,7 +6,6 @@ import type {
   ModelManagerConfig,
   DownloadProgress,
   ModelInfo,
-  ModelLifecycleListener,
 } from './types';
 
 // New Architecture only - use TurboModule
@@ -439,7 +438,6 @@ export const VisionCore = {
    * @param module - The OCRModule to download
    * @param apiKey - API key for authentication (optional)
    * @param token - Authentication token (optional)
-   * @param platformType - Platform identifier (defaults to 'react_native')
    * @param progressListener - Callback for download progress updates (optional)
    *
    * @example
@@ -447,7 +445,6 @@ export const VisionCore = {
    *   { type: 'shipping_label', size: 'micro' },
    *   apiKey,
    *   null,
-   *   'react_native',
    *   (progress) => console.log('Progress:', progress.progress * 100 + '%')
    * );
    */
@@ -455,7 +452,6 @@ export const VisionCore = {
     module: OCRModule,
     apiKey?: string | null,
     token?: string | null,
-    platformType: string = 'react_native',
     progressListener?: (progress: DownloadProgress) => void
   ) => {
     const requestId = generateUUID();
@@ -500,7 +496,7 @@ export const VisionCore = {
         toJsonString(module),
         apiKey ?? null,
         token ?? null,
-        platformType,
+        'react_native', // Hardcoded since this is a React Native library
         requestId
       );
     } finally {
@@ -540,7 +536,6 @@ export const VisionCore = {
    * @param module - The OCRModule to load
    * @param apiKey - API key for authentication (optional)
    * @param token - Authentication token (optional)
-   * @param platformType - Platform identifier (defaults to 'react_native')
    * @param executionProvider - ONNX execution provider (defaults to 'CPU', Android only)
    *   - 'CPU': Works on all devices (default for maximum compatibility)
    *   - 'NNAPI': Hardware acceleration via Android Neural Networks API
@@ -558,7 +553,6 @@ export const VisionCore = {
    *   { type: 'shipping_label', size: 'micro' },
    *   apiKey,
    *   null,
-   *   'react_native',
    *   'NNAPI'
    * );
    */
@@ -566,7 +560,6 @@ export const VisionCore = {
     module: OCRModule,
     apiKey?: string | null,
     token?: string | null,
-    platformType: string = 'react_native',
     executionProvider?: ExecutionProvider
   ) => {
     const provider = executionProvider ?? 'CPU';
@@ -574,7 +567,7 @@ export const VisionCore = {
       toJsonString(module),
       apiKey ?? null,
       token ?? null,
-      platformType,
+      'react_native', // Hardcoded since this is a React Native library
       provider
     );
   },
@@ -758,51 +751,4 @@ export const VisionCore = {
     }
   },
 
-  /**
-   * Subscribe to model lifecycle events
-   * Returns a subscription that must be removed when done
-   *
-   * @param listener - Lifecycle event callbacks
-   * @returns Event subscription (call .remove() to unsubscribe)
-   *
-   * @example
-   * const subscription = VisionCore.onModelLifecycle({
-   *   onDownloadCompleted: (module) => console.log('Downloaded:', module.type),
-   *   onModelLoaded: (module) => console.log('Loaded:', module.type),
-   *   onDownloadFailed: (module, error) => console.error('Failed:', error.message)
-   * });
-   *
-   * // Later, cleanup
-   * subscription.remove();
-   */
-  onModelLifecycle: (listener: ModelLifecycleListener) => {
-    return eventEmitter.addListener('onModelLifecycleEvent', (event) => {
-      const { eventType, moduleJson, errorJson } = event;
-      const module = fromJsonString(moduleJson);
-
-      switch (eventType) {
-        case 'onDownloadStarted':
-          listener.onDownloadStarted?.(module);
-          break;
-        case 'onDownloadCompleted':
-          listener.onDownloadCompleted?.(module);
-          break;
-        case 'onDownloadFailed':
-          listener.onDownloadFailed?.(module, fromJsonString(errorJson));
-          break;
-        case 'onDownloadCancelled':
-          listener.onDownloadCancelled?.(module);
-          break;
-        case 'onModelLoaded':
-          listener.onModelLoaded?.(module);
-          break;
-        case 'onModelUnloaded':
-          listener.onModelUnloaded?.(module);
-          break;
-        case 'onModelDeleted':
-          listener.onModelDeleted?.(module);
-          break;
-      }
-    });
-  },
 };

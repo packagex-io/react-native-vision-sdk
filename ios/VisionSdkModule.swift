@@ -10,6 +10,8 @@ class VisionSdkModule: RCTEventEmitter {
         return "VisionSdkModule"
     }
 
+  // Supported events for TurboModule event emission
+  // NOTE: onModelLifecycleEvent is reserved for future use when native SDKs support it
   override func supportedEvents() -> [String]! {
       return ["onModelDownloadProgress"]
   }

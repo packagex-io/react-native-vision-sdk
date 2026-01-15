@@ -397,8 +397,8 @@ await VisionCore.deleteModel(module);  // From disk (permanent)
 |--------|-----------|-------------|
 | `initializeModelManager()` | `config: { maxConcurrentDownloads?, enableLogging? }` | Initialize model manager (**Android only** - iOS is hardcoded no-op) |
 | `isModelManagerInitialized()` | None | Check initialization status (**Android only** - iOS always returns `true`) |
-| `downloadModel()` | `module: OCRModule, apiKey, token, progressCallback?` | Download model to disk with progress tracking → Returns `Promise<void>` |
-| `loadOCRModel()` | `module: OCRModule, apiKey, token, platform?, executionProvider?` | Load model into memory for inference |
+| `downloadModel()` | `module: OCRModule, apiKey?, token?, progressCallback?` | Download model to disk with progress tracking → Returns `Promise<void>` |
+| `loadOCRModel()` | `module: OCRModule, apiKey?, token?, executionProvider?` | Load model into memory for inference |
 | `unloadModel()` | `module: OCRModule` | Remove from memory (files stay on disk) → Returns `boolean` |
 | `deleteModel()` | `module: OCRModule` | Permanently delete from disk → Returns `boolean` |
 | `isModelLoaded()` | `module: OCRModule` | Check if model is loaded → Returns `boolean` |
@@ -408,7 +408,6 @@ await VisionCore.deleteModel(module);  // From disk (permanent)
 | `findLoadedModels()` | None | List loaded models → Returns `Promise<ModelInfo[]>` |
 | `predictWithModule()` | `module: OCRModule, imagePath, barcodes` | Predict with specific model |
 | `cancelDownload()` | `module: OCRModule` | Cancel active download for model → Returns `Promise<boolean>` |
-| `onModelLifecycle()` | `listener: (event) => void` | Listen to lifecycle events → Returns `EmitterSubscription` |
 
 **Note:** `OCRModule` = `{ type: 'shipping_label' | 'item_label' | 'bill_of_lading' | 'document_classification', size: 'nano' | 'micro' | 'small' | 'medium' | 'large' | 'xlarge' }`
 
@@ -519,35 +518,6 @@ console.log(`${loaded.length} model(s) in memory`);
 const count = VisionCore.getLoadedModelCount();
 ```
 
-#### Listen to Model Lifecycle Events
-
-```typescript
-const subscription = VisionCore.onModelLifecycle((event) => {
-  console.log('Event:', event.type);
-  console.log('Module:', `${event.module.type} (${event.module.size})`);
-
-  switch (event.type) {
-    case 'onDownloadStarted':
-      console.log('Download started');
-      break;
-    case 'onDownloadCompleted':
-      console.log('Download completed');
-      break;
-    case 'onModelLoaded':
-      console.log('Model loaded into memory');
-      break;
-    case 'onModelUnloaded':
-      console.log('Model unloaded from memory');
-      break;
-    case 'onModelDeleted':
-      console.log('Model deleted from disk');
-      break;
-  }
-});
-
-// Later: unsubscribe
-subscription.remove();
-```
 
 #### Cancel Downloads
 

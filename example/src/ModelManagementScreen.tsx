@@ -10,7 +10,7 @@ import {
   Image,
   Clipboard,
 } from 'react-native';
-import { VisionCore } from '../../src/index';
+import { VisionCore, ExecutionProvider } from '../../src/index';
 import { useFocusEffect } from '@react-navigation/native';
 
 const api_key = ""; // Add your PackageX API key here
@@ -20,7 +20,7 @@ const ModelManagementScreen = ({ navigation }) => {
   const [isInitialized, setIsInitialized] = useState<boolean>(false);
   const [selectedModelType, setSelectedModelType] = useState<string>('shipping_label');
   const [selectedModelSize, setSelectedModelSize] = useState<string>('micro');
-  const [selectedExecutionProvider, setSelectedExecutionProvider] = useState<string>('CPU');
+  const [selectedExecutionProvider, setSelectedExecutionProvider] = useState<ExecutionProvider>('CPU');
   const [downloadProgress, setDownloadProgress] = useState<number>(0);
   // NOT AVAILABLE - State commented out as method is no longer available
   // const [activeDownloads, setActiveDownloads] = useState<number>(0);
@@ -70,18 +70,6 @@ const ModelManagementScreen = ({ navigation }) => {
     }
   };
 
-  // Subscribe to download progress events
-  useFocusEffect(
-    useCallback(() => {
-      const subscription = VisionCore.onModelDownloadProgress((progress) => {
-        setDownloadProgress(progress * 100);
-      });
-
-      return () => {
-        subscription.remove();
-      };
-    }, [])
-  );
 
   // 1️⃣ INITIALIZATION METHODS
   const handleInitializeModelManager = async () => {
@@ -126,9 +114,7 @@ const ModelManagementScreen = ({ navigation }) => {
         },
         api_key,
         null,
-        'react_native',
         (progress) => {
-          console.log("PROGRESS IS: ", progress)
           setDownloadProgress(progress.progress * 100);
         }
       );
@@ -184,7 +170,6 @@ const ModelManagementScreen = ({ navigation }) => {
         },
         api_key,
         null,
-        'react_native',
         selectedExecutionProvider
       );
 
@@ -272,7 +257,6 @@ const ModelManagementScreen = ({ navigation }) => {
             model,
             api_key,
             null,
-            'react_native',
             (progress) => {
               // Update progress for this specific model
               setDownloadProgressMap((prev) => ({
@@ -353,7 +337,6 @@ const ModelManagementScreen = ({ navigation }) => {
             model,
             api_key,
             null,
-            'react_native',
             selectedExecutionProvider
           );
           const duration = Date.now() - modelStartTime;
@@ -759,7 +742,7 @@ const ModelManagementScreen = ({ navigation }) => {
                 styles.chip,
                 selectedExecutionProvider === provider.value && styles.selectedChip
               ]}
-              onPress={() => setSelectedExecutionProvider(provider.value)}
+              onPress={() => setSelectedExecutionProvider(provider.value as ExecutionProvider)}
             >
               <Text style={[
                 styles.chipText,
