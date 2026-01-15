@@ -133,7 +133,9 @@
       "tagName": "v${version}"
     },
     "npm": {
-      "publish": true
+      "publish": true,
+      "provenance": true,
+      "skipChecks": true
     },
     "github": {
       "release": true
