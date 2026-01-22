@@ -37,6 +37,7 @@ import io.packagex.visionsdk.config.ObjectDetectionConfiguration
 import io.packagex.visionsdk.core.TemplateManager
 import io.packagex.visionsdk.core.pricetag.PriceTagData
 import io.packagex.visionsdk.ui.startCreateTemplateScreen
+import io.packagex.visionsdk.ui.dialogs.TemplateCreationListener
 import androidx.fragment.app.FragmentActivity
 import io.packagex.visionsdk.dto.ScannedCodeResult
 import io.packagex.visionsdk.exceptions.VisionSDKException
@@ -798,10 +799,7 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
             "getPredictionItemLabelCloud" to 15,
             "getPredictionDocumentClassificationCloud" to 16,
             "reportError" to 17,
-            "createTemplate" to 18,
-            "getAllTemplates" to 19,
-            "deleteTemplateWithId" to 20,
-            "deleteAllTemplates" to 21
+            "createTemplate" to 18
         )
     }
 
@@ -831,9 +829,6 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
             "getPredictionDocumentClassificationCloud", "16" -> getPredictionDocumentClassificationCloud(args)
             "reportError", "17" -> reportError(args)
             "createTemplate", "18" -> createTemplate(root)
-            "getAllTemplates", "19" -> getAllTemplates(root)
-            "deleteTemplateWithId", "20" -> deleteTemplateWithId(args)
-            "deleteAllTemplates", "21" -> deleteAllTemplates()
             else -> Log.w(TAG, "Unknown command: $commandId")
         }
     }
@@ -996,21 +991,23 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
             view.setObjectDetectionConfiguration(detectionConfig)
 
             // Apply selected template
-            if (json.has("selectedTemplateId")) {
-                val selectedTemplateId = json.optString("selectedTemplateId", "")
+            if (json.has("selectedTemplate")) {
+                val selectedTemplate = json.optString("selectedTemplate", "")
 
-                if (selectedTemplateId.isNotEmpty()) {
-                    val templateManager = TemplateManager()
-                    val templates = templateManager.getAllBarcodeTemplates()
-                    val templateToApply = templates.firstOrNull { it.name == selectedTemplateId }
-
-                    if (templateToApply != null) {
-                        view.applyBarcodeTemplate(templateToApply)
-                    } else {
-                        Log.w(TAG, "Template not found: $selectedTemplateId")
+                if (selectedTemplate.isNotEmpty()) {
+                    try {
+                        val success = view.applyTemplateJson(selectedTemplate)
+                        if (success) {
+                            Log.d(TAG, "Template applied successfully")
+                        } else {
+                            Log.e(TAG, "Failed to apply template - invalid JSON format")
+                        }
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error applying template: ${e.message}", e)
                     }
                 } else {
-                    view.removeBarcodeTemplate()
+                    view.removeTemplate()
+                    Log.d(TAG, "Template removed")
                 }
             }
         } catch (e: Exception) {
@@ -1045,65 +1042,23 @@ class VisionSdkViewManager(private val appContext: ReactApplicationContext) :
             return
         }
 
-        val onTemplateCreated: (String) -> Unit = { newCreatedTemplateId: String ->
-            val event = Arguments.createMap().apply {
-                putString("data", newCreatedTemplateId)
-            }
-            sendEvent("onCreateTemplate", event)
-            view.startCamera()
-        }
-
         startCreateTemplateScreen(
             fragmentManager = activity.supportFragmentManager,
-            onTemplateCreated = onTemplateCreated,
-            onCancelled = {
-                view.startCamera()
+            listener = object : TemplateCreationListener {
+                override fun onTemplateCreated(templateJson: String) {
+                    val event = Arguments.createMap().apply {
+                        putString("data", templateJson)
+                    }
+                    sendEvent("onCreateTemplate", event)
+                    view.startCamera()
+                }
+
+                override fun onTemplateCancelled() {
+                    Log.d(TAG, "Template creation cancelled")
+                    view.startCamera()
+                }
             }
         )
-    }
-
-    private fun getAllTemplates(view: VisionCameraView) {
-        val templateManager = TemplateManager()
-        val templates = templateManager.getAllBarcodeTemplates()
-
-        // Convert to JSON array string (Fabric requires JSON string, not array)
-        val templateNames = templates.map { it.name }
-        val dataJson = JSONArray(templateNames).toString()
-
-        val event = Arguments.createMap().apply {
-            putString("dataJson", dataJson)
-        }
-        sendEvent("onGetTemplates", event)
-    }
-
-    private fun deleteTemplateWithId(args: ReadableArray?) {
-        val templateManager = TemplateManager()
-        val id = args?.getString(0)
-
-        val allTemplates = templateManager.getAllBarcodeTemplates()
-        val templateToDelete = allTemplates.firstOrNull { template -> template.name == id }
-
-        if (templateToDelete != null) {
-            templateManager.deleteBarcodeTemplate(templateToDelete)
-            val event = Arguments.createMap().apply {
-                putString("data", id)
-            }
-            sendEvent("onDeleteTemplateById", event)
-        }
-    }
-
-    private fun deleteAllTemplates() {
-        val templateManager = TemplateManager()
-        val allTemplates = templateManager.getAllBarcodeTemplates()
-
-        allTemplates.forEach { template ->
-            templateManager.deleteBarcodeTemplate(template)
-        }
-
-        val event = Arguments.createMap().apply {
-            putBoolean("success", true)
-        }
-        sendEvent("onDeleteTemplates", event)
     }
 
     // MARK: - Metadata/Recipient/Sender Commands
