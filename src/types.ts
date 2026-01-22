@@ -1395,6 +1395,60 @@ export interface ModelUpdateInfo {
 }
 
 /**
+ * Bounding box coordinates
+ * @interface
+ */
+export interface BoundingBox {
+  /**
+   * X coordinate (left edge)
+   */
+  x: number;
+
+  /**
+   * Y coordinate (top edge)
+   */
+  y: number;
+
+  /**
+   * Width of bounding box
+   */
+  width: number;
+
+  /**
+   * Height of bounding box
+   */
+  height: number;
+}
+
+/**
+ * Barcode information for OCR predictions
+ * @interface
+ */
+export interface DetectedBarcode {
+  /**
+   * Barcode value/string
+   */
+  scannedCode: string;
+
+  /**
+   * Barcode symbology/format (e.g., 'CODE_128', 'QR_CODE', 'EAN_13')
+   */
+  symbology: string;
+
+  /**
+   * GS1 extracted information (optional)
+   * Key-value pairs of GS1 application identifiers and their values
+   * @example { "01": "12345678901234", "17": "250101", "10": "LOT123" }
+   */
+  gs1ExtractedInfo?: Record<string, string>;
+
+  /**
+   * Bounding box coordinates (optional)
+   */
+  boundingBox?: BoundingBox;
+}
+
+/**
  * Model management exception types
  * @interface
  */
