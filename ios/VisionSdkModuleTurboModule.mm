@@ -257,13 +257,13 @@ RCT_EXPORT_METHOD(predict:(NSString *)imagePath
 
 RCT_EXPORT_METHOD(predictShippingLabelCloud:(NSString *)imagePath
                   barcodes:(NSArray<NSString *> * _Nullable)barcodes
-                  token:(NSString * _Nullable)token
-                  apiKey:(NSString * _Nullable)apiKey
-                  locationId:(NSString * _Nullable)locationId
-                  options:(NSDictionary * _Nullable)options
-                  metadata:(NSDictionary * _Nullable)metadata
-                  recipient:(NSDictionary * _Nullable)recipient
-                  sender:(NSDictionary * _Nullable)sender
+                  token:(id _Nullable)token
+                  apiKey:(id _Nullable)apiKey
+                  locationId:(id _Nullable)locationId
+                  options:(id _Nullable)options
+                  metadata:(id _Nullable)metadata
+                  recipient:(id _Nullable)recipient
+                  sender:(id _Nullable)sender
                   shouldResizeImage:(NSNumber * _Nullable)shouldResizeImage
                   resolve:(RCTPromiseResolveBlock)resolve
                   reject:(RCTPromiseRejectBlock)reject)
@@ -276,6 +276,33 @@ RCT_EXPORT_METHOD(predictShippingLabelCloud:(NSString *)imagePath
     return;
   }
 
+  // Convert NSNull to nil for nullable string parameters
+  NSString *tokenValue = ([token isKindOfClass:[NSNull class]] || token == nil) ? nil : (NSString *)token;
+  NSString *apiKeyValue = ([apiKey isKindOfClass:[NSNull class]] || apiKey == nil) ? nil : (NSString *)apiKey;
+  NSString *locationIdValue = ([locationId isKindOfClass:[NSNull class]] || locationId == nil) ? nil : (NSString *)locationId;
+
+  // Helper function to parse JSON string to NSDictionary
+  NSDictionary* (^parseJSONDict)(id) = ^NSDictionary*(id jsonParam) {
+    if (jsonParam && ![jsonParam isKindOfClass:[NSNull class]] && [jsonParam isKindOfClass:[NSString class]]) {
+      NSString *jsonString = (NSString *)jsonParam;
+      if (jsonString.length > 0) {
+        NSData *data = [jsonString dataUsingEncoding:NSUTF8StringEncoding];
+        NSError *error = nil;
+        NSDictionary *dict = [NSJSONSerialization JSONObjectWithData:data options:0 error:&error];
+        if (!error && dict) {
+          return dict;
+        }
+      }
+    }
+    return @{};
+  };
+
+  // Parse all JSON parameters
+  NSDictionary *optionsDict = parseJSONDict(options);
+  NSDictionary *metadataDict = parseJSONDict(metadata);
+  NSDictionary *recipientDict = parseJSONDict(recipient);
+  NSDictionary *senderDict = parseJSONDict(sender);
+
   SEL selector = NSSelectorFromString(@"predictShippingLabelCloud:barcodes:token:apiKey:locationId:options:metadata:recipient:sender:shouldResizeImage:resolver:rejecter:");
 
   if ([swiftModule respondsToSelector:selector]) {
@@ -284,13 +311,13 @@ RCT_EXPORT_METHOD(predictShippingLabelCloud:(NSString *)imagePath
     [invocation setTarget:swiftModule];
     [invocation setArgument:&imagePath atIndex:2];
     [invocation setArgument:&barcodes atIndex:3];
-    [invocation setArgument:&token atIndex:4];
-    [invocation setArgument:&apiKey atIndex:5];
-    [invocation setArgument:&locationId atIndex:6];
-    [invocation setArgument:&options atIndex:7];
-    [invocation setArgument:&metadata atIndex:8];
-    [invocation setArgument:&recipient atIndex:9];
-    [invocation setArgument:&sender atIndex:10];
+    [invocation setArgument:&tokenValue atIndex:4];
+    [invocation setArgument:&apiKeyValue atIndex:5];
+    [invocation setArgument:&locationIdValue atIndex:6];
+    [invocation setArgument:&optionsDict atIndex:7];
+    [invocation setArgument:&metadataDict atIndex:8];
+    [invocation setArgument:&recipientDict atIndex:9];
+    [invocation setArgument:&senderDict atIndex:10];
     [invocation setArgument:&shouldResizeImage atIndex:11];
     [invocation setArgument:&resolve atIndex:12];
     [invocation setArgument:&reject atIndex:13];
@@ -301,8 +328,8 @@ RCT_EXPORT_METHOD(predictShippingLabelCloud:(NSString *)imagePath
 }
 
 RCT_EXPORT_METHOD(predictItemLabelCloud:(NSString *)imagePath
-                  token:(NSString * _Nullable)token
-                  apiKey:(NSString * _Nullable)apiKey
+                  token:(id _Nullable)token
+                  apiKey:(id _Nullable)apiKey
                   shouldResizeImage:(NSNumber * _Nullable)shouldResizeImage
                   resolve:(RCTPromiseResolveBlock)resolve
                   reject:(RCTPromiseRejectBlock)reject)
@@ -315,11 +342,15 @@ RCT_EXPORT_METHOD(predictItemLabelCloud:(NSString *)imagePath
     return;
   }
 
+  // Convert NSNull to nil for nullable string parameters
+  NSString *tokenValue = ([token isKindOfClass:[NSNull class]] || token == nil) ? nil : (NSString *)token;
+  NSString *apiKeyValue = ([apiKey isKindOfClass:[NSNull class]] || apiKey == nil) ? nil : (NSString *)apiKey;
+
   SEL selector = NSSelectorFromString(@"predictItemLabelCloud:token:apiKey:shouldResizeImage:resolver:rejecter:");
 
   if ([swiftModule respondsToSelector:selector]) {
     ((void (*)(id, SEL, NSString *, NSString *, NSString *, NSNumber *, RCTPromiseResolveBlock, RCTPromiseRejectBlock))objc_msgSend)(
-      swiftModule, selector, imagePath, token, apiKey, shouldResizeImage, resolve, reject
+      swiftModule, selector, imagePath, tokenValue, apiKeyValue, shouldResizeImage, resolve, reject
     );
   } else {
     reject(@"NOT_IMPLEMENTED", @"predictItemLabelCloud method not available", nil);
@@ -328,10 +359,10 @@ RCT_EXPORT_METHOD(predictItemLabelCloud:(NSString *)imagePath
 
 RCT_EXPORT_METHOD(predictBillOfLadingCloud:(NSString *)imagePath
                   barcodes:(NSArray<NSString *> * _Nullable)barcodes
-                  token:(NSString * _Nullable)token
-                  apiKey:(NSString * _Nullable)apiKey
-                  locationId:(NSString * _Nullable)locationId
-                  options:(NSDictionary * _Nullable)options
+                  token:(id _Nullable)token
+                  apiKey:(id _Nullable)apiKey
+                  locationId:(id _Nullable)locationId
+                  options:(id _Nullable)options
                   shouldResizeImage:(NSNumber * _Nullable)shouldResizeImage
                   resolve:(RCTPromiseResolveBlock)resolve
                   reject:(RCTPromiseRejectBlock)reject)
@@ -344,6 +375,30 @@ RCT_EXPORT_METHOD(predictBillOfLadingCloud:(NSString *)imagePath
     return;
   }
 
+  // Convert NSNull to nil for nullable string parameters
+  NSString *tokenValue = ([token isKindOfClass:[NSNull class]] || token == nil) ? nil : (NSString *)token;
+  NSString *apiKeyValue = ([apiKey isKindOfClass:[NSNull class]] || apiKey == nil) ? nil : (NSString *)apiKey;
+  NSString *locationIdValue = ([locationId isKindOfClass:[NSNull class]] || locationId == nil) ? nil : (NSString *)locationId;
+
+  // Parse options JSON string to NSDictionary
+  NSDictionary *optionsDict = nil;
+  if (options && ![options isKindOfClass:[NSNull class]] && [options isKindOfClass:[NSString class]]) {
+    NSString *optionsString = (NSString *)options;
+    if (optionsString.length > 0) {
+      NSData *data = [optionsString dataUsingEncoding:NSUTF8StringEncoding];
+      NSError *error = nil;
+      optionsDict = [NSJSONSerialization JSONObjectWithData:data options:0 error:&error];
+      if (error) {
+        NSLog(@"[VisionSDK TurboModule] Failed to parse options JSON: %@", error.localizedDescription);
+        optionsDict = @{};
+      }
+    } else {
+      optionsDict = @{};
+    }
+  } else {
+    optionsDict = @{};
+  }
+
   SEL selector = NSSelectorFromString(@"predictBillOfLadingCloud:barcodes:token:apiKey:locationId:options:shouldResizeImage:resolver:rejecter:");
 
   if ([swiftModule respondsToSelector:selector]) {
@@ -352,10 +407,10 @@ RCT_EXPORT_METHOD(predictBillOfLadingCloud:(NSString *)imagePath
     [invocation setTarget:swiftModule];
     [invocation setArgument:&imagePath atIndex:2];
     [invocation setArgument:&barcodes atIndex:3];
-    [invocation setArgument:&token atIndex:4];
-    [invocation setArgument:&apiKey atIndex:5];
-    [invocation setArgument:&locationId atIndex:6];
-    [invocation setArgument:&options atIndex:7];
+    [invocation setArgument:&tokenValue atIndex:4];
+    [invocation setArgument:&apiKeyValue atIndex:5];
+    [invocation setArgument:&locationIdValue atIndex:6];
+    [invocation setArgument:&optionsDict atIndex:7];
     [invocation setArgument:&shouldResizeImage atIndex:8];
     [invocation setArgument:&resolve atIndex:9];
     [invocation setArgument:&reject atIndex:10];
@@ -366,8 +421,8 @@ RCT_EXPORT_METHOD(predictBillOfLadingCloud:(NSString *)imagePath
 }
 
 RCT_EXPORT_METHOD(predictDocumentClassificationCloud:(NSString *)imagePath
-                  token:(NSString * _Nullable)token
-                  apiKey:(NSString * _Nullable)apiKey
+                  token:(id _Nullable)token
+                  apiKey:(id _Nullable)apiKey
                   shouldResizeImage:(NSNumber * _Nullable)shouldResizeImage
                   resolve:(RCTPromiseResolveBlock)resolve
                   reject:(RCTPromiseRejectBlock)reject)
@@ -380,11 +435,15 @@ RCT_EXPORT_METHOD(predictDocumentClassificationCloud:(NSString *)imagePath
     return;
   }
 
+  // Convert NSNull to nil for nullable string parameters
+  NSString *tokenValue = ([token isKindOfClass:[NSNull class]] || token == nil) ? nil : (NSString *)token;
+  NSString *apiKeyValue = ([apiKey isKindOfClass:[NSNull class]] || apiKey == nil) ? nil : (NSString *)apiKey;
+
   SEL selector = NSSelectorFromString(@"predictDocumentClassificationCloud:token:apiKey:shouldResizeImage:resolver:rejecter:");
 
   if ([swiftModule respondsToSelector:selector]) {
     ((void (*)(id, SEL, NSString *, NSString *, NSString *, NSNumber *, RCTPromiseResolveBlock, RCTPromiseRejectBlock))objc_msgSend)(
-      swiftModule, selector, imagePath, token, apiKey, shouldResizeImage, resolve, reject
+      swiftModule, selector, imagePath, tokenValue, apiKeyValue, shouldResizeImage, resolve, reject
     );
   } else {
     reject(@"NOT_IMPLEMENTED", @"predictDocumentClassificationCloud method not available", nil);
@@ -393,13 +452,13 @@ RCT_EXPORT_METHOD(predictDocumentClassificationCloud:(NSString *)imagePath
 
 RCT_EXPORT_METHOD(predictWithCloudTransformations:(NSString *)imagePath
                   barcodes:(NSArray<NSString *> * _Nullable)barcodes
-                  token:(NSString * _Nullable)token
-                  apiKey:(NSString * _Nullable)apiKey
-                  locationId:(NSString * _Nullable)locationId
-                  options:(NSDictionary * _Nullable)options
-                  metadata:(NSDictionary * _Nullable)metadata
-                  recipient:(NSDictionary * _Nullable)recipient
-                  sender:(NSDictionary * _Nullable)sender
+                  token:(id _Nullable)token
+                  apiKey:(id _Nullable)apiKey
+                  locationId:(id _Nullable)locationId
+                  options:(id _Nullable)options
+                  metadata:(id _Nullable)metadata
+                  recipient:(id _Nullable)recipient
+                  sender:(id _Nullable)sender
                   shouldResizeImage:(NSNumber * _Nullable)shouldResizeImage
                   resolve:(RCTPromiseResolveBlock)resolve
                   reject:(RCTPromiseRejectBlock)reject)
@@ -412,6 +471,33 @@ RCT_EXPORT_METHOD(predictWithCloudTransformations:(NSString *)imagePath
     return;
   }
 
+  // Convert NSNull to nil for nullable string parameters
+  NSString *tokenValue = ([token isKindOfClass:[NSNull class]] || token == nil) ? nil : (NSString *)token;
+  NSString *apiKeyValue = ([apiKey isKindOfClass:[NSNull class]] || apiKey == nil) ? nil : (NSString *)apiKey;
+  NSString *locationIdValue = ([locationId isKindOfClass:[NSNull class]] || locationId == nil) ? nil : (NSString *)locationId;
+
+  // Helper function to parse JSON string to NSDictionary
+  NSDictionary* (^parseJSONDict)(id) = ^NSDictionary*(id jsonParam) {
+    if (jsonParam && ![jsonParam isKindOfClass:[NSNull class]] && [jsonParam isKindOfClass:[NSString class]]) {
+      NSString *jsonString = (NSString *)jsonParam;
+      if (jsonString.length > 0) {
+        NSData *data = [jsonString dataUsingEncoding:NSUTF8StringEncoding];
+        NSError *error = nil;
+        NSDictionary *dict = [NSJSONSerialization JSONObjectWithData:data options:0 error:&error];
+        if (!error && dict) {
+          return dict;
+        }
+      }
+    }
+    return @{};
+  };
+
+  // Parse all JSON parameters
+  NSDictionary *optionsDict = parseJSONDict(options);
+  NSDictionary *metadataDict = parseJSONDict(metadata);
+  NSDictionary *recipientDict = parseJSONDict(recipient);
+  NSDictionary *senderDict = parseJSONDict(sender);
+
   SEL selector = NSSelectorFromString(@"predictWithCloudTransformations:barcodes:token:apiKey:locationId:options:metadata:recipient:sender:shouldResizeImage:resolver:rejecter:");
 
   if ([swiftModule respondsToSelector:selector]) {
@@ -420,13 +506,13 @@ RCT_EXPORT_METHOD(predictWithCloudTransformations:(NSString *)imagePath
     [invocation setTarget:swiftModule];
     [invocation setArgument:&imagePath atIndex:2];
     [invocation setArgument:&barcodes atIndex:3];
-    [invocation setArgument:&token atIndex:4];
-    [invocation setArgument:&apiKey atIndex:5];
-    [invocation setArgument:&locationId atIndex:6];
-    [invocation setArgument:&options atIndex:7];
-    [invocation setArgument:&metadata atIndex:8];
-    [invocation setArgument:&recipient atIndex:9];
-    [invocation setArgument:&sender atIndex:10];
+    [invocation setArgument:&tokenValue atIndex:4];
+    [invocation setArgument:&apiKeyValue atIndex:5];
+    [invocation setArgument:&locationIdValue atIndex:6];
+    [invocation setArgument:&optionsDict atIndex:7];
+    [invocation setArgument:&metadataDict atIndex:8];
+    [invocation setArgument:&recipientDict atIndex:9];
+    [invocation setArgument:&senderDict atIndex:10];
     [invocation setArgument:&shouldResizeImage atIndex:11];
     [invocation setArgument:&resolve atIndex:12];
     [invocation setArgument:&reject atIndex:13];

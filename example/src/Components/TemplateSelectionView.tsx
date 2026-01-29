@@ -24,13 +24,13 @@ const TemplateSelectionView = ({
   }
 
   const handleSelectTemplate = useCallback((template) => {
-    if (selectedTemplate.name === template.name) {
-      setSelectedTemplate({})
+    if (selectedTemplate?.id === template?.id) {
+      setSelectedTemplate(null)
     } else {
       setSelectedTemplate(template)
     }
     closeModal()
-  }, [])
+  }, [selectedTemplate, closeModal, setSelectedTemplate])
 
 
   return (
@@ -54,12 +54,12 @@ const TemplateSelectionView = ({
           </TouchableOpacity>
           {templates.map((item, i) =>
 
-            <React.Fragment key={item.name || i}>
+            <React.Fragment key={item.id || i}>
               <View style={styles.horizontalLine} />
               <View
                 style={styles.rowStyle}
               >
-                <TouchableOpacity onPress={() => onPressDeleteTemplateById(item.name)}>
+                <TouchableOpacity onPress={() => onPressDeleteTemplateById(item.id)}>
                   <MaterialIcons name="delete-outline" size={20} color="#e32d2d" />
                 </TouchableOpacity>
                 <TouchableOpacity
@@ -73,9 +73,9 @@ const TemplateSelectionView = ({
                     height: '100%',
                     // backgroundColor:'yellow'
                   }}>
-                  <Text style={[styles.textStyle]}>{item.name}</Text>
+                  <Text style={[styles.textStyle]}>{item.id}</Text>
 
-                  {selectedTemplate?.name == item.name && (
+                  {selectedTemplate?.id == item.id && (
                     <MaterialIcons name="done" size={20} color="rgba(0, 239, 0, 0.8)" />
                   )}
                 </TouchableOpacity>
@@ -87,11 +87,11 @@ const TemplateSelectionView = ({
 
           <View style={styles.horizontalLine} />
           <TouchableOpacity
-            onPress={() => handleSelectTemplate({})}
+            onPress={() => handleSelectTemplate(null)}
             style={[styles.rowStyle]}
           >
             <Text style={styles.textStyle}>None</Text>
-            {!selectedTemplate?.name && (
+            {!selectedTemplate?.id && (
               <MaterialIcons name="done" size={20} color="rgba(0, 239, 0, 0.8)" />
             )}
 

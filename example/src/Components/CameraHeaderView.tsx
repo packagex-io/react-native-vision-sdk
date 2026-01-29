@@ -117,7 +117,7 @@ function CameraHeaderView({
           onPress={() => {
             setIfTemplateSelectorVisible(!isTemplateSeletorVisible);
           }}
-          style={[styles.rightIconContainer, {marginTop: 12, backgroundColor: selectedTemplate?.name ? 'rgba(0, 239, 0, 0.8)' : styles.rightIconContainer.backgroundColor }]}
+          style={[styles.rightIconContainer, {marginTop: 12, backgroundColor: selectedTemplate?.id ? 'rgba(0, 239, 0, 0.8)' : styles.rightIconContainer.backgroundColor }]}
         >
           <Icon
             name={'filter'}

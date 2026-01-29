@@ -306,44 +306,23 @@ export interface VisionSdkViewProps {
   onOCRScan?: (event: OCRScanResult | { nativeEvent: OCRScanResult }) => void;
 
   /**
-   * @type {(event: string | { nativeEvent: string }) => void}
-   * @param {string | { nativeEvent: string }} event - Event triggered when a template is created.
+   * @type {(event: { nativeEvent: { data: TemplateData } }) => void}
+   * @param {object} event - Event triggered when a template is created.
+   * @param {object} event.nativeEvent - Native event object.
+   * @param {TemplateData} event.nativeEvent.data - Template data object (normalized across iOS and Android).
    * @description Optional event handler that triggers when a template is successfully created.
-   * This callback receives the created template's ID or a native event.
+   * The wrapper automatically normalizes the data format between iOS and Android - you always
+   * receive a parsed TemplateData object ready to use.
    * @example
-   * onCreateTemplate: (event) => console.log('Template Created:', event)
+   * onCreateTemplate: (event) => {
+   *   const template = event.nativeEvent.data; // Already parsed TemplateData object
+   *   console.log('Template ID:', template.id);
+   *   console.log('Codes:', template.templateCodes);
+   *   // Save to AsyncStorage
+   *   saveTemplate(JSON.stringify(template));
+   * }
    */
-  onCreateTemplate?: (event: string | { nativeEvent: string }) => void;
-
-  /**
-   * @type {(event: string[] | { nativeEvent: string }) => void}
-   * @param {string[] | { nativeEvent: string }} event - Event triggered when templates are retrieved.
-   * @description Optional event handler that triggers when templates are successfully retrieved.
-   * This callback receives an array of template IDs or a native event.
-   * @example
-   * onGetTemplates: (event) => console.log('Templates Retrieved:', event)
-   */
-  onGetTemplates?: (event: string[] | { nativeEvent: string }) => void;
-
-  /**
-   * @type {(event: string | { nativeEvent: string }) => void}
-   * @param {string | { nativeEvent: string }} event - Event triggered when a template is deleted by its ID.
-   * @description Optional event handler that triggers when a template is successfully deleted using its ID.
-   * This callback receives the ID of the deleted template or a native event.
-   * @example
-   * onDeleteTemplateById: (event) => console.log('Template Deleted:', event)
-   */
-  onDeleteTemplateById?: (event: string | { nativeEvent: string }) => void;
-
-  /**
-   * @type {(event: string | { nativeEvent: string }) => void}
-   * @param {string | { nativeEvent: string }} event - Event triggered when multiple templates are deleted.
-   * @description Optional event handler that triggers when multiple templates are successfully deleted.
-   * This callback receives the IDs of the deleted templates or a native event.
-   * @example
-   * onDeleteTemplates: (event) => console.log('Templates Deleted:', event)
-   */
-  onDeleteTemplates?: (event: string | { nativeEvent: string }) => void;
+  onCreateTemplate?: (event: { nativeEvent: { data: TemplateData } }) => void;
 
   /**
    * @type {(event: DetectionResult | { nativeEvent: DetectionResult }) => void}
@@ -870,40 +849,12 @@ export interface VisionSdkRefProps {
 
   /**
    * Creates a new template.
-   * @description This method allows you to create a new template in the Vision SDK.
+   * @description Opens the template creation UI. The created template JSON will be returned via the onCreateTemplate event.
    * @example
    * visionSdkRef.current.createTemplate();
    * @return {void}
    */
-  createTemplate: (callback?: (res: any, err: any) => void) => void;
-
-  /**
-   * Gets all saved templates.
-   * @description This method retrieves all templates saved in the Vision SDK.
-   * @example
-   * visionSdkRef.current.getAllTemplates();
-   * @return {void}
-   */
-  getAllTemplates: () => void;
-
-  /**
-   * Deletes a specific template by its ID.
-   * @param {string} id - The unique identifier of the template to be deleted.
-   * @description This method deletes a template with a given ID.
-   * @example
-   * visionSdkRef.current.deleteTemplateWithId('template123');
-   * @return {void}
-   */
-  deleteTemplateWithId: (id: string) => void;
-
-  /**
-   * Deletes all templates from storage.
-   * @description This method deletes all templates stored in the Vision SDK.
-   * @example
-   * visionSdkRef.current.deleteAllTemplates();
-   * @return {void}
-   */
-  deleteAllTemplates: () => void;
+  createTemplate: () => void;
 
   /**
    * Sets the focus settings for the Vision SDK.
@@ -1177,52 +1128,21 @@ export interface VisionSdkProps {
 
   /**
    * @optional
-   * @param {string } event - The event triggered when a template is created.
-   * @type {(event: string ) => void | undefined}
+   * @param {object} event - The event triggered when a template is created.
+   * @param {object} event.nativeEvent - Native event object.
+   * @param {string} event.nativeEvent.data - Template JSON string.
+   * @type {(event: { nativeEvent: { data: string } }) => void | undefined}
    * @description Event handler that triggers when a template is successfully created.
-   * This callback receives the created template's ID or a native event.
+   * This callback receives the created template as JSON string.
    * @example
-   * onCreateTemplate: (event) => console.log('Template Created:', event)
+   * onCreateTemplate: (event) => {
+   *   const templateJson = event.nativeEvent.data;
+   *   saveTemplate(templateJson);
+   * }
    * @return {void}
    */
 
-  onCreateTemplate?: (event: string) => void;
-
-  /**
-   * @optional
-   * @param {string[]} event - The event triggered when templates are retrieved.
-   * @type {(event: string[]) => void | undefined}
-   * @description Event handler that triggers when templates are successfully retrieved.
-   * This callback receives an array of template IDs or a native event.
-   * @example
-   * onGetTemplates: (event) => console.log('Templates Retrieved:', event)
-   * @return {void}
-   */
-  onGetTemplates?: (event: string[]) => void;
-
-  /**
-   * @optional
-   * @param {string} event - The event triggered when a template is deleted by ID.
-   * @type {(event: string) => void | undefined}
-   * @description Event handler that triggers when a template is successfully deleted using its ID.
-   * This callback receives the ID of the deleted template or a native event.
-   * @example
-   * onDeleteTemplateById: (event) => console.log('Template Deleted:', event)
-   * @return {void}
-   */
-  onDeleteTemplateById?: (event: string | { nativeEvent: string }) => void;
-
-  /**
-   * @optional
-   * @param {string } event - The event triggered when multiple templates are deleted.
-   * @type {(event: string) => void | undefined}
-   * @description Event handler that triggers when multiple templates are successfully deleted.
-   * This callback receives the ID(s) of the deleted templates or a native event.
-   * @example
-   * onDeleteTemplates: (event) => console.log('Templates Deleted:', event)
-   * @return {void}
-   */
-  onDeleteTemplates?: (event: string) => void;
+  onCreateTemplate?: (event: { nativeEvent: { data: string } }) => void;
 
   /**
    * @optional
@@ -1392,6 +1312,100 @@ export interface ModelUpdateInfo {
    * Human-readable status message
    */
   message: string;
+}
+
+/**
+ * Bounding box coordinates
+ * @interface
+ */
+export interface BoundingBox {
+  /**
+   * X coordinate (left edge)
+   */
+  x: number;
+
+  /**
+   * Y coordinate (top edge)
+   */
+  y: number;
+
+  /**
+   * Width of bounding box
+   */
+  width: number;
+
+  /**
+   * Height of bounding box
+   */
+  height: number;
+}
+
+/**
+ * Barcode information for OCR predictions
+ * @interface
+ */
+export interface DetectedBarcode {
+  /**
+   * Barcode value/string
+   */
+  scannedCode: string;
+
+  /**
+   * Barcode symbology/format (e.g., 'CODE_128', 'QR_CODE', 'EAN_13')
+   */
+  symbology: string;
+
+  /**
+   * GS1 extracted information (optional)
+   * Key-value pairs of GS1 application identifiers and their values
+   * @example { "01": "12345678901234", "17": "250101", "10": "LOT123" }
+   */
+  gs1ExtractedInfo?: Record<string, string>;
+
+  /**
+   * Bounding box coordinates (optional)
+   */
+  boundingBox?: BoundingBox;
+}
+
+/**
+ * Template code information
+ * Represents a single barcode in a template
+ * @interface
+ */
+export interface TemplateCode {
+  /**
+   * Barcode value/string
+   */
+  codeString: string;
+
+  /**
+   * Barcode symbology (e.g., 'code128', 'qrcode', 'ean13')
+   */
+  codeSymbology: string;
+
+  /**
+   * Bounding box coordinates (optional)
+   * Uses iOS CGRect format for cross-platform compatibility
+   */
+  boundingBox?: BoundingBox;
+}
+
+/**
+ * Template data structure
+ * Templates define barcode matching patterns for scanning
+ * @interface
+ */
+export interface TemplateData {
+  /**
+   * Unique template identifier
+   */
+  id: string;
+
+  /**
+   * Array of template codes to match
+   */
+  templateCodes: TemplateCode[];
 }
 
 /**

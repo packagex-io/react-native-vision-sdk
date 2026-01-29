@@ -10,10 +10,39 @@ import {
   Image,
   Clipboard,
 } from 'react-native';
-import { VisionCore, ExecutionProvider } from '../../src/index';
+import { VisionCore, ExecutionProvider, DetectedBarcode } from '../../src/index';
 import { useFocusEffect } from '@react-navigation/native';
 
 const api_key = ""; // Add your PackageX API key here
+
+// Sample barcodes array with iOS-format properties
+const SAMPLE_BARCODES: DetectedBarcode[] = [
+  {
+    scannedCode: "1234567890128",
+    symbology: "code_128",
+    gs1ExtractedInfo: {
+      "01": "12345678901234",
+      "17": "250101",
+      "10": "LOT123"
+    },
+    boundingBox: {
+      x: 100,
+      y: 200,
+      width: 150,
+      height: 50
+    }
+  },
+  {
+    scannedCode: "9876543210",
+    symbology: "code_128",
+    boundingBox: {
+      x: 300,
+      y: 400,
+      width: 200,
+      height: 200
+    }
+  }
+];
 
 const ModelManagementScreen = ({ navigation }) => {
   // State management
@@ -450,7 +479,7 @@ const ModelManagementScreen = ({ navigation }) => {
           const result = await VisionCore.predictWithModule(
             model,
             imagePath,
-            []
+            SAMPLE_BARCODES
           );
           const duration = Date.now() - modelStartTime;
 
@@ -626,7 +655,7 @@ const ModelManagementScreen = ({ navigation }) => {
           size: selectedModelSize as any,
         },
         imagePath,
-        []
+        SAMPLE_BARCODES
       );
 
       setStatusMessage('✅ Prediction completed!');

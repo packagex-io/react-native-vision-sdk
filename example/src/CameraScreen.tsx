@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { StyleSheet, Platform, Alert, Vibration, useWindowDimensions, Text, View, Image, TouchableOpacity, InteractionManager } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 // import { GestureHandlerRootView } from 'react-native-gesture-handler'
 import VisionSdkView, {
   VisionSdkRefProps,
@@ -7,7 +8,8 @@ import VisionSdkView, {
   ModuleSize,
   OCRConfig,
   BoundingBoxesDetectedResult,
-  VisionCore
+  VisionCore,
+  TemplateData
 } from '../../src/index';
 import CameraFooterView from './Components/CameraFooterView';
 import DownloadingProgressView from './Components/DownloadingProgressView';
@@ -19,6 +21,9 @@ import { useFocusEffect } from '@react-navigation/native';
 
 
 const apiKey = "" // Add your PackageX API key here
+
+// Template storage key
+const TEMPLATES_STORAGE_KEY = '@vision_sdk_templates';
 
 // Define interfaces for the state types
 interface DownloadingProgress {
@@ -114,8 +119,8 @@ const CameraScreenComponent: React.FC<{ route: any }> = ({ route }) => {
   const [flash, setFlash] = useState<boolean>(false);
   const [zoomLevel, setZoomLevel] = useState<number>(1.8);
   const [cameraFacing, setCameraFacing] = useState<'back' | 'front'>('back');
-  const [availableTemplates, setAvailableTemplates] = useState([])
-  const [selectedTemplate, setSelectedTemplate] = useState({})
+  const [availableTemplates, setAvailableTemplates] = useState<TemplateData[]>([])
+  const [selectedTemplate, setSelectedTemplate] = useState<TemplateData | null>(null)
   const [detectedData, setDetectedData] = useState<DetectedDataProps>({
     barcode: false,
     qrcode: false,
@@ -140,6 +145,69 @@ const CameraScreenComponent: React.FC<{ route: any }> = ({ route }) => {
       progress: 0,
       isReady: false
     });
+
+  // Template storage helper functions
+  const loadTemplatesFromStorage = useCallback(async () => {
+    try {
+      const stored = await AsyncStorage.getItem(TEMPLATES_STORAGE_KEY);
+      if (stored) {
+        const templates = JSON.parse(stored);
+        setAvailableTemplates(templates);
+      }
+    } catch (error) {
+      console.error('Failed to load templates from storage:', error);
+    }
+  }, []);
+
+  const saveTemplatesToStorage = useCallback(async (templates: TemplateData[]) => {
+    try {
+      await AsyncStorage.setItem(TEMPLATES_STORAGE_KEY, JSON.stringify(templates));
+    } catch (error) {
+      console.error('Failed to save templates to storage:', error);
+    }
+  }, []);
+
+  const addTemplate = useCallback(async (templateJson: string) => {
+    try {
+      const template: TemplateData = JSON.parse(templateJson);
+      const updatedTemplates = [...availableTemplates, template];
+      // Remove duplicates by ID
+      const uniqueTemplates = updatedTemplates.filter(
+        (t, index, self) => index === self.findIndex((temp) => temp.id === t.id)
+      );
+      setAvailableTemplates(uniqueTemplates);
+      await saveTemplatesToStorage(uniqueTemplates);
+      return template;
+    } catch (error) {
+      console.error('Failed to add template:', error);
+      throw error;
+    }
+  }, [availableTemplates, saveTemplatesToStorage]);
+
+  const deleteTemplate = useCallback(async (templateId: string) => {
+    try {
+      const updatedTemplates = availableTemplates.filter((t) => t.id !== templateId);
+      setAvailableTemplates(updatedTemplates);
+      await saveTemplatesToStorage(updatedTemplates);
+
+      // If deleted template was selected, clear selection
+      if (selectedTemplate?.id === templateId) {
+        setSelectedTemplate(null);
+      }
+    } catch (error) {
+      console.error('Failed to delete template:', error);
+    }
+  }, [availableTemplates, selectedTemplate, saveTemplatesToStorage]);
+
+  const deleteAllTemplates = useCallback(async () => {
+    try {
+      setAvailableTemplates([]);
+      setSelectedTemplate(null);
+      await AsyncStorage.removeItem(TEMPLATES_STORAGE_KEY);
+    } catch (error) {
+      console.error('Failed to delete all templates:', error);
+    }
+  }, []);
 
   // Helper function to clear bounding boxes
   const clearBoundingBoxes = useCallback(() => {
@@ -209,16 +277,13 @@ const CameraScreenComponent: React.FC<{ route: any }> = ({ route }) => {
       visionSdk?.current?.startRunningHandler();
       console.log('⏱️ requestCameraPermission: Camera started', Date.now());
 
-      // Defer getAllTemplates to prevent blocking UI thread
-      // This call is heavy (~900ms) and not critical for initial render
-
-      console.log('⏱️ requestCameraPermission: Calling getAllTemplates (deferred)', Date.now());
-      visionSdk?.current?.getAllTemplates();
-
+      // Load templates from AsyncStorage
+      console.log('⏱️ requestCameraPermission: Loading templates from storage', Date.now());
+      loadTemplatesFromStorage();
 
       setLoading(false);
     }
-  }, [scannerX, scannerY, scannerWidth, scannerHeight, detectionSettings]);
+  }, [scannerX, scannerY, scannerWidth, scannerHeight, detectionSettings, loadTemplatesFromStorage]);
 
 
 
@@ -273,20 +338,15 @@ const CameraScreenComponent: React.FC<{ route: any }> = ({ route }) => {
   }, [ocrConfig])
 
   useEffect(() => {
-    // Combine both effects to avoid circular dependency
+    // Apply selected template to detection settings
     const updatedDetectionSettings: any = { ...detectionSettings }
-    const newTemplateId = (selectedTemplate as any)?.name;
-    const currentTemplateId = (detectionSettings as any).selectedTemplateId;
+    const newTemplateJson = selectedTemplate ? JSON.stringify(selectedTemplate) : '';
+    const currentTemplateJson = (detectionSettings as any).selectedTemplate || '';
 
-    if (newTemplateId) {
-      updatedDetectionSettings.selectedTemplateId = newTemplateId;
-    } else {
-      // Send empty string to trigger template removal on native side
-      updatedDetectionSettings.selectedTemplateId = "";
-    }
+    updatedDetectionSettings.selectedTemplate = newTemplateJson;
 
-    // Check if there's an actual change by comparing with current state
-    const hasChanged = newTemplateId !== currentTemplateId;
+    // Check if there's an actual change by comparing JSON strings
+    const hasChanged = newTemplateJson !== currentTemplateJson;
 
     if (hasChanged) {
       // Clear old bounding boxes when template changes
@@ -294,6 +354,7 @@ const CameraScreenComponent: React.FC<{ route: any }> = ({ route }) => {
 
       setDetectionSettings(updatedDetectionSettings)
       visionSdk.current?.setObjectDetectionSettings(updatedDetectionSettings)
+      console.log("✅ Template applied:", selectedTemplate?.id || 'none');
     } else {
       console.log("⏭️ Template unchanged, skipping update");
     }
@@ -580,56 +641,64 @@ const CameraScreenComponent: React.FC<{ route: any }> = ({ route }) => {
     setOcrConfig(ocrConfig);
   }, [])
 
-  const handleCreateTemplate = useCallback((event) => {
-    const templates = [...availableTemplates, { name: event.data }]
-    const uniqueTemplates = [...new Map(templates.map(item => [item.name, item])).values()]
-    setAvailableTemplates(uniqueTemplates)
-
-  }, [availableTemplates])
-
-  const onDeleteTemplateById = (event) => {
-    const updatedTemplates = availableTemplates.filter((item) => item.name !== event.data)
-    setAvailableTemplates(updatedTemplates)
-  }
-
-
-  const onDeleteAllTemplates = (event) => {
-
-    setSelectedTemplate({})
-    setAvailableTemplates([])
-  }
-
-  const handleGetTemplates = useCallback((args) => {
-    // Parse dataJson (Fabric uses JSON string due to codegen limitations)
-    let templateNames: string[] = [];
+  const handleCreateTemplate = useCallback(async (event) => {
     try {
-      if (args?.dataJson) {
-        templateNames = JSON.parse(args.dataJson);
-      } else if (args?.data) {
-        // Fallback for old architecture compatibility
-        templateNames = args.data;
-      }
-    } catch (error) {
-      console.error('Failed to parse template names:', error);
-    }
+      // The wrapper normalizes the data to always be a parsed TemplateData object
+      const template = event.data;
 
-    const templates = templateNames.map(item => ({ name: item }));
-    setAvailableTemplates(templates);
+      // Filter out old API format (just template ID without templateCodes)
+      if (!template.templateCodes || !Array.isArray(template.templateCodes)) {
+        return;
+      }
+
+      // Convert to JSON string for storage
+      const templateJson = JSON.stringify(template);
+      await addTemplate(templateJson);
+
+      Alert.alert(
+        'Template Created',
+        `Template "${template.id}" has been created successfully.`,
+        [{ text: 'OK' }]
+      );
+    } catch (error) {
+      console.error('Failed to create template:', error);
+      Alert.alert('Error', 'Failed to create template. Please try again.');
+    }
+  }, [addTemplate])
+
+  const handlePressCreateTemplate = useCallback(() => {
+    visionSdk.current?.createTemplate()
   }, [])
 
-  const handlePressCreateTemplate = () => {
+  const handlePressDeleteTemplateById = useCallback((templateId: string) => {
+    Alert.alert(
+      'Delete Template',
+      `Are you sure you want to delete "${templateId}"?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => deleteTemplate(templateId)
+        }
+      ]
+    );
+  }, [deleteTemplate])
 
-    visionSdk.current?.createTemplate()
-
-  }
-
-  const handlePressDeleteTemplateById = (templateId) => {
-    visionSdk?.current?.deleteTemplateWithId(templateId)
-  }
-
-  const handlePressDeleteAllTemplates = () => {
-    visionSdk?.current?.deleteAllTemplates()
-  }
+  const handlePressDeleteAllTemplates = useCallback(() => {
+    Alert.alert(
+      'Delete All Templates',
+      'Are you sure you want to delete all templates?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete All',
+          style: 'destructive',
+          onPress: () => deleteAllTemplates()
+        }
+      ]
+    );
+  }, [deleteAllTemplates])
 
 
   const handleBoundingBoxesDetected = useCallback((args) => {
@@ -706,7 +775,7 @@ const CameraScreenComponent: React.FC<{ route: any }> = ({ route }) => {
         options={{}}
         isEnableAutoOcrResponseWithImage={true}
         locationId=""
-        token={null}
+        token={undefined}
         apiKey={apiKey}
         flash={flash}
         zoomLevel={zoomLevel}
@@ -714,13 +783,10 @@ const CameraScreenComponent: React.FC<{ route: any }> = ({ route }) => {
         onDetected={handleDetected}
         onBarcodeScan={handleBarcodeScan}
         onCreateTemplate={handleCreateTemplate}
-        onDeleteTemplateById={onDeleteTemplateById}
-        onDeleteTemplates={onDeleteAllTemplates}
         onOCRScan={handleOcrScan}
         onImageCaptured={handleImageCaptured}
         onSharpnessScore={handleSharpnessScore}
         onModelDownloadProgress={handleModelDownloadProgress}
-        onGetTemplates={handleGetTemplates}
         onBoundingBoxesDetected={handleBoundingBoxesDetected}
         onPriceTagDetected={handlePriceTagDetected}
         onError={handleError}

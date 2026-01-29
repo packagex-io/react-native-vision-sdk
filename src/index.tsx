@@ -63,9 +63,6 @@ const Camera = forwardRef<VisionSdkRefProps, VisionSdkProps>(
       onBoundingBoxesDetected = () => { },
       onError = () => { },
       onCreateTemplate = () => { },
-      onGetTemplates = () => { },
-      onDeleteTemplateById = () => { },
-      onDeleteTemplates = () => { },
       shouldResizeImage = true,
       modelExecutionProviderAndroid = 'NNAPI'
     },
@@ -95,9 +92,6 @@ const Camera = forwardRef<VisionSdkRefProps, VisionSdkProps>(
       getPredictionDocumentClassificationCloud,
       reportError,
       createTemplate,
-      getAllTemplates,
-      deleteTemplateWithId,
-      deleteAllTemplates,
     }
 
     /* Command functions using dispatchCommand helper with name and enum fallback */
@@ -313,17 +307,7 @@ const Camera = forwardRef<VisionSdkRefProps, VisionSdkProps>(
         dispatchCommand('reportError', [JSON.stringify(param), token || '', apiKey || '']),
 
       // 18: Creates a new template using the 'createTemplate' command
-      createTemplate: () => dispatchCommand('createTemplate'), //no implementation found in android wrapper for this
-
-      // 19: Get all saved templates using the 'getAllTemplates' command
-      getAllTemplates: () => dispatchCommand('getAllTemplates'), //no implementation found in android wrapper for this
-
-      // 20: Deletes a specific template by its ID using the 'deleteTemplateWithId' command
-      deleteTemplateWithId: (id: string) =>
-        dispatchCommand('deleteTemplateWithId', [id]),  //no implementation found in android wrapper for this
-
-      // 21: Deletes all templates from storage using the 'deleteAllTemplates' command
-      deleteAllTemplates: () => dispatchCommand('deleteAllTemplates'),  //no implementation found in android wrapper for this
+      createTemplate: () => dispatchCommand('createTemplate'),
     }), [dispatchCommand]);
 
 
@@ -415,78 +399,40 @@ const Camera = forwardRef<VisionSdkRefProps, VisionSdkProps>(
       console.log("ON CREATE TEMPLATE HANDLER: ", event)
       let templateEvent = parseNativeEvent<any>(event);
 
+      // Normalize template data format between iOS and Android
+      // iOS: Sends parsed object (bridge auto-parses JSON)
+      // Android: Sends JSON string
+      let normalizedData = templateEvent.data;
+
       // Parse dataJson from Fabric architecture
       if (typeof templateEvent.dataJson === 'string') {
         try {
           const parsed = JSON.parse(templateEvent.dataJson);
           // If it's an array with a single element (wrapped primitive), unwrap it
-          templateEvent.data = Array.isArray(parsed) && parsed.length === 1 ? parsed[0] : parsed;
+          normalizedData = Array.isArray(parsed) && parsed.length === 1 ? parsed[0] : parsed;
         } catch (error) {
           console.warn("Failed to parse template dataJson:", error);
-          templateEvent.data = templateEvent.dataJson;
+          normalizedData = templateEvent.dataJson;
         }
+      }
+
+      // Ensure data is always a parsed object (TemplateData)
+      // iOS already sends parsed object, Android sends JSON string
+      if (typeof normalizedData === 'string') {
+        // Android case: Parse JSON string to object
+        try {
+          templateEvent.data = JSON.parse(normalizedData);
+        } catch (error) {
+          console.warn("Failed to parse template JSON string:", error);
+          templateEvent.data = normalizedData;
+        }
+      } else if (typeof normalizedData === 'object' && normalizedData !== null) {
+        // iOS case: Already an object, use as-is
+        templateEvent.data = normalizedData;
       }
 
       onCreateTemplate(templateEvent)
     }, [onCreateTemplate]);
-
-    const onGetTemplateHandler = useCallback((event: any) => {
-      // console.log("ON GET TEMPLATES HANDLER: ", event)
-      let templateEvent = parseNativeEvent<any>(event);
-
-      // Parse dataJson from Fabric architecture
-      if (typeof templateEvent.dataJson === 'string') {
-        try {
-          const parsed = JSON.parse(templateEvent.dataJson);
-          templateEvent.data = Array.isArray(parsed) ? parsed : [parsed];
-        } catch (error) {
-          console.warn("Failed to parse template dataJson:", error);
-          templateEvent.data = [];
-        }
-      } else {
-        templateEvent.data = [];
-      }
-
-      onGetTemplates(templateEvent)
-    }, [onGetTemplates]);
-
-    const onDeleteTemplateByIdHandler = useCallback((event: any) => {
-      console.log("ON DELETE TEMPLATE BY ID HANDLER: ", event)
-      let templateEvent = parseNativeEvent<any>(event);
-
-      // Parse dataJson from Fabric architecture
-      if (typeof templateEvent.dataJson === 'string') {
-        try {
-          const parsed = JSON.parse(templateEvent.dataJson);
-          // If it's an array with a single element (wrapped primitive), unwrap it
-          templateEvent.data = Array.isArray(parsed) && parsed.length === 1 ? parsed[0] : parsed;
-        } catch (error) {
-          console.warn("Failed to parse template dataJson:", error);
-          templateEvent.data = templateEvent.dataJson;
-        }
-      }
-
-      onDeleteTemplateById(templateEvent)
-    }, [onDeleteTemplateById])
-
-    const onDeleteTemplatesHandler = useCallback((event: any) => {
-      console.log("ON DELETE TEMPLATES HANDLER: ", event)
-      let templateEvent = parseNativeEvent<any>(event);
-
-      // Parse dataJson from Fabric architecture
-      if (typeof templateEvent.dataJson === 'string') {
-        try {
-          const parsed = JSON.parse(templateEvent.dataJson);
-          // If it's an array with a single element (wrapped primitive), unwrap it
-          templateEvent.data = Array.isArray(parsed) && parsed.length === 1 ? parsed[0] : parsed;
-        } catch (error) {
-          console.warn("Failed to parse template dataJson:", error);
-          templateEvent.data = templateEvent.dataJson;
-        }
-      }
-
-      onDeleteTemplates(templateEvent)
-    }, [onDeleteTemplates])
 
     const onOCRScanHandler = useCallback((event: any) => {
       let ocrEvent = parseNativeEvent<OCRScanResult>(event);
@@ -528,10 +474,7 @@ const Camera = forwardRef<VisionSdkRefProps, VisionSdkProps>(
       onDetected: onDetectedHandler,
       onBoundingBoxesDetected: onBoundingBoxesDetectedHandler,
       onError: onErrorHandler,
-      onCreateTemplate: onCreateTemplateHandler,
-      onGetTemplates: onGetTemplateHandler,
-      onDeleteTemplateById: onDeleteTemplateByIdHandler,
-      onDeleteTemplates: onDeleteTemplatesHandler
+      onCreateTemplate: onCreateTemplateHandler
     })
 
     useEffect(() => {
@@ -544,9 +487,6 @@ const Camera = forwardRef<VisionSdkRefProps, VisionSdkProps>(
       eventHandlersRef.current.onDetected = onDetectedHandler
       eventHandlersRef.current.onError = onErrorHandler
       eventHandlersRef.current.onCreateTemplate = onCreateTemplateHandler
-      eventHandlersRef.current.onGetTemplates = onGetTemplateHandler
-      eventHandlersRef.current.onDeleteTemplateById = onDeleteTemplateByIdHandler
-      eventHandlersRef.current.onDeleteTemplates = onDeleteTemplatesHandler
       eventHandlersRef.current.onBoundingBoxesDetected = onBoundingBoxesDetectedHandler
     }, [
       onBarcodeScan,
@@ -558,10 +498,7 @@ const Camera = forwardRef<VisionSdkRefProps, VisionSdkProps>(
       onDetected,
       onBoundingBoxesDetected,
       onError,
-      onCreateTemplate,
-      onGetTemplates,
-      onDeleteTemplateById,
-      onDeleteTemplates
+      onCreateTemplate
     ])
 
     // Subscribe event listeners on mount, and cleanup on unmount
@@ -580,9 +517,6 @@ const Camera = forwardRef<VisionSdkRefProps, VisionSdkProps>(
         ['onBoundingBoxesDetected', (event: BoundingBoxesDetectedResult) => eventHandlersRef.current.onBoundingBoxesDetected(event)],
         ['onError', (event: any) => eventHandlersRef.current.onError(event)],
         ['onCreateTemplate', (event: any) => eventHandlersRef.current.onCreateTemplate(event)],
-        ['onGetTemplates', (event: any) => eventHandlersRef.current.onGetTemplates(event)],
-        ['onDeleteTemplateById', (event: any) => eventHandlersRef.current.onDeleteTemplateById(event)],
-        ['onDeleteTemplates', (event: any) => eventHandlersRef.current.onDeleteTemplates(event)],
       ];
 
       // Ensure no duplicate listeners exist
@@ -634,9 +568,6 @@ const Camera = forwardRef<VisionSdkRefProps, VisionSdkProps>(
           onBoundingBoxesDetected={onBoundingBoxesDetectedHandler}
           onError={onErrorHandler}
           onCreateTemplate={onCreateTemplateHandler}
-          onGetTemplates={onGetTemplateHandler}
-          onDeleteTemplateById={onDeleteTemplateByIdHandler}
-          onDeleteTemplates={onDeleteTemplatesHandler}
         >
           {children}
         </VisionSdkView>
