@@ -306,20 +306,23 @@ export interface VisionSdkViewProps {
   onOCRScan?: (event: OCRScanResult | { nativeEvent: OCRScanResult }) => void;
 
   /**
-   * @type {(event: { nativeEvent: { data: string } }) => void}
+   * @type {(event: { nativeEvent: { data: TemplateData } }) => void}
    * @param {object} event - Event triggered when a template is created.
    * @param {object} event.nativeEvent - Native event object.
-   * @param {string} event.nativeEvent.data - Template JSON string.
+   * @param {TemplateData} event.nativeEvent.data - Template data object (normalized across iOS and Android).
    * @description Optional event handler that triggers when a template is successfully created.
-   * This callback receives the created template as JSON string.
+   * The wrapper automatically normalizes the data format between iOS and Android - you always
+   * receive a parsed TemplateData object ready to use.
    * @example
    * onCreateTemplate: (event) => {
-   *   const templateJson = event.nativeEvent.data;
-   *   // Save to AsyncStorage or your preferred storage
-   *   saveTemplate(templateJson);
+   *   const template = event.nativeEvent.data; // Already parsed TemplateData object
+   *   console.log('Template ID:', template.id);
+   *   console.log('Codes:', template.templateCodes);
+   *   // Save to AsyncStorage
+   *   saveTemplate(JSON.stringify(template));
    * }
    */
-  onCreateTemplate?: (event: { nativeEvent: { data: string } }) => void;
+  onCreateTemplate?: (event: { nativeEvent: { data: TemplateData } }) => void;
 
   /**
    * @type {(event: DetectionResult | { nativeEvent: DetectionResult }) => void}

@@ -399,16 +399,36 @@ const Camera = forwardRef<VisionSdkRefProps, VisionSdkProps>(
       console.log("ON CREATE TEMPLATE HANDLER: ", event)
       let templateEvent = parseNativeEvent<any>(event);
 
+      // Normalize template data format between iOS and Android
+      // iOS: Sends parsed object (bridge auto-parses JSON)
+      // Android: Sends JSON string
+      let normalizedData = templateEvent.data;
+
       // Parse dataJson from Fabric architecture
       if (typeof templateEvent.dataJson === 'string') {
         try {
           const parsed = JSON.parse(templateEvent.dataJson);
           // If it's an array with a single element (wrapped primitive), unwrap it
-          templateEvent.data = Array.isArray(parsed) && parsed.length === 1 ? parsed[0] : parsed;
+          normalizedData = Array.isArray(parsed) && parsed.length === 1 ? parsed[0] : parsed;
         } catch (error) {
           console.warn("Failed to parse template dataJson:", error);
-          templateEvent.data = templateEvent.dataJson;
+          normalizedData = templateEvent.dataJson;
         }
+      }
+
+      // Ensure data is always a parsed object (TemplateData)
+      // iOS already sends parsed object, Android sends JSON string
+      if (typeof normalizedData === 'string') {
+        // Android case: Parse JSON string to object
+        try {
+          templateEvent.data = JSON.parse(normalizedData);
+        } catch (error) {
+          console.warn("Failed to parse template JSON string:", error);
+          templateEvent.data = normalizedData;
+        }
+      } else if (typeof normalizedData === 'object' && normalizedData !== null) {
+        // iOS case: Already an object, use as-is
+        templateEvent.data = normalizedData;
       }
 
       onCreateTemplate(templateEvent)

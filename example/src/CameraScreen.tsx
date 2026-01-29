@@ -643,23 +643,18 @@ const CameraScreenComponent: React.FC<{ route: any }> = ({ route }) => {
 
   const handleCreateTemplate = useCallback(async (event) => {
     try {
-      const templateJson = event.data;
-      console.log('📝 Template created:', templateJson);
+      // The wrapper normalizes the data to always be a parsed TemplateData object
+      const template = event.data;
 
-      // Filter out old API format (just template ID string without JSON structure)
-      // Only process new API format (full JSON with templateCodes array)
-      try {
-        const parsed = JSON.parse(templateJson);
-        if (!parsed.templateCodes || !Array.isArray(parsed.templateCodes)) {
-          console.log('⏭️ Ignoring old API format (no templateCodes array)');
-          return;
-        }
-      } catch (e) {
-        console.log('⏭️ Ignoring invalid JSON format');
+      // Filter out old API format (just template ID without templateCodes)
+      if (!template.templateCodes || !Array.isArray(template.templateCodes)) {
         return;
       }
 
-      const template = await addTemplate(templateJson);
+      // Convert to JSON string for storage
+      const templateJson = JSON.stringify(template);
+      await addTemplate(templateJson);
+
       Alert.alert(
         'Template Created',
         `Template "${template.id}" has been created successfully.`,
