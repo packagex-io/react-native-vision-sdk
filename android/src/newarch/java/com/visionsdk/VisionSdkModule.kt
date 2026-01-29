@@ -1541,21 +1541,42 @@ class VisionSdkModule(reactContext: ReactApplicationContext) :
                     throw IllegalArgumentException("Failed to load image from path: $imagePath")
                 }
 
-                // Parse barcodes to ScannedCodeResult list
+                // Parse barcodes to ScannedCodeResult list (using iOS format)
                 val scannedCodes = mutableListOf<ScannedCodeResult>()
                 for (i in 0 until barcodes.size()) {
                     val barcodeMap = barcodes.getMap(i)
                     if (barcodeMap != null) {
-                        val value = barcodeMap.getString("value") ?: ""
+                        // Read iOS format: "scannedCode" instead of "value"
+                        val value = barcodeMap.getString("scannedCode") ?: ""
                         val symbology = barcodeMap.getString("symbology") ?: "CODE_128"
-                        val boundsMap = barcodeMap.getMap("bounds")
 
-                        val rect = if (boundsMap != null) {
+                        // Read iOS format: "gs1ExtractedInfo" (optional)
+                        val gs1ExtractedInfo = barcodeMap.getMap("gs1ExtractedInfo")?.let { gs1Map ->
+                            val map = mutableMapOf<String, String>()
+                            val iterator = gs1Map.keySetIterator()
+                            while (iterator.hasNextKey()) {
+                                val key = iterator.nextKey()
+                                gs1Map.getString(key)?.let { value ->
+                                    map[key] = value
+                                }
+                            }
+                            map
+                        }
+
+                        // Read iOS format: "boundingBox" with {x, y, width, height}
+                        val boundingBoxMap = barcodeMap.getMap("boundingBox")
+
+                        val rect = if (boundingBoxMap != null) {
+                            // Convert iOS format {x, y, width, height} to Android Rect {left, top, right, bottom}
+                            val x = boundingBoxMap.getDouble("x").toInt()
+                            val y = boundingBoxMap.getDouble("y").toInt()
+                            val width = boundingBoxMap.getDouble("width").toInt()
+                            val height = boundingBoxMap.getDouble("height").toInt()
                             Rect(
-                                boundsMap.getInt("left"),
-                                boundsMap.getInt("top"),
-                                boundsMap.getInt("right"),
-                                boundsMap.getInt("bottom")
+                                x,              // left
+                                y,              // top
+                                x + width,      // right
+                                y + height      // bottom
                             )
                         } else {
                             Rect(0, 0, 0, 0)
@@ -1583,13 +1604,12 @@ class VisionSdkModule(reactContext: ReactApplicationContext) :
                             ScannedCodeResult(
                                 scannedCode = value,
                                 symbology = barcodeSymbology,
-                                boundingBox = rect
+                                boundingBox = rect,
+                                gs1ExtractedInfo = gs1ExtractedInfo
                             )
                         )
                     }
                 }
-
-                Log.d(TAG, "🔹 predictWithModule: parsed ${scannedCodes.size} barcodes, creating OCR manager")
 
                 // Get immutable reference to bitmap to avoid smart cast issues
                 val loadedBitmap = bitmap ?: throw IllegalArgumentException("Bitmap is null after loading")

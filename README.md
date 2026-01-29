@@ -1320,50 +1320,304 @@ visionSdk.current.reportError(data);
 
 ## Template Management
 
-### `createTemplate`
+**NEW in v2.0.6+**: Templates are now **stateless** - the SDK no longer manages template storage. You are responsible for storing and managing templates in your app (e.g., using AsyncStorage).
 
-This method is used to create a new template for use in cloud predictions.
+### What are Templates?
+
+Templates define barcode matching patterns for scanning. Once created, a template contains reference barcodes that can be used to match against scanned codes during OCR operations, improving accuracy and filtering.
+
+### Template Workflow
+
+#### 1. Create Template
+
+Use `createTemplate()` to open the template creation UI. The SDK will return the template data via the `onCreateTemplate` event.
 
 ```typescript
-/**
- * Creates a new template.
- */
+// Trigger template creation UI
 visionSdk.current.createTemplate();
 ```
 
-### `getAllTemplates`
+#### 2. Handle Template Creation Event
 
-This method is used to get all saved templates.
-
-```typescript
-/**
- * Gets all saved templates.
- */
-visionSdk.current.getAllTemplates();
-```
-
-### `deleteTemplateWithId`
-
-This method is used to delete a specific template by its ID.
+The `onCreateTemplate` event receives the full template as JSON. **You must store this yourself** (e.g., in AsyncStorage, Redux, or a database).
 
 ```typescript
-/**
- * Deletes a specific template by its ID.
- * @param id - The unique identifier of the template to be deleted.
- */
-visionSdk.current.deleteTemplateWithId(id);
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+// Template data interface
+interface TemplateData {
+  id: string;
+  templateCodes: Array<{
+    codeString: string;
+    symbology: string;
+    boundingBox?: {
+      x: number;
+      y: number;
+      width: number;
+      height: number;
+    };
+  }>;
+}
+
+// Handle template creation
+const handleCreateTemplate = async (event) => {
+  try {
+    // The event.nativeEvent.data contains the full TemplateData object
+    const template: TemplateData = event.nativeEvent.data;
+
+    // Filter out old API format (backward compatibility check)
+    if (!template.templateCodes || !Array.isArray(template.templateCodes)) {
+      console.log('Invalid template format');
+      return;
+    }
+
+    // Store template in AsyncStorage
+    const templateJson = JSON.stringify(template);
+    await AsyncStorage.setItem(`template_${template.id}`, templateJson);
+
+    Alert.alert('Success', `Template "${template.id}" saved!`);
+  } catch (error) {
+    console.error('Failed to save template:', error);
+  }
+};
+
+// Register the event handler
+<VisionSdkView
+  ref={visionSdk}
+  onCreateTemplate={handleCreateTemplate}
+  // ... other props
+/>
 ```
 
-### `deleteAllTemplates`
+#### 3. Apply Template to Scanner
 
-This method is used to delete all templates from storage.
+To use a template during scanning, pass the **full template JSON** to `setObjectDetectionSettings()`:
 
 ```typescript
-/**
- * Deletes all templates from storage.
- */
-visionSdk.current.deleteAllTemplates();
+// Load template from storage
+const loadAndApplyTemplate = async (templateId: string) => {
+  try {
+    // Retrieve from AsyncStorage
+    const templateJson = await AsyncStorage.getItem(`template_${templateId}`);
+
+    if (templateJson) {
+      // Apply template to scanner
+      visionSdk.current?.setObjectDetectionSettings({
+        selectedTemplate: templateJson, // Pass full JSON string
+        // ... other detection settings
+        isTextIndicationOn: true,
+        isBarCodeOrQRCodeIndicationOn: true,
+        isDocumentIndicationOn: true,
+      });
+
+      console.log('Template applied successfully');
+    } else {
+      console.log('Template not found');
+    }
+  } catch (error) {
+    console.error('Failed to load template:', error);
+  }
+};
 ```
+
+#### 4. Remove Active Template
+
+To remove the currently active template, pass an empty string:
+
+```typescript
+// Remove template from scanner
+visionSdk.current?.setObjectDetectionSettings({
+  selectedTemplate: '', // Empty string removes the template
+  // ... other settings remain unchanged
+});
+```
+
+### Complete Example with State Management
+
+```typescript
+import React, { useRef, useState, useEffect } from 'react';
+import { View, Button, FlatList, Alert } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import VisionSdkView, { VisionSdkRefProps } from 'react-native-vision-sdk';
+
+const TemplateManagementExample = () => {
+  const visionSdk = useRef<VisionSdkRefProps>(null);
+  const [templates, setTemplates] = useState<TemplateData[]>([]);
+  const [activeTemplateId, setActiveTemplateId] = useState<string | null>(null);
+
+  // Load all templates from storage
+  const loadTemplates = async () => {
+    try {
+      const keys = await AsyncStorage.getAllKeys();
+      const templateKeys = keys.filter(key => key.startsWith('template_'));
+      const templateData = await AsyncStorage.multiGet(templateKeys);
+
+      const parsedTemplates = templateData
+        .map(([key, value]) => value ? JSON.parse(value) : null)
+        .filter(Boolean);
+
+      setTemplates(parsedTemplates);
+    } catch (error) {
+      console.error('Failed to load templates:', error);
+    }
+  };
+
+  // Handle template creation
+  const handleCreateTemplate = async (event) => {
+    try {
+      const template = event.nativeEvent.data;
+
+      if (!template.templateCodes || !Array.isArray(template.templateCodes)) {
+        return;
+      }
+
+      // Save to storage
+      const templateJson = JSON.stringify(template);
+      await AsyncStorage.setItem(`template_${template.id}`, templateJson);
+
+      // Reload templates list
+      await loadTemplates();
+
+      Alert.alert('Success', `Template "${template.id}" created!`);
+    } catch (error) {
+      console.error('Failed to save template:', error);
+    }
+  };
+
+  // Apply template to scanner
+  const applyTemplate = async (templateId: string) => {
+    try {
+      const templateJson = await AsyncStorage.getItem(`template_${templateId}`);
+
+      if (templateJson) {
+        visionSdk.current?.setObjectDetectionSettings({
+          selectedTemplate: templateJson,
+          isTextIndicationOn: true,
+          isBarCodeOrQRCodeIndicationOn: true,
+          isDocumentIndicationOn: true,
+        });
+
+        setActiveTemplateId(templateId);
+        Alert.alert('Applied', `Template "${templateId}" is now active`);
+      }
+    } catch (error) {
+      console.error('Failed to apply template:', error);
+    }
+  };
+
+  // Remove active template
+  const removeTemplate = () => {
+    visionSdk.current?.setObjectDetectionSettings({
+      selectedTemplate: '',
+    });
+    setActiveTemplateId(null);
+    Alert.alert('Removed', 'Template removed from scanner');
+  };
+
+  // Delete template from storage
+  const deleteTemplate = async (templateId: string) => {
+    try {
+      await AsyncStorage.removeItem(`template_${templateId}`);
+
+      // If this was the active template, remove it from scanner
+      if (activeTemplateId === templateId) {
+        removeTemplate();
+      }
+
+      await loadTemplates();
+      Alert.alert('Deleted', `Template "${templateId}" deleted`);
+    } catch (error) {
+      console.error('Failed to delete template:', error);
+    }
+  };
+
+  // Load templates on mount
+  useEffect(() => {
+    loadTemplates();
+  }, []);
+
+  return (
+    <View style={{ flex: 1 }}>
+      <VisionSdkView
+        ref={visionSdk}
+        mode="barcode"
+        onCreateTemplate={handleCreateTemplate}
+        onBarcodeScan={(event) => console.log('Scanned:', event)}
+      />
+
+      <View style={{ padding: 20 }}>
+        <Button title="Create New Template" onPress={() => visionSdk.current?.createTemplate()} />
+        {activeTemplateId && <Button title="Remove Active Template" onPress={removeTemplate} />}
+
+        <FlatList
+          data={templates}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => (
+            <View style={{ flexDirection: 'row', padding: 10 }}>
+              <Text>{item.id} ({item.templateCodes.length} codes)</Text>
+              <Button
+                title={activeTemplateId === item.id ? "Active" : "Apply"}
+                onPress={() => applyTemplate(item.id)}
+                disabled={activeTemplateId === item.id}
+              />
+              <Button title="Delete" onPress={() => deleteTemplate(item.id)} />
+            </View>
+          )}
+        />
+      </View>
+    </View>
+  );
+};
+```
+
+### Migration from Old API
+
+**DEPRECATED** (removed in v2.0.6+):
+```typescript
+// OLD - These methods no longer exist
+visionSdk.current.getAllTemplates();           // REMOVED
+visionSdk.current.deleteTemplateWithId(id);    // REMOVED
+visionSdk.current.deleteAllTemplates();        // REMOVED
+
+// OLD - These events no longer fire
+onGetTemplates={(event) => {}}                 // REMOVED
+onDeleteTemplateById={(event) => {}}           // REMOVED
+onDeleteTemplates={(event) => {}}              // REMOVED
+```
+
+**NEW** (v2.0.6+):
+```typescript
+// NEW - You manage storage yourself
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+// Create template (same method, different data format)
+visionSdk.current.createTemplate();
+
+// Store template (your responsibility)
+onCreateTemplate={async (event) => {
+  const template = event.nativeEvent.data; // Full TemplateData object
+  await AsyncStorage.setItem(`template_${template.id}`, JSON.stringify(template));
+}}
+
+// Apply template (via setObjectDetectionSettings)
+const templateJson = await AsyncStorage.getItem(`template_${id}`);
+visionSdk.current.setObjectDetectionSettings({
+  selectedTemplate: templateJson,
+});
+
+// Delete template (your responsibility)
+await AsyncStorage.removeItem(`template_${id}`);
+```
+
+### Key Changes
+
+| Old API | New API | Notes |
+|---------|---------|-------|
+| `getAllTemplates()` | ❌ Removed | Manage storage with AsyncStorage/Redux |
+| `deleteTemplateWithId(id)` | ❌ Removed | Delete from your storage manually |
+| `deleteAllTemplates()` | ❌ Removed | Clear your storage manually |
+| `onCreateTemplate` returns ID | Returns full `TemplateData` JSON | More data, you control storage |
+| `selectedTemplateId: "id"` | `selectedTemplate: "jsonString"` | Pass full JSON instead of ID |
 
 ---
 
@@ -1394,10 +1648,7 @@ Use the `VisionSdkView` component to configure and manage Vision SDK’s feature
 | `onImageCaptured`                  | `function`                                                                                    | Callback for image capture events.                                                                                                                                                                                          |
 | `onModelDownloadProgress`          | `function`                                                                                    | Event to monitor model download progress.                                                                                                                                                                                   |
 | `onError`                          | `function`                                                                                    | Callback for handling errors.                                                                                                                                                                                               |
-| `onCreateTemplate`                 | `function`                                                                                    | Callback event handler that triggers when a template is successfully created.                                                                                                                                               |
-| `onGetTemplates`                   | `function`                                                                                    | Callback event handler that triggers when templates are successfully retrieved.                                                                                                                                             |
-| `onDeleteTemplateById`             | `function`                                                                                    | Callback event handler that triggers when a template is successfully deleted using its ID.                                                                                                                                  |
-| `onDeleteTemplates`                | `function`                                                                                    | Callback event handler that triggers when multiple templates are successfully deleted.                                                                                                                                      |
+| `onCreateTemplate`                 | `function`                                                                                    | Callback event handler that triggers when a template is successfully created. Returns full `TemplateData` object - you are responsible for storing it (e.g., AsyncStorage). See [Template Management](#template-management) for details. |
 
 ---
 

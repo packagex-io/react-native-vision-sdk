@@ -109,9 +109,6 @@ export interface NativeProps extends ViewProps {
   onPriceTagDetected?: DirectEventHandler<PriceTagDetectedEvent>;
   onDetected?: DirectEventHandler<DetectedEvent>;
   onCreateTemplate?: DirectEventHandler<TemplateEvent>;
-  onGetTemplates?: DirectEventHandler<TemplateEvent>;
-  onDeleteTemplateById?: DirectEventHandler<TemplateEvent>;
-  onDeleteTemplates?: DirectEventHandler<TemplateEvent>;
 }
 
 // Native commands interface
@@ -190,11 +187,8 @@ interface NativeCommands {
   ) => void;
   reportError: (viewRef: React.ElementRef<HostComponent<NativeProps>>, dataJson: string, token: string, apiKey: string) => void;
 
-  // Template commands (18-21)
+  // Template command (18)
   createTemplate: (viewRef: React.ElementRef<HostComponent<NativeProps>>) => void;
-  getAllTemplates: (viewRef: React.ElementRef<HostComponent<NativeProps>>) => void;
-  deleteTemplateWithId: (viewRef: React.ElementRef<HostComponent<NativeProps>>, templateId: string) => void;
-  deleteAllTemplates: (viewRef: React.ElementRef<HostComponent<NativeProps>>) => void;
 }
 
 export const Commands: NativeCommands = codegenNativeCommands<NativeCommands>({
@@ -218,9 +212,6 @@ export const Commands: NativeCommands = codegenNativeCommands<NativeCommands>({
     'getPredictionDocumentClassificationCloud',
     'reportError',
     'createTemplate',
-    'getAllTemplates',
-    'deleteTemplateWithId',
-    'deleteAllTemplates',
   ],
 });
 

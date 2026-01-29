@@ -125,30 +125,6 @@ using namespace facebook::react;
         };
         ((void (*)(id, SEL, id))objc_msgSend)(_codeScannerView, onCreateTemplateSetter, createTemplateBlock);
       }
-
-      SEL onGetTemplatesSetter = NSSelectorFromString(@"setOnGetTemplates:");
-      if ([_codeScannerView respondsToSelector:onGetTemplatesSetter]) {
-        id getTemplatesBlock = ^(NSDictionary *event) {
-          [weakSelf emitGetTemplatesEvent:event];
-        };
-        ((void (*)(id, SEL, id))objc_msgSend)(_codeScannerView, onGetTemplatesSetter, getTemplatesBlock);
-      }
-
-      SEL onDeleteTemplateByIdSetter = NSSelectorFromString(@"setOnDeleteTemplateById:");
-      if ([_codeScannerView respondsToSelector:onDeleteTemplateByIdSetter]) {
-        id deleteTemplateByIdBlock = ^(NSDictionary *event) {
-          [weakSelf emitDeleteTemplateByIdEvent:event];
-        };
-        ((void (*)(id, SEL, id))objc_msgSend)(_codeScannerView, onDeleteTemplateByIdSetter, deleteTemplateByIdBlock);
-      }
-
-      SEL onDeleteTemplatesSetter = NSSelectorFromString(@"setOnDeleteTemplates:");
-      if ([_codeScannerView respondsToSelector:onDeleteTemplatesSetter]) {
-        id deleteTemplatesBlock = ^(NSDictionary *event) {
-          [weakSelf emitDeleteTemplatesEvent:event];
-        };
-        ((void (*)(id, SEL, id))objc_msgSend)(_codeScannerView, onDeleteTemplatesSetter, deleteTemplatesBlock);
-      }
     } else {
       // Fallback to placeholder if Swift class not available
       _codeScannerView = [[UIView alloc] initWithFrame:self.bounds];
@@ -393,8 +369,6 @@ using namespace facebook::react;
 
   if (commandId != nil) {
     // Map command IDs to command names based on the order in VisionSdkViewManager.m
-    // Note: Only the first 4 commands are implemented in Fabric spec currently
-    // TODO: Add remaining commands to the Fabric spec
     NSArray *commandNames = @[
       @"captureImage",        // 0
       @"stopRunning",         // 1
@@ -414,10 +388,8 @@ using namespace facebook::react;
       @"getPredictionItemLabelCloud", // 15
       @"getPredictionDocumentClassificationCloud", // 16
       @"reportError",         // 17
-      @"createTemplate",      // 18
-      @"getAllTemplates",     // 19
-      @"deleteTemplateWithId", // 20
-      @"deleteAllTemplates"   // 21
+      @"createTemplate"       // 18
+      // Removed deprecated commands: getAllTemplates (19), deleteTemplateWithId (20), deleteAllTemplates (21)
     ];
 
     NSInteger cmdId = [commandId integerValue];
@@ -426,15 +398,14 @@ using namespace facebook::react;
       actualCommandName = commandNames[cmdId];
       NSLog(@"[VisionSdkViewComponentView] Mapped command ID %ld to '%@'", (long)cmdId, actualCommandName);
 
-      // All commands 0-21 are now implemented in Fabric spec
+      // All commands 0-18 are implemented in Fabric spec
       // IDs: 0=captureImage, 1=stopRunning, 2=startRunning, 3=setMetaData, 4=setRecipient,
       //      5=setSender, 6=configureOnDeviceModel, 7=restartScanning, 8=setFocusSettings,
       //      9=setObjectDetectionSettings, 10=setCameraSettings, 11=getPrediction,
       //      12=getPredictionWithCloudTransformations, 13=getPredictionShippingLabelCloud,
       //      14=getPredictionBillOfLadingCloud, 15=getPredictionItemLabelCloud,
-      //      16=getPredictionDocumentClassificationCloud, 17=reportError,
-      //      18=createTemplate, 19=getAllTemplates, 20=deleteTemplateWithId, 21=deleteAllTemplates
-      if (cmdId > 21) {
+      //      16=getPredictionDocumentClassificationCloud, 17=reportError, 18=createTemplate
+      if (cmdId > 18) {
         NSLog(@"[VisionSdkViewComponentView] Command '%@' (ID %ld) not recognized", actualCommandName, (long)cmdId);
         return;
       }
@@ -692,54 +663,6 @@ using namespace facebook::react;
     if ([self->_codeScannerView respondsToSelector:createTemplateMethod]) {
       ((void (*)(id, SEL))objc_msgSend)(self->_codeScannerView, createTemplateMethod);
       NSLog(@"[VisionSdkViewComponentView] createTemplate completed");
-    }
-  });
-}
-
-- (void)getAllTemplates
-{
-  NSLog(@"[VisionSdkViewComponentView] ⏱️ getAllTemplates: Dispatching to background queue");
-
-  // Dispatch to main queue asynchronously to prevent blocking UI
-  dispatch_async(dispatch_get_main_queue(), ^{
-    CFAbsoluteTime startTime = CFAbsoluteTimeGetCurrent();
-
-    SEL getAllTemplatesMethod = NSSelectorFromString(@"getAllTemplates");
-    if ([self->_codeScannerView respondsToSelector:getAllTemplatesMethod]) {
-      ((void (*)(id, SEL))objc_msgSend)(self->_codeScannerView, getAllTemplatesMethod);
-
-      CFAbsoluteTime endTime = CFAbsoluteTimeGetCurrent();
-      NSLog(@"[VisionSdkViewComponentView] ⏱️ getAllTemplates: Completed in %.3f seconds", endTime - startTime);
-    } else {
-      NSLog(@"[VisionSdkViewComponentView] ERROR: _codeScannerView does not respond to getAllTemplates");
-    }
-  });
-}
-
-- (void)deleteTemplateWithId:(NSString *)templateId
-{
-  NSLog(@"[VisionSdkViewComponentView] ⏱️ deleteTemplateWithId: Dispatching to main queue");
-
-  // Dispatch to main queue asynchronously - involves file I/O
-  dispatch_async(dispatch_get_main_queue(), ^{
-    SEL deleteTemplateMethod = NSSelectorFromString(@"deleteTemplateWithId:");
-    if ([self->_codeScannerView respondsToSelector:deleteTemplateMethod]) {
-      ((void (*)(id, SEL, id))objc_msgSend)(self->_codeScannerView, deleteTemplateMethod, templateId);
-      NSLog(@"[VisionSdkViewComponentView] deleteTemplateWithId completed");
-    }
-  });
-}
-
-- (void)deleteAllTemplates
-{
-  NSLog(@"[VisionSdkViewComponentView] ⏱️ deleteAllTemplates: Dispatching to main queue");
-
-  // Dispatch to main queue asynchronously - involves file I/O
-  dispatch_async(dispatch_get_main_queue(), ^{
-    SEL deleteAllTemplatesMethod = NSSelectorFromString(@"deleteAllTemplates");
-    if ([self->_codeScannerView respondsToSelector:deleteAllTemplatesMethod]) {
-      ((void (*)(id, SEL))objc_msgSend)(self->_codeScannerView, deleteAllTemplatesMethod);
-      NSLog(@"[VisionSdkViewComponentView] deleteAllTemplates completed");
     }
   });
 }
@@ -1290,68 +1213,6 @@ using namespace facebook::react;
     }
 
     emitter->onCreateTemplate(event);
-  }
-}
-
-- (void)emitGetTemplatesEvent:(NSDictionary *)eventData
-{
-  if (_eventEmitter != nullptr) {
-    auto emitter = std::static_pointer_cast<VisionSdkViewEventEmitter const>(_eventEmitter);
-
-    VisionSdkViewEventEmitter::OnGetTemplates event = {};
-    event.success = true;
-
-    // Convert data to JSON string
-    if ([eventData objectForKey:@"data"]) {
-      id data = [eventData objectForKey:@"data"];
-      NSData *jsonData = [NSJSONSerialization dataWithJSONObject:data options:0 error:nil];
-      if (jsonData) {
-        NSString *jsonString = [[NSString alloc] initWithData:jsonData encoding:NSUTF8StringEncoding];
-        event.dataJson = std::string([jsonString UTF8String]);
-      }
-    }
-
-    emitter->onGetTemplates(event);
-  }
-}
-
-- (void)emitDeleteTemplateByIdEvent:(NSDictionary *)eventData
-{
-  if (_eventEmitter != nullptr) {
-    auto emitter = std::static_pointer_cast<VisionSdkViewEventEmitter const>(_eventEmitter);
-
-    VisionSdkViewEventEmitter::OnDeleteTemplateById event = {};
-    event.success = true;
-
-    // Convert data to JSON string
-    if ([eventData objectForKey:@"data"]) {
-      id data = [eventData objectForKey:@"data"];
-      if ([data isKindOfClass:[NSString class]]) {
-        event.dataJson = std::string([data UTF8String]);
-      }
-    }
-
-    emitter->onDeleteTemplateById(event);
-  }
-}
-
-- (void)emitDeleteTemplatesEvent:(NSDictionary *)eventData
-{
-  if (_eventEmitter != nullptr) {
-    auto emitter = std::static_pointer_cast<VisionSdkViewEventEmitter const>(_eventEmitter);
-
-    VisionSdkViewEventEmitter::OnDeleteTemplates event = {};
-    event.success = true;
-
-    // Convert data to JSON string
-    if ([eventData objectForKey:@"data"]) {
-      id data = [eventData objectForKey:@"data"];
-      if ([data isKindOfClass:[NSString class]]) {
-        event.dataJson = std::string([data UTF8String]);
-      }
-    }
-
-    emitter->onDeleteTemplates(event);
   }
 }
 

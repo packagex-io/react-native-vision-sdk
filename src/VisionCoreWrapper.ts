@@ -6,6 +6,7 @@ import type {
   ModelManagerConfig,
   DownloadProgress,
   ModelInfo,
+  DetectedBarcode,
 } from './types';
 
 // New Architecture only - use TurboModule
@@ -710,10 +711,18 @@ export const VisionCore = {
    *
    * @param module - The OCRModule to use for prediction
    * @param imagePath - Local file path or remote URL to the image
-   * @param barcodes - Array of barcode objects (optional)
+   * @param barcodes - Array of detected barcode objects (optional)
    * @returns Prediction result object
    *
    * @example
+   * const barcodes: DetectedBarcode[] = [
+   *   {
+   *     scannedCode: "1234567890128",
+   *     symbology: "CODE_128",
+   *     gs1ExtractedInfo: { "01": "12345678901234" },
+   *     boundingBox: { x: 100, y: 200, width: 150, height: 50 }
+   *   }
+   * ];
    * const result = await VisionCore.predictWithModule(
    *   { type: 'shipping_label', size: 'micro' },
    *   imagePath,
@@ -723,7 +732,7 @@ export const VisionCore = {
   predictWithModule: async (
     module: OCRModule,
     imagePath: string,
-    barcodes: any[] = []
+    barcodes: DetectedBarcode[] = []
   ) => {
     try {
       const result = await VisionSdkModuleNative.predictWithModule(

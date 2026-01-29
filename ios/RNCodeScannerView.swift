@@ -19,9 +19,6 @@ class RNCodeScannerView: UIView {
     @objc var onBoundingBoxesDetected: RCTDirectEventBlock?
     @objc var onPriceTagDetected: RCTDirectEventBlock?
     @objc var onCreateTemplate: RCTDirectEventBlock?
-    @objc var onGetTemplates: RCTDirectEventBlock?
-    @objc var onDeleteTemplateById: RCTDirectEventBlock?
-    @objc var onDeleteTemplates: RCTDirectEventBlock?
 
     //MARK: - CodeScannerView Instance
     @objc var codeScannerView: CodeScannerView?
@@ -114,92 +111,27 @@ class RNCodeScannerView: UIView {
       }
     }
 
-    // Helper function to convert data to JSON string for Fabric compatibility
-    private func toJSONString(_ data: Any) -> String? {
-        // NSJSONSerialization requires top-level object to be Array or Dictionary
-        // For strings and other primitives, wrap them in an array
-        let jsonObject: Any
-        if data is String || data is NSNumber || data is Bool {
-            jsonObject = [data]
-        } else if data is [Any] || data is [String: Any] {
-            jsonObject = data
-        } else {
-            // Wrap unknown types in array
-            jsonObject = [data]
-        }
-
-        guard let jsonData = try? JSONSerialization.data(withJSONObject: jsonObject, options: []),
-              let jsonString = String(data: jsonData, encoding: .utf8) else {
-            return nil
-        }
-        return jsonString
-    }
-
-    // Fetch saved templates
-    @objc func getAllTemplates() {
-        let savedTemplates = CodeScannerView.getAllTemplates()
-        print("Saved Template IDs: \(savedTemplates)")
-
-        // Send both formats for Fabric and Legacy compatibility
-        if let jsonString = toJSONString(savedTemplates) {
-            onGetTemplates!(["data": savedTemplates, "dataJson": jsonString])
-        } else {
-            onGetTemplates!(["data": savedTemplates])
-        }
-    }
-
-    // Delete template with specific ID
-    @objc func deleteTemplate(withId id: String) {
-        CodeScannerView.deleteTemplateWithId(id)
-
-        // Send both formats for Fabric and Legacy compatibility
-        if let jsonString = toJSONString(id) {
-            onDeleteTemplateById!(["data": id, "dataJson": jsonString])
-        } else {
-            onDeleteTemplateById!(["data": id])
-        }
-        print("Template with ID \(id) has been deleted.")
-    }
-
-    // Delete all templates
-    @objc func deleteAllTemplates() {
-        CodeScannerView.deleteAllTemplates()
-        let message = "All templates have been deleted."
-
-        // Send both formats for Fabric and Legacy compatibility
-        if let jsonString = toJSONString(message) {
-            onDeleteTemplates!(["data": message, "dataJson": jsonString])
-        } else {
-            onDeleteTemplates!(["data": message])
-        }
-        print(message)
-    }
 }
 
 // MARK: - VisionSDK GenerateTemplateControllerDelegate functions
 //MARK: -
 extension RNCodeScannerView: GenerateTemplateControllerDelegate {
 
-    // Template creation success
-    func templateScanController(_ controller: GenerateTemplateController, didFinishWith result: String) {
-        print("Template created successfully with ID: \(result)")
-
-        if !result.isEmpty {
+    // Template creation success - NEW API returns Data (JSON)
+    func templateScanController(_ controller: GenerateTemplateController, didFinishWith templateData: Data) {
+        // Convert Data to JSON string
+        if let jsonString = String(data: templateData, encoding: .utf8) {
             if let onCreateTemplate = onCreateTemplate {
-                // Send both formats for Fabric and Legacy compatibility
-                if let jsonString = toJSONString(result) {
-                    onCreateTemplate(["data": result, "dataJson": jsonString])
-                } else {
-                    onCreateTemplate(["data": result])
-                }
+                // Send template JSON string to React Native
+                onCreateTemplate(["data": jsonString])
             } else {
                 print("Error: onCreateTemplate is nil.")
             }
         } else {
             if let onError = onError {
-                onError(["message": "Result is empty or onCreateTemplate is nil.", "code": ""])
+                onError(["message": "Failed to convert template data to JSON string", "code": ""])
             } else {
-                print("Error: onError is nil.")
+                print("Error: Failed to convert template data and onError is nil.")
             }
         }
 
@@ -1605,9 +1537,17 @@ extension RNCodeScannerView {
             detectionSettings.secondsToWaitBeforeDocumentCapture = secondsToWaitBeforeDocumentCapture
         }
 
-        if let selectedTemplateId = objectDetectionSettings["selectedTemplateId"] as? String {
-            // Set to nil if empty string (removes template), otherwise apply the template
-            detectionSettings.selectedTemplateId = selectedTemplateId.isEmpty ? nil : selectedTemplateId
+        // NEW API: Apply template using JSON Data instead of template ID
+        if let selectedTemplateJson = objectDetectionSettings["selectedTemplate"] as? String {
+            if selectedTemplateJson.isEmpty {
+                // Empty string means remove template
+                detectionSettings.selectedTemplate = nil
+            } else {
+                // Convert JSON string to Data
+                if let templateData = selectedTemplateJson.data(using: .utf8) {
+                    detectionSettings.selectedTemplate = templateData
+                }
+            }
         }
 
         codeScannerView?.setObjectDetectionConfigurationTo(detectionSettings)

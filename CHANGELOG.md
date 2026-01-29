@@ -1,5 +1,83 @@
 # Release Notes
 
+### v2.0.6 — 2026-01-29
+
+  #### Breaking Changes
+
+  - **Stateless Templates Migration**
+    Templates are now **stateless** - the SDK no longer manages template storage. You are responsible for storing and managing templates in your app (e.g., using AsyncStorage, Redux, or a database).
+
+    **Removed Methods:**
+    - `getAllTemplates()` - Use AsyncStorage/your storage solution to manage templates
+    - `deleteTemplateWithId(id)` - Delete from your storage manually
+    - `deleteAllTemplates()` - Clear your storage manually
+
+    **Removed Events:**
+    - `onGetTemplates` - No longer emitted
+    - `onDeleteTemplateById` - No longer emitted
+    - `onDeleteTemplates` - No longer emitted
+
+    **API Changes:**
+    - `onCreateTemplate` now returns full `TemplateData` JSON object instead of just template ID
+    - `setObjectDetectionSettings({ selectedTemplateId: "id" })` changed to `setObjectDetectionSettings({ selectedTemplate: "fullJsonString" })`
+    - Templates must be passed as complete JSON Data objects, not IDs
+
+    **Migration:**
+    ```typescript
+    // Before (v2.0.5 and earlier)
+    visionSdk.current.getAllTemplates();
+    visionSdk.current.deleteTemplateWithId(id);
+    visionSdk.current.deleteAllTemplates();
+
+    onCreateTemplate={(event) => {
+      const templateId = event.nativeEvent.data; // Just an ID string
+    }}
+
+    visionSdk.current.setObjectDetectionSettings({
+      selectedTemplateId: "template-id-123"
+    });
+
+    // After (v2.0.6+)
+    import AsyncStorage from '@react-native-async-storage/async-storage';
+
+    // You manage storage yourself
+    const keys = await AsyncStorage.getAllKeys();
+    const templates = keys.filter(k => k.startsWith('template_'));
+
+    await AsyncStorage.removeItem(`template_${id}`);
+
+    onCreateTemplate={async (event) => {
+      const template = event.nativeEvent.data; // Full TemplateData object
+      await AsyncStorage.setItem(`template_${template.id}`, JSON.stringify(template));
+    }}
+
+    const templateJson = await AsyncStorage.getItem(`template_${id}`);
+    visionSdk.current.setObjectDetectionSettings({
+      selectedTemplate: templateJson // Full JSON string
+    });
+    ```
+
+  #### Improvements
+
+  - **Native SDK Updates**
+    - iOS VisionSDK updated to v2.1.0
+    - Android VisionSDK updated to v2.4.35
+
+  - **Template Data Structure**
+    Enhanced `TemplateData` interface now includes:
+    - `id: string` - Unique template identifier
+    - `templateCodes: TemplateCode[]` - Array of barcode data with symbology and bounding box info
+
+  - **Developer Control**
+    Templates are now more flexible - you choose where and how to store them (AsyncStorage, Redux, SQLite, remote backend, etc.)
+
+  - **Documentation**
+    - Added comprehensive Template Management guide with complete examples
+    - Includes AsyncStorage integration patterns
+    - Full migration guide from old to new API
+
+---
+
 ### v2.0.5 — 2026-01-15
 
   #### Breaking Changes
