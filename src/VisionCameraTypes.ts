@@ -1,5 +1,6 @@
 import { ReactNode } from 'react';
 import { StyleProp, ViewStyle } from 'react-native';
+import type { TemplateData } from './types';
 
 /**
  * Camera scan mode types
@@ -439,6 +440,14 @@ export interface VisionCameraViewProps {
 
   /**
    * @optional
+   * @type {TemplateData | null}
+   * @description Optional template to apply for template matching via the native SDK.
+   * Pass a TemplateData object to apply a template, or null to remove it.
+   */
+  template?: TemplateData | null;
+
+  /**
+   * @optional
    * @type {React.Ref<any>}
    * @description Optional reference to the component.
    */
@@ -611,4 +620,12 @@ export interface VisionCameraProps {
    * @default 'back'
    */
   cameraFacing?: CameraFacing;
+
+  /**
+   * @optional
+   * @type {TemplateData | null}
+   * @description Optional template to apply for template matching via the native SDK.
+   * Pass a TemplateData object to apply a template, or null to remove it.
+   */
+  template?: TemplateData | null;
 }

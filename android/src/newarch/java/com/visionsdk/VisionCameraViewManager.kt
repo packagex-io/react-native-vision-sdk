@@ -316,6 +316,23 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
         // TODO: Implement using ObjectDetectionConfiguration
     }
 
+    @ReactProp(name = "templateJson")
+    fun setTemplate(view: VisionCameraView, templateJson: String?) {
+        if (templateJson.isNullOrEmpty()) {
+            view.removeTemplate()
+            return
+        }
+
+        try {
+            val success = view.applyTemplateJson(templateJson)
+            if (!success) {
+                Log.e(TAG, "Failed to apply template - applyTemplateJson returned false")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error applying template: ${e.message}", e)
+        }
+    }
+
     // MARK: - Commands
 
     override fun receiveCommand(

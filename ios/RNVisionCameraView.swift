@@ -65,6 +65,12 @@ class RNVisionCameraView: UIView {
     }
   }
 
+  @objc var templateJson: NSString? {
+    didSet {
+      updateTemplate()
+    }
+  }
+
   // MARK: - VisionSDK Components
   var cameraView: CodeScannerView?
   private var currentScanMode: CodeScannerMode = .photo
@@ -446,7 +452,7 @@ class RNVisionCameraView: UIView {
   
   private func updateDetectionConfig() {
     guard let cameraView = cameraView, let config = detectionConfig else { return }
-    
+
     let detectionSettings = VisionSDK.CodeScannerView.ObjectDetectionConfiguration()
     detectionSettings.isTextIndicationOn = config["text"] as? Bool ?? true
     detectionSettings.isBarCodeOrQRCodeIndicationOn = config["barcode"] as? Bool ?? true
@@ -454,6 +460,35 @@ class RNVisionCameraView: UIView {
     detectionSettings.codeDetectionConfidence = config["barcodeConfidence"] as? Float ?? 0.5
     detectionSettings.documentDetectionConfidence = config["documentConfidence"] as? Float ?? 0.5
     detectionSettings.secondsToWaitBeforeDocumentCapture = config["documentCaptureDelay"] as? Double ?? 2.0
+    cameraView.setObjectDetectionConfigurationTo(detectionSettings)
+  }
+
+  private func updateTemplate() {
+    guard let cameraView = cameraView else { return }
+
+    let detectionSettings = VisionSDK.CodeScannerView.ObjectDetectionConfiguration()
+
+    // Apply existing detection config settings first
+    if let config = detectionConfig {
+      detectionSettings.isTextIndicationOn = config["text"] as? Bool ?? true
+      detectionSettings.isBarCodeOrQRCodeIndicationOn = config["barcode"] as? Bool ?? true
+      detectionSettings.isDocumentIndicationOn = config["document"] as? Bool ?? true
+      detectionSettings.codeDetectionConfidence = config["barcodeConfidence"] as? Float ?? 0.5
+      detectionSettings.documentDetectionConfidence = config["documentConfidence"] as? Float ?? 0.5
+      detectionSettings.secondsToWaitBeforeDocumentCapture = config["documentCaptureDelay"] as? Double ?? 2.0
+    }
+
+    // Apply or remove template
+    if let jsonString = templateJson as String?, !jsonString.isEmpty {
+      if let templateData = jsonString.data(using: .utf8) {
+        detectionSettings.selectedTemplate = templateData
+      } else {
+        NSLog("[RNVisionCameraView] Failed to convert template JSON to data")
+      }
+    } else {
+      detectionSettings.selectedTemplate = nil
+    }
+
     cameraView.setObjectDetectionConfigurationTo(detectionSettings)
   }
   

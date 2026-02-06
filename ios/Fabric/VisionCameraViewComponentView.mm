@@ -266,6 +266,18 @@ using namespace facebook::react;
     }
   }
 
+  // Handle templateJson prop - pass the JSON string directly to Swift view
+  if (oldViewProps.templateJson != newViewProps.templateJson) {
+    SEL setter = NSSelectorFromString(@"setTemplateJson:");
+    if ([_visionCameraView respondsToSelector:setter]) {
+      NSString *templateJson = nil;
+      if (!newViewProps.templateJson.empty()) {
+        templateJson = [NSString stringWithUTF8String:newViewProps.templateJson.c_str()];
+      }
+      ((void (*)(id, SEL, id))objc_msgSend)(_visionCameraView, setter, templateJson);
+    }
+  }
+
   [super updateProps:props oldProps:oldProps];
 }
 

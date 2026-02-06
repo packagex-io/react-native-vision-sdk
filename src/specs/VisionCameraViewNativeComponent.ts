@@ -67,6 +67,7 @@ export interface NativeProps extends ViewProps {
   // Object properties - passed as JSON strings due to codegen limitations
   scanAreaJson?: string;
   detectionConfigJson?: string;
+  templateJson?: string;
 
   // Event handlers
   onCapture?: DirectEventHandler<CaptureEvent>;
