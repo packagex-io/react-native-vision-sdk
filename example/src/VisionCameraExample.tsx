@@ -21,12 +21,14 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { TemplateCode, TemplateData } from '../../src';
 
 const TEMPLATES_STORAGE_KEY = '@vision_sdk_templates';
+const CAPTURED_IMAGE_STORAGE_KEY = '@vision_sdk_captured_image';
 
 const VisionCameraExample = ({ navigation }) => {
   const cameraRef = useRef<VisionCameraRefProps>(null);
   const [flashEnabled, setFlashEnabled] = useState(false);
   const [zoomLevel, setZoomLevel] = useState(1.0);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
+  const [lastCaptureEvent, setLastCaptureEvent] = useState<VisionCameraCaptureEvent | null>(null);
   const [scanMode, setScanMode] = useState<VisionCameraScanMode>('barcode');
   const [scanAreaEnabled, setScanAreaEnabled] = useState(false);
   const [autoCapture, setAutoCapture] = useState(false);
@@ -85,6 +87,12 @@ const VisionCameraExample = ({ navigation }) => {
       if (json) {
         const templates = JSON.parse(json);
         setSavedTemplates(templates);
+        console.log('=== All Available Templates ===');
+        console.log('Count:', templates.length);
+        console.log('Templates:', JSON.stringify(templates, null, 2));
+      } else {
+        console.log('=== All Available Templates ===');
+        console.log('No templates found');
       }
     } catch (e) {
       console.error('Failed to load templates', e);
@@ -121,6 +129,10 @@ const VisionCameraExample = ({ navigation }) => {
       id: `template_${Date.now()}`,
       templateCodes,
     };
+    console.log('=== Template Created ===');
+    console.log('Template ID:', newTemplate.id);
+    console.log('Template Codes Count:', newTemplate.templateCodes.length);
+    console.log('Template Data:', JSON.stringify(newTemplate, null, 2));
     const updated = [...savedTemplates, newTemplate];
     await persistTemplates(updated);
     setTemplateCodes([]);
@@ -260,9 +272,29 @@ const VisionCameraExample = ({ navigation }) => {
   }, [loadTemplates]);
 
   const handleCapture = (event: VisionCameraCaptureEvent) => {
-    // console.log("HANDLE CAPTURE: ", JSON.stringify(event))
     setCapturedImage(event.image);
-    // Alert.alert('Success', `Image captured: ${event.image}`);
+    setLastCaptureEvent(event);
+  };
+
+  const handleUseForModelTesting = async () => {
+    if (!lastCaptureEvent) {
+      Alert.alert('No Image', 'Please capture an image first.');
+      return;
+    }
+    try {
+      await AsyncStorage.setItem(CAPTURED_IMAGE_STORAGE_KEY, JSON.stringify(lastCaptureEvent));
+      Alert.alert(
+        'Image Saved',
+        'Captured image saved for model testing. Navigate to Model Management to use it.',
+        [
+          { text: 'Stay Here', style: 'cancel' },
+          { text: 'Go to Model Management', onPress: () => navigation.navigate('ModelManagementScreen') },
+        ]
+      );
+    } catch (e) {
+      console.error('Failed to save captured image', e);
+      Alert.alert('Error', 'Failed to save captured image.');
+    }
   };
 
   const handleError = (error: any) => {
@@ -728,6 +760,12 @@ const VisionCameraExample = ({ navigation }) => {
                   style={styles.previewOverlayImage}
                   resizeMode="cover"
                 />
+                <TouchableOpacity
+                  style={styles.useForTestingButton}
+                  onPress={handleUseForModelTesting}
+                >
+                  <Text style={styles.useForTestingButtonText}>Use for Testing</Text>
+                </TouchableOpacity>
               </View>
             )}
 
@@ -1190,6 +1228,19 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 6,
+  },
+  useForTestingButton: {
+    marginTop: 6,
+    backgroundColor: '#6f42c1',
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 4,
+  },
+  useForTestingButtonText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: '600',
+    textAlign: 'center',
   },
   barcodeOverlayContainer: {
     backgroundColor: 'rgba(0, 0, 0, 0.8)',

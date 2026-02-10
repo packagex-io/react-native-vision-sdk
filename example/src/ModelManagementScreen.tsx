@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -10,10 +10,14 @@ import {
   Image,
   Clipboard,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { VisionCore, ExecutionProvider, DetectedBarcode } from '../../src/index';
 import { useFocusEffect } from '@react-navigation/native';
+import type { VisionCameraCaptureEvent } from '../../src/VisionCamera';
 
-const api_key = ""; // Add your PackageX API key here
+const CAPTURED_IMAGE_STORAGE_KEY = '@vision_sdk_captured_image';
+
+const api_key = "key_00203c5642F9SYnJkKyi9dRw1eeteeUwXhbEfGuPZ4NML8l2bAfysni4ZpcZEBKn0gnbcOZYwIaJnOyp"; // Add your PackageX API key here
 
 // Sample barcodes array with iOS-format properties
 const SAMPLE_BARCODES: DetectedBarcode[] = [
@@ -61,6 +65,39 @@ const ModelManagementScreen = ({ navigation }) => {
   const [concurrentLoadingResults, setConcurrentLoadingResults] = useState<any[]>([]);
   const [downloadProgressMap, setDownloadProgressMap] = useState<{[key: string]: number}>({});
 
+  // Captured image state
+  const [capturedImageData, setCapturedImageData] = useState<VisionCameraCaptureEvent | null>(null);
+  const [useCapturedImage, setUseCapturedImage] = useState<boolean>(false);
+
+  // Load captured image on screen focus
+  useFocusEffect(
+    useCallback(() => {
+      const loadCapturedImage = async () => {
+        try {
+          const json = await AsyncStorage.getItem(CAPTURED_IMAGE_STORAGE_KEY);
+          if (json) {
+            const data = JSON.parse(json) as VisionCameraCaptureEvent;
+            setCapturedImageData(data);
+          }
+        } catch (e) {
+          console.error('Failed to load captured image', e);
+        }
+      };
+      loadCapturedImage();
+    }, [])
+  );
+
+  const clearCapturedImage = async () => {
+    try {
+      await AsyncStorage.removeItem(CAPTURED_IMAGE_STORAGE_KEY);
+      setCapturedImageData(null);
+      setUseCapturedImage(false);
+      setStatusMessage('✅ Captured image cleared');
+    } catch (e) {
+      console.error('Failed to clear captured image', e);
+    }
+  };
+
   const modelTypes = [
     { label: 'Shipping Label', value: 'shipping_label' },
     { label: 'Item Label', value: 'item_label' },
@@ -89,7 +126,8 @@ const ModelManagementScreen = ({ navigation }) => {
       case 'shipping_label':
         return 'https://cdn.shopify.com/s/files/1/0070/7032/files/image1_a462b651-c72f-4e21-8048-35763b21eef1.png?v=1671219333';
       case 'item_label':
-        return 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ8Jmenckba1oRIkRgKXLEDBjzcohm028JTsg&s';
+        return 'https://i.ibb.co/dwrQQ7m3/item-label-1.jpg'
+        // return 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ8Jmenckba1oRIkRgKXLEDBjzcohm028JTsg&s';
       case 'bill_of_lading':
         return 'https://www.freightera.com/blog/wp-content/uploads/2022/09/bol-basic-info-904x1024.jpg';
       case 'document_classification':
@@ -97,6 +135,22 @@ const ModelManagementScreen = ({ navigation }) => {
       default:
         return 'https://cdn.shopify.com/s/files/1/0070/7032/files/image1_a462b651-c72f-4e21-8048-35763b21eef1.png?v=1671219333';
     }
+  };
+
+  // Get current image path based on selection
+  const getCurrentImagePath = (modelType?: string) => {
+    if (useCapturedImage && capturedImageData?.image) {
+      return `file://${capturedImageData.image}`;
+    }
+    return getSampleImageForModelType(modelType || selectedModelType);
+  };
+
+  // Get current barcodes based on selection
+  const getCurrentBarcodes = (): DetectedBarcode[] => {
+    if (useCapturedImage && capturedImageData?.barcodes && capturedImageData.barcodes.length > 0) {
+      return capturedImageData.barcodes;
+    }
+    return SAMPLE_BARCODES;
   };
 
 
@@ -459,7 +513,8 @@ const ModelManagementScreen = ({ navigation }) => {
   const handlePredictWithMultipleModelsConcurrently = async () => {
     try {
       setIsLoading(true);
-      setStatusMessage('🔮 Running 3 predictions concurrently...');
+      const imageSource = useCapturedImage ? 'captured image' : 'sample images';
+      setStatusMessage(`🔮 Running 3 predictions concurrently with ${imageSource}...`);
       setConcurrentLoadingResults([]);
 
       const startTime = Date.now();
@@ -475,11 +530,13 @@ const ModelManagementScreen = ({ navigation }) => {
       const predictionPromises = modelsToPredictWith.map(async (model) => {
         const modelStartTime = Date.now();
         try {
-          const imagePath = getSampleImageForModelType(model.type);
+          // Use captured image for all models if enabled, otherwise use model-specific sample
+          const imagePath = getCurrentImagePath(model.type);
+          const barcodes = getCurrentBarcodes();
           const result = await VisionCore.predictWithModule(
             model,
             imagePath,
-            SAMPLE_BARCODES
+            barcodes
           );
           const duration = Date.now() - modelStartTime;
 
@@ -646,17 +703,29 @@ const ModelManagementScreen = ({ navigation }) => {
   const handlePredictWithModule = async () => {
     try {
       setIsLoading(true);
-      setStatusMessage('🔮 Making prediction...');
+      const imageSource = useCapturedImage ? 'captured image' : 'sample image';
+      setStatusMessage(`🔮 Making prediction with ${imageSource}...`);
 
-      const imagePath = getSampleImageForModelType(selectedModelType);
+      const imagePath = getCurrentImagePath();
+      const barcodes = getCurrentBarcodes();
+      const modelSpec = {
+        type: selectedModelType as any,
+        size: selectedModelSize as any,
+      };
+
+      console.log('=== predictWithModule Arguments ===');
+      console.log('Model:', JSON.stringify(modelSpec, null, 2));
+      console.log('Image Path:', imagePath);
+      console.log('Barcodes:', JSON.stringify(barcodes, null, 2));
+
       const result = await VisionCore.predictWithModule(
-        {
-          type: selectedModelType as any,
-          size: selectedModelSize as any,
-        },
+        modelSpec,
         imagePath,
-        SAMPLE_BARCODES
+        barcodes
       );
+
+      console.log('=== predictWithModule Response ===');
+      console.log('Result:', typeof result === 'string' ? result : JSON.stringify(result, null, 2));
 
       setStatusMessage('✅ Prediction completed!');
       setResults(typeof result === 'string' ? result : JSON.stringify(result, null, 2));
@@ -1004,18 +1073,81 @@ const ModelManagementScreen = ({ navigation }) => {
       {/* 7️⃣ PREDICTION */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>7️⃣ PREDICTION</Text>
-        <Text style={styles.label}>Sample Image:</Text>
+
+        {/* Image Source Toggle */}
+        {capturedImageData && (
+          <View style={styles.imageSourceToggle}>
+            <Text style={styles.label}>Image Source:</Text>
+            <View style={styles.toggleContainer}>
+              <TouchableOpacity
+                style={[
+                  styles.toggleButton,
+                  !useCapturedImage && styles.toggleButtonActive
+                ]}
+                onPress={() => setUseCapturedImage(false)}
+              >
+                <Text style={[
+                  styles.toggleButtonText,
+                  !useCapturedImage && styles.toggleButtonTextActive
+                ]}>
+                  Sample Image
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.toggleButton,
+                  useCapturedImage && styles.toggleButtonActive
+                ]}
+                onPress={() => setUseCapturedImage(true)}
+              >
+                <Text style={[
+                  styles.toggleButtonText,
+                  useCapturedImage && styles.toggleButtonTextActive
+                ]}>
+                  Captured Image
+                </Text>
+              </TouchableOpacity>
+            </View>
+            <TouchableOpacity
+              style={styles.clearCapturedButton}
+              onPress={clearCapturedImage}
+            >
+              <Text style={styles.clearCapturedButtonText}>Clear Captured</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        <Text style={styles.label}>
+          {useCapturedImage && capturedImageData ? 'Captured Image:' : 'Sample Image:'}
+        </Text>
         <Image
-          source={{ uri: getSampleImageForModelType(selectedModelType) }}
+          source={{ uri: getCurrentImagePath() }}
           style={styles.sampleImage}
           resizeMode="contain"
         />
+
+        {/* Show captured barcodes info */}
+        {useCapturedImage && capturedImageData?.barcodes && capturedImageData.barcodes.length > 0 && (
+          <View style={styles.capturedBarcodesInfo}>
+            <Text style={styles.capturedBarcodesTitle}>
+              Captured Barcodes ({capturedImageData.barcodes.length}):
+            </Text>
+            {capturedImageData.barcodes.map((barcode, index) => (
+              <Text key={index} style={styles.capturedBarcodeItem}>
+                • {barcode.symbology}: {barcode.scannedCode}
+              </Text>
+            ))}
+          </View>
+        )}
+
         <TouchableOpacity
           style={[styles.button, styles.indigoButton]}
           onPress={handlePredictWithModule}
           disabled={isLoading}
         >
-          <Text style={styles.buttonText}>Predict with Module</Text>
+          <Text style={styles.buttonText}>
+            Predict with {useCapturedImage && capturedImageData ? 'Captured' : 'Sample'} Image
+          </Text>
         </TouchableOpacity>
       </View>
 
@@ -1361,6 +1493,68 @@ const styles = StyleSheet.create({
     marginTop: 6,
     fontFamily: 'monospace',
     fontStyle: 'italic',
+  },
+  imageSourceToggle: {
+    marginBottom: 16,
+    padding: 12,
+    backgroundColor: '#f8f9fa',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#dee2e6',
+  },
+  toggleContainer: {
+    flexDirection: 'row',
+    marginBottom: 10,
+  },
+  toggleButton: {
+    flex: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: '#6610f2',
+    backgroundColor: 'transparent',
+    alignItems: 'center',
+  },
+  toggleButtonActive: {
+    backgroundColor: '#6610f2',
+  },
+  toggleButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#6610f2',
+  },
+  toggleButtonTextActive: {
+    color: '#fff',
+  },
+  clearCapturedButton: {
+    alignSelf: 'flex-end',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+  },
+  clearCapturedButtonText: {
+    fontSize: 13,
+    color: '#dc3545',
+    fontWeight: '500',
+  },
+  capturedBarcodesInfo: {
+    backgroundColor: '#e7f3ff',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 12,
+    borderLeftWidth: 3,
+    borderLeftColor: '#007bff',
+  },
+  capturedBarcodesTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 8,
+  },
+  capturedBarcodeItem: {
+    fontSize: 13,
+    color: '#555',
+    marginBottom: 4,
+    fontFamily: 'monospace',
   },
 });
 
