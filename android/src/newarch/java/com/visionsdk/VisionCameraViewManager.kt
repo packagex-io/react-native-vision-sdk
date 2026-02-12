@@ -573,6 +573,7 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
         }
 
         override fun onImageCaptured(bitmap: Bitmap, scannedCodeResults: List<ScannedCodeResult>, imageSharpnessScore: Float) {
+            Log.d(TAG, "onImageCaptured called with ${scannedCodeResults.size} barcodes, sharpnessScore: $imageSharpnessScore")
             try {
                 val tempDir = appContext.cacheDir
                 val fileName = "camera_${System.currentTimeMillis()}.jpg"
@@ -609,12 +610,15 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
                     barcodesArray.put(codeObj)
                 }
 
+                Log.d(TAG, "barcodesJson: ${barcodesArray.toString()}")
+
                 val event = Arguments.createMap()
                 event.putString("image", file.absolutePath)
                 event.putString("nativeImage", file.toURI().toString())
                 event.putDouble("sharpnessScore", imageSharpnessScore.toDouble())
                 event.putString("barcodesJson", barcodesArray.toString())
 
+                Log.d(TAG, "Sending onCapture event with barcodesJson length: ${barcodesArray.toString().length}")
                 sendEvent("onCapture", event)
 
                 // Automatically restart scanning after image capture

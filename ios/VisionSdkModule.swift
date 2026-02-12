@@ -93,96 +93,6 @@ class VisionSdkModule: RCTEventEmitter {
       }
   }
 
-
-  // DEPRECATED - Use unloadModel() or deleteModel() instead
-  // @objc func unLoadOnDeviceModels(
-  //     _ modelType: String?,
-  //     shouldDeleteFromDisk: Bool,
-  //     resolver: @escaping RCTPromiseResolveBlock,
-  //     rejecter: @escaping RCTPromiseRejectBlock
-  // ) {
-  //   // Convert empty string to nil
-  //   let modelTypeValue = (modelType?.isEmpty ?? true) ? nil : modelType
-  //
-  //   if let modelType = modelTypeValue {
-  //     let modelClass = getModelType(modelType)
-  //
-  //     do {
-  //       try OnDeviceOCRManager.shared.deconfigureOfflineOCR(for: modelClass, shouldDeleteFromDisk: shouldDeleteFromDisk)
-  //     }
-  //     catch(let error) {
-  //       rejecter("MODEL_UNLOAD_ERROR", error.localizedDescription, nil)
-  //     }
-  //
-  //     resolver("Model unloaded successfully")
-  //
-  //   }
-  //   else {
-  //     do {
-  //       try OnDeviceOCRManager.shared.deconfigureOfflineOCR(shouldDeleteFromDisk: shouldDeleteFromDisk)
-  //     }
-  //     catch(let error) {
-  //
-  //       rejecter("MODEL_UNLOAD_ERROR", error.localizedDescription, nil)
-  //     }
-  //
-  //     resolver("Model unloaded successfully")
-  //   }
-  //
-  // }
-  
-  
-  @objc func loadOnDeviceModels(
-    _ token: String?,
-      apiKey: String?,
-      modelType: String,
-      modelSize: String?,
-      resolver: @escaping RCTPromiseResolveBlock,
-      rejecter: @escaping RCTPromiseRejectBlock
-  ) {
-      let modelClass = getModelType(modelType)
-      let modelSizeEnum = getModelSize(modelSize) ?? VSDKModelExternalSize.large
-
-      // Convert empty strings to nil
-      let tokenValue = (token?.isEmpty ?? true) ? nil : token
-      let apiKeyValue = (apiKey?.isEmpty ?? true) ? nil : apiKey
-
-      // Dispatch to background queue to prevent blocking UI thread
-      // VisionSDK's prepareOfflineOCR does heavy initialization work synchronously
-      DispatchQueue.global(qos: .userInitiated).async {
-          OnDeviceOCRManager.shared.prepareOfflineOCR(
-            withApiKey: apiKeyValue,
-            andToken: tokenValue,
-            forModelClass: modelClass,
-            withModelSize: modelSizeEnum,
-            withProgressTracking: { currentProgress, totalSize, isModelAlreadyDownloaded in
-                let progressData: [String: Any] = [
-                    "progress": isModelAlreadyDownloaded ? 1.0 : (currentProgress / totalSize),
-                    "downloadStatus": isModelAlreadyDownloaded,
-                    "isReady": false  // Will be set to true in completion callback
-                ]
-                self.sendEvent(withName: "onModelDownloadProgress", body: progressData)
-            },
-            withCompletion: { error in
-                if let error = error {
-                    rejecter("MODEL_LOAD_ERROR", error.localizedDescription, nil)
-                } else {
-                    let completionData: [String: Any] = [
-                        "progress": 1.0,
-                        "downloadStatus": true,
-                        "isReady": true
-                    ]
-                    self.sendEvent(withName: "onModelDownloadProgress", body: completionData)
-                    resolver("Model configured successfully")
-                }
-            }
-          )
-      }
-  }
-  
-  
-  
-  
   @objc func logShippingLabelDataToPx(
     _ imageUri: String,
     barcodes: [String]?,
@@ -348,64 +258,19 @@ class VisionSdkModule: RCTEventEmitter {
       }
   }
 
-
-
-  @objc func predict(
-    _ imagePath: String,
-    barcodes: [[String: Any]]?,
-    resolver: @escaping RCTPromiseResolveBlock,
-    rejecter: @escaping RCTPromiseRejectBlock
-  ) {
-    loadImage(from: imagePath) { image in
-      guard let image = image else {
-        rejecter("IMAGE_LOAD_ERROR", "Failed to load image from path: \(imagePath)", nil)
-        return
-      }
-
-      // Convert UIImage to CIImage for OnDeviceOCRManager
-      guard let ciImage = convertToCIImage(from: image) else {
-        rejecter("IMAGE_CONVERSION_ERROR", "Failed to convert UIImage to CIImage", nil)
-        return
-      }
-
-      let barcodeList = barcodes ?? []
-      
-      let allBarcodes: [DetectedCode] = barcodeList.map { barcodeDict in
-        
-        let stringValue: String = (barcodeDict["scannedCode"] as? String) ?? ""
-        let symbology: VisionSDK.BarcodeSymbology = VisionSDK.BarcodeSymbology.value(VNStringValue: (barcodeDict["symbology"] as? String) ?? "")
-        let extractedData: [String : String]? = (barcodeDict["gs1ExtractedInfo"] as? [String : String])
-        
-        var finalRect: CGRect = .zero
-        
-        if let boundingBoxRect = barcodeDict["boundingBox"] as? [String: CGFloat] {
-          let x: CGFloat = boundingBoxRect["x"] ?? 0
-          let y: CGFloat = boundingBoxRect["y"] ?? 0
-          let width: CGFloat = boundingBoxRect["width"] ?? 0
-          let height: CGFloat = boundingBoxRect["height"] ?? 0
-          
-          finalRect = CGRect(x: x, y: y, width: width, height: height)
-        }
-        
-        return DetectedCode(stringValue: stringValue, symbology: symbology, extractedData: extractedData, boundingBox: finalRect)
-        
-      }
-      
-      
-
-      // Use the correct OnDeviceOCRManager API
-      
-      OnDeviceOCRManager.shared.extractDataFromImageUsing(ciImage, withBarcodes: allBarcodes) { data, error in
-        if let error = error {
-          rejecter("PREDICTION_ERROR", "On-device prediction failed: \(error.localizedDescription)", error)
-        } else if let data = data {
-          let responseString = String(data: data, encoding: .utf8) ?? ""
-          resolver(responseString)
-        } else {
-          rejecter("NO_DATA_ERROR", "No data returned from on-device prediction", nil)
-        }
-      }
+  /// Converts a UIImage to CIImage for use with VisionSDK's OCR
+  private func convertToCIImage(from image: UIImage) -> CIImage? {
+    // Try to get CIImage directly from UIImage
+    if let ciImage = image.ciImage {
+      return ciImage
     }
+
+    // If no CIImage, convert from CGImage
+    guard let cgImage = image.cgImage else {
+      return nil
+    }
+
+    return CIImage(cgImage: cgImage)
   }
 
   @objc func predictShippingLabelCloud(
@@ -604,7 +469,7 @@ class VisionSdkModule: RCTEventEmitter {
       let shouldResize = shouldResizeImage?.boolValue ?? true
 
       // Convert UIImage to CIImage for OnDeviceOCRManager
-      guard let ciImage = convertToCIImage(from: image) else {
+      guard let ciImage = self.convertToCIImage(from: image) else {
         rejecter("IMAGE_CONVERSION_ERROR", "Failed to convert UIImage to CIImage", nil)
         return
       }
@@ -1047,7 +912,7 @@ class VisionSdkModule: RCTEventEmitter {
       }
 
       // Convert UIImage to CIImage
-      guard let ciImage = convertToCIImage(from: image) else {
+      guard let ciImage = self.convertToCIImage(from: image) else {
         rejecter("IMAGE_CONVERSION_ERROR", "Failed to convert UIImage to CIImage", nil)
         return
       }

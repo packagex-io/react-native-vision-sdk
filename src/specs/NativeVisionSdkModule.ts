@@ -9,32 +9,6 @@ export interface Spec extends TurboModule {
   setEnvironment(environment: string): void;
 
   /**
-   * Loads on-device models without requiring the camera view
-   * @param token - Authentication token (empty string if not provided)
-   * @param apiKey - API Key (empty string if not provided)
-   * @param modelType - Model type ("shipping_label", "bill_of_lading", etc.)
-   * @param modelSize - Model size ("nano", "micro", "small", "medium", "large", "xlarge")
-   */
-  loadOnDeviceModels(
-    token: string,
-    apiKey: string,
-    modelType: string,
-    modelSize: string
-  ): Promise<void>;
-
-  // DEPRECATED - Use unloadModel() or deleteModel() instead
-  // /**
-  //  * Unloads on-device models to free up memory
-  //  * @param modelType - Model type to unload (empty string to unload all models)
-  //  * @param shouldDeleteFromDisk - Whether to delete model files from disk
-  //  * @returns Success message
-  //  */
-  // unLoadOnDeviceModels(
-  //   modelType: string,
-  //   shouldDeleteFromDisk: boolean
-  // ): Promise<string>;
-
-  /**
    * Logs item label data to PackageX
    * @param imageUri - URI of the image
    * @param barcodes - Array of barcodes
@@ -122,17 +96,6 @@ export interface Spec extends TurboModule {
     token: string | null,
     apiKey: string | null,
     shouldResizeImage: boolean
-  ): Promise<string>;
-
-  /**
-   * Performs on-device OCR prediction
-   * @param imagePath - Local file path or remote URL to the image
-   * @param barcodes - Array of barcodes
-   * @returns Prediction result as JSON string
-   */
-  predict(
-    imagePath: string,
-    barcodes: string[]
   ): Promise<string>;
 
   /**
