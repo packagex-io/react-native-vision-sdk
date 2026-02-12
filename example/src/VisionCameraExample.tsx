@@ -272,6 +272,7 @@ const VisionCameraExample = ({ navigation }) => {
   }, [loadTemplates]);
 
   const handleCapture = (event: VisionCameraCaptureEvent) => {
+    console.log("HANDLE CAPTURE EVENT: ", event)
     setCapturedImage(event.image);
     setLastCaptureEvent(event);
   };

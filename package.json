@@ -38,7 +38,7 @@
     "clean": "del-cli android/build example/android/build example/android/app/build example/ios/build"
   },
   "codegenConfig": {
-    "name": "VisionSdkView",
+    "name": "VisionSdkSpec",
     "type": "all",
     "jsSrcsDir": "src/specs",
     "android": {

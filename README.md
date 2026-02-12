@@ -32,6 +32,43 @@ Some key features of the VisionSDK Integration include:
 - **minSdkVersion**: 29+
 - **Kotlin**: 1.9.0+
 
+---
+
+## Migration from v2.x to v3.0
+
+### Breaking Changes in v3.0
+
+**1. `VisionSdkView` Component Removed**
+
+The `VisionSdkView` component has been completely removed in v3.0. Use `VisionCamera` instead:
+
+```tsx
+// ❌ v2.x (No longer available)
+import VisionSdkView from 'react-native-vision-sdk';
+<VisionSdkView mode="barcode" onBarcodeScan={...} />
+
+// ✅ v3.0
+import { VisionCamera } from 'react-native-vision-sdk';
+<VisionCamera scanMode="barcode" onBarcodeDetected={...} />
+```
+
+**2. Deprecated VisionCore Methods Removed**
+
+| Removed Method | Replacement |
+|----------------|-------------|
+| `loadOnDeviceModels()` | `downloadModel()` + `loadOCRModel()` |
+| `predict()` | `predictWithModule()` |
+| `unLoadOnDeviceModels()` | `unloadModel()` / `deleteModel()` |
+
+**3. For v2.x Documentation**
+
+If you're using v2.x and need the old documentation, it's available:
+- On npm: `npmjs.com/package/react-native-vision-sdk/v/2.x.x`
+- Via CLI: `npm show react-native-vision-sdk@2.0.5 readme`
+- GitHub releases tagged with v2.x versions
+
+---
+
 ## Installation
 
 Install the Vision SDK for React Native using either `npm` or `yarn`:
@@ -100,68 +137,62 @@ Update `Info.plist` with a usage description for the camera:
 
 ## Basic Usage Example
 
-Here’s an example of setting up the **Vision SDK** for barcode scanning in React Native.
+Here's an example of setting up the **Vision SDK** for barcode scanning in React Native using `VisionCamera`.
 
 ```tsx
-import React, { useEffect, useRef, useState } from 'react';
-import VisionSdkView, { VisionSdkRefProps } from 'react-native-vision-sdk';
-const ScannerView = () => {
-  const visionSdk = useRef<VisionSdkRefProps>(null);
+import React, { useRef, useState } from 'react';
+import { View, Text, StyleSheet } from 'react-native';
+import { VisionCamera, VisionCameraRefProps } from 'react-native-vision-sdk';
 
-  // Configure Vision SDK settings
-  useEffect(() => {
-    visionSdk?.current?.setFocusSettings({
-      shouldDisplayFocusImage: true,
-      shouldScanInFocusImageRect: true,
-      showCodeBoundariesInMultipleScan: true,
-      validCodeBoundaryBorderColor: '#2abd51',
-      validCodeBoundaryBorderWidth: 2,
-      validCodeBoundaryFillColor: '#2abd51',
-      inValidCodeBoundaryBorderColor: '#cc0829',
-      inValidCodeBoundaryBorderWidth: 2,
-      inValidCodeBoundaryFillColor: '#cc0829',
-      showDocumentBoundaries: true,
-      documentBoundaryBorderColor: '#241616',
-      documentBoundaryFillColor: '#e3000080',
-      focusImageTintColor: '#ffffff',
-      focusImageHighlightedColor: '#e30000',
-    });
-    visionSdk?.current?.setObjectDetectionSettings({
-      isTextIndicationOn: true,
-      isBarCodeOrQRCodeIndicationOn: true,
-      isDocumentIndicationOn: true,
-      codeDetectionConfidence: 0.5,
-      documentDetectionConfidence: 0.5,
-      secondsToWaitBeforeDocumentCapture: 2.0,
-    });
-    visionSdk?.current?.setCameraSettings({
-      nthFrameToProcess: 10,
-    });
-    visionSdk?.current?.startRunningHandler();
-  }, []);
+const ScannerView = () => {
+  const cameraRef = useRef<VisionCameraRefProps>(null);
+  const [lastScannedCode, setLastScannedCode] = useState<string>('');
 
   return (
-    <VisionSdkView
-      ref={visionSdk}
-      mode="barcode"
-      captureMode="auto"
-      flash={false}
-      zoomLevel={1.8}
-      flash={true}
-      onDetected={(event) => {
-        console.log('onDetected', event);
-        setDetectedData(event);
-      }}
-      onBarcodeScan={(event) => {
-        console.log('onBarcodeScan', event);
-        visionSdk.current?.restartScanningHandler();
-      }}
-      onError={(error) => {
-        console.log('onError', error);
-      }}
-    />
+    <View style={styles.container}>
+      <VisionCamera
+        ref={cameraRef}
+        scanMode="barcode"
+        autoCapture={false}
+        enableFlash={false}
+        zoomLevel={1.0}
+        cameraFacing="back"
+        onBarcodeDetected={(event) => {
+          console.log('Barcodes detected:', event.codes);
+          if (event.codes.length > 0) {
+            setLastScannedCode(event.codes[0].scannedCode);
+          }
+        }}
+        onCapture={(event) => {
+          console.log('Image captured:', event.image);
+          console.log('Barcodes in image:', event.barcodes);
+        }}
+        onError={(error) => {
+          console.error('Camera error:', error.message);
+        }}
+      />
+      {lastScannedCode && (
+        <View style={styles.overlay}>
+          <Text style={styles.codeText}>Scanned: {lastScannedCode}</Text>
+        </View>
+      )}
+    </View>
   );
 };
+
+const styles = StyleSheet.create({
+  container: { flex: 1 },
+  overlay: {
+    position: 'absolute',
+    bottom: 50,
+    left: 20,
+    right: 20,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    padding: 15,
+    borderRadius: 8,
+  },
+  codeText: { color: '#fff', fontSize: 16, textAlign: 'center' },
+});
 ```
 
 ## Headless OCR Example
@@ -422,25 +453,24 @@ await VisionCore.deleteModel(module);  // From disk (permanent)
 - **Type Safety**: OCRModule type instead of separate strings
 - **Explicit Selection**: Specify exact model for predictions
 
-#### Migration from Deprecated API
+#### Complete Workflow Example
 
-**DEPRECATED** (will be removed in v3.0.0):
 ```typescript
-// OLD - Don't use
-await VisionCore.loadModel(token, apiKey, 'shipping_label', 'large');
-await VisionCore.unLoadModel('shipping_label', true);
-const result = await VisionCore.predict(imageUri, barcodes);
-```
-
-**New API** (recommended):
-```typescript
-// NEW - Use this
 const module = { type: 'shipping_label', size: 'large' };
+
+// Initialize (required on Android)
+VisionCore.initializeModelManager({ maxConcurrentDownloads: 2 });
+
+// Download and load model
 await VisionCore.downloadModel(module, apiKey, token);
 await VisionCore.loadOCRModel(module, apiKey, token);
+
+// Make predictions
 const result = await VisionCore.predictWithModule(module, imageUri, barcodes);
-await VisionCore.unloadModel(module);
-await VisionCore.deleteModel(module);
+
+// Cleanup when done
+await VisionCore.unloadModel(module);  // From memory
+await VisionCore.deleteModel(module);  // From disk (permanent)
 ```
 
 ### Advanced Model Management
@@ -765,14 +795,11 @@ cameraRef.current?.stop();
 
 ### Camera Switching (Front/Back)
 
-Both `VisionCamera` and `VisionSdkView` components support switching between front and back cameras.
-
-#### VisionCamera (Prop-based)
-
 Switch cameras by updating the `cameraFacing` prop:
 
 ```tsx
 import React, { useState, useRef } from 'react';
+import { Button } from 'react-native';
 import { VisionCamera, VisionCameraRefProps, CameraFacing } from 'react-native-vision-sdk';
 
 const CameraSwitchExample = () => {
@@ -794,45 +821,6 @@ const CameraSwitchExample = () => {
         }}
       />
       <Button title="Switch Camera" onPress={toggleCamera} />
-    </>
-  );
-};
-```
-
-#### VisionSdkView (Ref-based)
-
-Use the `setCameraSettings` method to switch cameras:
-
-```tsx
-import React, { useRef } from 'react';
-import VisionSdkView, { VisionSdkRefProps } from 'react-native-vision-sdk';
-
-const LegacyCameraSwitchExample = () => {
-  const visionSdkRef = useRef<VisionSdkRefProps>(null);
-
-  const switchToFrontCamera = () => {
-    visionSdkRef.current?.setCameraSettings({
-      cameraPosition: 2  // 2 = front camera
-    });
-  };
-
-  const switchToBackCamera = () => {
-    visionSdkRef.current?.setCameraSettings({
-      cameraPosition: 1  // 1 = back camera
-    });
-  };
-
-  return (
-    <>
-      <VisionSdkView
-        ref={visionSdkRef}
-        mode="barcode"
-        onBarcodeScan={(event) => {
-          console.log('Barcode scanned:', event);
-        }}
-      />
-      <Button title="Front Camera" onPress={switchToFrontCamera} />
-      <Button title="Back Camera" onPress={switchToBackCamera} />
     </>
   );
 };
@@ -924,33 +912,22 @@ const styles = StyleSheet.create({
 });
 ```
 
-### Key Differences: VisionCamera vs VisionSDK
+### VisionCamera + VisionCore Architecture
 
-| **Feature** | **VisionCamera** | **VisionSDK** |
-|-------------|------------------|---------------|
-| **Setup Complexity** | Minimal - no API keys needed | Requires API key/token for cloud features |
-| **Use Case** | Simple barcode/QR scanning | Full OCR + cloud predictions |
-| **Bundle Size** | Lightweight | Full-featured |
-| **Configuration** | Props-based | Imperative methods + props |
-| **Cloud Integration** | No | Yes (shipping labels, BOL, etc.) |
-| **Offline Capability** | Full (barcode/QR only) | Partial (requires model download for OCR) |
+`VisionCamera` is the primary camera component for all scanning needs. For OCR capabilities, combine it with `VisionCore`:
 
-### When to Use VisionCamera
+| **Component** | **Purpose** |
+|---------------|-------------|
+| **VisionCamera** | Camera UI for barcode/QR scanning, image capture |
+| **VisionCore** | Headless OCR, model management, cloud predictions |
 
-- Simple barcode or QR code scanning
-- On-device OCR (when coupled with `VisionCore` for predictions)
-- No cloud OCR needed
-- Want minimal setup
-- Building a lightweight scanner
-- Custom UI overlays for scanning region
+**Typical Workflow:**
+1. Use `VisionCamera` to scan barcodes and capture images
+2. Use `VisionCore.downloadModel()` + `loadOCRModel()` to prepare on-device OCR
+3. Use `VisionCore.predictWithModule()` for on-device predictions
+4. Or use `VisionCore.predictShippingLabelCloud()` etc. for cloud predictions
 
-### When to Use VisionSDK (Full Component)
-
-- Need OCR for shipping labels, bills of lading
-- Cloud prediction API integration
-- On-device ML model inference
-- Complex document processing workflows
-- Template management
+See the [Headless OCR Example](#headless-ocr-example) and [Model Management API](#model-management-api) sections for complete workflows.
 
 ---
 
@@ -1083,32 +1060,43 @@ onError={(error) => {
 
 ### Headless OCR Workflows
 
-**NEW**: The Vision SDK now supports headless OCR operations that work independently of the camera component. These methods allow you to perform predictions on existing images without needing the camera view.
+The Vision SDK supports headless OCR operations that work independently of the camera component. These methods allow you to perform predictions on existing images without needing the camera view.
 
 ```typescript
 import { VisionCore } from 'react-native-vision-sdk';
 
-// First, set your environment and load a model
+// Set your environment
 VisionCore.setEnvironment('sandbox'); // or 'prod'
-await VisionCore.loadModel(
-  'your-token',
-  'your-api-key',
-  'shipping_label',
-  'large'
-);
 
-// Now you can make predictions on any image
-const result = await VisionCore.predict('/path/to/image.jpg', ['barcode1', 'barcode2']);
+// Initialize model manager (required on Android)
+VisionCore.initializeModelManager({ maxConcurrentDownloads: 2 });
+
+// Download and load a model
+const module = { type: 'shipping_label', size: 'large' };
+await VisionCore.downloadModel(module, 'your-api-key');
+await VisionCore.loadOCRModel(module, 'your-api-key');
+
+// Make predictions on any image
+const result = await VisionCore.predictWithModule(
+  module,
+  '/path/to/image.jpg',
+  ['barcode1', 'barcode2']
+);
 ```
 
 #### Available Headless Methods:
 
-- **`VisionCore.predict(imagePath, barcodes)`** - On-device prediction
-- **`VisionCore.predictShippingLabelCloud(imagePath, barcodes, options)`** - Cloud shipping label prediction
-- **`VisionCore.predictItemLabelCloud(imagePath, options)`** - Cloud item label prediction
-- **`VisionCore.predictBillOfLadingCloud(imagePath, barcodes, options)`** - Cloud bill of lading prediction
-- **`VisionCore.predictDocumentClassificationCloud(imagePath, options)`** - Cloud document classification
-- **`VisionCore.predictWithCloudTransformations(imagePath, barcodes, options)`** - Hybrid on-device + cloud prediction
+**On-Device Prediction:**
+- **`VisionCore.predictWithModule(module, imagePath, barcodes)`** - On-device prediction with explicit model selection
+
+**Cloud Predictions (no model download required):**
+- **`VisionCore.predictShippingLabelCloud(imagePath, barcodes, ...options)`** - Cloud shipping label prediction
+- **`VisionCore.predictItemLabelCloud(imagePath, ...options)`** - Cloud item label prediction
+- **`VisionCore.predictBillOfLadingCloud(imagePath, barcodes, ...options)`** - Cloud bill of lading prediction
+- **`VisionCore.predictDocumentClassificationCloud(imagePath, ...options)`** - Cloud document classification
+
+**Hybrid:**
+- **`VisionCore.predictWithCloudTransformations(imagePath, barcodes, options)`** - On-device prediction + cloud transformations
 
 ---
 
@@ -1337,234 +1325,268 @@ Use `createTemplate()` to open the template creation UI. The SDK will return the
 visionSdk.current.createTemplate();
 ```
 
-#### 2. Handle Template Creation Event
+#### 2. Handle Barcode Detection
 
-The `onCreateTemplate` event receives the full template as JSON. **You must store this yourself** (e.g., in AsyncStorage, Redux, or a database).
+Listen for barcode detections via the `onBarcodeDetected` callback. In template creation mode, allow users to select barcodes to add to the template.
 
 ```typescript
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import type { TemplateData, TemplateCode } from 'react-native-vision-sdk';
 
-// Template data interface
-interface TemplateData {
-  id: string;
-  templateCodes: Array<{
-    codeString: string;
-    symbology: string;
-    boundingBox?: {
-      x: number;
-      y: number;
-      width: number;
-      height: number;
-    };
-  }>;
-}
+// State for template creation
+const [isTemplateMode, setIsTemplateMode] = useState(false);
+const [templateCodes, setTemplateCodes] = useState<TemplateCode[]>([]);
 
-// Handle template creation
-const handleCreateTemplate = async (event) => {
-  try {
-    // The event.nativeEvent.data contains the full TemplateData object
-    const template: TemplateData = event.nativeEvent.data;
+// Handle barcode detection - add to template when in template mode
+const handleBarcodeDetected = (event: { codes: Array<{ scannedCode: string; symbology: string; boundingBox: any }> }) => {
+  if (!isTemplateMode) return;
 
-    // Filter out old API format (backward compatibility check)
-    if (!template.templateCodes || !Array.isArray(template.templateCodes)) {
-      console.log('Invalid template format');
-      return;
-    }
-
-    // Store template in AsyncStorage
-    const templateJson = JSON.stringify(template);
-    await AsyncStorage.setItem(`template_${template.id}`, templateJson);
-
-    Alert.alert('Success', `Template "${template.id}" saved!`);
-  } catch (error) {
-    console.error('Failed to save template:', error);
-  }
+  // Allow user to tap detected barcodes to add to template
+  // See complete example below for UI implementation
 };
 
-// Register the event handler
-<VisionSdkView
-  ref={visionSdk}
-  onCreateTemplate={handleCreateTemplate}
-  // ... other props
-/>
+// Add a barcode to the template
+const addBarcodeToTemplate = (code: { scannedCode: string; symbology: string; boundingBox: any }) => {
+  setTemplateCodes(prev => {
+    const alreadyExists = prev.some(
+      c => c.codeString === code.scannedCode && c.codeSymbology === code.symbology
+    );
+    if (alreadyExists) return prev;
+    return [...prev, {
+      codeString: code.scannedCode,
+      codeSymbology: code.symbology,
+      boundingBox: code.boundingBox
+    }];
+  });
+};
+
+// Save the template
+const saveTemplate = async () => {
+  if (templateCodes.length === 0) return;
+
+  const template: TemplateData = {
+    id: `template_${Date.now()}`,
+    templateCodes,
+  };
+
+  await AsyncStorage.setItem(`template_${template.id}`, JSON.stringify(template));
+  setTemplateCodes([]);
+  setIsTemplateMode(false);
+};
 ```
 
 #### 3. Apply Template to Scanner
 
-To use a template during scanning, pass the **full template JSON** to `setObjectDetectionSettings()`:
+To use a template during scanning, pass it via the `template` prop:
 
 ```typescript
-// Load template from storage
+const [activeTemplate, setActiveTemplate] = useState<TemplateData | null>(null);
+
+// Load and apply a template
 const loadAndApplyTemplate = async (templateId: string) => {
   try {
-    // Retrieve from AsyncStorage
     const templateJson = await AsyncStorage.getItem(`template_${templateId}`);
-
     if (templateJson) {
-      // Apply template to scanner
-      visionSdk.current?.setObjectDetectionSettings({
-        selectedTemplate: templateJson, // Pass full JSON string
-        // ... other detection settings
-        isTextIndicationOn: true,
-        isBarCodeOrQRCodeIndicationOn: true,
-        isDocumentIndicationOn: true,
-      });
-
+      const template = JSON.parse(templateJson);
+      setActiveTemplate(template);
       console.log('Template applied successfully');
-    } else {
-      console.log('Template not found');
     }
   } catch (error) {
     console.error('Failed to load template:', error);
   }
 };
+
+// In your component:
+<VisionCamera
+  ref={cameraRef}
+  scanMode="barcode"
+  template={activeTemplate}
+  onBarcodeDetected={handleBarcodeDetected}
+  onCapture={handleCapture}
+  // ... other props
+/>
 ```
 
 #### 4. Remove Active Template
 
-To remove the currently active template, pass an empty string:
+To remove the currently active template, set it to `null`:
 
 ```typescript
 // Remove template from scanner
-visionSdk.current?.setObjectDetectionSettings({
-  selectedTemplate: '', // Empty string removes the template
-  // ... other settings remain unchanged
-});
+setActiveTemplate(null);
 ```
 
 ### Complete Example with State Management
 
 ```typescript
-import React, { useRef, useState, useEffect } from 'react';
-import { View, Button, FlatList, Alert } from 'react-native';
+import React, { useRef, useState, useEffect, useCallback } from 'react';
+import { View, Button, FlatList, Text, Alert, TouchableOpacity, Modal } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import VisionSdkView, { VisionSdkRefProps } from 'react-native-vision-sdk';
+import { VisionCamera, VisionCameraRefProps } from 'react-native-vision-sdk';
+import type { TemplateData, TemplateCode } from 'react-native-vision-sdk';
+
+const TEMPLATES_STORAGE_KEY = '@vision_sdk_templates';
 
 const TemplateManagementExample = () => {
-  const visionSdk = useRef<VisionSdkRefProps>(null);
-  const [templates, setTemplates] = useState<TemplateData[]>([]);
-  const [activeTemplateId, setActiveTemplateId] = useState<string | null>(null);
+  const cameraRef = useRef<VisionCameraRefProps>(null);
+
+  // Template state
+  const [savedTemplates, setSavedTemplates] = useState<TemplateData[]>([]);
+  const [activeTemplate, setActiveTemplate] = useState<TemplateData | null>(null);
+
+  // Template creation state
+  const [isTemplateMode, setIsTemplateMode] = useState(false);
+  const [templateCodes, setTemplateCodes] = useState<TemplateCode[]>([]);
+  const [showTemplateManager, setShowTemplateManager] = useState(false);
 
   // Load all templates from storage
-  const loadTemplates = async () => {
+  const loadTemplates = useCallback(async () => {
     try {
-      const keys = await AsyncStorage.getAllKeys();
-      const templateKeys = keys.filter(key => key.startsWith('template_'));
-      const templateData = await AsyncStorage.multiGet(templateKeys);
-
-      const parsedTemplates = templateData
-        .map(([key, value]) => value ? JSON.parse(value) : null)
-        .filter(Boolean);
-
-      setTemplates(parsedTemplates);
+      const json = await AsyncStorage.getItem(TEMPLATES_STORAGE_KEY);
+      if (json) {
+        setSavedTemplates(JSON.parse(json));
+      }
     } catch (error) {
       console.error('Failed to load templates:', error);
     }
-  };
+  }, []);
 
-  // Handle template creation
-  const handleCreateTemplate = async (event) => {
+  // Persist templates to storage
+  const persistTemplates = useCallback(async (templates: TemplateData[]) => {
     try {
-      const template = event.nativeEvent.data;
-
-      if (!template.templateCodes || !Array.isArray(template.templateCodes)) {
-        return;
-      }
-
-      // Save to storage
-      const templateJson = JSON.stringify(template);
-      await AsyncStorage.setItem(`template_${template.id}`, templateJson);
-
-      // Reload templates list
-      await loadTemplates();
-
-      Alert.alert('Success', `Template "${template.id}" created!`);
+      await AsyncStorage.setItem(TEMPLATES_STORAGE_KEY, JSON.stringify(templates));
+      setSavedTemplates(templates);
     } catch (error) {
-      console.error('Failed to save template:', error);
+      console.error('Failed to save templates:', error);
     }
-  };
+  }, []);
 
-  // Apply template to scanner
-  const applyTemplate = async (templateId: string) => {
-    try {
-      const templateJson = await AsyncStorage.getItem(`template_${templateId}`);
-
-      if (templateJson) {
-        visionSdk.current?.setObjectDetectionSettings({
-          selectedTemplate: templateJson,
-          isTextIndicationOn: true,
-          isBarCodeOrQRCodeIndicationOn: true,
-          isDocumentIndicationOn: true,
-        });
-
-        setActiveTemplateId(templateId);
-        Alert.alert('Applied', `Template "${templateId}" is now active`);
-      }
-    } catch (error) {
-      console.error('Failed to apply template:', error);
-    }
-  };
-
-  // Remove active template
-  const removeTemplate = () => {
-    visionSdk.current?.setObjectDetectionSettings({
-      selectedTemplate: '',
+  // Add barcode to template being created
+  const handleAddBarcodeToTemplate = useCallback((code: {
+    scannedCode: string;
+    symbology: string;
+    boundingBox: { x: number; y: number; width: number; height: number };
+  }) => {
+    setTemplateCodes(prev => {
+      const alreadyExists = prev.some(
+        c => c.codeString === code.scannedCode && c.codeSymbology === code.symbology
+      );
+      if (alreadyExists) return prev;
+      return [...prev, {
+        codeString: code.scannedCode,
+        codeSymbology: code.symbology,
+        boundingBox: code.boundingBox
+      }];
     });
-    setActiveTemplateId(null);
-    Alert.alert('Removed', 'Template removed from scanner');
-  };
+  }, []);
 
-  // Delete template from storage
-  const deleteTemplate = async (templateId: string) => {
-    try {
-      await AsyncStorage.removeItem(`template_${templateId}`);
+  // Save the template
+  const handleSaveTemplate = useCallback(async () => {
+    if (templateCodes.length === 0) return;
 
-      // If this was the active template, remove it from scanner
-      if (activeTemplateId === templateId) {
-        removeTemplate();
-      }
+    const newTemplate: TemplateData = {
+      id: `template_${Date.now()}`,
+      templateCodes,
+    };
 
-      await loadTemplates();
-      Alert.alert('Deleted', `Template "${templateId}" deleted`);
-    } catch (error) {
-      console.error('Failed to delete template:', error);
+    const updated = [...savedTemplates, newTemplate];
+    await persistTemplates(updated);
+    setTemplateCodes([]);
+    setIsTemplateMode(false);
+    Alert.alert('Template Saved', `Template saved with ${newTemplate.templateCodes.length} code(s).`);
+  }, [templateCodes, savedTemplates, persistTemplates]);
+
+  // Apply/remove template
+  const handleApplyTemplate = useCallback((template: TemplateData) => {
+    if (activeTemplate?.id === template.id) {
+      setActiveTemplate(null);
+    } else {
+      setActiveTemplate(template);
     }
-  };
+    setShowTemplateManager(false);
+  }, [activeTemplate]);
+
+  // Delete a template
+  const handleDeleteTemplate = useCallback(async (id: string) => {
+    if (activeTemplate?.id === id) {
+      setActiveTemplate(null);
+    }
+    const updated = savedTemplates.filter(t => t.id !== id);
+    await persistTemplates(updated);
+  }, [savedTemplates, persistTemplates, activeTemplate]);
 
   // Load templates on mount
   useEffect(() => {
     loadTemplates();
-  }, []);
+  }, [loadTemplates]);
 
   return (
     <View style={{ flex: 1 }}>
-      <VisionSdkView
-        ref={visionSdk}
-        mode="barcode"
-        onCreateTemplate={handleCreateTemplate}
-        onBarcodeScan={(event) => console.log('Scanned:', event)}
+      <VisionCamera
+        ref={cameraRef}
+        scanMode="barcode"
+        template={activeTemplate}
+        onBarcodeDetected={(event) => {
+          // In template mode, display barcodes for user to tap and add
+          if (isTemplateMode) {
+            // Your UI should show bounding boxes that users can tap
+            // to call handleAddBarcodeToTemplate(code)
+          }
+        }}
+        onCapture={(event) => console.log('Captured:', event)}
       />
 
-      <View style={{ padding: 20 }}>
-        <Button title="Create New Template" onPress={() => visionSdk.current?.createTemplate()} />
-        {activeTemplateId && <Button title="Remove Active Template" onPress={removeTemplate} />}
+      {/* Template Manager Button */}
+      <TouchableOpacity
+        style={{ position: 'absolute', top: 50, right: 20 }}
+        onPress={() => setShowTemplateManager(true)}
+      >
+        <Text>Templates</Text>
+      </TouchableOpacity>
 
-        <FlatList
-          data={templates}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <View style={{ flexDirection: 'row', padding: 10 }}>
-              <Text>{item.id} ({item.templateCodes.length} codes)</Text>
-              <Button
-                title={activeTemplateId === item.id ? "Active" : "Apply"}
-                onPress={() => applyTemplate(item.id)}
-                disabled={activeTemplateId === item.id}
-              />
-              <Button title="Delete" onPress={() => deleteTemplate(item.id)} />
-            </View>
-          )}
-        />
-      </View>
+      {/* Template Creation Panel (when in template mode) */}
+      {isTemplateMode && (
+        <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: 20 }}>
+          <Text>Template ({templateCodes.length} codes)</Text>
+          <Button title="Save Template" onPress={handleSaveTemplate} disabled={templateCodes.length === 0} />
+          <Button title="Cancel" onPress={() => { setTemplateCodes([]); setIsTemplateMode(false); }} />
+        </View>
+      )}
+
+      {/* Template Manager Modal */}
+      <Modal visible={showTemplateManager} animationType="slide" transparent>
+        <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <View style={{ backgroundColor: '#1a1a2e', padding: 20, borderTopLeftRadius: 20, borderTopRightRadius: 20 }}>
+            <Text style={{ color: '#fff', fontSize: 18 }}>Templates</Text>
+
+            <Button title="+ Create New Template" onPress={() => {
+              setShowTemplateManager(false);
+              setTemplateCodes([]);
+              setIsTemplateMode(true);
+            }} />
+
+            <FlatList
+              data={savedTemplates}
+              keyExtractor={(item) => item.id}
+              renderItem={({ item }) => (
+                <View style={{ flexDirection: 'row', padding: 10, alignItems: 'center' }}>
+                  <Text style={{ flex: 1, color: '#fff' }}>
+                    {item.id} ({item.templateCodes.length} codes)
+                    {activeTemplate?.id === item.id ? ' (Active)' : ''}
+                  </Text>
+                  <Button
+                    title={activeTemplate?.id === item.id ? 'Remove' : 'Apply'}
+                    onPress={() => handleApplyTemplate(item)}
+                  />
+                  <Button title="Delete" onPress={() => handleDeleteTemplate(item.id)} />
+                </View>
+              )}
+            />
+
+            <Button title="Close" onPress={() => setShowTemplateManager(false)} />
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -1572,246 +1594,55 @@ const TemplateManagementExample = () => {
 
 ### Migration from Old API
 
-**DEPRECATED** (removed in v2.0.6+):
+**DEPRECATED** (removed in v3.0):
 ```typescript
-// OLD - These methods no longer exist
+// OLD - VisionSdkView methods no longer exist
+visionSdk.current.createTemplate();            // REMOVED
 visionSdk.current.getAllTemplates();           // REMOVED
 visionSdk.current.deleteTemplateWithId(id);    // REMOVED
 visionSdk.current.deleteAllTemplates();        // REMOVED
+visionSdk.current.setObjectDetectionSettings({ selectedTemplate: json });  // REMOVED
 
-// OLD - These events no longer fire
+// OLD - VisionSdkView events no longer fire
+onCreateTemplate={(event) => {}}               // REMOVED
 onGetTemplates={(event) => {}}                 // REMOVED
 onDeleteTemplateById={(event) => {}}           // REMOVED
 onDeleteTemplates={(event) => {}}              // REMOVED
 ```
 
-**NEW** (v2.0.6+):
+**NEW** (v3.0+):
 ```typescript
-// NEW - You manage storage yourself
-import AsyncStorage from '@react-native-async-storage/async-storage';
+// NEW - Use VisionCamera with template prop
+import { VisionCamera } from 'react-native-vision-sdk';
+import type { TemplateData } from 'react-native-vision-sdk';
 
-// Create template (same method, different data format)
-visionSdk.current.createTemplate();
+// Template creation is done in React Native (see example above)
+const [templateCodes, setTemplateCodes] = useState<TemplateCode[]>([]);
 
-// Store template (your responsibility)
-onCreateTemplate={async (event) => {
-  const template = event.nativeEvent.data; // Full TemplateData object
-  await AsyncStorage.setItem(`template_${template.id}`, JSON.stringify(template));
-}}
+// Apply template via prop
+const [activeTemplate, setActiveTemplate] = useState<TemplateData | null>(null);
 
-// Apply template (via setObjectDetectionSettings)
-const templateJson = await AsyncStorage.getItem(`template_${id}`);
-visionSdk.current.setObjectDetectionSettings({
-  selectedTemplate: templateJson,
-});
+<VisionCamera
+  template={activeTemplate}  // Pass TemplateData object or null
+  // ... other props
+/>
 
-// Delete template (your responsibility)
+// Delete template from your storage
 await AsyncStorage.removeItem(`template_${id}`);
 ```
 
 ### Key Changes
 
-| Old API | New API | Notes |
-|---------|---------|-------|
+| Old API (VisionSdkView) | New API (VisionCamera) | Notes |
+|-------------------------|------------------------|-------|
+| `createTemplate()` method | Build in React Native | Tap barcodes to add to template |
 | `getAllTemplates()` | ❌ Removed | Manage storage with AsyncStorage/Redux |
 | `deleteTemplateWithId(id)` | ❌ Removed | Delete from your storage manually |
 | `deleteAllTemplates()` | ❌ Removed | Clear your storage manually |
-| `onCreateTemplate` returns ID | Returns full `TemplateData` JSON | More data, you control storage |
-| `selectedTemplateId: "id"` | `selectedTemplate: "jsonString"` | Pass full JSON instead of ID |
+| `onCreateTemplate` event | Build template in state | Full control over UI/UX |
+| `setObjectDetectionSettings({ selectedTemplate })` | `<VisionCamera template={...} />` | Pass via prop |
 
 ---
-
-## Configuration
-
-Use the `VisionSdkView` component to configure and manage Vision SDK’s features.
-
-### Props
-
-| **Prop**                           | **Type**                                                                                      | **Description**                                                                                                                                                                                                             |
-| ---------------------------------- | --------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `ref`                              | `Function`                                                                                    | Catch the reference of the component to manipulate modes or to access callback functions.                                                                                                                                   |
-| `mode`                             | `string: (ocr, barcode, qrcode, barCodeOrQrCode, photo)`                                      | Default mode is ‘barcode’, you can either use other like ocr, qrcode, photo.                                                                                                                                                |
-| `captureMode`                      | `string: (manual, auto)`                                                                      | Default captureMode is ‘manual’, you can either use ‘auto’.                                                                                                                                                                 |
-| `apiKey`                           | `string`                                                                                      | In order to use the OCR API/MODEL, You must set your API key or either an Auth token..                                                                                                                                      |
-| `token`                            | `string`                                                                                      | In order to use the OCR API/MODEL, You must set your API key or either an Auth token.                                                                                                                                       |
-| `environment`                      | `string: (sandbox, prod)`                                                                     | If you are using OCR mode then you can set your development environment. (Default env is prod)                                                                                                                              |
-| `ocrMode`                          | `string: (cloud, on-device, on-device-with-translation, item_label, document_classification)` | ocrMode defines whether you want to scan using cloud API, on-Device Model or on-Device Model with response translation                                                                                                      |
-| `isMultipleScanEnabled`            | `boolean: (true, false)`                                                                      | You can enable or disable multiple scan mode by using this prop. (Default value is false)                                                                                                                                   |
-| `isEnableAutoOcrResponseWithImage` | `boolean: (true, false)`                                                                      | You can enable or disable automatic OCR responses that include the image with the OCR result using the isEnableAutoOcrResponseWithImage property. It accepts a boolean value (true or false), with a default value of true. |
-| `flash`                            | `boolean: (true, false)`                                                                      | You can turn ON/OFF camera flash by using this prop. (Default value is false)                                                                                                                                               |
-| `zoomLevel`                        | `number:  (1 to 5)`                                                                           | You can set the Zoom value. Zoom value is device dependent. It will be vary between 1 to 5.                                                                                                                                 |
-| `locationId`                       | `string: (ex# loc_2rpHXFf6ith)`                                                               | By default your location will get from apiKey or either you can set location id.                                                                                                                                            |
-| `options`                          | `Object: {x: number, y: string}`                                                              | Option contains different other optional parameters you can provide along with the image.                                                                                                                                   |
-| `onDetected`                       | `function`                                                                                    | Callback for detection events.                                                                                                                                                                                              |
-| `onBarcodeScan`                    | `function`                                                                                    | Callback when a barcode is scanned.                                                                                                                                                                                         |
-| `onOCRScan`                        | `function`                                                                                    | Callback for OCR events.                                                                                                                                                                                                    |
-| `onImageCaptured`                  | `function`                                                                                    | Callback for image capture events.                                                                                                                                                                                          |
-| `onModelDownloadProgress`          | `function`                                                                                    | Event to monitor model download progress.                                                                                                                                                                                   |
-| `onError`                          | `function`                                                                                    | Callback for handling errors.                                                                                                                                                                                               |
-| `onCreateTemplate`                 | `function`                                                                                    | Callback event handler that triggers when a template is successfully created. Returns full `TemplateData` object - you are responsible for storing it (e.g., AsyncStorage). See [Template Management](#template-management) for details. |
-
----
-
-## Event Handlers
-
-The Vision SDK provides several event handlers to handle different types of responses from the SDK. Here is an explanation of each:
-
-### 1. `onDetected`
-
-Triggered when any target (barcode, document, QR code, etc.) is detected.
-
-- **Response**:
-  ```json
-  {
-    "barcode": false,
-    "document": false,
-    "qrcode": false,
-    "text": false
-  }
-  ```
-  - `barcode`, `document`, `qrcode`, `text`: Indicates the detection of each type.
-
-### 2. `onBarcodeScan`
-
-Called when a barcode is successfully scanned.
-
-- **Response**:
-  ```json
-  {
-    "code": []
-  }
-  ```
-  - `code`: The scanned barcode data.
-
-### 3. `onOCRScan`
-
-Triggered when OCR detects and returns text.
-
-- **Response**:
-  ```json
-  {
-    "data": {}
-  }
-  ```
-  - `data`: Text recognized through OCR.
-
-### 4. `onImageCaptured`
-
-Fires when an image is captured.
-
-- **Response**:
-  ```json
-  {
-    "barcodes": [],
-    "image": "/path/to/image"
-  }
-  ```
-  - `barcodes`: An array of detected barcodes in the image.
-  - `image`: File path to the captured image.
-
-### 5. `onModelDownloadProgress`
-
-Tracks the download progress of the model.
-
-- **Response**:
-  ```json
-  { "downloadStatus": true, "progress": 1 }
-  ```
-  - `downloadStatus`: Indicates if downloading is ongoing.
-  - `progress`: A number (0 to 1) indicating download progress.
-
-### 6. `onError`
-
-Called when an error occurs.
-
-- **Response**:
-  ```json
-  {
-    "code": 1,
-    "message": ""
-  }
-  ```
-  - `code`: Error code.
-  - `message`: Description of the error.
-
-## Example Usage
-
-Here's how to set up the Vision SDK in your React Native component:
-
-```tsx
-import React, { useEffect, useRef, useState } from 'react';
-import VisionSdkView, { VisionSdkRefProps } from 'react-native-vision-sdk';
-const ScannerView = () => {
-  const visionSdk = useRef<VisionSdkRefProps>(null);
-
-  // Configure Vision SDK settings
-  useEffect(() => {
-    visionSdk?.current?.setFocusSettings({
-      shouldDisplayFocusImage: true,
-      shouldScanInFocusImageRect: true,
-      showCodeBoundariesInMultipleScan: true,
-      validCodeBoundaryBorderColor: '#2abd51',
-      validCodeBoundaryBorderWidth: 2,
-      validCodeBoundaryFillColor: '#2abd51',
-      inValidCodeBoundaryBorderColor: '#cc0829',
-      inValidCodeBoundaryBorderWidth: 2,
-      inValidCodeBoundaryFillColor: '#cc0829',
-      showDocumentBoundaries: true,
-      documentBoundaryBorderColor: '#241616',
-      documentBoundaryFillColor: '#e3000080',
-      focusImageTintColor: '#ffffff',
-      focusImageHighlightedColor: '#e30000',
-    });
-    visionSdk?.current?.setObjectDetectionSettings({
-      isTextIndicationOn: true,
-      isBarCodeOrQRCodeIndicationOn: true,
-      isDocumentIndicationOn: true,
-      codeDetectionConfidence: 0.5,
-      documentDetectionConfidence: 0.5,
-      secondsToWaitBeforeDocumentCapture: 2.0,
-    });
-    visionSdk?.current?.setCameraSettings({
-      nthFrameToProcess: 10,
-    });
-    visionSdk?.current?.startRunningHandler();
-  }, []);
-
-  return (
-    <VisionSdkView
-      ref={visionSdk}
-      mode="ocr"
-      captureMode="manual"
-      ocrMode="cloud"
-      environment="your-environment"
-      locationId="your-location-id"
-      apiKey="your-api-key"
-      flash={false}
-      zoomLevel={1.8}
-      onDetected={(event) => {
-        console.log('onDetected', event);
-        setDetectedData(event);
-      }}
-      onOCRScan={(event) => {
-        console.log('onOCRScan', event);
-        visionSdk.current?.restartScanningHandler();
-      }}
-      onImageCaptured={(event) => {
-        console.log('onImageCaptured', event);
-        visionSdk.current?.restartScanningHandler();
-      }}
-      onModelDownloadProgress={(event) => {
-        console.log('onModelDownloadProgress', event);
-        if (event.downloadStatus) {
-          visionSdk.current?.startRunningHandler();
-        }
-      }}
-      onError={(error) => {
-        console.log('onError', error);
-      }}
-    />
-  );
-};
-```
 
 ### API Key
 

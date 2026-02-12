@@ -699,7 +699,7 @@ const ModelManagementScreen = ({ navigation }) => {
     );
   };
 
-  // 6️⃣ PREDICTION
+  // 6️⃣ ON-DEVICE PREDICTION
   const handlePredictWithModule = async () => {
     try {
       setIsLoading(true);
@@ -732,6 +732,116 @@ const ModelManagementScreen = ({ navigation }) => {
     } catch (error: any) {
       setStatusMessage('❌ Prediction failed: ' + error.message);
       Alert.alert('Error', 'Prediction failed: ' + error.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // 7️⃣ CLOUD PREDICTIONS
+  const handlePredictShippingLabelCloud = async () => {
+    try {
+      setIsLoading(true);
+      const imageSource = useCapturedImage ? 'captured image' : 'sample image';
+      setStatusMessage(`☁️ Making cloud shipping label prediction with ${imageSource}...`);
+
+      const imagePath = getCurrentImagePath('shipping_label');
+
+      const result = await VisionCore.predictShippingLabelCloud(
+        imagePath,
+        [], // barcodes
+        null, // token
+        api_key, // apiKey
+        null, // locationId
+        null, // options
+        null, // metadata
+        null, // recipient
+        null, // sender
+        true // shouldResizeImage
+      );
+
+      setStatusMessage('✅ Cloud shipping label prediction completed!');
+      setResults(typeof result === 'string' ? result : JSON.stringify(result, null, 2));
+    } catch (error: any) {
+      setStatusMessage('❌ Cloud prediction failed: ' + error.message);
+      Alert.alert('Error', 'Cloud prediction failed: ' + error.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handlePredictItemLabelCloud = async () => {
+    try {
+      setIsLoading(true);
+      const imageSource = useCapturedImage ? 'captured image' : 'sample image';
+      setStatusMessage(`☁️ Making cloud item label prediction with ${imageSource}...`);
+
+      const imagePath = getCurrentImagePath('item_label');
+
+      const result = await VisionCore.predictItemLabelCloud(
+        imagePath,
+        null, // token
+        api_key, // apiKey
+        true // shouldResizeImage
+      );
+
+      setStatusMessage('✅ Cloud item label prediction completed!');
+      setResults(typeof result === 'string' ? result : JSON.stringify(result, null, 2));
+    } catch (error: any) {
+      setStatusMessage('❌ Cloud prediction failed: ' + error.message);
+      Alert.alert('Error', 'Cloud prediction failed: ' + error.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handlePredictBillOfLadingCloud = async () => {
+    try {
+      setIsLoading(true);
+      const imageSource = useCapturedImage ? 'captured image' : 'sample image';
+      setStatusMessage(`☁️ Making cloud bill of lading prediction with ${imageSource}...`);
+
+      const imagePath = getCurrentImagePath('bill_of_lading');
+
+      const result = await VisionCore.predictBillOfLadingCloud(
+        imagePath,
+        [], // barcodes
+        null, // token
+        api_key, // apiKey
+        null, // locationId
+        null, // options
+        true // shouldResizeImage
+      );
+
+      setStatusMessage('✅ Cloud bill of lading prediction completed!');
+      setResults(typeof result === 'string' ? result : JSON.stringify(result, null, 2));
+    } catch (error: any) {
+      setStatusMessage('❌ Cloud prediction failed: ' + error.message);
+      Alert.alert('Error', 'Cloud prediction failed: ' + error.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handlePredictDocumentClassificationCloud = async () => {
+    try {
+      setIsLoading(true);
+      const imageSource = useCapturedImage ? 'captured image' : 'sample image';
+      setStatusMessage(`☁️ Making cloud document classification prediction with ${imageSource}...`);
+
+      const imagePath = getCurrentImagePath('document_classification');
+
+      const result = await VisionCore.predictDocumentClassificationCloud(
+        imagePath,
+        null, // token
+        api_key, // apiKey
+        true // shouldResizeImage
+      );
+
+      setStatusMessage('✅ Cloud document classification prediction completed!');
+      setResults(typeof result === 'string' ? result : JSON.stringify(result, null, 2));
+    } catch (error: any) {
+      setStatusMessage('❌ Cloud prediction failed: ' + error.message);
+      Alert.alert('Error', 'Cloud prediction failed: ' + error.message);
     } finally {
       setIsLoading(false);
     }
@@ -1070,9 +1180,9 @@ const ModelManagementScreen = ({ navigation }) => {
         </TouchableOpacity>
       </View>
 
-      {/* 7️⃣ PREDICTION */}
+      {/* 7️⃣ ON-DEVICE PREDICTION */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>7️⃣ PREDICTION</Text>
+        <Text style={styles.sectionTitle}>7️⃣ ON-DEVICE PREDICTION</Text>
 
         {/* Image Source Toggle */}
         {capturedImageData && (
@@ -1149,6 +1259,48 @@ const ModelManagementScreen = ({ navigation }) => {
             Predict with {useCapturedImage && capturedImageData ? 'Captured' : 'Sample'} Image
           </Text>
         </TouchableOpacity>
+      </View>
+
+      {/* 8️⃣ CLOUD PREDICTIONS */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>8️⃣ CLOUD PREDICTIONS</Text>
+        <Text style={styles.helperText}>
+          Cloud predictions don't require model download. Uses API for processing.
+        </Text>
+
+        <View style={styles.buttonRow}>
+          <TouchableOpacity
+            style={[styles.button, styles.tealButton, styles.halfButton]}
+            onPress={handlePredictShippingLabelCloud}
+            disabled={isLoading}
+          >
+            <Text style={styles.buttonText}>Shipping Label</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.button, styles.tealButton, styles.halfButton]}
+            onPress={handlePredictItemLabelCloud}
+            disabled={isLoading}
+          >
+            <Text style={styles.buttonText}>Item Label</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.buttonRow}>
+          <TouchableOpacity
+            style={[styles.button, styles.tealButton, styles.halfButton]}
+            onPress={handlePredictBillOfLadingCloud}
+            disabled={isLoading}
+          >
+            <Text style={styles.buttonText}>Bill of Lading</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.button, styles.tealButton, styles.halfButton]}
+            onPress={handlePredictDocumentClassificationCloud}
+            disabled={isLoading}
+          >
+            <Text style={styles.buttonText}>Doc Classification</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Loading Indicator */}
