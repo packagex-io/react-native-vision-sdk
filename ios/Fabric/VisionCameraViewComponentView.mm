@@ -2,10 +2,10 @@
 
 #import "VisionCameraViewComponentView.h"
 
-#import <react/renderer/components/VisionSdkView/ComponentDescriptors.h>
-#import <react/renderer/components/VisionSdkView/EventEmitters.h>
-#import <react/renderer/components/VisionSdkView/Props.h>
-#import <react/renderer/components/VisionSdkView/RCTComponentViewHelpers.h>
+#import <react/renderer/components/VisionSdkSpec/ComponentDescriptors.h>
+#import <react/renderer/components/VisionSdkSpec/EventEmitters.h>
+#import <react/renderer/components/VisionSdkSpec/Props.h>
+#import <react/renderer/components/VisionSdkSpec/RCTComponentViewHelpers.h>
 
 #import "RCTFabricComponentsPlugins.h"
 #import <objc/message.h>
