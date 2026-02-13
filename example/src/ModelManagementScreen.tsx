@@ -17,7 +17,7 @@ import type { VisionCameraCaptureEvent } from '../../src/VisionCamera';
 
 const CAPTURED_IMAGE_STORAGE_KEY = '@vision_sdk_captured_image';
 
-const api_key = "key_00203c5642F9SYnJkKyi9dRw1eeteeUwXhbEfGuPZ4NML8l2bAfysni4ZpcZEBKn0gnbcOZYwIaJnOyp"; // Add your PackageX API key here
+const api_key = ""; // Add your PackageX API key here
 
 // Sample barcodes array with iOS-format properties
 const SAMPLE_BARCODES: DetectedBarcode[] = [
@@ -80,7 +80,7 @@ const ModelManagementScreen = ({ navigation }) => {
             setCapturedImageData(data);
           }
         } catch (e) {
-          console.error('Failed to load captured image', e);
+          // Failed to load captured image
         }
       };
       loadCapturedImage();
@@ -94,7 +94,7 @@ const ModelManagementScreen = ({ navigation }) => {
       setUseCapturedImage(false);
       setStatusMessage('✅ Captured image cleared');
     } catch (e) {
-      console.error('Failed to clear captured image', e);
+      // Failed to clear captured image
     }
   };
 
@@ -713,19 +713,11 @@ const ModelManagementScreen = ({ navigation }) => {
         size: selectedModelSize as any,
       };
 
-      console.log('=== predictWithModule Arguments ===');
-      console.log('Model:', JSON.stringify(modelSpec, null, 2));
-      console.log('Image Path:', imagePath);
-      console.log('Barcodes:', JSON.stringify(barcodes, null, 2));
-
       const result = await VisionCore.predictWithModule(
         modelSpec,
         imagePath,
         barcodes
       );
-
-      console.log('=== predictWithModule Response ===');
-      console.log('Result:', typeof result === 'string' ? result : JSON.stringify(result, null, 2));
 
       setStatusMessage('✅ Prediction completed!');
       setResults(typeof result === 'string' ? result : JSON.stringify(result, null, 2));
