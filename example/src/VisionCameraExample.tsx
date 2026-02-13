@@ -87,15 +87,9 @@ const VisionCameraExample = ({ navigation }) => {
       if (json) {
         const templates = JSON.parse(json);
         setSavedTemplates(templates);
-        console.log('=== All Available Templates ===');
-        console.log('Count:', templates.length);
-        console.log('Templates:', JSON.stringify(templates, null, 2));
-      } else {
-        console.log('=== All Available Templates ===');
-        console.log('No templates found');
       }
     } catch (e) {
-      console.error('Failed to load templates', e);
+      // Failed to load templates
     }
   }, []);
 
@@ -104,7 +98,7 @@ const VisionCameraExample = ({ navigation }) => {
       await AsyncStorage.setItem(TEMPLATES_STORAGE_KEY, JSON.stringify(templates));
       setSavedTemplates(templates);
     } catch (e) {
-      console.error('Failed to save templates', e);
+      // Failed to save templates
     }
   }, []);
 
@@ -129,10 +123,6 @@ const VisionCameraExample = ({ navigation }) => {
       id: `template_${Date.now()}`,
       templateCodes,
     };
-    console.log('=== Template Created ===');
-    console.log('Template ID:', newTemplate.id);
-    console.log('Template Codes Count:', newTemplate.templateCodes.length);
-    console.log('Template Data:', JSON.stringify(newTemplate, null, 2));
     const updated = [...savedTemplates, newTemplate];
     await persistTemplates(updated);
     setTemplateCodes([]);
@@ -272,7 +262,6 @@ const VisionCameraExample = ({ navigation }) => {
   }, [loadTemplates]);
 
   const handleCapture = (event: VisionCameraCaptureEvent) => {
-    console.log("HANDLE CAPTURE EVENT: ", event)
     setCapturedImage(event.image);
     setLastCaptureEvent(event);
   };
@@ -293,7 +282,6 @@ const VisionCameraExample = ({ navigation }) => {
         ]
       );
     } catch (e) {
-      console.error('Failed to save captured image', e);
       Alert.alert('Error', 'Failed to save captured image.');
     }
   };
@@ -349,14 +337,8 @@ const VisionCameraExample = ({ navigation }) => {
     cameraRef.current?.capture();
   };
 
-  const onToggleFlash = async () => {
-
-    try {
-
-      setFlashEnabled(!flashEnabled);
-    } catch (error) {
-      console.error("error:", error);
-    }
+  const onToggleFlash = () => {
+    setFlashEnabled(!flashEnabled);
   };
 
   const onZoomIn = () => {
