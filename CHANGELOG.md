@@ -1,5 +1,52 @@
 # Release Notes
 
+### v3.0.0 — 2025-02-12
+
+  #### Breaking Changes
+
+  - **VisionSdkView Component Removed**
+    The `VisionSdkView` component has been completely removed. Use `VisionCamera` instead.
+
+    **Migration:**
+    ```typescript
+    // Before (v2.x)
+    import VisionSdkView from 'react-native-vision-sdk';
+    <VisionSdkView mode="barcode" onBarcodeScan={...} />
+
+    // After (v3.0)
+    import { VisionCamera } from 'react-native-vision-sdk';
+    <VisionCamera scanMode="barcode" onBarcodeDetected={...} />
+    ```
+
+  - **Deprecated VisionCore Methods Removed**
+    The following methods have been removed in favor of the Model Management API:
+
+    | Removed Method | Replacement |
+    |----------------|-------------|
+    | `loadOnDeviceModels()` | `downloadModel()` + `loadOCRModel()` |
+    | `predict()` | `predictWithModule()` |
+    | `unLoadOnDeviceModels()` | `unloadModel()` / `deleteModel()` |
+
+  - **Template Management Changes**
+    - Template creation is now handled entirely in React Native (no native `createTemplate()` method)
+    - Templates are applied via VisionCamera's `template` prop instead of `setObjectDetectionSettings()`
+    - The `onCreateTemplate` event has been removed from VisionSdkView (use state-based approach with VisionCamera)
+
+  #### Removed
+
+  - `VisionSdkView` component and all related native modules
+  - `VisionSdkViewManager` native implementations (iOS/Android)
+  - Deprecated VisionCore methods: `loadOnDeviceModels()`, `predict()`, `unLoadOnDeviceModels()`
+  - `VISION_SDK_VIEW_TEST_CASES.md` documentation file
+
+  #### Documentation
+
+  - Added comprehensive v2.x to v3.0 migration guide in README
+  - Updated Template Management section for VisionCamera workflow
+  - Removed all VisionSdkView-specific documentation
+
+---
+
 ### v2.0.6 — 2026-01-29
 
   #### Breaking Changes

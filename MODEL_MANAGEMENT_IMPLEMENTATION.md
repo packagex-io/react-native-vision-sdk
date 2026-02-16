@@ -43,7 +43,6 @@ This document tracks the implementation of the Model Management API for the Reac
   - `checkModelUpdates()` - Check for updates
   - `deleteModel()` - Delete from disk
   - `predictWithModule()` - Predict with specific model
-  - Deprecated: `loadOnDeviceModels()`, `unLoadOnDeviceModels()`, `predict()`
 
 #### Android Native Layer - Complete
 - **File**: `android/src/newarch/java/com/visionsdk/VisionSdkModule.kt`
@@ -218,35 +217,26 @@ Once unobfuscated SDK is available:
    - Some Android native methods (e.g., `getActiveDownloadCount()`) not available in iOS
    - These are commented out in wrapper to maintain cross-platform consistency
 
-### Deprecation Warnings
+## API Usage Example
 
-The following methods are **deprecated** and will be removed in v3.0.0:
-- `loadModel()` → Use `downloadModel()` + `loadOCRModel()`
-- `unLoadModel()` → Use `unloadModel()` and/or `deleteModel()`
-- `predict()` → Use `predictWithModule()`
-
-All deprecated methods currently work but show warnings. Migration is recommended.
-
-## Migration Guide (For Users)
-
-### Old API (Deprecated)
 ```typescript
-// Old way - will be removed in v3.0.0
-await VisionCore.loadOnDeviceModels(token, apiKey, 'shipping_label', 'large');
-const result = await VisionCore.predict(imageUri, barcodes);
-```
-
-### New API (Recommended)
-```typescript
-// New way - fine-grained control
+// Initialize (required on Android)
 await VisionCore.initializeModelManager({ maxConcurrentDownloads: 2 });
+
+// Download and load model
 await VisionCore.downloadModel({ type: 'shipping_label', size: 'large' }, apiKey, token);
 await VisionCore.loadOCRModel({ type: 'shipping_label', size: 'large' }, apiKey, token);
+
+// Make predictions
 const result = await VisionCore.predictWithModule(
   { type: 'shipping_label', size: 'large' },
   imageUri,
   barcodes
 );
+
+// Cleanup
+await VisionCore.unloadModel({ type: 'shipping_label', size: 'large' });
+await VisionCore.deleteModel({ type: 'shipping_label', size: 'large' });
 ```
 
 ## Contact

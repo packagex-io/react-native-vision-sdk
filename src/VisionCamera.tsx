@@ -32,6 +32,7 @@ const Camera = forwardRef<VisionCameraRefProps, VisionCameraProps>(
       detectionConfig,
       frameSkip,
       cameraFacing = 'back',
+      template = null,
       onCapture = () => { },
       onError = () => { },
       onRecognitionUpdate = () => { },
@@ -175,6 +176,7 @@ const Camera = forwardRef<VisionCameraRefProps, VisionCameraProps>(
           detectionConfig={detectionConfig}
           frameSkip={frameSkip}
           cameraFacing={cameraFacing}
+          template={template}
           onCapture={onCaptureHandler}
           onError={onErrorHandler}
           onRecognitionUpdate={onRecognitionUpdateHandler}

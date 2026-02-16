@@ -2,6 +2,51 @@ import UIKit
 import VisionSDK
 import AVFoundation
 
+// MARK: - FocusSettings Helper
+@available(iOS 13.0, *)
+extension VisionSDK.CodeScannerView.FocusSettings {
+  /// Creates FocusSettings with default values for all required parameters
+  static func makeDefault(
+    focusImage: UIImage? = nil,
+    focusImageRect: CGRect = .zero,
+    shouldDisplayFocusImage: Bool = false,
+    shouldScanInFocusImageRect: Bool = false,
+    showCodeBoundariesInMultipleScan: Bool = false,
+    validCodeBoundryBorderColor: UIColor = .green,
+    validCodeBoundryBorderWidth: CGFloat = 2.0,
+    validCodeBoundryFillColor: UIColor = UIColor.green.withAlphaComponent(0.3),
+    inValidCodeBoundryBorderColor: UIColor = .red,
+    inValidCodeBoundryBorderWidth: CGFloat = 2.0,
+    inValidCodeBoundryFillColor: UIColor = UIColor.red.withAlphaComponent(0.3),
+    showDocumentBoundries: Bool = false,
+    documentBoundryBorderColor: UIColor = .blue,
+    documentBoundryBorderWidth: CGFloat = 2.0,
+    documentBoundryFillColor: UIColor = UIColor.blue.withAlphaComponent(0.3),
+    focusImageTintColor: UIColor = .white,
+    focusImageHighlightedColor: UIColor = .green
+  ) -> VisionSDK.CodeScannerView.FocusSettings {
+    return VisionSDK.CodeScannerView.FocusSettings(
+      focusImage: focusImage,
+      focusImageRect: focusImageRect,
+      shouldDisplayFocusImage: shouldDisplayFocusImage,
+      shouldScanInFocusImageRect: shouldScanInFocusImageRect,
+      showCodeBoundariesInMultipleScan: showCodeBoundariesInMultipleScan,
+      validCodeBoundryBorderColor: validCodeBoundryBorderColor,
+      validCodeBoundryBorderWidth: validCodeBoundryBorderWidth,
+      validCodeBoundryFillColor: validCodeBoundryFillColor,
+      inValidCodeBoundryBorderColor: inValidCodeBoundryBorderColor,
+      inValidCodeBoundryBorderWidth: inValidCodeBoundryBorderWidth,
+      inValidCodeBoundryFillColor: inValidCodeBoundryFillColor,
+      showDocumentBoundries: showDocumentBoundries,
+      documentBoundryBorderColor: documentBoundryBorderColor,
+      documentBoundryBorderWidth: documentBoundryBorderWidth,
+      documentBoundryFillColor: documentBoundryFillColor,
+      focusImageTintColor: focusImageTintColor,
+      focusImageHighlightedColor: focusImageHighlightedColor
+    )
+  }
+}
+
 @available(iOS 13.0, *)
 @objc(RNVisionCameraView)
 class RNVisionCameraView: UIView {
@@ -62,6 +107,12 @@ class RNVisionCameraView: UIView {
   @objc var cameraFacing: NSString? {
     didSet {
       updateCameraPosition()
+    }
+  }
+
+  @objc var templateJson: NSString? {
+    didSet {
+      updateTemplate()
     }
   }
 
@@ -413,11 +464,12 @@ class RNVisionCameraView: UIView {
       captureType = .multiple
       cameraView.setCaptureTypeTo(captureType)
 
-      let focusSettings = VisionSDK.CodeScannerView.FocusSettings()
-      focusSettings.shouldDisplayFocusImage = false
-      focusSettings.shouldScanInFocusImageRect = false
-      focusSettings.showCodeBoundariesInMultipleScan = false
-      focusSettings.showDocumentBoundries = false
+      let focusSettings = VisionSDK.CodeScannerView.FocusSettings.makeDefault(
+        shouldDisplayFocusImage: false,
+        shouldScanInFocusImageRect: false,
+        showCodeBoundariesInMultipleScan: false,
+        showDocumentBoundries: false
+      )
       cameraView.setFocusSettingsTo(focusSettings)
       return
     }
@@ -433,12 +485,13 @@ class RNVisionCameraView: UIView {
 
     let focusRect = CGRect(x: x, y: y, width: width, height: height)
 
-    let focusSettings = VisionSDK.CodeScannerView.FocusSettings()
-    focusSettings.shouldDisplayFocusImage = false
-    focusSettings.shouldScanInFocusImageRect = true
-    focusSettings.focusImageRect = focusRect
-    focusSettings.showCodeBoundariesInMultipleScan = false
-    focusSettings.showDocumentBoundries = false
+    let focusSettings = VisionSDK.CodeScannerView.FocusSettings.makeDefault(
+      focusImageRect: focusRect,
+      shouldDisplayFocusImage: false,
+      shouldScanInFocusImageRect: true,
+      showCodeBoundariesInMultipleScan: false,
+      showDocumentBoundries: false
+    )
 
     cameraView.setFocusSettingsTo(focusSettings)
     cameraView.rescan()
@@ -446,7 +499,7 @@ class RNVisionCameraView: UIView {
   
   private func updateDetectionConfig() {
     guard let cameraView = cameraView, let config = detectionConfig else { return }
-    
+
     let detectionSettings = VisionSDK.CodeScannerView.ObjectDetectionConfiguration()
     detectionSettings.isTextIndicationOn = config["text"] as? Bool ?? true
     detectionSettings.isBarCodeOrQRCodeIndicationOn = config["barcode"] as? Bool ?? true
@@ -454,6 +507,35 @@ class RNVisionCameraView: UIView {
     detectionSettings.codeDetectionConfidence = config["barcodeConfidence"] as? Float ?? 0.5
     detectionSettings.documentDetectionConfidence = config["documentConfidence"] as? Float ?? 0.5
     detectionSettings.secondsToWaitBeforeDocumentCapture = config["documentCaptureDelay"] as? Double ?? 2.0
+    cameraView.setObjectDetectionConfigurationTo(detectionSettings)
+  }
+
+  private func updateTemplate() {
+    guard let cameraView = cameraView else { return }
+
+    let detectionSettings = VisionSDK.CodeScannerView.ObjectDetectionConfiguration()
+
+    // Apply existing detection config settings first
+    if let config = detectionConfig {
+      detectionSettings.isTextIndicationOn = config["text"] as? Bool ?? true
+      detectionSettings.isBarCodeOrQRCodeIndicationOn = config["barcode"] as? Bool ?? true
+      detectionSettings.isDocumentIndicationOn = config["document"] as? Bool ?? true
+      detectionSettings.codeDetectionConfidence = config["barcodeConfidence"] as? Float ?? 0.5
+      detectionSettings.documentDetectionConfidence = config["documentConfidence"] as? Float ?? 0.5
+      detectionSettings.secondsToWaitBeforeDocumentCapture = config["documentCaptureDelay"] as? Double ?? 2.0
+    }
+
+    // Apply or remove template
+    if let jsonString = templateJson as String?, !jsonString.isEmpty {
+      if let templateData = jsonString.data(using: .utf8) {
+        detectionSettings.selectedTemplate = templateData
+      } else {
+        NSLog("[RNVisionCameraView] Failed to convert template JSON to data")
+      }
+    } else {
+      detectionSettings.selectedTemplate = nil
+    }
+
     cameraView.setObjectDetectionConfigurationTo(detectionSettings)
   }
   

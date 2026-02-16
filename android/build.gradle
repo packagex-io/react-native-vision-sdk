@@ -139,7 +139,7 @@ repositories {
       "${project.name}: unable to locate React Native android sources. " +
         "Ensure you have you installed React Native as a dependency in your project and try again."
     )
-  }
+  }f        
 }
 
 def kotlin_version = getExtOrDefault('kotlinVersion')
@@ -149,12 +149,12 @@ dependencies {
   implementation "com.facebook.react:react-native:+"
   implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
 // From node_modules
-  implementation 'com.github.packagexlabs:vision-sdk-android:v2.4.35'
+  implementation 'com.github.packagexlabs:vision-sdk-android:v2.4.36'
   implementation 'com.github.asadullahilyas:HandyUtils:1.1.6'
 }
 
 react {
   jsRootDir = file("../src/")
-  libraryName = "VisionSdkView"
+  libraryName = "VisionSdkSpec"
   codegenJavaPackageName = "com.visionsdk"
 }
