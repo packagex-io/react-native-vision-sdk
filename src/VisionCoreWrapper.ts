@@ -57,64 +57,6 @@ export const VisionCore = {
     VisionSdkModuleNative.setEnvironment(environment);
   },
 
-  /**
-   * Loads on-device models without requiring the camera view.
-   * @deprecated Use loadOCRModel() instead. This method will be removed in v3.0.0
-   * @param {string} token - Authentication token.
-   * @param {string} apiKey - API Key.
-   * @param {string} modelType - Model type ("shipping_label", "bill_of_lading", etc.).
-   * @param {string} modelSize - Model size ("nano", "micro", "small", "medium", "large", "xlarge").
-   */
-  loadModel: async (
-    token: string | null,
-    apiKey: string | null,
-    modelType: string,
-    modelSize: string
-  ) => {
-    try {
-      await VisionSdkModuleNative.loadOnDeviceModels(
-        token ?? '',
-        apiKey ?? '',
-        modelType,
-        modelSize
-      );
-    } catch (error) {
-      throw error;
-    }
-  },
-
-  // DEPRECATED - Use unloadModel() or deleteModel() instead
-  // /**
-  //  * Unloads on-device models to free up memory.
-  //  * @deprecated Use unloadModel() to unload from memory or deleteModel() to delete from disk. This method will be removed in v3.0.0
-  //  * @param {string | null} modelType - Model type to unload (null to unload all models).
-  //  * @param {boolean} shouldDeleteFromDisk - Whether to delete model files from disk.
-  //  * @returns {Promise<string>} - Success message.
-  //  */
-  // unLoadModel: async (modelType: string | null = null, shouldDeleteFromDisk: boolean = false) => {
-  //   try {
-  //     const result = await VisionSdkModuleNative.unLoadOnDeviceModels(
-  //       modelType ?? '',
-  //       shouldDeleteFromDisk
-  //     );
-  //     return result;
-  //   } catch (error) {
-  //     throw error;
-  //   }
-  // },
-
-  /**
-   * Subscribes to model download progress updates.
-   * @deprecated Use downloadModel() with progressListener parameter instead. This method will be removed in v3.0.0
-   */
-  onModelDownloadProgress: (
-    callback: (progress: number, downloadStatus: boolean, isReady: boolean) => void
-  ) => {
-    return eventEmitter.addListener('onModelDownloadProgress', (event) => {
-      callback(event.progress, event.downloadStatus, event.isReady);
-    });
-  },
-
   logItemLabelDataToPx: async (
     imageUri: string,
     barcodes: string[],
@@ -217,38 +159,6 @@ export const VisionCore = {
         shouldResizeImage
       );
       return fromJsonString(result);
-    } catch (error) {
-      throw error;
-    }
-  },
-
-  /**
-   * Performs on-device OCR prediction.
-   * @param {string} imagePath - Local file path or remote URL to the image.
-   * @param {any[]} barcodes - Array of barcode objects (optional).
-   * @returns {Promise<string>} - JSON string with prediction results.
-   */
-  predict: async (
-    imagePath: string,
-    barcodes: any[] = []
-  ) => {
-    try {
-      const result = await VisionSdkModuleNative.predict(imagePath, barcodes);
-      const parsedResult = fromJsonString(result);
-
-      // Transform extended_response for Android item label only
-      if (
-        Platform.OS === 'android' &&
-        parsedResult?.data?.object === 'item_label_inference' &&
-        parsedResult?.extended_response &&
-        Array.isArray(parsedResult.extended_response)
-      ) {
-        parsedResult.extended_response = {
-          raw_response: parsedResult.extended_response
-        };
-      }
-
-      return parsedResult;
     } catch (error) {
       throw error;
     }

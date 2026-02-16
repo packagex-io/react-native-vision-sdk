@@ -19,7 +19,6 @@ class VisionSdkPackage : ReactPackage {
 
   override fun createViewManagers(reactContext: ReactApplicationContext): List<ViewManager<*, *>> {
     return listOf(
-      VisionSdkViewManager(reactContext),
       VisionCameraViewManager(reactContext)
     )
   }

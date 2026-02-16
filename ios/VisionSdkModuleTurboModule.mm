@@ -89,50 +89,6 @@ RCT_EXPORT_METHOD(setEnvironment:(NSString *)environment)
   }
 }
 
-RCT_EXPORT_METHOD(loadOnDeviceModels:(NSString *)token
-                  apiKey:(NSString *)apiKey
-                  modelType:(NSString *)modelType
-                  modelSize:(NSString *)modelSize
-                  resolve:(RCTPromiseResolveBlock)resolve
-                  reject:(RCTPromiseRejectBlock)reject)
-{
-  id swiftModule = [self getSwiftModule];
-  if (swiftModule) {
-    SEL selector = NSSelectorFromString(@"loadOnDeviceModels:apiKey:modelType:modelSize:resolver:rejecter:");
-    if ([swiftModule respondsToSelector:selector]) {
-      ((void (*)(id, SEL, NSString *, NSString *, NSString *, NSString *, RCTPromiseResolveBlock, RCTPromiseRejectBlock))objc_msgSend)(
-        swiftModule, selector, token, apiKey, modelType, modelSize, resolve, reject
-      );
-    } else {
-      NSLog(@"[VisionSDK TurboModule] loadOnDeviceModels method not found");
-      reject(@"METHOD_NOT_FOUND", @"loadOnDeviceModels method not found on VisionSdkModule", nil);
-    }
-  } else {
-    reject(@"MODULE_NOT_FOUND", @"VisionSdkModule Swift class not found", nil);
-  }
-}
-
-RCT_EXPORT_METHOD(unLoadOnDeviceModels:(NSString *)modelType
-                  shouldDeleteFromDisk:(BOOL)shouldDeleteFromDisk
-                  resolve:(RCTPromiseResolveBlock)resolve
-                  reject:(RCTPromiseRejectBlock)reject)
-{
-  id swiftModule = [self getSwiftModule];
-  if (swiftModule) {
-    SEL selector = NSSelectorFromString(@"unLoadOnDeviceModels:shouldDeleteFromDisk:resolver:rejecter:");
-    if ([swiftModule respondsToSelector:selector]) {
-      ((void (*)(id, SEL, NSString *, BOOL, RCTPromiseResolveBlock, RCTPromiseRejectBlock))objc_msgSend)(
-        swiftModule, selector, modelType, shouldDeleteFromDisk, resolve, reject
-      );
-    } else {
-      NSLog(@"[VisionSDK TurboModule] unLoadOnDeviceModels method not found");
-      reject(@"METHOD_NOT_FOUND", @"unLoadOnDeviceModels method not found on VisionSdkModule", nil);
-    }
-  } else {
-    reject(@"MODULE_NOT_FOUND", @"VisionSdkModule Swift class not found", nil);
-  }
-}
-
 RCT_EXPORT_METHOD(logItemLabelDataToPx:(NSString *)imageUri
                   barcodes:(NSArray<NSString *> *)barcodes
                   responseData:(NSString *)responseData
@@ -215,44 +171,6 @@ RCT_EXPORT_METHOD(logDocumentClassificationDataToPx:(NSString *)imageUri
   }
 
   return (NSDictionary *)result;
-}
-
-RCT_EXPORT_METHOD(predict:(NSString *)imagePath
-                  barcodes:(NSArray *)barcodes
-                  resolve:(RCTPromiseResolveBlock)resolve
-                  reject:(RCTPromiseRejectBlock)reject)
-{
-  NSLog(@"[VisionSDK TurboModule] predict called");
-  id swiftModule = [self getSwiftModule];
-  if (swiftModule) {
-    // Try different possible selectors
-    NSArray *possibleSelectors = @[
-      @"predict:barcodes:resolver:rejecter:",
-      @"predictWithBarcodes:resolver:rejecter:",
-      @"predict:withBarcodes:resolver:rejecter:"
-    ];
-
-    SEL foundSelector = nil;
-    for (NSString *selectorString in possibleSelectors) {
-      SEL selector = NSSelectorFromString(selectorString);
-      if ([swiftModule respondsToSelector:selector]) {
-        NSLog(@"[VisionSDK TurboModule] Found working selector: %@", selectorString);
-        foundSelector = selector;
-        break;
-      }
-    }
-
-    if (foundSelector) {
-      ((void (*)(id, SEL, NSString *, NSArray *, RCTPromiseResolveBlock, RCTPromiseRejectBlock))objc_msgSend)(
-        swiftModule, foundSelector, imagePath, barcodes, resolve, reject
-      );
-    } else {
-      NSLog(@"[VisionSDK TurboModule] No matching selector found. Tried: %@", possibleSelectors);
-      reject(@"METHOD_NOT_FOUND", @"predict method not found on VisionSdkModule", nil);
-    }
-  } else {
-    reject(@"MODULE_NOT_FOUND", @"VisionSdkModule Swift class not found", nil);
-  }
 }
 
 RCT_EXPORT_METHOD(predictShippingLabelCloud:(NSString *)imagePath

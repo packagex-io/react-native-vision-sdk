@@ -24,10 +24,19 @@ const VisionCameraViewWrapper = React.forwardRef<any, VisionCameraViewProps>((pr
     }
     delete convertedProps.detectionConfig;
 
+    // Convert template object to JSON string, or clear it if undefined/null
+    if (props.template && typeof props.template === 'object') {
+      convertedProps.templateJson = JSON.stringify(props.template);
+    } else {
+      convertedProps.templateJson = '';
+    }
+    delete convertedProps.template;
+
     return convertedProps;
   }, [
     props.scanArea,
     props.detectionConfig,
+    props.template,
     props.enableFlash,
     props.zoomLevel,
     props.scanMode,

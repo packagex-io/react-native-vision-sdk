@@ -1,25 +1,34 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
+  Pressable,
   Alert,
   SafeAreaView,
   Image,
   ScrollView,
   Platform,
   Dimensions,
+  Modal,
+  FlatList,
 } from 'react-native';
 import { PERMISSIONS, RESULTS, request } from 'react-native-permissions';
 import { VisionCamera, VisionCameraRefProps, VisionCameraCaptureEvent, VisionCameraScanMode } from '../../src/VisionCamera';
 import { VisionCore } from '../../src';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import type { TemplateCode, TemplateData } from '../../src';
+
+const TEMPLATES_STORAGE_KEY = '@vision_sdk_templates';
+const CAPTURED_IMAGE_STORAGE_KEY = '@vision_sdk_captured_image';
 
 const VisionCameraExample = ({ navigation }) => {
   const cameraRef = useRef<VisionCameraRefProps>(null);
   const [flashEnabled, setFlashEnabled] = useState(false);
   const [zoomLevel, setZoomLevel] = useState(1.0);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
+  const [lastCaptureEvent, setLastCaptureEvent] = useState<VisionCameraCaptureEvent | null>(null);
   const [scanMode, setScanMode] = useState<VisionCameraScanMode>('barcode');
   const [scanAreaEnabled, setScanAreaEnabled] = useState(false);
   const [autoCapture, setAutoCapture] = useState(false);
@@ -40,6 +49,13 @@ const VisionCameraExample = ({ navigation }) => {
     documentBoundingBox: null,
   });
 
+  // Template creation state
+  const [isTemplateMode, setIsTemplateMode] = useState(false);
+  const [templateCodes, setTemplateCodes] = useState<TemplateCode[]>([]);
+  const [savedTemplates, setSavedTemplates] = useState<TemplateData[]>([]);
+  const [showTemplateManager, setShowTemplateManager] = useState(false);
+  const [activeTemplate, setActiveTemplate] = useState<TemplateData | null>(null);
+
   // Throttle sharpness updates (update at most every 200ms)
   const lastSharpnessUpdate = useRef<number>(0);
   const sharpnessThrottleMs = 200;
@@ -47,6 +63,10 @@ const VisionCameraExample = ({ navigation }) => {
   // Throttle bounding boxes updates (update at most every 300ms)
   const lastBoundingBoxUpdate = useRef<number>(0);
   const boundingBoxThrottleMs = 300;
+
+  // Clear stale bounding boxes if no update received within timeout
+  const boundingBoxTimeoutMs = 1000;
+  const boundingBoxTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const scanModes: { label: string; value: VisionCameraScanMode }[] = [
     { label: '📷 Photo', value: 'photo' },
@@ -59,6 +79,128 @@ const VisionCameraExample = ({ navigation }) => {
     setScanMode(mode);
     setAutoCapture(false);
   };
+
+  // --- Template Storage Helpers ---
+  const loadTemplates = useCallback(async () => {
+    try {
+      const json = await AsyncStorage.getItem(TEMPLATES_STORAGE_KEY);
+      if (json) {
+        const templates = JSON.parse(json);
+        setSavedTemplates(templates);
+      }
+    } catch (e) {
+      // Failed to load templates
+    }
+  }, []);
+
+  const persistTemplates = useCallback(async (templates: TemplateData[]) => {
+    try {
+      await AsyncStorage.setItem(TEMPLATES_STORAGE_KEY, JSON.stringify(templates));
+      setSavedTemplates(templates);
+    } catch (e) {
+      // Failed to save templates
+    }
+  }, []);
+
+  // --- Template Handlers ---
+  const handleAddBarcodeToTemplate = useCallback((code: { scannedCode: string; symbology: string; boundingBox: { x: number; y: number; width: number; height: number } }) => {
+    setTemplateCodes(prev => {
+      const alreadyExists = prev.some(
+        c => c.codeString === code.scannedCode && c.codeSymbology === code.symbology
+      );
+      if (alreadyExists) return prev;
+      return [...prev, { codeString: code.scannedCode, codeSymbology: code.symbology, boundingBox: code.boundingBox }];
+    });
+  }, []);
+
+  const handleRemoveCodeFromTemplate = useCallback((index: number) => {
+    setTemplateCodes(prev => prev.filter((_, i) => i !== index));
+  }, []);
+
+  const handleSaveTemplate = useCallback(async () => {
+    if (templateCodes.length === 0) return;
+    const newTemplate: TemplateData = {
+      id: `template_${Date.now()}`,
+      templateCodes,
+    };
+    const updated = [...savedTemplates, newTemplate];
+    await persistTemplates(updated);
+    setTemplateCodes([]);
+    setIsTemplateMode(false);
+    Alert.alert('Template Saved', `Template saved with ${newTemplate.templateCodes.length} code(s).`);
+  }, [templateCodes, savedTemplates, persistTemplates]);
+
+  const handleCancelTemplate = useCallback(() => {
+    if (templateCodes.length > 0) {
+      Alert.alert(
+        'Discard Template?',
+        `You have ${templateCodes.length} code(s) added. Discard?`,
+        [
+          { text: 'Keep Editing', style: 'cancel' },
+          {
+            text: 'Discard',
+            style: 'destructive',
+            onPress: () => {
+              setTemplateCodes([]);
+              setIsTemplateMode(false);
+            },
+          },
+        ]
+      );
+    } else {
+      setTemplateCodes([]);
+      setIsTemplateMode(false);
+    }
+  }, [templateCodes]);
+
+  const handleApplyTemplate = useCallback((template: TemplateData) => {
+    if (activeTemplate?.id === template.id) {
+      setActiveTemplate(null);
+    } else {
+      setActiveTemplate(template);
+    }
+  }, [activeTemplate]);
+
+  const handleDeleteTemplate = useCallback(async (id: string) => {
+    if (activeTemplate?.id === id) {
+      setActiveTemplate(null);
+    }
+    const updated = savedTemplates.filter(t => t.id !== id);
+    await persistTemplates(updated);
+  }, [savedTemplates, persistTemplates, activeTemplate]);
+
+  const handleDeleteAllTemplates = useCallback(() => {
+    if (savedTemplates.length === 0) return;
+    Alert.alert(
+      'Delete All Templates?',
+      `This will delete ${savedTemplates.length} template(s). This cannot be undone.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete All',
+          style: 'destructive',
+          onPress: () => {
+            setActiveTemplate(null);
+            persistTemplates([]);
+          },
+        },
+      ]
+    );
+  }, [savedTemplates, persistTemplates]);
+
+  const handleEnterTemplateMode = useCallback(() => {
+    setShowTemplateManager(false);
+    setTemplateCodes([]);
+    setScanMode('barcode');
+    setAutoCapture(false);
+    setIsTemplateMode(true);
+  }, []);
+
+  const isCodeInTemplate = useCallback((scannedCode: string, symbology: string) => {
+    return templateCodes.some(
+      c => c.codeString === scannedCode && c.codeSymbology === symbology
+    );
+  }, [templateCodes]);
 
   // State to store camera view dimensions
   const [cameraViewSize, setCameraViewSize] = useState({ width: 0, height: 0 });
@@ -109,16 +251,39 @@ const VisionCameraExample = ({ navigation }) => {
 
   useEffect(() => {
     requestCameraPermission();
+    loadTemplates();
 
     return () => {
       cameraRef.current?.stop();
+      if (boundingBoxTimeoutRef.current) {
+        clearTimeout(boundingBoxTimeoutRef.current);
+      }
     };
-  }, []);
+  }, [loadTemplates]);
 
   const handleCapture = (event: VisionCameraCaptureEvent) => {
-    // console.log("HANDLE CAPTURE: ", JSON.stringify(event))
     setCapturedImage(event.image);
-    // Alert.alert('Success', `Image captured: ${event.image}`);
+    setLastCaptureEvent(event);
+  };
+
+  const handleUseForModelTesting = async () => {
+    if (!lastCaptureEvent) {
+      Alert.alert('No Image', 'Please capture an image first.');
+      return;
+    }
+    try {
+      await AsyncStorage.setItem(CAPTURED_IMAGE_STORAGE_KEY, JSON.stringify(lastCaptureEvent));
+      Alert.alert(
+        'Image Saved',
+        'Captured image saved for model testing. Navigate to Model Management to use it.',
+        [
+          { text: 'Stay Here', style: 'cancel' },
+          { text: 'Go to Model Management', onPress: () => navigation.navigate('ModelManagementScreen') },
+        ]
+      );
+    } catch (e) {
+      Alert.alert('Error', 'Failed to save captured image.');
+    }
   };
 
   const handleError = (error: any) => {
@@ -138,27 +303,33 @@ const VisionCameraExample = ({ navigation }) => {
   };
 
   const handleBarcodeDetected = (event: any) => {
-    console.log("DETECTED BARCODES ARE: ", event.codes);
     setBarcodeResults(event.codes);
-    Alert.alert('Barcode Detected', `Found ${event.codes.length} barcode(s)`);
+    if (!isTemplateMode) {
+      Alert.alert('Barcode Detected', `Found ${event.codes.length} barcode(s)`);
+    }
   };
 
   const handleBoundingBoxesUpdate = (event: any) => {
-    // console.log("BOUNDING BOXES UPDATE EVENT: ", event)
     const now = Date.now();
     if (now - lastBoundingBoxUpdate.current >= boundingBoxThrottleMs) {
       lastBoundingBoxUpdate.current = now;
-      // console.log('📦 Bounding Boxes Update:', {
-      //   barcodes: event.barcodeBoundingBoxes?.length || 0,
-      //   qrCodes: event.qrCodeBoundingBoxes?.length || 0,
-      //   document: event.documentBoundingBox ? 'detected' : 'none',
-      //   data: event
-      // });
       setBoundingBoxes({
         barcodeBoundingBoxes: event.barcodeBoundingBoxes || [],
         qrCodeBoundingBoxes: event.qrCodeBoundingBoxes || [],
         documentBoundingBox: event.documentBoundingBox || null,
       });
+
+      // Clear any existing timeout and set a new one to clear stale boxes
+      if (boundingBoxTimeoutRef.current) {
+        clearTimeout(boundingBoxTimeoutRef.current);
+      }
+      boundingBoxTimeoutRef.current = setTimeout(() => {
+        setBoundingBoxes({
+          barcodeBoundingBoxes: [],
+          qrCodeBoundingBoxes: [],
+          documentBoundingBox: null,
+        });
+      }, boundingBoxTimeoutMs);
     }
   };
 
@@ -166,14 +337,8 @@ const VisionCameraExample = ({ navigation }) => {
     cameraRef.current?.capture();
   };
 
-  const onToggleFlash = async () => {
-
-    try {
-
-      setFlashEnabled(!flashEnabled);
-    } catch (error) {
-      console.error("error:", error);
-    }
+  const onToggleFlash = () => {
+    setFlashEnabled(!flashEnabled);
   };
 
   const onZoomIn = () => {
@@ -200,15 +365,21 @@ const VisionCameraExample = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
+      <View style={[styles.header, isTemplateMode && styles.headerTemplateMode]}>
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => navigation.goBack()}
         >
           <Text style={styles.backButtonText}>← Back</Text>
         </TouchableOpacity>
-        <Text style={styles.title}>Vision Camera</Text>
-        <View style={styles.placeholder} />
+        <Text style={styles.title}>{isTemplateMode ? 'Creating Template' : 'Vision Camera'}</Text>
+        <TouchableOpacity
+          style={styles.templateHeaderButton}
+          onPress={() => setShowTemplateManager(true)}
+          disabled={isTemplateMode}
+        >
+          <Text style={[styles.templateHeaderButtonText, isTemplateMode && { opacity: 0.4 }]}>Templates</Text>
+        </TouchableOpacity>
       </View>
 
       <View
@@ -227,6 +398,7 @@ const VisionCameraExample = ({ navigation }) => {
             autoCapture={autoCapture}
             cameraFacing={cameraFacing}
             scanArea={getScanArea()}
+            template={activeTemplate}
             onCapture={handleCapture}
             onError={handleError}
             onRecognitionUpdate={handleRecognitionUpdate}
@@ -274,7 +446,7 @@ const VisionCameraExample = ({ navigation }) => {
         )}
 
         {/* Bounding Boxes Overlay */}
-        <View style={styles.boundingBoxesContainer} pointerEvents="none">
+        <View style={[styles.boundingBoxesContainer, isTemplateMode && styles.boundingBoxesContainerTemplateMode]} pointerEvents={isTemplateMode ? 'box-none' : 'none'}>
           {/* For OCR mode with autoCapture, only show document box with translucent fill */}
           {scanMode === 'ocr' && autoCapture ? (
             <>
@@ -297,31 +469,80 @@ const VisionCameraExample = ({ navigation }) => {
             </>
           ) : (
             <>
-              {/* Barcode Bounding Boxes - Yellow */}
-              {boundingBoxes.barcodeBoundingBoxes.map((code, index) => (
-                <View
-                  key={`barcode-${index}`}
-                  style={[
-                    styles.boundingBox,
-                    {
-                      left: code.boundingBox.x,
-                      top: code.boundingBox.y,
-                      width: code.boundingBox.width,
-                      height: code.boundingBox.height,
-                      borderColor: '#FFEB3B', // Yellow for barcodes
-                    },
-                  ]}
-                >
-                  <Text style={styles.boundingBoxLabel}>
-                    {code.scannedCode} ({code.symbology})
-                  </Text>
-                </View>
-              ))}
+              {/* Barcode Bounding Boxes */}
+              {boundingBoxes.barcodeBoundingBoxes.map((code, index) => {
+                const added = isTemplateMode && isCodeInTemplate(code.scannedCode, code.symbology);
+                const boxContent = (
+                  <View
+                    key={`barcode-${index}`}
+                    style={[
+                      styles.boundingBox,
+                      {
+                        left: code.boundingBox.x,
+                        top: code.boundingBox.y,
+                        width: code.boundingBox.width,
+                        height: code.boundingBox.height,
+                        borderColor: added ? '#4CAF50' : '#FFEB3B',
+                        borderWidth: added ? 3 : 2,
+                      },
+                    ]}
+                  >
+                    <Text style={styles.boundingBoxLabel}>
+                      {code.scannedCode} ({code.symbology})
+                    </Text>
+                    {added && (
+                      <View style={styles.addedBadge}>
+                        <Text style={styles.addedBadgeText}>ADDED</Text>
+                      </View>
+                    )}
+                  </View>
+                );
 
-              {/* QR Code Bounding Boxes - Cyan */}
+                if (isTemplateMode) {
+                  return (
+                    <Pressable
+                      key={`barcode-tap-${index}`}
+                      style={({ pressed }) => [
+                        {
+                          position: 'absolute',
+                          left: code.boundingBox.x,
+                          top: code.boundingBox.y,
+                          width: Math.max(code.boundingBox.width, 60),
+                          height: Math.max(code.boundingBox.height, 40),
+                          opacity: pressed ? 0.7 : 1,
+                        },
+                      ]}
+                      onPress={() => handleAddBarcodeToTemplate(code)}
+                    >
+                      <View
+                        style={[
+                          styles.boundingBoxTappable,
+                          {
+                            borderColor: added ? '#4CAF50' : '#FFEB3B',
+                            borderWidth: added ? 3 : 2,
+                          },
+                        ]}
+                      >
+                        <Text style={styles.boundingBoxLabel}>
+                          {code.scannedCode} ({code.symbology})
+                        </Text>
+                        {added && (
+                          <View style={styles.addedBadge}>
+                            <Text style={styles.addedBadgeText}>ADDED</Text>
+                          </View>
+                        )}
+                      </View>
+                    </Pressable>
+                  );
+                }
+                return boxContent;
+              })}
+
+              {/* QR Code Bounding Boxes - Cyan (pointerEvents="none" so they don't block touches) */}
               {boundingBoxes.qrCodeBoundingBoxes.map((code, index) => (
                 <View
                   key={`qrcode-${index}`}
+                  pointerEvents="none"
                   style={[
                     styles.boundingBox,
                     {
@@ -339,9 +560,10 @@ const VisionCameraExample = ({ navigation }) => {
                 </View>
               ))}
 
-              {/* Document Bounding Box - Green */}
-              {boundingBoxes.documentBoundingBox && boundingBoxes.documentBoundingBox.width > 0 && (
+              {/* Document Bounding Box - Green (hidden in template mode, pointerEvents="none" so it doesn't block touches) */}
+              {!isTemplateMode && boundingBoxes.documentBoundingBox && boundingBoxes.documentBoundingBox.width > 0 && (
                 <View
+                  pointerEvents="none"
                   style={[
                     styles.boundingBox,
                     {
@@ -382,45 +604,47 @@ const VisionCameraExample = ({ navigation }) => {
           </View>
         </View>
 
-        {/* Scan Mode Dropdown - Below Recognition Status */}
-        <View style={styles.modeDropdownOverlay}>
-          <TouchableOpacity
-            style={styles.modeDropdownButton}
-            onPress={() => setModeDropdownOpen(!modeDropdownOpen)}
-          >
-            <Text style={styles.modeDropdownButtonText}>
-              {scanModes.find(m => m.value === scanMode)?.label || 'Photo'}
-            </Text>
-            <Text style={styles.modeDropdownArrow}>{modeDropdownOpen ? '▲' : '▼'}</Text>
-          </TouchableOpacity>
+        {/* Scan Mode Dropdown - Below Recognition Status (hidden in template mode) */}
+        {!isTemplateMode && (
+          <View style={styles.modeDropdownOverlay}>
+            <TouchableOpacity
+              style={styles.modeDropdownButton}
+              onPress={() => setModeDropdownOpen(!modeDropdownOpen)}
+            >
+              <Text style={styles.modeDropdownButtonText}>
+                {scanModes.find(m => m.value === scanMode)?.label || 'Photo'}
+              </Text>
+              <Text style={styles.modeDropdownArrow}>{modeDropdownOpen ? '▲' : '▼'}</Text>
+            </TouchableOpacity>
 
-          {modeDropdownOpen && (
-            <View style={styles.modeDropdownMenu}>
-              {scanModes.map((mode) => (
-                <TouchableOpacity
-                  key={mode.value}
-                  style={[
-                    styles.modeDropdownItem,
-                    scanMode === mode.value && styles.modeDropdownItemActive,
-                  ]}
-                  onPress={() => {
-                    handleScanModeChange(mode.value);
-                    setModeDropdownOpen(false);
-                  }}
-                >
-                  <Text
+            {modeDropdownOpen && (
+              <View style={styles.modeDropdownMenu}>
+                {scanModes.map((mode) => (
+                  <TouchableOpacity
+                    key={mode.value}
                     style={[
-                      styles.modeDropdownItemText,
-                      scanMode === mode.value && styles.modeDropdownItemTextActive,
+                      styles.modeDropdownItem,
+                      scanMode === mode.value && styles.modeDropdownItemActive,
                     ]}
+                    onPress={() => {
+                      handleScanModeChange(mode.value);
+                      setModeDropdownOpen(false);
+                    }}
                   >
-                    {mode.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          )}
-        </View>
+                    <Text
+                      style={[
+                        styles.modeDropdownItemText,
+                        scanMode === mode.value && styles.modeDropdownItemTextActive,
+                      ]}
+                    >
+                      {mode.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+          </View>
+        )}
 
         {/* Control Buttons - Top Right */}
         <View style={styles.controlsOverlay}>
@@ -473,8 +697,8 @@ const VisionCameraExample = ({ navigation }) => {
           </View>
         </View>
 
-        {/* Bottom Controls - Auto Capture & Scan Area */}
-        {scanMode !== 'photo' && (
+        {/* Bottom Controls - Auto Capture & Scan Area (hidden in template mode) */}
+        {scanMode !== 'photo' && !isTemplateMode && (
           <View style={styles.bottomControlsOverlay}>
             {(scanMode === 'barcode' || scanMode === 'qrcode') && (
               <TouchableOpacity
@@ -498,16 +722,18 @@ const VisionCameraExample = ({ navigation }) => {
           </View>
         )}
 
-        {/* Capture Button - Bottom Center */}
-        <TouchableOpacity
-          style={styles.captureButtonOverlay}
-          onPress={onCapturePress}
-        >
-          <View style={styles.captureButtonInner} />
-        </TouchableOpacity>
+        {/* Capture Button - Bottom Center (hidden in template mode) */}
+        {!isTemplateMode && (
+          <TouchableOpacity
+            style={styles.captureButtonOverlay}
+            onPress={onCapturePress}
+          >
+            <View style={styles.captureButtonInner} />
+          </TouchableOpacity>
+        )}
 
-        {/* Results Overlay - Bottom Left */}
-        {(capturedImage || barcodeResults.length > 0) && (
+        {/* Results Overlay - Bottom Left (hidden in template mode) */}
+        {!isTemplateMode && (capturedImage || barcodeResults.length > 0) && (
           <View style={styles.resultsOverlay}>
             {capturedImage && (
               <View style={styles.previewOverlayContainer}>
@@ -517,6 +743,12 @@ const VisionCameraExample = ({ navigation }) => {
                   style={styles.previewOverlayImage}
                   resizeMode="cover"
                 />
+                <TouchableOpacity
+                  style={styles.useForTestingButton}
+                  onPress={handleUseForModelTesting}
+                >
+                  <Text style={styles.useForTestingButtonText}>Use for Testing</Text>
+                </TouchableOpacity>
               </View>
             )}
 
@@ -534,7 +766,116 @@ const VisionCameraExample = ({ navigation }) => {
             )}
           </View>
         )}
+
+        {/* Template Creation Panel - Bottom */}
+        {isTemplateMode && (
+          <View style={styles.templatePanel}>
+            <View style={styles.templatePanelHeader}>
+              <Text style={styles.templatePanelTitle}>Template ({templateCodes.length} codes)</Text>
+              <Text style={styles.templatePanelHint}>Tap barcodes on camera to add</Text>
+            </View>
+
+            {templateCodes.length > 0 && (
+              <ScrollView style={styles.templateCodesList} nestedScrollEnabled>
+                {templateCodes.map((code, index) => (
+                  <View key={`tpl-${index}`} style={styles.templateCodeItem}>
+                    <View style={styles.templateCodeInfo}>
+                      <Text style={styles.templateCodeString} numberOfLines={1}>{code.codeString}</Text>
+                      <Text style={styles.templateCodeSymbology}>{code.codeSymbology}</Text>
+                    </View>
+                    <TouchableOpacity
+                      style={styles.templateCodeRemove}
+                      onPress={() => handleRemoveCodeFromTemplate(index)}
+                    >
+                      <Text style={styles.templateCodeRemoveText}>X</Text>
+                    </TouchableOpacity>
+                  </View>
+                ))}
+              </ScrollView>
+            )}
+
+            <View style={styles.templatePanelActions}>
+              <TouchableOpacity style={styles.templateCancelButton} onPress={handleCancelTemplate}>
+                <Text style={styles.templateCancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.templateSaveButton, templateCodes.length === 0 && styles.templateSaveButtonDisabled]}
+                onPress={handleSaveTemplate}
+                disabled={templateCodes.length === 0}
+              >
+                <Text style={styles.templateSaveButtonText}>Save Template</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
       </View>
+
+      {/* Template Manager Modal */}
+      <Modal
+        visible={showTemplateManager}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setShowTemplateManager(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Templates</Text>
+              <TouchableOpacity onPress={() => setShowTemplateManager(false)}>
+                <Text style={styles.modalClose}>Close</Text>
+              </TouchableOpacity>
+            </View>
+
+            <TouchableOpacity style={styles.createTemplateButton} onPress={handleEnterTemplateMode}>
+              <Text style={styles.createTemplateButtonText}>+ Create New Template</Text>
+            </TouchableOpacity>
+
+            {savedTemplates.length === 0 ? (
+              <View style={styles.emptyTemplates}>
+                <Text style={styles.emptyTemplatesText}>No saved templates</Text>
+              </View>
+            ) : (
+              <>
+                <FlatList
+                  data={savedTemplates}
+                  keyExtractor={(item) => item.id}
+                  style={styles.templateList}
+                  renderItem={({ item }) => {
+                    const isActive = activeTemplate?.id === item.id;
+                    return (
+                      <View style={[styles.templateListItem, isActive && styles.templateListItemActive]}>
+                        <View style={styles.templateListItemInfo}>
+                          <Text style={styles.templateListItemId} numberOfLines={1}>
+                            {item.id}{isActive ? ' (Active)' : ''}
+                          </Text>
+                          <Text style={styles.templateListItemCount}>
+                            {item.templateCodes.length} code(s): {item.templateCodes.map(c => c.codeString).join(', ')}
+                          </Text>
+                        </View>
+                        <TouchableOpacity
+                          style={[styles.templateApplyButton, isActive && styles.templateApplyButtonActive]}
+                          onPress={() => handleApplyTemplate(item)}
+                        >
+                          <Text style={styles.templateApplyButtonText}>{isActive ? 'Remove' : 'Apply'}</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={styles.templateDeleteButton}
+                          onPress={() => handleDeleteTemplate(item.id)}
+                        >
+                          <Text style={styles.templateDeleteButtonText}>Delete</Text>
+                        </TouchableOpacity>
+                      </View>
+                    );
+                  }}
+                />
+                <TouchableOpacity style={styles.deleteAllButton} onPress={handleDeleteAllTemplates}>
+                  <Text style={styles.deleteAllButtonText}>Delete All</Text>
+                </TouchableOpacity>
+              </>
+            )}
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -580,6 +921,13 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
+    zIndex: 10,
+  },
+  boundingBoxesContainerTemplateMode: {
+    // On iOS, we need to ensure the overlay is above the native camera view
+    // and can receive touch events
+    zIndex: 100,
+    elevation: 100, // Android elevation
   },
   boundingBox: {
     position: 'absolute',
@@ -864,6 +1212,19 @@ const styles = StyleSheet.create({
     height: 80,
     borderRadius: 6,
   },
+  useForTestingButton: {
+    marginTop: 6,
+    backgroundColor: '#6f42c1',
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 4,
+  },
+  useForTestingButtonText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
   barcodeOverlayContainer: {
     backgroundColor: 'rgba(0, 0, 0, 0.8)',
     borderRadius: 8,
@@ -935,6 +1296,258 @@ const styles = StyleSheet.create({
   },
   startButton: {
     backgroundColor: 'rgba(40, 167, 69, 0.9)', // Green for start
+  },
+  // --- Header Template Mode ---
+  headerTemplateMode: {
+    backgroundColor: '#6A1B9A',
+  },
+  templateHeaderButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+  },
+  templateHeaderButtonText: {
+    color: '#BB86FC',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  // --- Bounding Box Tappable ---
+  boundingBoxTappable: {
+    flex: 1,
+    backgroundColor: 'transparent',
+  },
+  addedBadge: {
+    position: 'absolute',
+    bottom: -20,
+    left: 0,
+    backgroundColor: '#4CAF50',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 3,
+  },
+  addedBadgeText: {
+    color: '#fff',
+    fontSize: 9,
+    fontWeight: 'bold',
+  },
+  // --- Template Panel ---
+  templatePanel: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.9)',
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    paddingTop: 16,
+    paddingHorizontal: 16,
+    paddingBottom: 24,
+    maxHeight: 280,
+  },
+  templatePanelHeader: {
+    marginBottom: 12,
+  },
+  templatePanelTitle: {
+    color: '#BB86FC',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  templatePanelHint: {
+    color: '#aaa',
+    fontSize: 12,
+    marginTop: 4,
+  },
+  templateCodesList: {
+    maxHeight: 120,
+    marginBottom: 12,
+  },
+  templateCodeItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 8,
+    padding: 10,
+    marginBottom: 6,
+  },
+  templateCodeInfo: {
+    flex: 1,
+  },
+  templateCodeString: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  templateCodeSymbology: {
+    color: '#aaa',
+    fontSize: 11,
+    marginTop: 2,
+  },
+  templateCodeRemove: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: 'rgba(220, 53, 69, 0.8)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 10,
+  },
+  templateCodeRemoveText: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: 'bold',
+  },
+  templatePanelActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  templateCancelButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#666',
+    alignItems: 'center',
+  },
+  templateCancelButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  templateSaveButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    backgroundColor: '#6A1B9A',
+    alignItems: 'center',
+  },
+  templateSaveButtonDisabled: {
+    backgroundColor: '#444',
+    opacity: 0.6,
+  },
+  templateSaveButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  // --- Template Manager Modal ---
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#1a1a1a',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingTop: 20,
+    paddingHorizontal: 20,
+    paddingBottom: 40,
+    maxHeight: '70%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  modalTitle: {
+    color: '#fff',
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+  modalClose: {
+    color: '#BB86FC',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  createTemplateButton: {
+    backgroundColor: '#6A1B9A',
+    paddingVertical: 14,
+    borderRadius: 10,
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  createTemplateButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  emptyTemplates: {
+    alignItems: 'center',
+    paddingVertical: 30,
+  },
+  emptyTemplatesText: {
+    color: '#666',
+    fontSize: 14,
+  },
+  templateList: {
+    maxHeight: 300,
+  },
+  templateListItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    borderRadius: 10,
+    padding: 14,
+    marginBottom: 8,
+  },
+  templateListItemActive: {
+    borderWidth: 1,
+    borderColor: '#4CAF50',
+    backgroundColor: 'rgba(76, 175, 80, 0.1)',
+  },
+  templateListItemInfo: {
+    flex: 1,
+  },
+  templateListItemId: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  templateListItemCount: {
+    color: '#aaa',
+    fontSize: 11,
+    marginTop: 4,
+  },
+  templateApplyButton: {
+    paddingVertical: 6,
+    paddingHorizontal: 14,
+    backgroundColor: 'rgba(76, 175, 80, 0.8)',
+    borderRadius: 6,
+    marginLeft: 10,
+  },
+  templateApplyButtonActive: {
+    backgroundColor: 'rgba(158, 158, 158, 0.8)',
+  },
+  templateApplyButtonText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  templateDeleteButton: {
+    paddingVertical: 6,
+    paddingHorizontal: 14,
+    backgroundColor: 'rgba(220, 53, 69, 0.8)',
+    borderRadius: 6,
+    marginLeft: 10,
+  },
+  templateDeleteButtonText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  deleteAllButton: {
+    marginTop: 12,
+    paddingVertical: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#dc3545',
+    alignItems: 'center',
+  },
+  deleteAllButtonText: {
+    color: '#dc3545',
+    fontSize: 14,
+    fontWeight: '600',
   },
 });
 

@@ -130,7 +130,6 @@ export const syncWithPx = async (scanResult, modelName, env, apiKey) => {
         }
 
     } catch (err) {
-        console.log("AN ERROR OCCURED [syncpx]: ", err.message)
         throw err
     }
 }

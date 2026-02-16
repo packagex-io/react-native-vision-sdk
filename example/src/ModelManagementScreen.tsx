@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -10,8 +10,12 @@ import {
   Image,
   Clipboard,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { VisionCore, ExecutionProvider, DetectedBarcode } from '../../src/index';
 import { useFocusEffect } from '@react-navigation/native';
+import type { VisionCameraCaptureEvent } from '../../src/VisionCamera';
+
+const CAPTURED_IMAGE_STORAGE_KEY = '@vision_sdk_captured_image';
 
 const api_key = ""; // Add your PackageX API key here
 
@@ -61,6 +65,39 @@ const ModelManagementScreen = ({ navigation }) => {
   const [concurrentLoadingResults, setConcurrentLoadingResults] = useState<any[]>([]);
   const [downloadProgressMap, setDownloadProgressMap] = useState<{[key: string]: number}>({});
 
+  // Captured image state
+  const [capturedImageData, setCapturedImageData] = useState<VisionCameraCaptureEvent | null>(null);
+  const [useCapturedImage, setUseCapturedImage] = useState<boolean>(false);
+
+  // Load captured image on screen focus
+  useFocusEffect(
+    useCallback(() => {
+      const loadCapturedImage = async () => {
+        try {
+          const json = await AsyncStorage.getItem(CAPTURED_IMAGE_STORAGE_KEY);
+          if (json) {
+            const data = JSON.parse(json) as VisionCameraCaptureEvent;
+            setCapturedImageData(data);
+          }
+        } catch (e) {
+          // Failed to load captured image
+        }
+      };
+      loadCapturedImage();
+    }, [])
+  );
+
+  const clearCapturedImage = async () => {
+    try {
+      await AsyncStorage.removeItem(CAPTURED_IMAGE_STORAGE_KEY);
+      setCapturedImageData(null);
+      setUseCapturedImage(false);
+      setStatusMessage('✅ Captured image cleared');
+    } catch (e) {
+      // Failed to clear captured image
+    }
+  };
+
   const modelTypes = [
     { label: 'Shipping Label', value: 'shipping_label' },
     { label: 'Item Label', value: 'item_label' },
@@ -89,7 +126,8 @@ const ModelManagementScreen = ({ navigation }) => {
       case 'shipping_label':
         return 'https://cdn.shopify.com/s/files/1/0070/7032/files/image1_a462b651-c72f-4e21-8048-35763b21eef1.png?v=1671219333';
       case 'item_label':
-        return 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ8Jmenckba1oRIkRgKXLEDBjzcohm028JTsg&s';
+        return 'https://i.ibb.co/dwrQQ7m3/item-label-1.jpg'
+        // return 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ8Jmenckba1oRIkRgKXLEDBjzcohm028JTsg&s';
       case 'bill_of_lading':
         return 'https://www.freightera.com/blog/wp-content/uploads/2022/09/bol-basic-info-904x1024.jpg';
       case 'document_classification':
@@ -97,6 +135,22 @@ const ModelManagementScreen = ({ navigation }) => {
       default:
         return 'https://cdn.shopify.com/s/files/1/0070/7032/files/image1_a462b651-c72f-4e21-8048-35763b21eef1.png?v=1671219333';
     }
+  };
+
+  // Get current image path based on selection
+  const getCurrentImagePath = (modelType?: string) => {
+    if (useCapturedImage && capturedImageData?.image) {
+      return `file://${capturedImageData.image}`;
+    }
+    return getSampleImageForModelType(modelType || selectedModelType);
+  };
+
+  // Get current barcodes based on selection
+  const getCurrentBarcodes = (): DetectedBarcode[] => {
+    if (useCapturedImage && capturedImageData?.barcodes && capturedImageData.barcodes.length > 0) {
+      return capturedImageData.barcodes;
+    }
+    return SAMPLE_BARCODES;
   };
 
 
@@ -459,7 +513,8 @@ const ModelManagementScreen = ({ navigation }) => {
   const handlePredictWithMultipleModelsConcurrently = async () => {
     try {
       setIsLoading(true);
-      setStatusMessage('🔮 Running 3 predictions concurrently...');
+      const imageSource = useCapturedImage ? 'captured image' : 'sample images';
+      setStatusMessage(`🔮 Running 3 predictions concurrently with ${imageSource}...`);
       setConcurrentLoadingResults([]);
 
       const startTime = Date.now();
@@ -475,11 +530,13 @@ const ModelManagementScreen = ({ navigation }) => {
       const predictionPromises = modelsToPredictWith.map(async (model) => {
         const modelStartTime = Date.now();
         try {
-          const imagePath = getSampleImageForModelType(model.type);
+          // Use captured image for all models if enabled, otherwise use model-specific sample
+          const imagePath = getCurrentImagePath(model.type);
+          const barcodes = getCurrentBarcodes();
           const result = await VisionCore.predictWithModule(
             model,
             imagePath,
-            SAMPLE_BARCODES
+            barcodes
           );
           const duration = Date.now() - modelStartTime;
 
@@ -642,20 +699,24 @@ const ModelManagementScreen = ({ navigation }) => {
     );
   };
 
-  // 6️⃣ PREDICTION
+  // 6️⃣ ON-DEVICE PREDICTION
   const handlePredictWithModule = async () => {
     try {
       setIsLoading(true);
-      setStatusMessage('🔮 Making prediction...');
+      const imageSource = useCapturedImage ? 'captured image' : 'sample image';
+      setStatusMessage(`🔮 Making prediction with ${imageSource}...`);
 
-      const imagePath = getSampleImageForModelType(selectedModelType);
+      const imagePath = getCurrentImagePath();
+      const barcodes = getCurrentBarcodes();
+      const modelSpec = {
+        type: selectedModelType as any,
+        size: selectedModelSize as any,
+      };
+
       const result = await VisionCore.predictWithModule(
-        {
-          type: selectedModelType as any,
-          size: selectedModelSize as any,
-        },
+        modelSpec,
         imagePath,
-        SAMPLE_BARCODES
+        barcodes
       );
 
       setStatusMessage('✅ Prediction completed!');
@@ -663,6 +724,116 @@ const ModelManagementScreen = ({ navigation }) => {
     } catch (error: any) {
       setStatusMessage('❌ Prediction failed: ' + error.message);
       Alert.alert('Error', 'Prediction failed: ' + error.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // 7️⃣ CLOUD PREDICTIONS
+  const handlePredictShippingLabelCloud = async () => {
+    try {
+      setIsLoading(true);
+      const imageSource = useCapturedImage ? 'captured image' : 'sample image';
+      setStatusMessage(`☁️ Making cloud shipping label prediction with ${imageSource}...`);
+
+      const imagePath = getCurrentImagePath('shipping_label');
+
+      const result = await VisionCore.predictShippingLabelCloud(
+        imagePath,
+        [], // barcodes
+        null, // token
+        api_key, // apiKey
+        null, // locationId
+        null, // options
+        null, // metadata
+        null, // recipient
+        null, // sender
+        true // shouldResizeImage
+      );
+
+      setStatusMessage('✅ Cloud shipping label prediction completed!');
+      setResults(typeof result === 'string' ? result : JSON.stringify(result, null, 2));
+    } catch (error: any) {
+      setStatusMessage('❌ Cloud prediction failed: ' + error.message);
+      Alert.alert('Error', 'Cloud prediction failed: ' + error.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handlePredictItemLabelCloud = async () => {
+    try {
+      setIsLoading(true);
+      const imageSource = useCapturedImage ? 'captured image' : 'sample image';
+      setStatusMessage(`☁️ Making cloud item label prediction with ${imageSource}...`);
+
+      const imagePath = getCurrentImagePath('item_label');
+
+      const result = await VisionCore.predictItemLabelCloud(
+        imagePath,
+        null, // token
+        api_key, // apiKey
+        true // shouldResizeImage
+      );
+
+      setStatusMessage('✅ Cloud item label prediction completed!');
+      setResults(typeof result === 'string' ? result : JSON.stringify(result, null, 2));
+    } catch (error: any) {
+      setStatusMessage('❌ Cloud prediction failed: ' + error.message);
+      Alert.alert('Error', 'Cloud prediction failed: ' + error.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handlePredictBillOfLadingCloud = async () => {
+    try {
+      setIsLoading(true);
+      const imageSource = useCapturedImage ? 'captured image' : 'sample image';
+      setStatusMessage(`☁️ Making cloud bill of lading prediction with ${imageSource}...`);
+
+      const imagePath = getCurrentImagePath('bill_of_lading');
+
+      const result = await VisionCore.predictBillOfLadingCloud(
+        imagePath,
+        [], // barcodes
+        null, // token
+        api_key, // apiKey
+        null, // locationId
+        null, // options
+        true // shouldResizeImage
+      );
+
+      setStatusMessage('✅ Cloud bill of lading prediction completed!');
+      setResults(typeof result === 'string' ? result : JSON.stringify(result, null, 2));
+    } catch (error: any) {
+      setStatusMessage('❌ Cloud prediction failed: ' + error.message);
+      Alert.alert('Error', 'Cloud prediction failed: ' + error.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handlePredictDocumentClassificationCloud = async () => {
+    try {
+      setIsLoading(true);
+      const imageSource = useCapturedImage ? 'captured image' : 'sample image';
+      setStatusMessage(`☁️ Making cloud document classification prediction with ${imageSource}...`);
+
+      const imagePath = getCurrentImagePath('document_classification');
+
+      const result = await VisionCore.predictDocumentClassificationCloud(
+        imagePath,
+        null, // token
+        api_key, // apiKey
+        true // shouldResizeImage
+      );
+
+      setStatusMessage('✅ Cloud document classification prediction completed!');
+      setResults(typeof result === 'string' ? result : JSON.stringify(result, null, 2));
+    } catch (error: any) {
+      setStatusMessage('❌ Cloud prediction failed: ' + error.message);
+      Alert.alert('Error', 'Cloud prediction failed: ' + error.message);
     } finally {
       setIsLoading(false);
     }
@@ -1001,22 +1172,127 @@ const ModelManagementScreen = ({ navigation }) => {
         </TouchableOpacity>
       </View>
 
-      {/* 7️⃣ PREDICTION */}
+      {/* 7️⃣ ON-DEVICE PREDICTION */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>7️⃣ PREDICTION</Text>
-        <Text style={styles.label}>Sample Image:</Text>
+        <Text style={styles.sectionTitle}>7️⃣ ON-DEVICE PREDICTION</Text>
+
+        {/* Image Source Toggle */}
+        {capturedImageData && (
+          <View style={styles.imageSourceToggle}>
+            <Text style={styles.label}>Image Source:</Text>
+            <View style={styles.toggleContainer}>
+              <TouchableOpacity
+                style={[
+                  styles.toggleButton,
+                  !useCapturedImage && styles.toggleButtonActive
+                ]}
+                onPress={() => setUseCapturedImage(false)}
+              >
+                <Text style={[
+                  styles.toggleButtonText,
+                  !useCapturedImage && styles.toggleButtonTextActive
+                ]}>
+                  Sample Image
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.toggleButton,
+                  useCapturedImage && styles.toggleButtonActive
+                ]}
+                onPress={() => setUseCapturedImage(true)}
+              >
+                <Text style={[
+                  styles.toggleButtonText,
+                  useCapturedImage && styles.toggleButtonTextActive
+                ]}>
+                  Captured Image
+                </Text>
+              </TouchableOpacity>
+            </View>
+            <TouchableOpacity
+              style={styles.clearCapturedButton}
+              onPress={clearCapturedImage}
+            >
+              <Text style={styles.clearCapturedButtonText}>Clear Captured</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        <Text style={styles.label}>
+          {useCapturedImage && capturedImageData ? 'Captured Image:' : 'Sample Image:'}
+        </Text>
         <Image
-          source={{ uri: getSampleImageForModelType(selectedModelType) }}
+          source={{ uri: getCurrentImagePath() }}
           style={styles.sampleImage}
           resizeMode="contain"
         />
+
+        {/* Show captured barcodes info */}
+        {useCapturedImage && capturedImageData?.barcodes && capturedImageData.barcodes.length > 0 && (
+          <View style={styles.capturedBarcodesInfo}>
+            <Text style={styles.capturedBarcodesTitle}>
+              Captured Barcodes ({capturedImageData.barcodes.length}):
+            </Text>
+            {capturedImageData.barcodes.map((barcode, index) => (
+              <Text key={index} style={styles.capturedBarcodeItem}>
+                • {barcode.symbology}: {barcode.scannedCode}
+              </Text>
+            ))}
+          </View>
+        )}
+
         <TouchableOpacity
           style={[styles.button, styles.indigoButton]}
           onPress={handlePredictWithModule}
           disabled={isLoading}
         >
-          <Text style={styles.buttonText}>Predict with Module</Text>
+          <Text style={styles.buttonText}>
+            Predict with {useCapturedImage && capturedImageData ? 'Captured' : 'Sample'} Image
+          </Text>
         </TouchableOpacity>
+      </View>
+
+      {/* 8️⃣ CLOUD PREDICTIONS */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>8️⃣ CLOUD PREDICTIONS</Text>
+        <Text style={styles.helperText}>
+          Cloud predictions don't require model download. Uses API for processing.
+        </Text>
+
+        <View style={styles.buttonRow}>
+          <TouchableOpacity
+            style={[styles.button, styles.tealButton, styles.halfButton]}
+            onPress={handlePredictShippingLabelCloud}
+            disabled={isLoading}
+          >
+            <Text style={styles.buttonText}>Shipping Label</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.button, styles.tealButton, styles.halfButton]}
+            onPress={handlePredictItemLabelCloud}
+            disabled={isLoading}
+          >
+            <Text style={styles.buttonText}>Item Label</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.buttonRow}>
+          <TouchableOpacity
+            style={[styles.button, styles.tealButton, styles.halfButton]}
+            onPress={handlePredictBillOfLadingCloud}
+            disabled={isLoading}
+          >
+            <Text style={styles.buttonText}>Bill of Lading</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.button, styles.tealButton, styles.halfButton]}
+            onPress={handlePredictDocumentClassificationCloud}
+            disabled={isLoading}
+          >
+            <Text style={styles.buttonText}>Doc Classification</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Loading Indicator */}
@@ -1361,6 +1637,68 @@ const styles = StyleSheet.create({
     marginTop: 6,
     fontFamily: 'monospace',
     fontStyle: 'italic',
+  },
+  imageSourceToggle: {
+    marginBottom: 16,
+    padding: 12,
+    backgroundColor: '#f8f9fa',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#dee2e6',
+  },
+  toggleContainer: {
+    flexDirection: 'row',
+    marginBottom: 10,
+  },
+  toggleButton: {
+    flex: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: '#6610f2',
+    backgroundColor: 'transparent',
+    alignItems: 'center',
+  },
+  toggleButtonActive: {
+    backgroundColor: '#6610f2',
+  },
+  toggleButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#6610f2',
+  },
+  toggleButtonTextActive: {
+    color: '#fff',
+  },
+  clearCapturedButton: {
+    alignSelf: 'flex-end',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+  },
+  clearCapturedButtonText: {
+    fontSize: 13,
+    color: '#dc3545',
+    fontWeight: '500',
+  },
+  capturedBarcodesInfo: {
+    backgroundColor: '#e7f3ff',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 12,
+    borderLeftWidth: 3,
+    borderLeftColor: '#007bff',
+  },
+  capturedBarcodesTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 8,
+  },
+  capturedBarcodeItem: {
+    fontSize: 13,
+    color: '#555',
+    marginBottom: 4,
+    fontFamily: 'monospace',
   },
 });
 
