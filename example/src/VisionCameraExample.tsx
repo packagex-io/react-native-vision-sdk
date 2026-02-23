@@ -18,7 +18,7 @@ import { PERMISSIONS, RESULTS, request } from 'react-native-permissions';
 import { VisionCamera, VisionCameraRefProps, VisionCameraCaptureEvent, VisionCameraScanMode } from '../../src/VisionCamera';
 import { VisionCore } from '../../src';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import type { TemplateCode, TemplateData } from '../../src';
+import type { TemplateCode, TemplateData, VisionCameraErrorResult } from '../../src';
 
 const TEMPLATES_STORAGE_KEY = '@vision_sdk_templates';
 const CAPTURED_IMAGE_STORAGE_KEY = '@vision_sdk_captured_image';
@@ -286,8 +286,30 @@ const VisionCameraExample = ({ navigation }) => {
     }
   };
 
-  const handleError = (error: any) => {
-    Alert.alert('Error', error.message);
+  const handleError = (error: VisionCameraErrorResult) => {
+    // Enhanced error handling with error codes
+    const message = error.message || 'Unknown error occurred';
+    const errorCode = error.code !== undefined ? ` (Code: ${error.code})` : '';
+    
+    // Handle specific error codes
+    if (error.code === 403) {
+      Alert.alert(
+        'Permission Denied',
+        'Camera permission is required. Please grant permission in settings.',
+        [{ text: 'OK' }]
+      );
+    } else if (error.code === -1) {
+      Alert.alert(
+        'Camera Error',
+        `${message}. Please try restarting the camera.`,
+        [{ text: 'OK' }]
+      );
+    } else {
+      Alert.alert('Camera Error', `${message}${errorCode}`);
+    }
+    
+    // Log for debugging
+    console.log('Camera Error:', message, errorCode);
   };
 
   const handleRecognitionUpdate = (event: any) => {

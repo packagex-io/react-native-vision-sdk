@@ -87,4 +87,4 @@ example/.yarn/*
 # apk
 *.apk
 BACKLOG.md
-.local
+.localpackage-lock.json
