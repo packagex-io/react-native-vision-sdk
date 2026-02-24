@@ -1,5 +1,21 @@
 # Release Notes
 
+### v3.0.1 — 2026-02-23
+
+  #### Bug Fixes
+
+  - **Fixed TypeScript type definition for error handling**
+    - Added missing `code?: number` property to `VisionCameraErrorResult` interface
+    - Resolves casting error when error object was passed to `Alert.alert()` in v3.0.0
+    - Enhanced example app error handling to demonstrate proper usage of error codes
+
+  #### Improvements
+
+  - Updated example app to showcase error code-based conditional logic (permission denied, camera unavailable, etc.)
+  - Added `package-lock.json` to `.gitignore`
+
+---
+
 ### v3.0.0 — 2025-02-12
 
   #### Breaking Changes

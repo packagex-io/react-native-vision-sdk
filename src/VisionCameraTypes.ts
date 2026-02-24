@@ -56,6 +56,13 @@ export interface VisionCameraErrorResult {
    * @description A description of the error that occurred.
    */
   message: string;
+
+  /**
+   * @type {number | undefined}
+   * @description Optional error code for more specific error identification.
+   * iOS filters error codes 13, 14, 15, 16 for cleaner error handling.
+   */
+  code?: number;
 }
 
 /**
