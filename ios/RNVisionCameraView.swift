@@ -456,7 +456,8 @@ class RNVisionCameraView: UIView {
     let cleanHex = hex.trimmingCharacters(in: .whitespacesAndNewlines).replacingOccurrences(of: "#", with: "")
 
     var hexValue: UInt64 = 0
-    Scanner(string: cleanHex).scanHexInt64(&hexValue)
+    let scanner = Scanner(string: cleanHex)
+    guard scanner.scanHexInt64(&hexValue) else { return nil }
 
     if cleanHex.count == 6 {
       let r = CGFloat((hexValue & 0xFF0000) >> 16) / 255.0
