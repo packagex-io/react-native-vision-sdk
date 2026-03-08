@@ -402,6 +402,76 @@ class RNVisionCameraView: UIView {
     self.zoomLevel = NSNumber(value: Float(level))
     updateZoom()
   }
+
+  @objc func setFocusSettings(jsonString: NSString) {
+    guard let cameraView = cameraView else { return }
+    guard let data = (jsonString as String).data(using: .utf8),
+          let settings = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+      NSLog("[RNVisionCameraView] Failed to parse focus settings JSON")
+      return
+    }
+
+    let shouldDisplayFocusImage = settings["shouldDisplayFocusImage"] as? Bool ?? false
+    let shouldScanInFocusImageRect = settings["shouldScanInFocusImageRect"] as? Bool ?? false
+    let showCodeBoundariesInMultipleScan = settings["showCodeBoundariesInMultipleScan"] as? Bool ?? false
+    let showDocumentBoundaries = settings["showDocumentBoundaries"] as? Bool ?? false
+
+    let validCodeBoundaryBorderColor = Self.parseColor(settings["validCodeBoundaryBorderColor"] as? String) ?? .green
+    let validCodeBoundaryBorderWidth = settings["validCodeBoundaryBorderWidth"] as? CGFloat ?? 2.0
+    let validCodeBoundaryFillColor = Self.parseColor(settings["validCodeBoundaryFillColor"] as? String) ?? UIColor.green.withAlphaComponent(0.3)
+
+    let inValidCodeBoundaryBorderColor = Self.parseColor(settings["inValidCodeBoundaryBorderColor"] as? String) ?? .red
+    let inValidCodeBoundaryBorderWidth = settings["inValidCodeBoundaryBorderWidth"] as? CGFloat ?? 2.0
+    let inValidCodeBoundaryFillColor = Self.parseColor(settings["inValidCodeBoundaryFillColor"] as? String) ?? UIColor.red.withAlphaComponent(0.3)
+
+    let documentBoundaryBorderColor = Self.parseColor(settings["documentBoundaryBorderColor"] as? String) ?? .blue
+    let documentBoundaryFillColor = Self.parseColor(settings["documentBoundaryFillColor"] as? String) ?? UIColor.blue.withAlphaComponent(0.3)
+
+    let focusImageTintColor = Self.parseColor(settings["focusImageTintColor"] as? String) ?? .white
+    let focusImageHighlightedColor = Self.parseColor(settings["focusImageHighlightedColor"] as? String) ?? .green
+
+    let focusSettings = VisionSDK.CodeScannerView.FocusSettings.makeDefault(
+      shouldDisplayFocusImage: shouldDisplayFocusImage,
+      shouldScanInFocusImageRect: shouldScanInFocusImageRect,
+      showCodeBoundariesInMultipleScan: showCodeBoundariesInMultipleScan,
+      validCodeBoundryBorderColor: validCodeBoundaryBorderColor,
+      validCodeBoundryBorderWidth: validCodeBoundaryBorderWidth,
+      validCodeBoundryFillColor: validCodeBoundaryFillColor,
+      inValidCodeBoundryBorderColor: inValidCodeBoundaryBorderColor,
+      inValidCodeBoundryBorderWidth: inValidCodeBoundaryBorderWidth,
+      inValidCodeBoundryFillColor: inValidCodeBoundaryFillColor,
+      showDocumentBoundries: showDocumentBoundaries,
+      documentBoundryBorderColor: documentBoundaryBorderColor,
+      documentBoundryFillColor: documentBoundaryFillColor,
+      focusImageTintColor: focusImageTintColor,
+      focusImageHighlightedColor: focusImageHighlightedColor
+    )
+
+    cameraView.setFocusSettingsTo(focusSettings)
+  }
+
+  /// Parses a hex color string (e.g., "#ff0000", "#ff000080") into a UIColor.
+  private static func parseColor(_ hex: String?) -> UIColor? {
+    guard let hex = hex else { return nil }
+    let cleanHex = hex.trimmingCharacters(in: .whitespacesAndNewlines).replacingOccurrences(of: "#", with: "")
+
+    var hexValue: UInt64 = 0
+    Scanner(string: cleanHex).scanHexInt64(&hexValue)
+
+    if cleanHex.count == 6 {
+      let r = CGFloat((hexValue & 0xFF0000) >> 16) / 255.0
+      let g = CGFloat((hexValue & 0x00FF00) >> 8) / 255.0
+      let b = CGFloat(hexValue & 0x0000FF) / 255.0
+      return UIColor(red: r, green: g, blue: b, alpha: 1.0)
+    } else if cleanHex.count == 8 {
+      let r = CGFloat((hexValue & 0xFF000000) >> 24) / 255.0
+      let g = CGFloat((hexValue & 0x00FF0000) >> 16) / 255.0
+      let b = CGFloat((hexValue & 0x0000FF00) >> 8) / 255.0
+      let a = CGFloat(hexValue & 0x000000FF) / 255.0
+      return UIColor(red: r, green: g, blue: b, alpha: a)
+    }
+    return nil
+  }
   
   private func updateFlash() {
     guard let cameraView = cameraView else { return }

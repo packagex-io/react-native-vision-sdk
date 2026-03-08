@@ -15,6 +15,7 @@ import {
   VisionCameraErrorResult,
   VisionCameraRecognitionUpdateEvent,
   VisionCameraSharpnessScoreEvent,
+  FocusSettings,
 } from './VisionCameraTypes';
 
 export * from './VisionCameraTypes';
@@ -79,6 +80,13 @@ const Camera = forwardRef<VisionCameraRefProps, VisionCameraProps>(
       setZoom: (level: number) => {
         if (VisionCameraViewRef.current) {
           Commands.setZoom(VisionCameraViewRef.current, level);
+        }
+      },
+
+      // Sets focus settings using Fabric command
+      setFocusSettings: (settings: FocusSettings) => {
+        if (VisionCameraViewRef.current) {
+          Commands.setFocusSettings(VisionCameraViewRef.current, JSON.stringify(settings));
         }
       },
     }), []);
