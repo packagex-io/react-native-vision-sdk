@@ -296,7 +296,7 @@ using namespace facebook::react;
 
   if (commandId != nil) {
     // Map command IDs to command names based on the order in supportedCommands array
-    // From VisionCameraViewNativeComponent.ts: ['capture', 'stop', 'start', 'toggleFlash', 'setZoom']
+    // From VisionCameraViewNativeComponent.ts: ['capture', 'stop', 'start', 'toggleFlash', 'setZoom', 'setFocusSettings']
     NSArray *commandNames = @[@"capture", @"stop", @"start", @"toggleFlash", @"setZoom", @"setFocusSettings"];
 
     NSInteger cmdId = [commandId integerValue];
