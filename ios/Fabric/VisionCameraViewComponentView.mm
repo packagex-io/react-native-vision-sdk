@@ -296,8 +296,8 @@ using namespace facebook::react;
 
   if (commandId != nil) {
     // Map command IDs to command names based on the order in supportedCommands array
-    // From VisionCameraViewNativeComponent.ts: ['capture', 'stop', 'start', 'toggleFlash', 'setZoom']
-    NSArray *commandNames = @[@"capture", @"stop", @"start", @"toggleFlash", @"setZoom"];
+    // From VisionCameraViewNativeComponent.ts: ['capture', 'stop', 'start', 'toggleFlash', 'setZoom', 'setFocusSettings']
+    NSArray *commandNames = @[@"capture", @"stop", @"start", @"toggleFlash", @"setZoom", @"setFocusSettings"];
 
     NSInteger cmdId = [commandId integerValue];
     if (cmdId >= 0 && cmdId < commandNames.count) {
@@ -353,6 +353,14 @@ using namespace facebook::react;
     [invocation setTarget:_visionCameraView];
     [invocation setArgument:&level atIndex:2];
     [invocation invoke];
+  }
+}
+
+- (void)setFocusSettings:(NSString *)settingsJson
+{
+  SEL selector = NSSelectorFromString(@"setFocusSettingsWithJsonString:");
+  if ([_visionCameraView respondsToSelector:selector]) {
+    ((void (*)(id, SEL, id))objc_msgSend)(_visionCameraView, selector, settingsJson);
   }
 }
 

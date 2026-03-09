@@ -462,6 +462,123 @@ export interface VisionCameraViewProps {
 }
 
 /**
+ * Focus settings for configuring focus image, code boundaries, and document boundaries.
+ */
+export interface FocusSettings {
+  /**
+   * @optional
+   * @type {boolean}
+   * @description Whether to display the focus image overlay.
+   * @default false
+   */
+  shouldDisplayFocusImage?: boolean;
+
+  /**
+   * @optional
+   * @type {boolean}
+   * @description Whether to restrict scanning to the focus image rect area.
+   * @default false
+   */
+  shouldScanInFocusImageRect?: boolean;
+
+  /**
+   * @optional
+   * @type {boolean}
+   * @description Whether to show code boundaries when scanning multiple codes.
+   * @default false
+   */
+  showCodeBoundariesInMultipleScan?: boolean;
+
+  /**
+   * @optional
+   * @type {string}
+   * @description Border color for valid code boundaries (hex color string, e.g., '#2abd51').
+   * @default '#00ff00'
+   */
+  validCodeBoundaryBorderColor?: string;
+
+  /**
+   * @optional
+   * @type {number}
+   * @description Border width for valid code boundaries.
+   * @default 2
+   */
+  validCodeBoundaryBorderWidth?: number;
+
+  /**
+   * @optional
+   * @type {string}
+   * @description Fill color for valid code boundaries (hex color string with optional alpha, e.g., '#2abd5140').
+   * @default '#00ff004D'
+   */
+  validCodeBoundaryFillColor?: string;
+
+  /**
+   * @optional
+   * @type {string}
+   * @description Border color for invalid code boundaries (hex color string, e.g., '#cc0829').
+   * @default '#ff0000'
+   */
+  inValidCodeBoundaryBorderColor?: string;
+
+  /**
+   * @optional
+   * @type {number}
+   * @description Border width for invalid code boundaries.
+   * @default 2
+   */
+  inValidCodeBoundaryBorderWidth?: number;
+
+  /**
+   * @optional
+   * @type {string}
+   * @description Fill color for invalid code boundaries (hex color string with optional alpha, e.g., '#cc082940').
+   * @default '#ff00004D'
+   */
+  inValidCodeBoundaryFillColor?: string;
+
+  /**
+   * @optional
+   * @type {boolean}
+   * @description Whether to show document boundaries.
+   * @default false
+   */
+  showDocumentBoundaries?: boolean;
+
+  /**
+   * @optional
+   * @type {string}
+   * @description Border color for document boundaries (hex color string, e.g., '#241616').
+   * @default '#0000ff'
+   */
+  documentBoundaryBorderColor?: string;
+
+  /**
+   * @optional
+   * @type {string}
+   * @description Fill color for document boundaries (hex color string with optional alpha, e.g., '#e3000080').
+   * @default '#0000ff4D'
+   */
+  documentBoundaryFillColor?: string;
+
+  /**
+   * @optional
+   * @type {string}
+   * @description Tint color for the focus image (hex color string, e.g., '#ffffff').
+   * @default '#ffffff'
+   */
+  focusImageTintColor?: string;
+
+  /**
+   * @optional
+   * @type {string}
+   * @description Highlighted color for the focus image when object is detected (hex color string, e.g., '#e30000').
+   * @default '#00ff00'
+   */
+  focusImageHighlightedColor?: string;
+}
+
+/**
  * Exposes methods to control the Vision Camera from the parent component.
  */
 export interface VisionCameraRefProps {
@@ -494,6 +611,12 @@ export interface VisionCameraRefProps {
    * @param {number} level - The zoom level to set.
    */
   setZoom: (level: number) => void;
+
+  /**
+   * Configures focus settings including focus image, code boundaries, and document boundaries.
+   * @param {FocusSettings} settings - The focus settings to apply.
+   */
+  setFocusSettings: (settings: FocusSettings) => void;
 }
 
 /**

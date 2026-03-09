@@ -79,6 +79,11 @@ android {
 
   namespace "com.visionsdkexample"
 
+  packagingOptions {
+    pickFirst 'lib/**/libonnxruntime*.so'
+    pickFirst 'lib/**/libonnxruntime4j_jni.so'
+  }
+
   lintOptions {
       checkReleaseBuilds false
       abortOnError false

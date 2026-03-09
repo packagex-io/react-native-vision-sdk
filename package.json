@@ -44,7 +44,11 @@
     "android": {
       "javaPackageName": "com.visionsdk"
     },
-    "ios": {}
+    "ios": {
+      "componentProvider": {
+        "VisionCameraView": "VisionCameraViewComponentView"
+      }
+    }
   },
   "keywords": [
     "react-native",

@@ -355,6 +355,10 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
                 val level = args?.getDouble(0) ?: 1.0
                 setZoomCommand(root, level)
             }
+            "setFocusSettings" -> {
+                val settingsJson = args?.getString(0) ?: "{}"
+                setFocusSettingsCommand(root, settingsJson)
+            }
             else -> Log.w(TAG, "Unknown command: $commandId")
         }
     }
@@ -382,6 +386,29 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
     private fun setZoomCommand(view: VisionCameraView, level: Double) {
         Log.d(TAG, "setZoom called with level: $level")
         view.setZoomRatio(level.toFloat())
+    }
+
+    private fun setFocusSettingsCommand(view: VisionCameraView, settingsJson: String) {
+        Log.d(TAG, "setFocusSettings called with: $settingsJson")
+        try {
+            val json = org.json.JSONObject(settingsJson)
+
+            val shouldScanInFocusImageRect = json.optBoolean("shouldScanInFocusImageRect", false)
+            val showCodeBoundariesInMultipleScan = json.optBoolean("showCodeBoundariesInMultipleScan", false)
+            val showDocumentBoundaries = json.optBoolean("showDocumentBoundaries", false)
+
+            val focusSettings = io.packagex.visionsdk.config.FocusSettings(
+                context = appContext,
+                shouldScanInFocusImageRect = shouldScanInFocusImageRect,
+                showCodeBoundariesInMultipleScan = showCodeBoundariesInMultipleScan,
+                showDocumentBoundaries = showDocumentBoundaries
+            )
+
+            view.getFocusRegionManager()?.setFocusSettings(focusSettings)
+            Log.d(TAG, "Focus settings applied successfully")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to apply focus settings: ${e.message}", e)
+        }
     }
 
     // MARK: - ViewCallback inner class
