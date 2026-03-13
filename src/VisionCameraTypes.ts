@@ -455,6 +455,16 @@ export interface VisionCameraViewProps {
 
   /**
    * @optional
+   * @type {boolean}
+   * @description When true, the native SDK draws bounding boxes on a Canvas overlay
+   * with spring-animated smoothing. When false (default), bounding box coordinates
+   * are still smoothed and emitted via onBoundingBoxesUpdate for custom JS drawing.
+   * @default false
+   */
+  showNativeBoundingBoxes?: boolean;
+
+  /**
+   * @optional
    * @type {React.Ref<any>}
    * @description Optional reference to the component.
    */
@@ -758,4 +768,14 @@ export interface VisionCameraProps {
    * Pass a TemplateData object to apply a template, or null to remove it.
    */
   template?: TemplateData | null;
+
+  /**
+   * @optional
+   * @type {boolean}
+   * @description When true, the native SDK draws bounding boxes on a Canvas overlay
+   * with spring-animated smoothing. When false (default), bounding box coordinates
+   * are still smoothed and emitted via onBoundingBoxesUpdate for custom JS drawing.
+   * @default false
+   */
+  showNativeBoundingBoxes?: boolean;
 }

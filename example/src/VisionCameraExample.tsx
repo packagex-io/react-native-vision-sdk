@@ -434,6 +434,7 @@ const VisionCameraExample = ({ navigation }) => {
               documentCaptureDelay: 0.5,  // Reduce delay from 2s to 0.5s for faster capture
             }}
             // frameSkip={15}
+            showNativeBoundingBoxes={true}
             onBoundingBoxesUpdate={handleBoundingBoxesUpdate}
           />
         ) : (

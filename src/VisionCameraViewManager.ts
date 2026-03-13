@@ -43,6 +43,7 @@ const VisionCameraViewWrapper = React.forwardRef<any, VisionCameraViewProps>((pr
     props.cameraFacing,
     props.frameSkip,
     props.autoCapture,
+    props.showNativeBoundingBoxes,
   ]);
 
   return React.createElement(VisionCameraViewNative, { ...fabricProps, ref });

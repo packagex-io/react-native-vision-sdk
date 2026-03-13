@@ -45,6 +45,8 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
     private var currentDetectionMode: DetectionMode = DetectionMode.Photo // Track current detection mode
     private val density = appContext.resources.displayMetrics.density
 
+    private var showNativeBoundingBoxes = false
+
     // Event throttling - timestamps for last emitted events
     private var lastRecognitionUpdateTime = 0L
     private var lastBoundingBoxesUpdateTime = 0L
@@ -206,6 +208,16 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
         view.setScanningMode(scanningMode)
     }
 
+    @ReactProp(name = "showNativeBoundingBoxes")
+    fun setShowNativeBoundingBoxes(view: VisionCameraView, enabled: Boolean) {
+        Log.d(TAG, "setShowNativeBoundingBoxes: $enabled")
+        showNativeBoundingBoxes = enabled
+        // Re-apply scan area to update FocusSettings with the new value
+        if (isCameraReady) {
+            applyScanArea(view, pendingScanArea)
+        }
+    }
+
     @ReactProp(name = "cameraFacing")
     fun setCameraFacing(view: VisionCameraView, facing: String?) {
         Log.d(TAG, "setCameraFacing: $facing")
@@ -285,8 +297,11 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
                     context = appContext,
                     shouldScanInFocusImageRect = true,
                     focusImageRect = focusRect,
-                    showCodeBoundariesInMultipleScan = false,
-                    showDocumentBoundaries = false
+                    showCodeBoundariesInMultipleScan = showNativeBoundingBoxes,
+                    showDocumentBoundaries = false,
+                    validCodeBoundaryBorderColor = 0xFFFFEB3B.toInt(), // Yellow (#FFEB3B)
+                    validCodeBoundaryBorderWidth = 2,
+                    validCodeBoundaryFillColor = android.graphics.Color.TRANSPARENT,
                 )
                 view.getFocusRegionManager()?.setFocusSettings(focusSettings)
                 Log.d(TAG, "Scan area applied - single scan mode enabled with focus rect: $focusRect")
@@ -294,12 +309,13 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
                 // If no scan area, enable multiple scan mode
                 view.setMultipleScanEnabled(true)
 
-                // Create FocusSettings without shouldScanInFocusImageRect or focusImageRect
-                // This matches the oldarch implementation
                 val focusSettings = io.packagex.visionsdk.config.FocusSettings(
                     context = appContext,
-                    showCodeBoundariesInMultipleScan = false,
-                    showDocumentBoundaries = false
+                    showCodeBoundariesInMultipleScan = showNativeBoundingBoxes,
+                    showDocumentBoundaries = false,
+                    validCodeBoundaryBorderColor = 0xFFFFEB3B.toInt(), // Yellow (#FFEB3B)
+                    validCodeBoundaryBorderWidth = 2,
+                    validCodeBoundaryFillColor = android.graphics.Color.TRANSPARENT,
                 )
                 view.getFocusRegionManager()?.setFocusSettings(focusSettings)
                 Log.d(TAG, "No scan area - multiple scan mode enabled")
@@ -388,20 +404,55 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
         view.setZoomRatio(level.toFloat())
     }
 
+    private fun parseColor(hex: String?, default: Int): Int {
+        if (hex.isNullOrEmpty()) return default
+        return try {
+            android.graphics.Color.parseColor(hex)
+        } catch (e: Exception) {
+            default
+        }
+    }
+
     private fun setFocusSettingsCommand(view: VisionCameraView, settingsJson: String) {
         Log.d(TAG, "setFocusSettings called with: $settingsJson")
         try {
             val json = org.json.JSONObject(settingsJson)
 
             val shouldScanInFocusImageRect = json.optBoolean("shouldScanInFocusImageRect", false)
-            val showCodeBoundariesInMultipleScan = json.optBoolean("showCodeBoundariesInMultipleScan", false)
+            val showCodeBoundariesInMultipleScan = json.optBoolean("showCodeBoundariesInMultipleScan", showNativeBoundingBoxes)
             val showDocumentBoundaries = json.optBoolean("showDocumentBoundaries", false)
 
             val focusSettings = io.packagex.visionsdk.config.FocusSettings(
                 context = appContext,
                 shouldScanInFocusImageRect = shouldScanInFocusImageRect,
                 showCodeBoundariesInMultipleScan = showCodeBoundariesInMultipleScan,
-                showDocumentBoundaries = showDocumentBoundaries
+                showDocumentBoundaries = showDocumentBoundaries,
+                validCodeBoundaryBorderColor = parseColor(
+                    json.optString("validCodeBoundaryBorderColor", null),
+                    android.graphics.Color.GREEN
+                ),
+                validCodeBoundaryBorderWidth = json.optInt("validCodeBoundaryBorderWidth", 1),
+                validCodeBoundaryFillColor = parseColor(
+                    json.optString("validCodeBoundaryFillColor", null),
+                    android.graphics.Color.argb(76, 0, 255, 0)
+                ),
+                invalidCodeBoundaryBorderColor = parseColor(
+                    json.optString("inValidCodeBoundaryBorderColor", null),
+                    android.graphics.Color.RED
+                ),
+                invalidCodeBoundaryBorderWidth = json.optInt("inValidCodeBoundaryBorderWidth", 1),
+                invalidCodeBoundaryFillColor = parseColor(
+                    json.optString("inValidCodeBoundaryFillColor", null),
+                    android.graphics.Color.argb(76, 255, 0, 0)
+                ),
+                documentBoundaryBorderColor = parseColor(
+                    json.optString("documentBoundaryBorderColor", null),
+                    android.graphics.Color.YELLOW
+                ),
+                documentBoundaryFillColor = parseColor(
+                    json.optString("documentBoundaryFillColor", null),
+                    android.graphics.Color.argb(76, 255, 255, 0)
+                ),
             )
 
             view.getFocusRegionManager()?.setFocusSettings(focusSettings)
@@ -502,12 +553,6 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
             qrCodeBoundingBoxes: List<ScannedCodeResult>,
             documentBoundingBox: android.graphics.Rect?
         ) {
-            // Throttle bounding box updates (heavier payload, more processing)
-            if (!shouldEmitThrottledEvent(lastBoundingBoxesUpdateTime, BOUNDING_BOXES_UPDATE_THROTTLE_MS)) {
-                return
-            }
-            lastBoundingBoxesUpdateTime = System.currentTimeMillis()
-
             // Build barcode bounding boxes JSON array
             val barcodeRectsJsonArray = org.json.JSONArray()
             barcodeBoundingBoxes.forEach { code ->
