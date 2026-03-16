@@ -116,6 +116,14 @@ class RNVisionCameraView: UIView {
     }
   }
 
+  @objc var showNativeBoundingBoxes: Bool = false {
+    didSet {
+      DispatchQueue.main.async {
+        self.updateScanArea()
+      }
+    }
+  }
+
   // MARK: - VisionSDK Components
   var cameraView: CodeScannerView?
   private var currentScanMode: CodeScannerMode = .photo
@@ -413,7 +421,7 @@ class RNVisionCameraView: UIView {
 
     let shouldDisplayFocusImage = settings["shouldDisplayFocusImage"] as? Bool ?? false
     let shouldScanInFocusImageRect = settings["shouldScanInFocusImageRect"] as? Bool ?? false
-    let showCodeBoundariesInMultipleScan = settings["showCodeBoundariesInMultipleScan"] as? Bool ?? false
+    let showCodeBoundariesInMultipleScan = settings["showCodeBoundariesInMultipleScan"] as? Bool ?? showNativeBoundingBoxes
     let showDocumentBoundaries = settings["showDocumentBoundaries"] as? Bool ?? false
 
     let validCodeBoundaryBorderColor = Self.parseColor(settings["validCodeBoundaryBorderColor"] as? String) ?? .green
@@ -538,7 +546,10 @@ class RNVisionCameraView: UIView {
       let focusSettings = VisionSDK.CodeScannerView.FocusSettings.makeDefault(
         shouldDisplayFocusImage: false,
         shouldScanInFocusImageRect: false,
-        showCodeBoundariesInMultipleScan: false,
+        showCodeBoundariesInMultipleScan: showNativeBoundingBoxes,
+        validCodeBoundryBorderColor: UIColor(red: 1.0, green: 0.922, blue: 0.231, alpha: 1.0),
+        validCodeBoundryBorderWidth: 2.0,
+        validCodeBoundryFillColor: .clear,
         showDocumentBoundries: false
       )
       cameraView.setFocusSettingsTo(focusSettings)
@@ -560,7 +571,10 @@ class RNVisionCameraView: UIView {
       focusImageRect: focusRect,
       shouldDisplayFocusImage: false,
       shouldScanInFocusImageRect: true,
-      showCodeBoundariesInMultipleScan: false,
+      showCodeBoundariesInMultipleScan: showNativeBoundingBoxes,
+      validCodeBoundryBorderColor: UIColor(red: 1.0, green: 0.922, blue: 0.231, alpha: 1.0),
+      validCodeBoundryBorderWidth: 2.0,
+      validCodeBoundryFillColor: .clear,
       showDocumentBoundries: false
     )
 

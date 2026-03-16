@@ -1,5 +1,51 @@
 # Release Notes
 
+### v3.0.3 — 2026-03-13
+
+  #### New Features
+
+  - **Added `showNativeBoundingBoxes` prop**
+    - When enabled, the native SDK draws bounding boxes on a Canvas overlay with spring-animated smoothing
+    - Defaults to `false`; bounding box coordinates are still emitted via `onBoundingBoxesUpdate` for custom JS drawing
+  - **Enhanced `setFocusSettings` command on Android**
+    - Added support for all color and border width customization options: `validCodeBoundaryBorderColor`, `validCodeBoundaryBorderWidth`, `validCodeBoundaryFillColor`, `inValidCodeBoundaryBorderColor`, `inValidCodeBoundaryBorderWidth`, `inValidCodeBoundaryFillColor`, `documentBoundaryBorderColor`, `documentBoundaryFillColor`
+
+  #### Improvements
+
+  - Bumped `vision-sdk-android` to `2.4.38`
+  - Removed throttling on bounding box update events for smoother real-time tracking
+  - `showCodeBoundariesInMultipleScan` now respects the `showNativeBoundingBoxes` prop value
+
+---
+
+### v3.0.2 — 2026-03-09
+
+  Includes latest iOS (v2.1.3) and Android (v2.4.37) SDK updates, focus settings support, and iOS component provider config.
+
+  #### New Features
+
+  - Added iOS `componentProvider` config to `package.json`
+  - **Added `setFocusSettings` command for iOS and Android**
+    - iOS: full support for focus image, code boundary, and document boundary styling
+    - Android: support for boolean focus settings (scan rect, code boundaries, document boundaries)
+
+  #### iOS (v2.1.3)
+
+  - Added item label micro model support
+  - Fixed part number regex, country of origin extraction, and model number deduplication
+  - Fixed crash in `getWordIndicesForCharRange` on empty regex match
+
+  #### Android (v2.4.37)
+
+  - Significantly improved barcode detection accuracy and speed
+  - Better recognition of damaged or hard-to-read barcodes
+  - Added 11 newly supported barcode formats (EAN2, EAN5, ISBN10, ISBN13, GS1DataBar, GS1DataBarExpanded, GS1DataBarLimited, MicroPDF417, MicroQR, MaxiCode, RMQRCode)
+  - Added John Deere as a courier with Box ID and Account ID support
+  - Smoother bounding box animations and overlay transitions
+  - Multiple bug fixes for barcode scanning and focus-frame filtering
+
+---
+
 ### v3.0.1 — 2026-02-23
 
   #### Bug Fixes

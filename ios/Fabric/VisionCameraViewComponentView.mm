@@ -194,6 +194,15 @@ using namespace facebook::react;
     }
   }
 
+  if (oldViewProps.showNativeBoundingBoxes != newViewProps.showNativeBoundingBoxes) {
+    SEL setter = NSSelectorFromString(@"setShowNativeBoundingBoxes:");
+    if ([_visionCameraView respondsToSelector:setter]) {
+      BOOL value = newViewProps.showNativeBoundingBoxes;
+      NSLog(@"[VisionCameraViewComponentView] Setting showNativeBoundingBoxes to: %d", value);
+      ((void (*)(id, SEL, BOOL))objc_msgSend)(_visionCameraView, setter, value);
+    }
+  }
+
   // Update number properties
   if (oldViewProps.zoomLevel != newViewProps.zoomLevel) {
     SEL setter = NSSelectorFromString(@"setZoomLevel:");
