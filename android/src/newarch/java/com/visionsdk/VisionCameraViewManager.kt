@@ -49,12 +49,10 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
 
     // Event throttling - timestamps for last emitted events
     private var lastRecognitionUpdateTime = 0L
-    private var lastBoundingBoxesUpdateTime = 0L
     private var lastSharpnessScoreUpdateTime = 0L
 
     // Throttle intervals in milliseconds
     private val RECOGNITION_UPDATE_THROTTLE_MS = 100L // 10 FPS
-    private val BOUNDING_BOXES_UPDATE_THROTTLE_MS = 150L // ~6.7 FPS (heavier payload)
     private val SHARPNESS_SCORE_UPDATE_THROTTLE_MS = 200L // 5 FPS
 
     override fun getName(): String = REACT_CLASS
@@ -431,7 +429,7 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
                     json.optString("validCodeBoundaryBorderColor", null),
                     android.graphics.Color.GREEN
                 ),
-                validCodeBoundaryBorderWidth = json.optInt("validCodeBoundaryBorderWidth", 1),
+                validCodeBoundaryBorderWidth = json.optInt("validCodeBoundaryBorderWidth", 2),
                 validCodeBoundaryFillColor = parseColor(
                     json.optString("validCodeBoundaryFillColor", null),
                     android.graphics.Color.argb(76, 0, 255, 0)
@@ -440,7 +438,7 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
                     json.optString("inValidCodeBoundaryBorderColor", null),
                     android.graphics.Color.RED
                 ),
-                invalidCodeBoundaryBorderWidth = json.optInt("inValidCodeBoundaryBorderWidth", 1),
+                invalidCodeBoundaryBorderWidth = json.optInt("inValidCodeBoundaryBorderWidth", 2),
                 invalidCodeBoundaryFillColor = parseColor(
                     json.optString("inValidCodeBoundaryFillColor", null),
                     android.graphics.Color.argb(76, 255, 0, 0)
