@@ -215,7 +215,7 @@ describe('VisionCameraViewManager', () => {
       );
       // Find the mock native component (innermost View)
       const views = tree.root.findAllByType('View' as any);
-      const nativeView = views[views.length - 1];
+      const nativeView = views[views.length - 1]!;
       expect(nativeView.props.scanAreaJson).toBe(JSON.stringify(scanArea));
       expect(nativeView.props.scanArea).toBeUndefined();
     });
@@ -223,17 +223,17 @@ describe('VisionCameraViewManager', () => {
     it('sets empty string for scanAreaJson when scanArea is undefined', () => {
       const tree = renderInAct(<VisionCameraView />);
       const views = tree.root.findAllByType('View' as any);
-      const nativeView = views[views.length - 1];
+      const nativeView = views[views.length - 1]!;
       expect(nativeView.props.scanAreaJson).toBe('');
     });
 
     it('converts detectionConfig object to JSON string', () => {
-      const detectionConfig = { confidence: 0.8, maxResults: 10 };
+      const detectionConfig = { text: true, barcode: true, document: false };
       const tree = renderInAct(
         <VisionCameraView detectionConfig={detectionConfig} />
       );
       const views = tree.root.findAllByType('View' as any);
-      const nativeView = views[views.length - 1];
+      const nativeView = views[views.length - 1]!;
       expect(nativeView.props.detectionConfigJson).toBe(JSON.stringify(detectionConfig));
       expect(nativeView.props.detectionConfig).toBeUndefined();
     });
@@ -243,7 +243,7 @@ describe('VisionCameraViewManager', () => {
         <VisionCameraView showNativeBoundingBoxes={true} />
       );
       const views = tree.root.findAllByType('View' as any);
-      const nativeView = views[views.length - 1];
+      const nativeView = views[views.length - 1]!;
       expect(nativeView.props.showNativeBoundingBoxes).toBe(true);
     });
 
@@ -258,7 +258,7 @@ describe('VisionCameraViewManager', () => {
       });
 
       const views = tree!.root.findAllByType('View' as any);
-      const nativeView = views[views.length - 1];
+      const nativeView = views[views.length - 1]!;
       expect(nativeView.props.showNativeBoundingBoxes).toBe(true);
     });
   });
