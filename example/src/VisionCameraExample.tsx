@@ -29,7 +29,7 @@ const VisionCameraExample = ({ navigation }) => {
   const [zoomLevel, setZoomLevel] = useState(1.0);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [lastCaptureEvent, setLastCaptureEvent] = useState<VisionCameraCaptureEvent | null>(null);
-  const [scanMode, setScanMode] = useState<VisionCameraScanMode>('barcode');
+  const [scanMode, setScanMode] = useState<VisionCameraScanMode>('photo');
   const [scanAreaEnabled, setScanAreaEnabled] = useState(false);
   const [autoCapture, setAutoCapture] = useState(false);
   const [recognitionData, setRecognitionData] = useState({ text: false, barcode: false, qrcode: false, document: false });
@@ -264,6 +264,14 @@ const VisionCameraExample = ({ navigation }) => {
   const handleCapture = (event: VisionCameraCaptureEvent) => {
     setCapturedImage(event.image);
     setLastCaptureEvent(event);
+
+    const barcodes = event.barcodes ?? [];
+    if (barcodes.length > 0) {
+      const list = barcodes
+        .map((b, i) => `${i + 1}. [${b.symbology}] ${b.scannedCode}`)
+        .join('\n');
+      Alert.alert(`Captured ${barcodes.length} Barcode(s)`, list);
+    }
   };
 
   const handleUseForModelTesting = async () => {

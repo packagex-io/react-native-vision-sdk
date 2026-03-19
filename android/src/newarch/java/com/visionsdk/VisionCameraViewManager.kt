@@ -270,12 +270,6 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
 
     private fun applyScanArea(view: VisionCameraView, scanArea: com.facebook.react.bridge.ReadableMap?) {
         try {
-            // Skip FocusSettings only for Photo mode (OCR mode works fine with scan areas)
-            if (currentDetectionMode == DetectionMode.Photo) {
-                Log.d(TAG, "Skipping scan area application in Photo mode")
-                return
-            }
-
             if (scanArea != null) {
                 // When scan area is defined, disable multiple scan mode
                 view.setMultipleScanEnabled(false)
