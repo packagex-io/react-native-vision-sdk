@@ -265,10 +265,10 @@ const VisionCameraExample = ({ navigation }) => {
     setCapturedImage(event.image);
     setLastCaptureEvent(event);
 
-    const barcodes = (event as any).barcodes || [];
+    const barcodes = event.barcodes ?? [];
     if (barcodes.length > 0) {
       const list = barcodes
-        .map((b: any, i: number) => `${i + 1}. [${b.symbology}] ${b.scannedCode}`)
+        .map((b, i) => `${i + 1}. [${b.symbology}] ${b.scannedCode}`)
         .join('\n');
       Alert.alert(`Captured ${barcodes.length} Barcode(s)`, list);
     }
