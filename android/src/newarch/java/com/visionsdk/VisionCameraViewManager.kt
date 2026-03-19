@@ -270,9 +270,19 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
 
     private fun applyScanArea(view: VisionCameraView, scanArea: com.facebook.react.bridge.ReadableMap?) {
         try {
-            // Skip FocusSettings only for Photo mode (OCR mode works fine with scan areas)
+            // Photo mode doesn't use scan areas or focus rects, but still needs FocusSettings
+            // for showNativeBoundingBoxes to work
             if (currentDetectionMode == DetectionMode.Photo) {
-                Log.d(TAG, "Skipping scan area application in Photo mode")
+                Log.d(TAG, "Photo mode - applying FocusSettings without scan area")
+                val focusSettings = io.packagex.visionsdk.config.FocusSettings(
+                    context = appContext,
+                    showCodeBoundariesInMultipleScan = showNativeBoundingBoxes,
+                    showDocumentBoundaries = false,
+                    validCodeBoundaryBorderColor = 0xFFFFEB3B.toInt(), // Yellow (#FFEB3B)
+                    validCodeBoundaryBorderWidth = 2,
+                    validCodeBoundaryFillColor = android.graphics.Color.TRANSPARENT,
+                )
+                view.getFocusRegionManager()?.setFocusSettings(focusSettings)
                 return
             }
 
