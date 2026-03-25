@@ -545,6 +545,9 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
             qrCodeBoundingBoxes: List<ScannedCodeResult>,
             documentBoundingBox: android.graphics.Rect?
         ) {
+            if (BuildConfig.DEBUG) {
+                Log.d(TAG, "onIndicationsBoundingBoxes called - barcodes: ${barcodeBoundingBoxes.size}, qr: ${qrCodeBoundingBoxes.size}, doc: ${documentBoundingBox != null}")
+            }
             // Build barcode bounding boxes JSON array
             val barcodeRectsJsonArray = org.json.JSONArray()
             barcodeBoundingBoxes.forEach { code ->
