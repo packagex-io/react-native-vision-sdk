@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect, useCallback } from 'react';
+import React, { useRef, useState, useEffect, useCallback, memo } from 'react';
 import {
   View,
   Text,
@@ -22,6 +22,188 @@ import type { TemplateCode, TemplateData, VisionCameraErrorResult } from '../../
 
 const TEMPLATES_STORAGE_KEY = '@vision_sdk_templates';
 const CAPTURED_IMAGE_STORAGE_KEY = '@vision_sdk_captured_image';
+
+// Isolated bounding box overlay — only this component re-renders on bbox updates
+const BoundingBoxOverlay = memo(({
+  boundingBoxes,
+  scanMode,
+  autoCapture,
+  isTemplateMode,
+  isCodeInTemplate,
+  onAddBarcodeToTemplate,
+}: {
+  boundingBoxes: { barcodeBoundingBoxes: any[]; qrCodeBoundingBoxes: any[]; documentBoundingBox: any };
+  scanMode: string;
+  autoCapture: boolean;
+  isTemplateMode: boolean;
+  isCodeInTemplate: (scannedCode: string, symbology: string) => boolean;
+  onAddBarcodeToTemplate: (code: any) => void;
+}) => {
+  return (
+    <View style={[overlayStyles.container, isTemplateMode && overlayStyles.containerTemplateMode]} pointerEvents={isTemplateMode ? 'box-none' : 'none'}>
+      {scanMode === 'ocr' && autoCapture ? (
+        <>
+          {boundingBoxes.documentBoundingBox && boundingBoxes.documentBoundingBox.width > 0 && (
+            <View
+              style={[
+                overlayStyles.box,
+                {
+                  left: boundingBoxes.documentBoundingBox.x,
+                  top: boundingBoxes.documentBoundingBox.y,
+                  width: boundingBoxes.documentBoundingBox.width,
+                  height: boundingBoxes.documentBoundingBox.height,
+                  borderColor: '#4CAF50',
+                  backgroundColor: 'rgba(76, 175, 80, 0.2)',
+                },
+              ]}
+            />
+          )}
+        </>
+      ) : (
+        <>
+          {boundingBoxes.barcodeBoundingBoxes.map((code, index) => {
+            if (isTemplateMode) {
+              const added = isCodeInTemplate(code.scannedCode, code.symbology);
+              return (
+                <Pressable
+                  key={`barcode-tap-${index}`}
+                  style={({ pressed }) => [
+                    {
+                      position: 'absolute',
+                      left: code.boundingBox.x,
+                      top: code.boundingBox.y,
+                      width: Math.max(code.boundingBox.width, 60),
+                      height: Math.max(code.boundingBox.height, 40),
+                      opacity: pressed ? 0.7 : 1,
+                    },
+                  ]}
+                  onPress={() => onAddBarcodeToTemplate(code)}
+                >
+                  <View
+                    style={[
+                      overlayStyles.tappable,
+                      {
+                        borderColor: added ? '#4CAF50' : '#FFEB3B',
+                        borderWidth: added ? 3 : 2,
+                      },
+                    ]}
+                  >
+                    <Text style={overlayStyles.label}>
+                      {code.scannedCode} ({code.symbology})
+                    </Text>
+                    {added && (
+                      <View style={overlayStyles.addedBadge}>
+                        <Text style={overlayStyles.addedBadgeText}>ADDED</Text>
+                      </View>
+                    )}
+                  </View>
+                </Pressable>
+              );
+            }
+            // Non-template: lightweight rect only (no Text — matches native SDK)
+            return (
+              <View
+                key={`barcode-${index}`}
+                style={[
+                  overlayStyles.box,
+                  {
+                    left: code.boundingBox.x,
+                    top: code.boundingBox.y,
+                    width: code.boundingBox.width,
+                    height: code.boundingBox.height,
+                    borderColor: '#FFEB3B',
+                  },
+                ]}
+              />
+            );
+          })}
+
+          {boundingBoxes.qrCodeBoundingBoxes.map((code, index) => (
+            <View
+              key={`qrcode-${index}`}
+              pointerEvents="none"
+              style={[
+                overlayStyles.box,
+                {
+                  left: code.boundingBox.x,
+                  top: code.boundingBox.y,
+                  width: code.boundingBox.width,
+                  height: code.boundingBox.height,
+                  borderColor: '#00E5FF',
+                },
+              ]}
+            />
+          ))}
+
+          {!isTemplateMode && boundingBoxes.documentBoundingBox && boundingBoxes.documentBoundingBox.width > 0 && (
+            <View
+              pointerEvents="none"
+              style={[
+                overlayStyles.box,
+                {
+                  left: boundingBoxes.documentBoundingBox.x,
+                  top: boundingBoxes.documentBoundingBox.y,
+                  width: boundingBoxes.documentBoundingBox.width,
+                  height: boundingBoxes.documentBoundingBox.height,
+                  borderColor: '#4CAF50',
+                },
+              ]}
+            />
+          )}
+        </>
+      )}
+    </View>
+  );
+});
+
+const overlayStyles = StyleSheet.create({
+  container: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 10,
+  },
+  containerTemplateMode: {
+    zIndex: 100,
+    elevation: 100,
+  },
+  box: {
+    position: 'absolute',
+    borderWidth: 2,
+    backgroundColor: 'transparent',
+  },
+  label: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: 'bold',
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    padding: 4,
+    borderRadius: 3,
+    position: 'absolute',
+    top: -20,
+    left: 0,
+  },
+  tappable: {
+    flex: 1,
+    backgroundColor: 'transparent',
+  },
+  addedBadge: {
+    position: 'absolute',
+    bottom: -20,
+    left: 0,
+    backgroundColor: '#4CAF50',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 3,
+  },
+  addedBadgeText: {
+    color: '#fff',
+    fontSize: 9,
+    fontWeight: 'bold',
+  },
+});
 
 const VisionCameraExample = ({ navigation }) => {
   const cameraRef = useRef<VisionCameraRefProps>(null);
@@ -51,6 +233,8 @@ const VisionCameraExample = ({ navigation }) => {
 
   // Template creation state
   const [isTemplateMode, setIsTemplateMode] = useState(false);
+  const isTemplateModeRef = useRef(isTemplateMode);
+  useEffect(() => { isTemplateModeRef.current = isTemplateMode; }, [isTemplateMode]);
   const [templateCodes, setTemplateCodes] = useState<TemplateCode[]>([]);
   const [savedTemplates, setSavedTemplates] = useState<TemplateData[]>([]);
   const [showTemplateManager, setShowTemplateManager] = useState(false);
@@ -60,12 +244,8 @@ const VisionCameraExample = ({ navigation }) => {
   const lastSharpnessUpdate = useRef<number>(0);
   const sharpnessThrottleMs = 200;
 
-  // Throttle bounding boxes updates (update at most every 300ms)
-  const lastBoundingBoxUpdate = useRef<number>(0);
-  const boundingBoxThrottleMs = 300;
-
   // Clear stale bounding boxes if no update received within timeout
-  const boundingBoxTimeoutMs = 1000;
+  const boundingBoxTimeoutMs = 500;
   const boundingBoxTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const scanModes: { label: string; value: VisionCameraScanMode }[] = [
@@ -320,48 +500,44 @@ const VisionCameraExample = ({ navigation }) => {
     console.log('Camera Error:', message, errorCode);
   };
 
-  const handleRecognitionUpdate = (event: any) => {
+  const handleRecognitionUpdate = useCallback((event: any) => {
     setRecognitionData(event);
-  };
+  }, []);
 
-  const handleSharpnessScoreUpdate = (event: any) => {
+  const handleSharpnessScoreUpdate = useCallback((event: any) => {
     const now = Date.now();
     if (now - lastSharpnessUpdate.current >= sharpnessThrottleMs) {
       lastSharpnessUpdate.current = now;
       setSharpness(event.sharpnessScore);
     }
-  };
+  }, []);
 
-  const handleBarcodeDetected = (event: any) => {
+  const handleBarcodeDetected = useCallback((event: any) => {
     setBarcodeResults(event.codes);
-    if (!isTemplateMode) {
+    if (!isTemplateModeRef.current) {
       Alert.alert('Barcode Detected', `Found ${event.codes.length} barcode(s)`);
     }
-  };
+  }, []);
 
-  const handleBoundingBoxesUpdate = (event: any) => {
-    const now = Date.now();
-    if (now - lastBoundingBoxUpdate.current >= boundingBoxThrottleMs) {
-      lastBoundingBoxUpdate.current = now;
+  const handleBoundingBoxesUpdate = useCallback((event: any) => {
+    setBoundingBoxes({
+      barcodeBoundingBoxes: event.barcodeBoundingBoxes || [],
+      qrCodeBoundingBoxes: event.qrCodeBoundingBoxes || [],
+      documentBoundingBox: event.documentBoundingBox || null,
+    });
+
+    // Reset stale-box timeout
+    if (boundingBoxTimeoutRef.current) {
+      clearTimeout(boundingBoxTimeoutRef.current);
+    }
+    boundingBoxTimeoutRef.current = setTimeout(() => {
       setBoundingBoxes({
-        barcodeBoundingBoxes: event.barcodeBoundingBoxes || [],
-        qrCodeBoundingBoxes: event.qrCodeBoundingBoxes || [],
-        documentBoundingBox: event.documentBoundingBox || null,
-      });
-
-      // Clear any existing timeout and set a new one to clear stale boxes
-      if (boundingBoxTimeoutRef.current) {
-        clearTimeout(boundingBoxTimeoutRef.current);
-      }
-      boundingBoxTimeoutRef.current = setTimeout(() => {
-        setBoundingBoxes({
           barcodeBoundingBoxes: [],
           qrCodeBoundingBoxes: [],
           documentBoundingBox: null,
         });
       }, boundingBoxTimeoutMs);
-    }
-  };
+  }, []);
 
   const onCapturePress = () => {
     cameraRef.current?.capture();
@@ -476,140 +652,15 @@ const VisionCameraExample = ({ navigation }) => {
           </View>
         )}
 
-        {/* Bounding Boxes Overlay */}
-        <View style={[styles.boundingBoxesContainer, isTemplateMode && styles.boundingBoxesContainerTemplateMode]} pointerEvents={isTemplateMode ? 'box-none' : 'none'}>
-          {/* For OCR mode with autoCapture, only show document box with translucent fill */}
-          {scanMode === 'ocr' && autoCapture ? (
-            <>
-              {/* Document Bounding Box - Translucent fill */}
-              {boundingBoxes.documentBoundingBox && boundingBoxes.documentBoundingBox.width > 0 && (
-                <View
-                  style={[
-                    styles.boundingBox,
-                    {
-                      left: boundingBoxes.documentBoundingBox.x,
-                      top: boundingBoxes.documentBoundingBox.y,
-                      width: boundingBoxes.documentBoundingBox.width,
-                      height: boundingBoxes.documentBoundingBox.height,
-                      borderColor: '#4CAF50', // Green for documents
-                      backgroundColor: 'rgba(76, 175, 80, 0.2)', // Translucent green fill
-                    },
-                  ]}
-                />
-              )}
-            </>
-          ) : (
-            <>
-              {/* Barcode Bounding Boxes */}
-              {boundingBoxes.barcodeBoundingBoxes.map((code, index) => {
-                const added = isTemplateMode && isCodeInTemplate(code.scannedCode, code.symbology);
-                const boxContent = (
-                  <View
-                    key={`barcode-${index}`}
-                    style={[
-                      styles.boundingBox,
-                      {
-                        left: code.boundingBox.x,
-                        top: code.boundingBox.y,
-                        width: code.boundingBox.width,
-                        height: code.boundingBox.height,
-                        borderColor: added ? '#4CAF50' : '#FFEB3B',
-                        borderWidth: added ? 3 : 2,
-                      },
-                    ]}
-                  >
-                    <Text style={styles.boundingBoxLabel}>
-                      {code.scannedCode} ({code.symbology})
-                    </Text>
-                    {added && (
-                      <View style={styles.addedBadge}>
-                        <Text style={styles.addedBadgeText}>ADDED</Text>
-                      </View>
-                    )}
-                  </View>
-                );
-
-                if (isTemplateMode) {
-                  return (
-                    <Pressable
-                      key={`barcode-tap-${index}`}
-                      style={({ pressed }) => [
-                        {
-                          position: 'absolute',
-                          left: code.boundingBox.x,
-                          top: code.boundingBox.y,
-                          width: Math.max(code.boundingBox.width, 60),
-                          height: Math.max(code.boundingBox.height, 40),
-                          opacity: pressed ? 0.7 : 1,
-                        },
-                      ]}
-                      onPress={() => handleAddBarcodeToTemplate(code)}
-                    >
-                      <View
-                        style={[
-                          styles.boundingBoxTappable,
-                          {
-                            borderColor: added ? '#4CAF50' : '#FFEB3B',
-                            borderWidth: added ? 3 : 2,
-                          },
-                        ]}
-                      >
-                        <Text style={styles.boundingBoxLabel}>
-                          {code.scannedCode} ({code.symbology})
-                        </Text>
-                        {added && (
-                          <View style={styles.addedBadge}>
-                            <Text style={styles.addedBadgeText}>ADDED</Text>
-                          </View>
-                        )}
-                      </View>
-                    </Pressable>
-                  );
-                }
-                return boxContent;
-              })}
-
-              {/* QR Code Bounding Boxes - Cyan (pointerEvents="none" so they don't block touches) */}
-              {boundingBoxes.qrCodeBoundingBoxes.map((code, index) => (
-                <View
-                  key={`qrcode-${index}`}
-                  pointerEvents="none"
-                  style={[
-                    styles.boundingBox,
-                    {
-                      left: code.boundingBox.x,
-                      top: code.boundingBox.y,
-                      width: code.boundingBox.width,
-                      height: code.boundingBox.height,
-                      borderColor: '#00E5FF', // Cyan for QR codes
-                    },
-                  ]}
-                >
-                  <Text style={styles.boundingBoxLabel}>
-                    {code.scannedCode}
-                  </Text>
-                </View>
-              ))}
-
-              {/* Document Bounding Box - Green (hidden in template mode, pointerEvents="none" so it doesn't block touches) */}
-              {!isTemplateMode && boundingBoxes.documentBoundingBox && boundingBoxes.documentBoundingBox.width > 0 && (
-                <View
-                  pointerEvents="none"
-                  style={[
-                    styles.boundingBox,
-                    {
-                      left: boundingBoxes.documentBoundingBox.x,
-                      top: boundingBoxes.documentBoundingBox.y,
-                      width: boundingBoxes.documentBoundingBox.width,
-                      height: boundingBoxes.documentBoundingBox.height,
-                      borderColor: '#4CAF50', // Green for documents
-                    },
-                  ]}
-                />
-              )}
-            </>
-          )}
-        </View>
+        {/* Bounding Boxes Overlay — isolated in memo'd component for perf */}
+        <BoundingBoxOverlay
+          boundingBoxes={boundingBoxes}
+          scanMode={scanMode}
+          autoCapture={autoCapture}
+          isTemplateMode={isTemplateMode}
+          isCodeInTemplate={isCodeInTemplate}
+          onAddBarcodeToTemplate={handleAddBarcodeToTemplate}
+        />
 
         {/* Recognition Status Overlay - Top Left */}
         <View style={styles.recognitionOverlay}>
@@ -945,25 +996,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#000',
     position: 'relative',
-  },
-  boundingBoxesContainer: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    zIndex: 10,
-  },
-  boundingBoxesContainerTemplateMode: {
-    // On iOS, we need to ensure the overlay is above the native camera view
-    // and can receive touch events
-    zIndex: 100,
-    elevation: 100, // Android elevation
-  },
-  boundingBox: {
-    position: 'absolute',
-    borderWidth: 2,
-    backgroundColor: 'transparent',
   },
   permissionContainer: {
     flex: 1,
@@ -1311,17 +1343,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderRadius: 8,
   },
-  boundingBoxLabel: {
-    color: '#FFFFFF',
-    fontSize: 10,
-    fontWeight: 'bold',
-    backgroundColor: 'rgba(0, 0, 0, 0.8)',
-    padding: 4,
-    borderRadius: 3,
-    position: 'absolute',
-    top: -20,
-    left: 0,
-  },
   stopButton: {
     backgroundColor: 'rgba(220, 53, 69, 0.9)', // Red for stop
   },
@@ -1340,25 +1361,6 @@ const styles = StyleSheet.create({
     color: '#BB86FC',
     fontSize: 14,
     fontWeight: '600',
-  },
-  // --- Bounding Box Tappable ---
-  boundingBoxTappable: {
-    flex: 1,
-    backgroundColor: 'transparent',
-  },
-  addedBadge: {
-    position: 'absolute',
-    bottom: -20,
-    left: 0,
-    backgroundColor: '#4CAF50',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 3,
-  },
-  addedBadgeText: {
-    color: '#fff',
-    fontSize: 9,
-    fontWeight: 'bold',
   },
   // --- Template Panel ---
   templatePanel: {

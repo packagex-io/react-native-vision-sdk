@@ -57,6 +57,10 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
 
     override fun getName(): String = REACT_CLASS
 
+    // Let the native VisionCameraView layout its own children (camera preview surface)
+    // Without this, Yoga overrides child layout and the preview gets cropped/zoomed
+    override fun needsCustomLayoutForChildren(): Boolean = true
+
     override fun createViewInstance(context: ThemedReactContext): VisionCameraView {
         Log.d(TAG, "createViewInstance")
 

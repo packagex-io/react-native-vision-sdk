@@ -20,6 +20,14 @@ import {
 
 export * from './VisionCameraTypes';
 
+// Extract nativeEvent from Fabric event wrapper
+function parseNativeEvent<T>(event: any): T {
+  if (event && typeof event === 'object' && 'nativeEvent' in event) {
+    return event.nativeEvent;
+  }
+  return event;
+}
+
 // Camera component
 const Camera = forwardRef<VisionCameraRefProps, VisionCameraProps>(
   (
@@ -47,44 +55,53 @@ const Camera = forwardRef<VisionCameraRefProps, VisionCameraProps>(
     // Ref for the Vision Camera View
     const VisionCameraViewRef = useRef(null);
 
+    // Stable refs for callback props — updated synchronously during render
+    // so handlers always point at the latest props with no stale window
+    const onCaptureRef = useRef(onCapture);
+    const onErrorRef = useRef(onError);
+    const onRecognitionUpdateRef = useRef(onRecognitionUpdate);
+    const onSharpnessScoreUpdateRef = useRef(onSharpnessScoreUpdate);
+    const onBarcodeDetectedRef = useRef(onBarcodeDetected);
+    const onBoundingBoxesUpdateRef = useRef(onBoundingBoxesUpdate);
+    onCaptureRef.current = onCapture;
+    onErrorRef.current = onError;
+    onRecognitionUpdateRef.current = onRecognitionUpdate;
+    onSharpnessScoreUpdateRef.current = onSharpnessScoreUpdate;
+    onBarcodeDetectedRef.current = onBarcodeDetected;
+    onBoundingBoxesUpdateRef.current = onBoundingBoxesUpdate;
+
     // Expose handlers via ref to parent components
     useImperativeHandle(ref, () => ({
-      // Captures an image using Fabric command
       capture: () => {
         if (VisionCameraViewRef.current) {
           Commands.capture(VisionCameraViewRef.current);
         }
       },
 
-      // Stops the camera using Fabric command
       stop: () => {
         if (VisionCameraViewRef.current) {
           Commands.stop(VisionCameraViewRef.current);
         }
       },
 
-      // Starts the camera using Fabric command
       start: () => {
         if (VisionCameraViewRef.current) {
           Commands.start(VisionCameraViewRef.current);
         }
       },
 
-      // Toggles flash using Fabric command
       toggleFlash: (enabled: boolean) => {
         if (VisionCameraViewRef.current) {
           Commands.toggleFlash(VisionCameraViewRef.current, enabled);
         }
       },
 
-      // Sets zoom level using Fabric command
       setZoom: (level: number) => {
         if (VisionCameraViewRef.current) {
           Commands.setZoom(VisionCameraViewRef.current, level);
         }
       },
 
-      // Sets focus settings using Fabric command
       setFocusSettings: (settings: FocusSettings) => {
         if (VisionCameraViewRef.current) {
           Commands.setFocusSettings(VisionCameraViewRef.current, JSON.stringify(settings));
@@ -92,18 +109,9 @@ const Camera = forwardRef<VisionCameraRefProps, VisionCameraProps>(
       },
     }), []);
 
-    // Helper function to handle events
-    const parseNativeEvent = useCallback(<T,>(event: any): T => {
-      // Ensure event is an object before checking for 'nativeEvent'
-      if (event && typeof event === 'object' && 'nativeEvent' in event) {
-        return event.nativeEvent;
-      }
-      return event; // If no 'nativeEvent', return the event itself
-    }, []);
-
+    // All handlers use refs — permanently stable, never cause native view prop updates
     const onCaptureHandler = useCallback((event: any) => {
       const nativeEvent = parseNativeEvent<any>(event);
-      // Parse barcodesJson back to barcodes array for backward compatibility
       if (nativeEvent.barcodesJson && typeof nativeEvent.barcodesJson === 'string') {
         try {
           nativeEvent.barcodes = JSON.parse(nativeEvent.barcodesJson);
@@ -112,28 +120,27 @@ const Camera = forwardRef<VisionCameraRefProps, VisionCameraProps>(
           console.error('Failed to parse barcodesJson:', e);
         }
       }
-      onCapture(nativeEvent);
-    }, [onCapture])
+      onCaptureRef.current(nativeEvent);
+    }, [])
 
     const onErrorHandler = useCallback((event: any) =>
-      onError(parseNativeEvent<VisionCameraErrorResult>(event)), [onError])
+      onErrorRef.current(parseNativeEvent<VisionCameraErrorResult>(event)), [])
 
     const onRecognitionUpdateHandler = useCallback(
       (event: any) =>
-        onRecognitionUpdate(parseNativeEvent<VisionCameraRecognitionUpdateEvent>(event)),
-      [onRecognitionUpdate]
+        onRecognitionUpdateRef.current(parseNativeEvent<VisionCameraRecognitionUpdateEvent>(event)),
+      []
     )
 
     const onSharpnessScoreUpdateHandler = useCallback(
       (event: any) =>
-        onSharpnessScoreUpdate(parseNativeEvent<VisionCameraSharpnessScoreEvent>(event)),
-      [onSharpnessScoreUpdate]
+        onSharpnessScoreUpdateRef.current(parseNativeEvent<VisionCameraSharpnessScoreEvent>(event)),
+      []
     )
 
     const onBarcodeDetectedHandler = useCallback(
       (event: any) => {
         const nativeEvent = parseNativeEvent<any>(event);
-        // Parse codesJson back to codes array for backward compatibility
         if (nativeEvent.codesJson && typeof nativeEvent.codesJson === 'string') {
           try {
             nativeEvent.codes = JSON.parse(nativeEvent.codesJson);
@@ -142,15 +149,14 @@ const Camera = forwardRef<VisionCameraRefProps, VisionCameraProps>(
             console.error('Failed to parse codesJson:', e);
           }
         }
-        onBarcodeDetected(nativeEvent);
+        onBarcodeDetectedRef.current(nativeEvent);
       },
-      [onBarcodeDetected]
+      []
     )
 
     const onBoundingBoxesUpdateHandler = useCallback(
       (event: any) => {
         const nativeEvent = parseNativeEvent<any>(event);
-        // Parse JSON fields back to arrays for backward compatibility
         if (nativeEvent.barcodeBoundingBoxesJson && typeof nativeEvent.barcodeBoundingBoxesJson === 'string') {
           try {
             nativeEvent.barcodeBoundingBoxes = JSON.parse(nativeEvent.barcodeBoundingBoxesJson);
@@ -167,9 +173,9 @@ const Camera = forwardRef<VisionCameraRefProps, VisionCameraProps>(
             console.error('Failed to parse qrCodeBoundingBoxesJson:', e);
           }
         }
-        onBoundingBoxesUpdate(nativeEvent);
+        onBoundingBoxesUpdateRef.current(nativeEvent);
       },
-      [onBoundingBoxesUpdate]
+      []
     )
 
     return (
