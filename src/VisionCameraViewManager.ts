@@ -29,7 +29,7 @@ const VisionCameraViewWrapper = React.forwardRef<any, VisionCameraViewProps>((pr
   const detectionConfigJson = React.useMemo(
     () => (detectionConfig && typeof detectionConfig === 'object') ? JSON.stringify(detectionConfig) : '',
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [detectionConfig?.text, detectionConfig?.barcode, detectionConfig?.document, detectionConfig?.documentConfidence, detectionConfig?.documentCaptureDelay]
+    [detectionConfig?.text, detectionConfig?.barcode, detectionConfig?.document, detectionConfig?.documentConfidence, detectionConfig?.documentCaptureDelay, detectionConfig?.barcodeConfidence]
   );
 
   const templateJson = React.useMemo(

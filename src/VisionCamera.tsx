@@ -3,7 +3,6 @@ import React, {
   useRef,
   forwardRef,
   useCallback,
-  useEffect,
 } from 'react';
 import {
   StyleSheet,
@@ -56,22 +55,20 @@ const Camera = forwardRef<VisionCameraRefProps, VisionCameraProps>(
     // Ref for the Vision Camera View
     const VisionCameraViewRef = useRef(null);
 
-    // Stable refs for callback props — handlers never invalidate regardless of consumer code
+    // Stable refs for callback props — updated synchronously during render
+    // so handlers always point at the latest props with no stale window
     const onCaptureRef = useRef(onCapture);
     const onErrorRef = useRef(onError);
     const onRecognitionUpdateRef = useRef(onRecognitionUpdate);
     const onSharpnessScoreUpdateRef = useRef(onSharpnessScoreUpdate);
     const onBarcodeDetectedRef = useRef(onBarcodeDetected);
     const onBoundingBoxesUpdateRef = useRef(onBoundingBoxesUpdate);
-
-    useEffect(() => {
-      onCaptureRef.current = onCapture;
-      onErrorRef.current = onError;
-      onRecognitionUpdateRef.current = onRecognitionUpdate;
-      onSharpnessScoreUpdateRef.current = onSharpnessScoreUpdate;
-      onBarcodeDetectedRef.current = onBarcodeDetected;
-      onBoundingBoxesUpdateRef.current = onBoundingBoxesUpdate;
-    });
+    onCaptureRef.current = onCapture;
+    onErrorRef.current = onError;
+    onRecognitionUpdateRef.current = onRecognitionUpdate;
+    onSharpnessScoreUpdateRef.current = onSharpnessScoreUpdate;
+    onBarcodeDetectedRef.current = onBarcodeDetected;
+    onBoundingBoxesUpdateRef.current = onBoundingBoxesUpdate;
 
     // Expose handlers via ref to parent components
     useImperativeHandle(ref, () => ({
