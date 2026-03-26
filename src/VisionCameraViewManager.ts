@@ -4,49 +4,54 @@ import type { VisionCameraViewProps } from './VisionCameraTypes';
 
 // Wrapper component to handle prop conversion for Fabric
 const VisionCameraViewWrapper = React.forwardRef<any, VisionCameraViewProps>((props, ref) => {
-  // Convert object props to JSON strings for Fabric
-  const fabricProps = React.useMemo(() => {
-    const convertedProps: any = { ...props };
+  const {
+    scanArea,
+    detectionConfig,
+    template,
+    // Event handlers — pass through directly, not through useMemo
+    onCapture,
+    onError,
+    onRecognitionUpdate,
+    onSharpnessScoreUpdate,
+    onBarcodeDetected,
+    onBoundingBoxesUpdate,
+    // Everything else is a simple value prop
+    ...valueProps
+  } = props;
 
-    // Convert scanArea object to JSON string, or clear it if undefined
-    if (props.scanArea && typeof props.scanArea === 'object') {
-      convertedProps.scanAreaJson = JSON.stringify(props.scanArea);
-    } else {
-      convertedProps.scanAreaJson = '';
-    }
-    delete convertedProps.scanArea;
+  // Only recompute JSON strings when the serialized values actually change
+  const scanAreaJson = React.useMemo(
+    () => (scanArea && typeof scanArea === 'object') ? JSON.stringify(scanArea) : '',
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [scanArea?.x, scanArea?.y, scanArea?.width, scanArea?.height]
+  );
 
-    // Convert detectionConfig object to JSON string, or clear it if undefined
-    if (props.detectionConfig && typeof props.detectionConfig === 'object') {
-      convertedProps.detectionConfigJson = JSON.stringify(props.detectionConfig);
-    } else {
-      convertedProps.detectionConfigJson = '';
-    }
-    delete convertedProps.detectionConfig;
+  const detectionConfigJson = React.useMemo(
+    () => (detectionConfig && typeof detectionConfig === 'object') ? JSON.stringify(detectionConfig) : '',
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [detectionConfig?.text, detectionConfig?.barcode, detectionConfig?.document, detectionConfig?.documentConfidence, detectionConfig?.documentCaptureDelay]
+  );
 
-    // Convert template object to JSON string, or clear it if undefined/null
-    if (props.template && typeof props.template === 'object') {
-      convertedProps.templateJson = JSON.stringify(props.template);
-    } else {
-      convertedProps.templateJson = '';
-    }
-    delete convertedProps.template;
+  const templateJson = React.useMemo(
+    () => (template && typeof template === 'object') ? JSON.stringify(template) : '',
+    [template]
+  );
 
-    return convertedProps;
-  }, [
-    props.scanArea,
-    props.detectionConfig,
-    props.template,
-    props.enableFlash,
-    props.zoomLevel,
-    props.scanMode,
-    props.cameraFacing,
-    props.frameSkip,
-    props.autoCapture,
-    props.showNativeBoundingBoxes,
-  ]);
+  const nativeProps: any = {
+    ...valueProps,
+    scanAreaJson,
+    detectionConfigJson,
+    templateJson,
+    onCapture,
+    onError,
+    onRecognitionUpdate,
+    onSharpnessScoreUpdate,
+    onBarcodeDetected,
+    onBoundingBoxesUpdate,
+    ref,
+  };
 
-  return React.createElement(VisionCameraViewNative, { ...fabricProps, ref });
+  return React.createElement(VisionCameraViewNative, nativeProps);
 });
 
 VisionCameraViewWrapper.displayName = 'VisionCameraView';
