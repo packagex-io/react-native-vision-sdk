@@ -3,6 +3,7 @@ buildscript {
   def kotlin_version = rootProject.ext.has('kotlinVersion') ? rootProject.ext.get('kotlinVersion') : project.properties['VisionSdk_kotlinVersion']
 
   repositories {
+    mavenLocal()
     google()
     mavenCentral()
     maven { url = uri("https://jitpack.io") }
@@ -150,7 +151,7 @@ dependencies {
   implementation "com.facebook.react:react-native:+"
   implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
 // From node_modules
-  implementation 'com.github.packagexlabs:vision-sdk-android:v2.4.42'
+  implementation 'com.packagexlabs:VisionScanner:v2.4.44'
   implementation 'com.github.asadullahilyas:HandyUtils:1.1.6'
 }
 

@@ -642,6 +642,13 @@ export interface VisionCameraProps {
 
   /**
    * @optional
+   * @type {StyleProp<ViewStyle>}
+   * @description Style for the camera view container.
+   */
+  style?: StyleProp<ViewStyle>;
+
+  /**
+   * @optional
    * @type {React.Ref<any> | undefined}
    * @description Optional reference to the component.
    */

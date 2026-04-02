@@ -4,9 +4,7 @@ import React, {
   forwardRef,
   useCallback,
 } from 'react';
-import {
-  StyleSheet,
-} from 'react-native';
+import { StyleSheet } from 'react-native';
 import { VisionCameraView } from './VisionCameraViewManager';
 import { Commands } from './specs/VisionCameraViewNativeComponent';
 import {
@@ -33,6 +31,7 @@ const Camera = forwardRef<VisionCameraRefProps, VisionCameraProps>(
   (
     {
       children,
+      style,
       enableFlash = false,
       zoomLevel = 1.0,
       scanMode = 'photo',
@@ -182,7 +181,7 @@ const Camera = forwardRef<VisionCameraRefProps, VisionCameraProps>(
       <>
         <VisionCameraView
           ref={VisionCameraViewRef}
-          style={styles.flex}
+          style={style ?? styles.flex}
           enableFlash={enableFlash}
           zoomLevel={zoomLevel}
           scanMode={scanMode}
