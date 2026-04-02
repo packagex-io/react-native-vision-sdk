@@ -3,7 +3,9 @@ buildscript {
   def kotlin_version = rootProject.ext.has('kotlinVersion') ? rootProject.ext.get('kotlinVersion') : project.properties['VisionSdk_kotlinVersion']
 
   repositories {
-    mavenLocal()
+    if (project.hasProperty('useMavenLocal')) {
+      mavenLocal()
+    }
     google()
     mavenCentral()
     maven { url = uri("https://jitpack.io") }

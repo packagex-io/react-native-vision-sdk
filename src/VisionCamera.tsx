@@ -181,7 +181,7 @@ const Camera = forwardRef<VisionCameraRefProps, VisionCameraProps>(
       <>
         <VisionCameraView
           ref={VisionCameraViewRef}
-          style={style ?? styles.flex}
+          style={[styles.flex, style]}
           enableFlash={enableFlash}
           zoomLevel={zoomLevel}
           scanMode={scanMode}
