@@ -39,7 +39,7 @@ Pod::Spec.new do |s|
   s.frameworks = "CoreMotion"
 
   s.dependency "React-Core"
-  s.dependency "VisionSDK", "= 2.1.3"
+  s.dependency "VisionSDK", "= 2.1.4"
 
   # New Architecture dependencies
   install_modules_dependencies(s)
