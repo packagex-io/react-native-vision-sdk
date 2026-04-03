@@ -113,7 +113,7 @@
     "@types/react": "^19.0.0",
     "brace-expansion": "^1.1.12",
     "handlebars": "^4.7.9",
-    "flatted": "^3.3.3"
+    "flatted": "^3.4.2"
   },
   "peerDependencies": {
     "react": ">=18.0.0",
