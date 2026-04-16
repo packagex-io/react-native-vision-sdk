@@ -626,9 +626,12 @@ class RNVisionCameraView: UIView {
   
   private func updateFrameSkip() {
     guard let cameraView = cameraView, let frameSkip = frameSkip else { return }
-    
+
     let cameraSettings = VisionSDK.CodeScannerView.CameraSettings()
     cameraSettings.nthFrameToProcess = frameSkip.int64Value
+    if let facingString = cameraFacing?.lowercased {
+      cameraSettings.cameraPosition = facingString == "front" ? .front : .back
+    }
     cameraView.setCameraSettingsTo(cameraSettings)
   }
   
