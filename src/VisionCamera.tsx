@@ -41,7 +41,6 @@ const Camera = forwardRef<VisionCameraRefProps, VisionCameraProps>(
       frameSkip,
       cameraFacing = 'back',
       template = null,
-      showNativeBoundingBoxes = false,
       onCapture = () => { },
       onError = () => { },
       onRecognitionUpdate = () => { },
@@ -191,7 +190,6 @@ const Camera = forwardRef<VisionCameraRefProps, VisionCameraProps>(
           frameSkip={frameSkip}
           cameraFacing={cameraFacing}
           template={template}
-          showNativeBoundingBoxes={showNativeBoundingBoxes}
           onCapture={onCaptureHandler}
           onError={onErrorHandler}
           onRecognitionUpdate={onRecognitionUpdateHandler}

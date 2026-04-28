@@ -111,7 +111,6 @@ const BoundingBoxOverlay = memo(({
                     top: code.boundingBox.y,
                     width: code.boundingBox.width,
                     height: code.boundingBox.height,
-                    borderColor: '#FFEB3B',
                   },
                 ]}
               />
@@ -129,7 +128,6 @@ const BoundingBoxOverlay = memo(({
                   top: code.boundingBox.y,
                   width: code.boundingBox.width,
                   height: code.boundingBox.height,
-                  borderColor: '#00E5FF',
                 },
               ]}
             />
@@ -172,7 +170,8 @@ const overlayStyles = StyleSheet.create({
   box: {
     position: 'absolute',
     borderWidth: 2,
-    backgroundColor: 'transparent',
+    borderColor: '#FFEB3B',
+    backgroundColor: 'rgba(255, 235, 59, 0.2)',
   },
   label: {
     color: '#FFFFFF',
@@ -618,7 +617,6 @@ const VisionCameraExample = ({ navigation }) => {
               documentCaptureDelay: 0.5,  // Reduce delay from 2s to 0.5s for faster capture
             }}
             // frameSkip={15}
-            showNativeBoundingBoxes={true}
             onBoundingBoxesUpdate={handleBoundingBoxesUpdate}
           />
         ) : (
@@ -652,7 +650,6 @@ const VisionCameraExample = ({ navigation }) => {
           </View>
         )}
 
-        {/* Bounding Boxes Overlay — isolated in memo'd component for perf */}
         <BoundingBoxOverlay
           boundingBoxes={boundingBoxes}
           scanMode={scanMode}
