@@ -29,12 +29,22 @@ import com.visionsdk.utils.toDp
  */
 @ReactModule(name = VisionCameraViewManager.REACT_CLASS)
 class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
-    ViewGroupManager<VisionCameraView>() {
+    ViewGroupManager<VisionCameraView>(),
+    com.facebook.react.viewmanagers.VisionCameraViewManagerInterface<VisionCameraView> {
 
     companion object {
         const val REACT_CLASS = "VisionCameraView"
         const val TAG = "VisionCameraView Fabric"
     }
+
+    // Fabric delegate — without this, Fabric can't route props to the @ReactProp
+    // setters below and every prop (scanMode, zoomLevel, detectionConfigJson, …)
+    // is silently dropped.
+    private val viewManagerDelegate: com.facebook.react.uimanager.ViewManagerDelegate<VisionCameraView> =
+        com.facebook.react.viewmanagers.VisionCameraViewManagerDelegate<VisionCameraView, VisionCameraViewManager>(this)
+
+    override fun getDelegate(): com.facebook.react.uimanager.ViewManagerDelegate<VisionCameraView> =
+        viewManagerDelegate
 
     private var visionCameraView: VisionCameraView? = null
     private var hasStarted = false
@@ -44,8 +54,6 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
     private var hasScanAreaBeenSet = false // Track if scanArea prop was explicitly set
     private var currentDetectionMode: DetectionMode = DetectionMode.Photo // Track current detection mode
     private val density = appContext.resources.displayMetrics.density
-
-    private var showNativeBoundingBoxes = false
 
     // Event throttling - timestamps for last emitted events
     private var lastRecognitionUpdateTime = 0L
@@ -177,19 +185,19 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
     // MARK: - Props
 
     @ReactProp(name = "enableFlash")
-    fun setEnableFlash(view: VisionCameraView, enabled: Boolean) {
+    override fun setEnableFlash(view: VisionCameraView, enabled: Boolean) {
         Log.d(TAG, "setEnableFlash: $enabled")
         view.setFlashTurnedOn(enabled)
     }
 
     @ReactProp(name = "zoomLevel")
-    fun setZoomLevel(view: VisionCameraView, level: Double) {
+    override fun setZoomLevel(view: VisionCameraView, level: Double) {
         Log.d(TAG, "setZoomLevel: $level")
         view.setZoomRatio(level.toFloat())
     }
 
     @ReactProp(name = "scanMode")
-    fun setScanMode(view: VisionCameraView, mode: String?) {
+    override fun setScanMode(view: VisionCameraView, mode: String?) {
         Log.d(TAG, "setScanMode: $mode")
         val detectionMode = when (mode?.lowercase()) {
             "ocr" -> DetectionMode.OCR
@@ -204,24 +212,14 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
     }
 
     @ReactProp(name = "autoCapture")
-    fun setAutoCapture(view: VisionCameraView, enabled: Boolean) {
+    override fun setAutoCapture(view: VisionCameraView, enabled: Boolean) {
         Log.d(TAG, "setAutoCapture: $enabled")
         val scanningMode = if (enabled) ScanningMode.Auto else ScanningMode.Manual
         view.setScanningMode(scanningMode)
     }
 
-    @ReactProp(name = "showNativeBoundingBoxes")
-    fun setShowNativeBoundingBoxes(view: VisionCameraView, enabled: Boolean) {
-        Log.d(TAG, "setShowNativeBoundingBoxes: $enabled")
-        showNativeBoundingBoxes = enabled
-        // Re-apply scan area to update FocusSettings with the new value
-        if (isCameraReady) {
-            applyScanArea(view, pendingScanArea)
-        }
-    }
-
     @ReactProp(name = "cameraFacing")
-    fun setCameraFacing(view: VisionCameraView, facing: String?) {
+    override fun setCameraFacing(view: VisionCameraView, facing: String?) {
         Log.d(TAG, "setCameraFacing: $facing")
         // TODO: Implement camera facing/position switching for Android
         // This will require updating the VisionSDK Android implementation
@@ -230,13 +228,13 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
     }
 
     @ReactProp(name = "frameSkip")
-    fun setFrameSkip(view: VisionCameraView, skip: Int) {
+    override fun setFrameSkip(view: VisionCameraView, skip: Int) {
         Log.d(TAG, "setFrameSkip: $skip")
         // Frame skip would be configured via CameraSettings
     }
 
     @ReactProp(name = "scanAreaJson")
-    fun setScanArea(view: VisionCameraView, scanAreaJson: String?) {
+    override fun setScanAreaJson(view: VisionCameraView, scanAreaJson: String?) {
         Log.d(TAG, "setScanArea: $scanAreaJson")
 
         // Parse JSON string to ReadableMap
@@ -293,11 +291,7 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
                     context = appContext,
                     shouldScanInFocusImageRect = true,
                     focusImageRect = focusRect,
-                    showCodeBoundariesInMultipleScan = showNativeBoundingBoxes,
-                    showDocumentBoundaries = false,
-                    validCodeBoundaryBorderColor = 0xFFFFEB3B.toInt(), // Yellow (#FFEB3B)
-                    validCodeBoundaryBorderWidth = 2,
-                    validCodeBoundaryFillColor = android.graphics.Color.TRANSPARENT,
+                    showCodeBoundariesInMultipleScan = false,
                 )
                 view.getFocusRegionManager()?.setFocusSettings(focusSettings)
                 Log.d(TAG, "Scan area applied - single scan mode enabled with focus rect: $focusRect")
@@ -307,11 +301,7 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
 
                 val focusSettings = io.packagex.visionsdk.config.FocusSettings(
                     context = appContext,
-                    showCodeBoundariesInMultipleScan = showNativeBoundingBoxes,
-                    showDocumentBoundaries = false,
-                    validCodeBoundaryBorderColor = 0xFFFFEB3B.toInt(), // Yellow (#FFEB3B)
-                    validCodeBoundaryBorderWidth = 2,
-                    validCodeBoundaryFillColor = android.graphics.Color.TRANSPARENT,
+                    showCodeBoundariesInMultipleScan = false,
                 )
                 view.getFocusRegionManager()?.setFocusSettings(focusSettings)
                 Log.d(TAG, "No scan area - multiple scan mode enabled")
@@ -322,14 +312,14 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
     }
 
     @ReactProp(name = "detectionConfigJson")
-    fun setDetectionConfig(view: VisionCameraView, configJson: String?) {
+    override fun setDetectionConfigJson(view: VisionCameraView, configJson: String?) {
         Log.d(TAG, "setDetectionConfig")
         // Parse JSON and configure ObjectDetectionConfiguration
         // TODO: Implement using ObjectDetectionConfiguration
     }
 
     @ReactProp(name = "templateJson")
-    fun setTemplate(view: VisionCameraView, templateJson: String?) {
+    override fun setTemplateJson(view: VisionCameraView, templateJson: String?) {
         if (templateJson.isNullOrEmpty()) {
             view.removeTemplate()
             return
@@ -365,39 +355,39 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
             }
             "setZoom" -> {
                 val level = args?.getDouble(0) ?: 1.0
-                setZoomCommand(root, level)
+                setZoom(root, level.toFloat())
             }
             "setFocusSettings" -> {
                 val settingsJson = args?.getString(0) ?: "{}"
-                setFocusSettingsCommand(root, settingsJson)
+                setFocusSettings(root, settingsJson)
             }
             else -> Log.w(TAG, "Unknown command: $commandId")
         }
     }
 
-    private fun capture(view: VisionCameraView) {
+    override fun capture(view: VisionCameraView) {
         Log.d(TAG, "capture called")
         view.capture()
     }
 
-    private fun stop(view: VisionCameraView) {
+    override fun stop(view: VisionCameraView) {
         Log.d(TAG, "stop called")
         view.stopCamera()
     }
 
-    private fun start(view: VisionCameraView) {
+    override fun start(view: VisionCameraView) {
         Log.d(TAG, "start called")
         view.startCamera()
     }
 
-    private fun toggleFlash(view: VisionCameraView, enabled: Boolean) {
+    override fun toggleFlash(view: VisionCameraView, enabled: Boolean) {
         Log.d(TAG, "toggleFlash called with enabled: $enabled")
         view.setFlashTurnedOn(enabled)
     }
 
-    private fun setZoomCommand(view: VisionCameraView, level: Double) {
+    override fun setZoom(view: VisionCameraView, level: Float) {
         Log.d(TAG, "setZoom called with level: $level")
-        view.setZoomRatio(level.toFloat())
+        view.setZoomRatio(level)
     }
 
     private fun parseColor(hex: String?, default: Int): Int {
@@ -409,13 +399,13 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
         }
     }
 
-    private fun setFocusSettingsCommand(view: VisionCameraView, settingsJson: String) {
+    override fun setFocusSettings(view: VisionCameraView, settingsJson: String) {
         Log.d(TAG, "setFocusSettings called with: $settingsJson")
         try {
             val json = org.json.JSONObject(settingsJson)
 
             val shouldScanInFocusImageRect = json.optBoolean("shouldScanInFocusImageRect", false)
-            val showCodeBoundariesInMultipleScan = json.optBoolean("showCodeBoundariesInMultipleScan", showNativeBoundingBoxes)
+            val showCodeBoundariesInMultipleScan = json.optBoolean("showCodeBoundariesInMultipleScan", true)
             val showDocumentBoundaries = json.optBoolean("showDocumentBoundaries", false)
 
             val focusSettings = io.packagex.visionsdk.config.FocusSettings(
@@ -464,6 +454,14 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
         private val context: ReactApplicationContext
     ) : ScannerCallback, CameraLifecycleCallback {
 
+        // Dedup state for onBoundingBoxesUpdate. The native BarcodeOverlayView's
+        // Choreographer emits empty callbacks every frame while no boxes are
+        // visible, which causes JS consumers to thrash setState({ []: [] })
+        // between real detections — visible as overlay flicker. We forward the
+        // first "became-empty" transition only; subsequent empties are dropped
+        // until a non-empty event arrives.
+        private var lastBoundingBoxesEmpty = false
+
         private fun sendEvent(eventName: String, params: com.facebook.react.bridge.WritableMap) {
             if (view.isAttachedToWindow) {
                 try {
@@ -508,8 +506,10 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
             event.putString("codesJson", codesArray.toString())
             sendEvent("onBarcodeDetected", event)
 
-            // Automatically restart scanning after barcode detection
-            visionCameraView?.rescan()
+            // DIAGNOSTIC: auto-rescan disabled. rescan() tears down the camera,
+            // analyzer, and overlay view, then rebuilds everything — matches the
+            // "feels like restart" flicker. Consumer can call rescan imperatively.
+            // visionCameraView?.rescan()
         }
 
         override fun onFailure(exception: VisionSDKException) {
@@ -518,10 +518,8 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
             event.putInt("code", exception.errorCode ?: -1)
             sendEvent("onError", event)
 
-            // Delay rescan slightly to avoid immediate recursion
-            view.postDelayed({
-                visionCameraView?.rescan()
-            }, 100)
+            // DIAGNOSTIC: auto-rescan-on-failure disabled for the same reason.
+            // view.postDelayed({ visionCameraView?.rescan() }, 100)
         }
 
         override fun onIndications(
@@ -530,6 +528,7 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
             textDetected: Boolean,
             documentDetected: Boolean
         ) {
+            Log.d(TAG, "onIndications: barcode=$barcodeDetected qr=$qrCodeDetected text=$textDetected doc=$documentDetected")
             // Throttle recognition updates to avoid overwhelming the JS bridge
             if (!shouldEmitThrottledEvent(lastRecognitionUpdateTime, RECOGNITION_UPDATE_THROTTLE_MS)) {
                 return
@@ -552,6 +551,16 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
             if (BuildConfig.DEBUG) {
                 Log.d(TAG, "onIndicationsBoundingBoxes called - barcodes: ${barcodeBoundingBoxes.size}, qr: ${qrCodeBoundingBoxes.size}, doc: ${documentBoundingBox != null}")
             }
+
+            // Suppress repeat empty events. The native overlay fires empty
+            // every idle frame; forwarding them all causes JS overlay flicker.
+            val isEmpty = barcodeBoundingBoxes.isEmpty() &&
+                qrCodeBoundingBoxes.isEmpty() &&
+                documentBoundingBox == null
+            if (isEmpty && lastBoundingBoxesEmpty) {
+                return
+            }
+            lastBoundingBoxesEmpty = isEmpty
             // Build barcode bounding boxes JSON array
             val barcodeRectsJsonArray = org.json.JSONArray()
             barcodeBoundingBoxes.forEach { code ->
@@ -692,15 +701,15 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
                 Log.d(TAG, "Sending onCapture event with barcodesJson length: ${barcodesArray.toString().length}")
                 sendEvent("onCapture", event)
 
-                // Automatically restart scanning after image capture
-                visionCameraView?.rescan()
+                // DIAGNOSTIC: auto-rescan-after-capture disabled.
+                // visionCameraView?.rescan()
             } catch (e: Exception) {
                 val event = Arguments.createMap()
                 event.putString("message", "Failed to save image: ${e.message}")
                 sendEvent("onError", event)
 
-                // Restart scanning after error
-                visionCameraView?.rescan()
+                // DIAGNOSTIC: auto-rescan-on-save-error disabled.
+                // visionCameraView?.rescan()
             }
         }
 

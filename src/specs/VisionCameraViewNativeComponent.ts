@@ -55,7 +55,6 @@ export interface NativeProps extends ViewProps {
   // Boolean properties
   enableFlash?: boolean;
   autoCapture?: boolean;
-  showNativeBoundingBoxes?: WithDefault<boolean, false>;
 
   // Number properties
   zoomLevel?: WithDefault<Double, 1.0>;

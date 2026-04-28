@@ -41,12 +41,6 @@ describe('VisionCamera', () => {
   });
 
   describe('prop defaults', () => {
-    it('defaults showNativeBoundingBoxes to false', () => {
-      const tree = renderInAct(<VisionCamera />);
-      const viewProps = tree.root.findByType(VisionCameraView as any).props;
-      expect(viewProps.showNativeBoundingBoxes).toBe(false);
-    });
-
     it('defaults scanMode to photo', () => {
       const tree = renderInAct(<VisionCamera />);
       const viewProps = tree.root.findByType(VisionCameraView as any).props;
@@ -63,26 +57,6 @@ describe('VisionCamera', () => {
       const tree = renderInAct(<VisionCamera />);
       const viewProps = tree.root.findByType(VisionCameraView as any).props;
       expect(viewProps.cameraFacing).toBe('back');
-    });
-  });
-
-  describe('showNativeBoundingBoxes prop', () => {
-    it('passes showNativeBoundingBoxes=true to native view', () => {
-      const tree = renderInAct(<VisionCamera showNativeBoundingBoxes={true} />);
-      const viewProps = tree.root.findByType(VisionCameraView as any).props;
-      expect(viewProps.showNativeBoundingBoxes).toBe(true);
-    });
-
-    it('passes showNativeBoundingBoxes=true regardless of scanMode', () => {
-      const modes = ['photo', 'barcode', 'qrcode', 'ocr', 'barcodeorqrcode'] as const;
-      for (const scanMode of modes) {
-        const tree = renderInAct(
-          <VisionCamera showNativeBoundingBoxes={true} scanMode={scanMode} />
-        );
-        const viewProps = tree.root.findByType(VisionCameraView as any).props;
-        expect(viewProps.showNativeBoundingBoxes).toBe(true);
-        expect(viewProps.scanMode).toBe(scanMode);
-      }
     });
   });
 
@@ -238,28 +212,5 @@ describe('VisionCameraViewManager', () => {
       expect(nativeView.props.detectionConfig).toBeUndefined();
     });
 
-    it('passes showNativeBoundingBoxes through without conversion', () => {
-      const tree = renderInAct(
-        <VisionCameraView showNativeBoundingBoxes={true} />
-      );
-      const views = tree.root.findAllByType('View' as any);
-      const nativeView = views[views.length - 1]!;
-      expect(nativeView.props.showNativeBoundingBoxes).toBe(true);
-    });
-
-    it('updates when showNativeBoundingBoxes changes', () => {
-      let tree: ReactTestRenderer;
-      act(() => {
-        tree = create(<VisionCameraView showNativeBoundingBoxes={false} />);
-      });
-
-      act(() => {
-        tree!.update(<VisionCameraView showNativeBoundingBoxes={true} />);
-      });
-
-      const views = tree!.root.findAllByType('View' as any);
-      const nativeView = views[views.length - 1]!;
-      expect(nativeView.props.showNativeBoundingBoxes).toBe(true);
-    });
   });
 });
