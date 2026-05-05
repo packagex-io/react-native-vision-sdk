@@ -123,9 +123,25 @@ export interface VisionCameraBarcodeResult {
 
   /**
    * @type {object}
-   * @description Bounding box coordinates of the detected barcode.
+   * @description Bounding box coordinates of the detected barcode in preview-pixel
+   * space (the camera view's bounds). Use this for overlays drawn on top of the
+   * live preview.
    */
   boundingBox: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  };
+
+  /**
+   * @type {object}
+   * @description Bounding box normalized to 0–1 in image coordinates with top-left
+   * origin. Use this when overlaying on the captured image (the saved photo) —
+   * it survives any aspect-ratio difference between the preview and the image.
+   * Multiply by image width/height to get pixel coordinates.
+   */
+  normalizedBoundingBox?: {
     x: number;
     y: number;
     width: number;
@@ -285,9 +301,16 @@ export interface VisionCameraDetectedCodeBoundingBox {
 
   /**
    * @type {VisionCameraBoundingBox}
-   * @description Bounding box coordinates of the detected code.
+   * @description Bounding box coordinates of the detected code in preview-pixel space.
    */
   boundingBox: VisionCameraBoundingBox;
+
+  /**
+   * @type {VisionCameraBoundingBox}
+   * @description Bounding box normalized to 0–1 in image coordinates with top-left
+   * origin. Multiply by image width/height to overlay on the captured image.
+   */
+  normalizedBoundingBox?: VisionCameraBoundingBox;
 }
 
 /**

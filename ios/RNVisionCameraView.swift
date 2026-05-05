@@ -762,6 +762,15 @@ extension RNVisionCameraView: CodeScannerViewDelegate {
         "width": code.boundingBox.size.width,
         "height": code.boundingBox.size.height
       ]
+      // 0–1 normalized rect in image coordinates, top-left origin.
+      // Use this when overlaying on the captured image — it survives
+      // aspect-ratio differences between preview and saved photo.
+      codeInfo["normalizedBoundingBox"] = [
+        "x": code.normalizedBoundingBox.origin.x,
+        "y": code.normalizedBoundingBox.origin.y,
+        "width": code.normalizedBoundingBox.size.width,
+        "height": code.normalizedBoundingBox.size.height
+      ]
       if let gs1Info = code.extractedData {
         codeInfo["gs1ExtractedInfo"] = gs1Info
       }
@@ -814,16 +823,18 @@ extension RNVisionCameraView: CodeScannerViewDelegate {
         "scannedCode": code.stringValue,
         "symbology": code.symbology.stringValue(),
         "gs1ExtractedInfo": code.extractedData ?? [:],
-        "boundingBox": dict(from: code.boundingBox)
+        "boundingBox": dict(from: code.boundingBox),
+        "normalizedBoundingBox": dict(from: code.normalizedBoundingBox)
       ]
     }
-    
+
     let qrCodeBoundingBoxes = qrCode.map { code in
       return [
         "scannedCode": code.stringValue,
         "symbology": code.symbology.stringValue(),
         "gs1ExtractedInfo": code.extractedData ?? [:],
-        "boundingBox": dict(from: code.boundingBox)
+        "boundingBox": dict(from: code.boundingBox),
+        "normalizedBoundingBox": dict(from: code.normalizedBoundingBox)
       ]
     }
     
@@ -871,7 +882,8 @@ extension RNVisionCameraView: CodeScannerViewDelegate {
             "scannedCode": barcode.stringValue,
             "symbology": barcode.symbology.stringValue(),
             "gs1ExtractedInfo": barcode.extractedData ?? [:],
-            "boundingBox": dict(from: barcode.boundingBox)
+            "boundingBox": dict(from: barcode.boundingBox),
+            "normalizedBoundingBox": dict(from: barcode.normalizedBoundingBox)
           ]
         }
       ])

@@ -508,6 +508,16 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
                         })
                     }
 
+                    // 0–1 normalized rect in image coordinates, top-left origin.
+                    // Use this when overlaying on the captured image — it survives
+                    // aspect-ratio differences between preview and saved photo.
+                    put("normalizedBoundingBox", org.json.JSONObject().apply {
+                        put("x", code.normalizedBoundingBox.left.toDouble())
+                        put("y", code.normalizedBoundingBox.top.toDouble())
+                        put("width", code.normalizedBoundingBox.width().toDouble())
+                        put("height", code.normalizedBoundingBox.height().toDouble())
+                    })
+
                     if (!code.gs1ExtractedInfo.isNullOrEmpty()) {
                         val gs1Obj = org.json.JSONObject()
                         code.gs1ExtractedInfo?.forEach { (key, value) ->
@@ -601,6 +611,14 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
                             put("height", box.height().toDp(density))
                         })
                     }
+
+                    // 0–1 normalized rect in image coordinates, top-left origin.
+                    put("normalizedBoundingBox", org.json.JSONObject().apply {
+                        put("x", code.normalizedBoundingBox.left.toDouble())
+                        put("y", code.normalizedBoundingBox.top.toDouble())
+                        put("width", code.normalizedBoundingBox.width().toDouble())
+                        put("height", code.normalizedBoundingBox.height().toDouble())
+                    })
                 }
                 barcodeRectsJsonArray.put(boxObj)
             }
@@ -628,6 +646,14 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
                             put("height", box.height().toDp(density))
                         })
                     }
+
+                    // 0–1 normalized rect in image coordinates, top-left origin.
+                    put("normalizedBoundingBox", org.json.JSONObject().apply {
+                        put("x", code.normalizedBoundingBox.left.toDouble())
+                        put("y", code.normalizedBoundingBox.top.toDouble())
+                        put("width", code.normalizedBoundingBox.width().toDouble())
+                        put("height", code.normalizedBoundingBox.height().toDouble())
+                    })
                 }
                 qrCodeRectsJsonArray.put(boxObj)
             }
@@ -695,6 +721,14 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
                                 put("height", box.height().toDouble())
                             })
                         }
+
+                        // 0–1 normalized rect in image coordinates, top-left origin.
+                        put("normalizedBoundingBox", org.json.JSONObject().apply {
+                            put("x", code.normalizedBoundingBox.left.toDouble())
+                            put("y", code.normalizedBoundingBox.top.toDouble())
+                            put("width", code.normalizedBoundingBox.width().toDouble())
+                            put("height", code.normalizedBoundingBox.height().toDouble())
+                        })
 
                         if (!code.gs1ExtractedInfo.isNullOrEmpty()) {
                             val gs1Obj = org.json.JSONObject()
