@@ -313,9 +313,28 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
 
     @ReactProp(name = "detectionConfigJson")
     override fun setDetectionConfigJson(view: VisionCameraView, configJson: String?) {
-        Log.d(TAG, "setDetectionConfig")
-        // Parse JSON and configure ObjectDetectionConfiguration
-        // TODO: Implement using ObjectDetectionConfiguration
+        Log.d(TAG, "setDetectionConfig: $configJson")
+        // Empty/null → keep SDK defaults (all detectors on) for backwards compat.
+        if (configJson.isNullOrEmpty()) return
+        try {
+            val obj = org.json.JSONObject(configJson)
+            // When consumer passes a config, opt-in semantics: anything not
+            // explicitly true is off. This is critical on Photo mode — without
+            // it the SDK runs MLKit text recognition on every frame, queuing
+            // 1.5×W×H byte[] InputImages internally and OOM'ing within seconds.
+            view.setObjectDetectionConfiguration(
+                io.packagex.visionsdk.config.ObjectDetectionConfiguration(
+                    isTextIndicationOn = obj.optBoolean("text", false),
+                    isBarcodeOrQRCodeIndicationOn =
+                        obj.optBoolean("barcode", false) ||
+                            obj.optBoolean("qrcode", false) ||
+                            obj.optBoolean("qrCode", false),
+                    isDocumentIndicationOn = obj.optBoolean("document", false),
+                ),
+            )
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to parse detectionConfig JSON", e)
+        }
     }
 
     @ReactProp(name = "templateJson")
