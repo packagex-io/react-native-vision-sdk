@@ -392,7 +392,16 @@ class RNVisionCameraView: UIView {
   @objc func capture() {
     cameraView?.capturePhoto()
   }
-  
+
+  /// Tear down the camera + analyzer + overlay and rebuild from scratch.
+  /// Exposed for parity with Android, where it's required for repeated captures
+  /// (the Android SDK's stopScanning() runs inside onCaptureSuccess and leaves
+  /// isScanning=false until rescan resets it). On iOS this just delegates to
+  /// the existing internal cameraView.rescan() — safe to call after each capture.
+  @objc func rescan() {
+    cameraView?.rescan()
+  }
+
   @objc func toggleFlash(enabled: Bool) {
     self.enableFlash = enabled
     updateFlash()

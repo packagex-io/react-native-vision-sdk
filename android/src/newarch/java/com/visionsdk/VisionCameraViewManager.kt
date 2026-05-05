@@ -349,6 +349,7 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
             "capture" -> capture(root)
             "stop" -> stop(root)
             "start" -> start(root)
+            "rescan" -> rescan(root)
             "toggleFlash" -> {
                 val enabled = args?.getBoolean(0) ?: false
                 toggleFlash(root, enabled)
@@ -376,8 +377,24 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
     }
 
     override fun start(view: VisionCameraView) {
+        // Guard against duplicate start. The Fabric `onAfterUpdateTransaction` already
+        // calls startCamera() on first mount; a follow-up Commands.start() from JS would
+        // re-call startCamera(), which internally tears down the previewView and analyzer
+        // and re-adds them. That detaches the bound CameraX session — the existing
+        // `imageCaptureUseCase` is left orphaned and the next takePicture() fails with
+        // "Not bound to a valid Camera". Skipping when already started keeps the session
+        // intact.
+        if (view.isCameraStarted()) {
+            Log.d(TAG, "start called - camera already started, ignoring")
+            return
+        }
         Log.d(TAG, "start called")
         view.startCamera()
+    }
+
+    override fun rescan(view: VisionCameraView) {
+        Log.d(TAG, "rescan called")
+        view.rescan()
     }
 
     override fun toggleFlash(view: VisionCameraView, enabled: Boolean) {

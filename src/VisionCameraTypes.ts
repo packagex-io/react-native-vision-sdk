@@ -601,6 +601,16 @@ export interface VisionCameraRefProps {
   start: () => void;
 
   /**
+   * Tears down the camera session and rebuilds it from scratch.
+   * @description Required for repeated captures: the native SDK calls stopScanning()
+   * inside its onCaptureSuccess handler, which leaves isScanning=false. Subsequent
+   * capture() calls bail out with CallStartCameraOrRescanBeforeCapture. Auto-rescan
+   * was disabled in v3.0.x to fix overlay flicker, so consumers must call this after
+   * each successful capture for the next capture to work.
+   */
+  rescan: () => void;
+
+  /**
    * Toggles the flash mode.
    * @param {boolean} enabled - Whether flash should be enabled.
    */

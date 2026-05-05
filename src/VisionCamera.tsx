@@ -88,6 +88,20 @@ const Camera = forwardRef<VisionCameraRefProps, VisionCameraProps>(
         }
       },
 
+      // Tear down the camera + analyzer + overlay and rebuild from scratch.
+      // Required after a successful capture (or on Android-specific lifecycle
+      // recovery) because the native SDK calls stopScanning() inside its
+      // onCaptureSuccess handler, which leaves isScanning=false. Subsequent
+      // capture() calls bail out with CallStartCameraOrRescanBeforeCapture.
+      // Auto-rescan was disabled in v3.0.x to fix overlay flicker, so consumers
+      // must invoke this imperatively after each capture for repeated captures
+      // to work.
+      rescan: () => {
+        if (VisionCameraViewRef.current) {
+          Commands.rescan(VisionCameraViewRef.current);
+        }
+      },
+
       toggleFlash: (enabled: boolean) => {
         if (VisionCameraViewRef.current) {
           Commands.toggleFlash(VisionCameraViewRef.current, enabled);
