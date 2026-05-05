@@ -377,18 +377,22 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
     }
 
     override fun start(view: VisionCameraView) {
-        // Guard against duplicate start. The Fabric `onAfterUpdateTransaction` already
-        // calls startCamera() on first mount; a follow-up Commands.start() from JS would
-        // re-call startCamera(), which internally tears down the previewView and analyzer
-        // and re-adds them. That detaches the bound CameraX session — the existing
-        // `imageCaptureUseCase` is left orphaned and the next takePicture() fails with
-        // "Not bound to a valid Camera". Skipping when already started keeps the session
-        // intact.
-        if (view.isCameraStarted()) {
-            Log.d(TAG, "start called - camera already started, ignoring")
+        // Guard against duplicate start. Fabric's `onAfterUpdateTransaction` schedules
+        // the initial `startCamera()` via `view.post`, so on a fast mount+start sequence
+        // a JS-triggered `Commands.start()` can land BEFORE the posted runnable executes.
+        // At that point `isCameraStarted()` still returns false but `hasStarted` was
+        // already set synchronously by `onAfterUpdateTransaction`, so check both.
+        // Without this, `startCamera()` runs twice — second pass tears down PreviewView's
+        // surface, orphans `imageCaptureUseCase`, next takePicture() fails with
+        // "Not bound to a valid Camera".
+        if (hasStarted || view.isCameraStarted()) {
+            Log.d(TAG, "start called - camera already started or scheduled, ignoring")
             return
         }
-        Log.d(TAG, "start called")
+        Log.d(TAG, "start called - starting")
+        // Mark scheduled synchronously so a subsequent `onAfterUpdateTransaction` won't
+        // queue a second startCamera either.
+        hasStarted = true
         view.startCamera()
     }
 

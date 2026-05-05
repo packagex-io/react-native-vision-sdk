@@ -123,9 +123,15 @@ export interface VisionCameraBarcodeResult {
 
   /**
    * @type {object}
-   * @description Bounding box coordinates of the detected barcode in preview-pixel
-   * space (the camera view's bounds). Use this for overlays drawn on top of the
-   * live preview.
+   * @description Bounding box of the detected barcode in the camera view's
+   * coordinate space. Units vary by event source:
+   * - iOS (all events): UIView points (RN layout units).
+   * - Android `onBoundingBoxesUpdate`: DP (RN layout units, matches iOS).
+   * - Android `onBarcodeDetected` / `onCapture`: preview-view pixels.
+   *
+   * For overlays on the live preview, use `onBoundingBoxesUpdate` and treat
+   * values as RN layout units on both platforms. For overlays on the captured
+   * image, prefer `normalizedBoundingBox` and multiply by image width/height.
    */
   boundingBox: {
     x: number;
@@ -301,7 +307,11 @@ export interface VisionCameraDetectedCodeBoundingBox {
 
   /**
    * @type {VisionCameraBoundingBox}
-   * @description Bounding box coordinates of the detected code in preview-pixel space.
+   * @description Bounding box of the detected code in the camera view's
+   * coordinate space. iOS sends points; Android `onBoundingBoxesUpdate` sends
+   * DP (so RN absolute-positioned overlays work on both platforms). Other
+   * Android events send preview-view pixels — prefer `normalizedBoundingBox`
+   * for cross-platform image overlays.
    */
   boundingBox: VisionCameraBoundingBox;
 
@@ -625,11 +635,13 @@ export interface VisionCameraRefProps {
 
   /**
    * Tears down the camera session and rebuilds it from scratch.
-   * @description Required for repeated captures: the native SDK calls stopScanning()
-   * inside its onCaptureSuccess handler, which leaves isScanning=false. Subsequent
-   * capture() calls bail out with CallStartCameraOrRescanBeforeCapture. Auto-rescan
-   * was disabled in v3.0.x to fix overlay flicker, so consumers must call this after
-   * each successful capture for the next capture to work.
+   * @description Required on Android for repeated captures: the Android SDK calls
+   * stopScanning() inside its onCaptureSuccess handler, which leaves isScanning=false.
+   * Subsequent capture() calls bail out with CallStartCameraOrRescanBeforeCapture
+   * (auto-rescan-after-capture was disabled in v3.0.x to fix overlay flicker). On
+   * iOS the SDK auto-rescans internally after capture/detection, so calling
+   * rescan() there is a no-op-equivalent — safe but redundant. Calling on both
+   * platforms is safe and recommended for cross-platform consumers.
    */
   rescan: () => void;
 
