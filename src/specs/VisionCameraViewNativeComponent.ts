@@ -83,13 +83,14 @@ interface NativeCommands {
   capture: (viewRef: React.ElementRef<HostComponent<NativeProps>>) => void;
   stop: (viewRef: React.ElementRef<HostComponent<NativeProps>>) => void;
   start: (viewRef: React.ElementRef<HostComponent<NativeProps>>) => void;
+  rescan: (viewRef: React.ElementRef<HostComponent<NativeProps>>) => void;
   toggleFlash: (viewRef: React.ElementRef<HostComponent<NativeProps>>, enabled: boolean) => void;
   setZoom: (viewRef: React.ElementRef<HostComponent<NativeProps>>, level: Float) => void;
   setFocusSettings: (viewRef: React.ElementRef<HostComponent<NativeProps>>, settingsJson: string) => void;
 }
 
 export const Commands: NativeCommands = codegenNativeCommands<NativeCommands>({
-  supportedCommands: ['capture', 'stop', 'start', 'toggleFlash', 'setZoom', 'setFocusSettings'],
+  supportedCommands: ['capture', 'stop', 'start', 'rescan', 'toggleFlash', 'setZoom', 'setFocusSettings'],
 });
 
 export default codegenNativeComponent<NativeProps>(

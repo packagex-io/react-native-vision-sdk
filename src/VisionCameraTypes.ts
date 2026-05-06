@@ -123,9 +123,31 @@ export interface VisionCameraBarcodeResult {
 
   /**
    * @type {object}
-   * @description Bounding box coordinates of the detected barcode.
+   * @description Bounding box of the detected barcode in the camera view's
+   * coordinate space. Units vary by event source:
+   * - iOS (all events): UIView points (RN layout units).
+   * - Android `onBoundingBoxesUpdate`: DP (RN layout units, matches iOS).
+   * - Android `onBarcodeDetected` / `onCapture`: preview-view pixels.
+   *
+   * For overlays on the live preview, use `onBoundingBoxesUpdate` and treat
+   * values as RN layout units on both platforms. For overlays on the captured
+   * image, prefer `normalizedBoundingBox` and multiply by image width/height.
    */
   boundingBox: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  };
+
+  /**
+   * @type {object}
+   * @description Bounding box normalized to 0–1 in image coordinates with top-left
+   * origin. Use this when overlaying on the captured image (the saved photo) —
+   * it survives any aspect-ratio difference between the preview and the image.
+   * Multiply by image width/height to get pixel coordinates.
+   */
+  normalizedBoundingBox?: {
     x: number;
     y: number;
     width: number;
@@ -285,9 +307,20 @@ export interface VisionCameraDetectedCodeBoundingBox {
 
   /**
    * @type {VisionCameraBoundingBox}
-   * @description Bounding box coordinates of the detected code.
+   * @description Bounding box of the detected code in the camera view's
+   * coordinate space. iOS sends points; Android `onBoundingBoxesUpdate` sends
+   * DP (so RN absolute-positioned overlays work on both platforms). Other
+   * Android events send preview-view pixels — prefer `normalizedBoundingBox`
+   * for cross-platform image overlays.
    */
   boundingBox: VisionCameraBoundingBox;
+
+  /**
+   * @type {VisionCameraBoundingBox}
+   * @description Bounding box normalized to 0–1 in image coordinates with top-left
+   * origin. Multiply by image width/height to overlay on the captured image.
+   */
+  normalizedBoundingBox?: VisionCameraBoundingBox;
 }
 
 /**
@@ -599,6 +632,18 @@ export interface VisionCameraRefProps {
    * @description This method starts the camera preview.
    */
   start: () => void;
+
+  /**
+   * Tears down the camera session and rebuilds it from scratch.
+   * @description Required on Android for repeated captures: the Android SDK calls
+   * stopScanning() inside its onCaptureSuccess handler, which leaves isScanning=false.
+   * Subsequent capture() calls bail out with CallStartCameraOrRescanBeforeCapture
+   * (auto-rescan-after-capture was disabled in v3.0.x to fix overlay flicker). On
+   * iOS the SDK auto-rescans internally after capture/detection, so calling
+   * rescan() there is a no-op-equivalent — safe but redundant. Calling on both
+   * platforms is safe and recommended for cross-platform consumers.
+   */
+  rescan: () => void;
 
   /**
    * Toggles the flash mode.

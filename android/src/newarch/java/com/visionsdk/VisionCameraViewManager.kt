@@ -313,9 +313,28 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
 
     @ReactProp(name = "detectionConfigJson")
     override fun setDetectionConfigJson(view: VisionCameraView, configJson: String?) {
-        Log.d(TAG, "setDetectionConfig")
-        // Parse JSON and configure ObjectDetectionConfiguration
-        // TODO: Implement using ObjectDetectionConfiguration
+        Log.d(TAG, "setDetectionConfig: $configJson")
+        // Empty/null → keep SDK defaults (all detectors on) for backwards compat.
+        if (configJson.isNullOrEmpty()) return
+        try {
+            val obj = org.json.JSONObject(configJson)
+            // When consumer passes a config, opt-in semantics: anything not
+            // explicitly true is off. This is critical on Photo mode — without
+            // it the SDK runs MLKit text recognition on every frame, queuing
+            // 1.5×W×H byte[] InputImages internally and OOM'ing within seconds.
+            view.setObjectDetectionConfiguration(
+                io.packagex.visionsdk.config.ObjectDetectionConfiguration(
+                    isTextIndicationOn = obj.optBoolean("text", false),
+                    isBarcodeOrQRCodeIndicationOn =
+                        obj.optBoolean("barcode", false) ||
+                            obj.optBoolean("qrcode", false) ||
+                            obj.optBoolean("qrCode", false),
+                    isDocumentIndicationOn = obj.optBoolean("document", false),
+                ),
+            )
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to parse detectionConfig JSON", e)
+        }
     }
 
     @ReactProp(name = "templateJson")
@@ -349,6 +368,7 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
             "capture" -> capture(root)
             "stop" -> stop(root)
             "start" -> start(root)
+            "rescan" -> rescan(root)
             "toggleFlash" -> {
                 val enabled = args?.getBoolean(0) ?: false
                 toggleFlash(root, enabled)
@@ -376,8 +396,28 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
     }
 
     override fun start(view: VisionCameraView) {
-        Log.d(TAG, "start called")
+        // Guard against duplicate start. Fabric's `onAfterUpdateTransaction` schedules
+        // the initial `startCamera()` via `view.post`, so on a fast mount+start sequence
+        // a JS-triggered `Commands.start()` can land BEFORE the posted runnable executes.
+        // At that point `isCameraStarted()` still returns false but `hasStarted` was
+        // already set synchronously by `onAfterUpdateTransaction`, so check both.
+        // Without this, `startCamera()` runs twice — second pass tears down PreviewView's
+        // surface, orphans `imageCaptureUseCase`, next takePicture() fails with
+        // "Not bound to a valid Camera".
+        if (hasStarted || view.isCameraStarted()) {
+            Log.d(TAG, "start called - camera already started or scheduled, ignoring")
+            return
+        }
+        Log.d(TAG, "start called - starting")
+        // Mark scheduled synchronously so a subsequent `onAfterUpdateTransaction` won't
+        // queue a second startCamera either.
+        hasStarted = true
         view.startCamera()
+    }
+
+    override fun rescan(view: VisionCameraView) {
+        Log.d(TAG, "rescan called")
+        view.rescan()
     }
 
     override fun toggleFlash(view: VisionCameraView, enabled: Boolean) {
@@ -491,6 +531,16 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
                         })
                     }
 
+                    // 0–1 normalized rect in image coordinates, top-left origin.
+                    // Use this when overlaying on the captured image — it survives
+                    // aspect-ratio differences between preview and saved photo.
+                    put("normalizedBoundingBox", org.json.JSONObject().apply {
+                        put("x", code.normalizedBoundingBox.left.toDouble())
+                        put("y", code.normalizedBoundingBox.top.toDouble())
+                        put("width", code.normalizedBoundingBox.width().toDouble())
+                        put("height", code.normalizedBoundingBox.height().toDouble())
+                    })
+
                     if (!code.gs1ExtractedInfo.isNullOrEmpty()) {
                         val gs1Obj = org.json.JSONObject()
                         code.gs1ExtractedInfo?.forEach { (key, value) ->
@@ -584,6 +634,14 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
                             put("height", box.height().toDp(density))
                         })
                     }
+
+                    // 0–1 normalized rect in image coordinates, top-left origin.
+                    put("normalizedBoundingBox", org.json.JSONObject().apply {
+                        put("x", code.normalizedBoundingBox.left.toDouble())
+                        put("y", code.normalizedBoundingBox.top.toDouble())
+                        put("width", code.normalizedBoundingBox.width().toDouble())
+                        put("height", code.normalizedBoundingBox.height().toDouble())
+                    })
                 }
                 barcodeRectsJsonArray.put(boxObj)
             }
@@ -611,6 +669,14 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
                             put("height", box.height().toDp(density))
                         })
                     }
+
+                    // 0–1 normalized rect in image coordinates, top-left origin.
+                    put("normalizedBoundingBox", org.json.JSONObject().apply {
+                        put("x", code.normalizedBoundingBox.left.toDouble())
+                        put("y", code.normalizedBoundingBox.top.toDouble())
+                        put("width", code.normalizedBoundingBox.width().toDouble())
+                        put("height", code.normalizedBoundingBox.height().toDouble())
+                    })
                 }
                 qrCodeRectsJsonArray.put(boxObj)
             }
@@ -678,6 +744,14 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
                                 put("height", box.height().toDouble())
                             })
                         }
+
+                        // 0–1 normalized rect in image coordinates, top-left origin.
+                        put("normalizedBoundingBox", org.json.JSONObject().apply {
+                            put("x", code.normalizedBoundingBox.left.toDouble())
+                            put("y", code.normalizedBoundingBox.top.toDouble())
+                            put("width", code.normalizedBoundingBox.width().toDouble())
+                            put("height", code.normalizedBoundingBox.height().toDouble())
+                        })
 
                         if (!code.gs1ExtractedInfo.isNullOrEmpty()) {
                             val gs1Obj = org.json.JSONObject()

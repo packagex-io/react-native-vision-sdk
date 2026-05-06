@@ -932,7 +932,19 @@ class VisionSdkModule: RCTEventEmitter {
           finalRect = CGRect(x: x, y: y, width: width, height: height)
         }
 
-        return DetectedCode(stringValue: stringValue, symbology: symbology, extractedData: extractedData, boundingBox: finalRect)
+        // Read "normalizedBoundingBox" (0–1 normalized, top-left origin) so the OCR
+        // pipeline can crop the captured image around each barcode without depending
+        // on preview-pixel coords. Falls back to .zero for older consumers.
+        var normalizedRect: CGRect = .zero
+        if let normRect = barcodeDict["normalizedBoundingBox"] as? [String: CGFloat] {
+          let nx: CGFloat = normRect["x"] ?? 0
+          let ny: CGFloat = normRect["y"] ?? 0
+          let nw: CGFloat = normRect["width"] ?? 0
+          let nh: CGFloat = normRect["height"] ?? 0
+          normalizedRect = CGRect(x: nx, y: ny, width: nw, height: nh)
+        }
+
+        return DetectedCode(stringValue: stringValue, symbology: symbology, extractedData: extractedData, boundingBox: finalRect, normalizedBoundingBox: normalizedRect)
       }
 
       // Call extractDataFromImageUsing with explicit modelClass and modelSize

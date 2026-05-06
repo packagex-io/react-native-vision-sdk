@@ -1452,6 +1452,21 @@ class VisionSdkModule(reactContext: ReactApplicationContext) :
                             Rect(0, 0, 0, 0)
                         }
 
+                        // Read "normalizedBoundingBox" (0–1 normalized, top-left origin) so the OCR
+                        // path can crop the captured image around each barcode without depending on
+                        // preview-pixel coords. Falls back to empty RectF if not provided
+                        // (consumers on older SDK versions).
+                        val normalizedBoundingBoxMap = barcodeMap.getMap("normalizedBoundingBox")
+                        val normalizedRect = if (normalizedBoundingBoxMap != null) {
+                            val nx = normalizedBoundingBoxMap.getDouble("x").toFloat()
+                            val ny = normalizedBoundingBoxMap.getDouble("y").toFloat()
+                            val nw = normalizedBoundingBoxMap.getDouble("width").toFloat()
+                            val nh = normalizedBoundingBoxMap.getDouble("height").toFloat()
+                            android.graphics.RectF(nx, ny, nx + nw, ny + nh)
+                        } else {
+                            android.graphics.RectF()
+                        }
+
                         // Convert symbology string to BarcodeSymbology enum
                         val barcodeSymbology = when (symbology.lowercase()) {
                             "code_128", "code128" -> BarcodeSymbology.code128
@@ -1475,7 +1490,8 @@ class VisionSdkModule(reactContext: ReactApplicationContext) :
                                 scannedCode = value,
                                 symbology = barcodeSymbology,
                                 boundingBox = rect,
-                                gs1ExtractedInfo = gs1ExtractedInfo
+                                gs1ExtractedInfo = gs1ExtractedInfo,
+                                normalizedBoundingBox = normalizedRect
                             )
                         )
                     }

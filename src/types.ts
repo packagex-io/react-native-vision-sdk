@@ -237,7 +237,20 @@ export interface BarcodeResult {
   scannedCode: string; // The scanned barcode value
   symbology?: string; // Barcode symbology type (e.g., QR, EAN, CODE128)
   gs1ExtractedInfo?: Record<string, string>; // Additional extracted information as a key-value map
-  boundingBox?: BoundingBox; // Bounding box coordinates of the detected barcode
+  /**
+   * Bounding box in the camera view's coordinate space. Units differ by event:
+   * iOS sends points (RN layout units); Android `onBoundingBoxesUpdate` sends DP
+   * (also RN layout units); Android `onBarcodeDetected` and `onCapture` send raw
+   * preview-view pixels. Prefer `normalizedBoundingBox` when overlaying on the
+   * captured image.
+   */
+  boundingBox?: BoundingBox;
+  /**
+   * 0–1 normalized rect in image coordinates with top-left origin.
+   * Multiply by image width/height to overlay on the captured image — works
+   * cross-platform regardless of preview/image aspect-ratio differences.
+   */
+  normalizedBoundingBox?: BoundingBox;
 }
 
 /**
@@ -284,7 +297,18 @@ export interface DetectedCodeBoundingBox {
   scannedCode: string;
   symbology: string;
   gs1ExtractedInfo?: Record<string, string>;
+  /**
+   * Bounding box in the camera view's coordinate space. iOS: points.
+   * Android `onBoundingBoxesUpdate`: DP. Both are RN layout units, so values
+   * can be passed directly to absolute-positioned `<View>` styles.
+   */
   boundingBox: BoundingBox;
+  /**
+   * 0–1 normalized rect in image coordinates with top-left origin.
+   * Multiply by image width/height to overlay on the captured image — use
+   * this whenever the preview aspect ratio may differ from the saved photo.
+   */
+  normalizedBoundingBox?: BoundingBox;
 }
 
 export interface BoundingBoxesDetectedResult {
@@ -569,9 +593,15 @@ export interface DetectedBarcode {
   gs1ExtractedInfo?: Record<string, string>;
 
   /**
-   * Bounding box coordinates (optional)
+   * Bounding box in preview-pixel space (optional).
    */
   boundingBox?: BoundingBox;
+
+  /**
+   * 0–1 normalized rect in image coordinates with top-left origin (optional).
+   * Multiply by image width/height to overlay on the captured image.
+   */
+  normalizedBoundingBox?: BoundingBox;
 }
 
 /**

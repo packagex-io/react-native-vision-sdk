@@ -296,8 +296,8 @@ using namespace facebook::react;
 
   if (commandId != nil) {
     // Map command IDs to command names based on the order in supportedCommands array
-    // From VisionCameraViewNativeComponent.ts: ['capture', 'stop', 'start', 'toggleFlash', 'setZoom', 'setFocusSettings']
-    NSArray *commandNames = @[@"capture", @"stop", @"start", @"toggleFlash", @"setZoom", @"setFocusSettings"];
+    // From VisionCameraViewNativeComponent.ts: ['capture', 'stop', 'start', 'rescan', 'toggleFlash', 'setZoom', 'setFocusSettings']
+    NSArray *commandNames = @[@"capture", @"stop", @"start", @"rescan", @"toggleFlash", @"setZoom", @"setFocusSettings"];
 
     NSInteger cmdId = [commandId integerValue];
     if (cmdId >= 0 && cmdId < commandNames.count) {
@@ -327,6 +327,13 @@ using namespace facebook::react;
 {
   if ([_visionCameraView respondsToSelector:@selector(start)]) {
     [_visionCameraView performSelector:@selector(start)];
+  }
+}
+
+- (void)rescan
+{
+  if ([_visionCameraView respondsToSelector:@selector(rescan)]) {
+    [_visionCameraView performSelector:@selector(rescan)];
   }
 }
 

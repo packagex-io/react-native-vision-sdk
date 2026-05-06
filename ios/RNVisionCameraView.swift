@@ -392,7 +392,16 @@ class RNVisionCameraView: UIView {
   @objc func capture() {
     cameraView?.capturePhoto()
   }
-  
+
+  /// Tear down the camera + analyzer + overlay and rebuild from scratch.
+  /// Exposed for parity with Android, where it's required for repeated captures
+  /// (the Android SDK's stopScanning() runs inside onCaptureSuccess and leaves
+  /// isScanning=false until rescan resets it). On iOS this just delegates to
+  /// the existing internal cameraView.rescan() — safe to call after each capture.
+  @objc func rescan() {
+    cameraView?.rescan()
+  }
+
   @objc func toggleFlash(enabled: Bool) {
     self.enableFlash = enabled
     updateFlash()
@@ -753,6 +762,15 @@ extension RNVisionCameraView: CodeScannerViewDelegate {
         "width": code.boundingBox.size.width,
         "height": code.boundingBox.size.height
       ]
+      // 0–1 normalized rect in image coordinates, top-left origin.
+      // Use this when overlaying on the captured image — it survives
+      // aspect-ratio differences between preview and saved photo.
+      codeInfo["normalizedBoundingBox"] = [
+        "x": code.normalizedBoundingBox.origin.x,
+        "y": code.normalizedBoundingBox.origin.y,
+        "width": code.normalizedBoundingBox.size.width,
+        "height": code.normalizedBoundingBox.size.height
+      ]
       if let gs1Info = code.extractedData {
         codeInfo["gs1ExtractedInfo"] = gs1Info
       }
@@ -805,16 +823,18 @@ extension RNVisionCameraView: CodeScannerViewDelegate {
         "scannedCode": code.stringValue,
         "symbology": code.symbology.stringValue(),
         "gs1ExtractedInfo": code.extractedData ?? [:],
-        "boundingBox": dict(from: code.boundingBox)
+        "boundingBox": dict(from: code.boundingBox),
+        "normalizedBoundingBox": dict(from: code.normalizedBoundingBox)
       ]
     }
-    
+
     let qrCodeBoundingBoxes = qrCode.map { code in
       return [
         "scannedCode": code.stringValue,
         "symbology": code.symbology.stringValue(),
         "gs1ExtractedInfo": code.extractedData ?? [:],
-        "boundingBox": dict(from: code.boundingBox)
+        "boundingBox": dict(from: code.boundingBox),
+        "normalizedBoundingBox": dict(from: code.normalizedBoundingBox)
       ]
     }
     
@@ -862,7 +882,8 @@ extension RNVisionCameraView: CodeScannerViewDelegate {
             "scannedCode": barcode.stringValue,
             "symbology": barcode.symbology.stringValue(),
             "gs1ExtractedInfo": barcode.extractedData ?? [:],
-            "boundingBox": dict(from: barcode.boundingBox)
+            "boundingBox": dict(from: barcode.boundingBox),
+            "normalizedBoundingBox": dict(from: barcode.normalizedBoundingBox)
           ]
         }
       ])
