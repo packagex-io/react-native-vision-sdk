@@ -55,6 +55,12 @@ export interface NativeProps extends ViewProps {
   // Boolean properties
   enableFlash?: boolean;
   autoCapture?: boolean;
+  showCodeBoundingBoxes?: boolean;
+
+  // Native overlay style (only used when showCodeBoundingBoxes=true)
+  barcodeBoundingBoxBorderColor?: string;
+  barcodeBoundingBoxBorderWidth?: WithDefault<Double, 3.0>;
+  barcodeBoundingBoxFillColor?: string;
 
   // Number properties
   zoomLevel?: WithDefault<Double, 1.0>;

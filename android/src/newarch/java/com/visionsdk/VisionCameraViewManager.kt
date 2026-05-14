@@ -52,6 +52,13 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
     private var isCameraReady = false
     private var pendingScanArea: com.facebook.react.bridge.ReadableMap? = null
     private var hasScanAreaBeenSet = false // Track if scanArea prop was explicitly set
+    // Pending value for `showCodeBoundingBoxes` — applied on `onCameraStarted`
+    // because `getFocusRegionManager()` throws during Fabric preallocateView.
+    private var pendingShowCodeBoundingBoxes: Boolean? = null
+    // Native overlay style; defaults match Skia purple from the prior JS path.
+    private var bboxBorderColor: Int = android.graphics.Color.rgb(139, 92, 246)
+    private var bboxBorderWidthDp: Float = 3f
+    private var bboxFillColor: Int = android.graphics.Color.argb(51, 139, 92, 246)
     private var currentDetectionMode: DetectionMode = DetectionMode.Photo // Track current detection mode
     private val density = appContext.resources.displayMetrics.density
 
@@ -216,6 +223,70 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
         Log.d(TAG, "setAutoCapture: $enabled")
         val scanningMode = if (enabled) ScanningMode.Auto else ScanningMode.Manual
         view.setScanningMode(scanningMode)
+    }
+
+    @ReactProp(name = "showCodeBoundingBoxes")
+    override fun setShowCodeBoundingBoxes(view: VisionCameraView, enabled: Boolean) {
+        Log.d(TAG, "setShowCodeBoundingBoxes: $enabled (cameraReady=$isCameraReady)")
+        // Defer until camera ready — getFocusRegionManager() throws
+        // FocusRegionManagerNotAvailable during Fabric preallocateView.
+        pendingShowCodeBoundingBoxes = enabled
+        if (isCameraReady) {
+            applyShowCodeBoundingBoxes(view, enabled)
+        }
+    }
+
+    @ReactProp(name = "barcodeBoundingBoxBorderColor")
+    override fun setBarcodeBoundingBoxBorderColor(view: VisionCameraView, color: String?) {
+        parseColorOrNull(color)?.let { bboxBorderColor = it; reapplyOverlayStyleIfActive(view) }
+    }
+
+    @ReactProp(name = "barcodeBoundingBoxBorderWidth", defaultDouble = 3.0)
+    override fun setBarcodeBoundingBoxBorderWidth(view: VisionCameraView, widthDp: Double) {
+        bboxBorderWidthDp = widthDp.toFloat()
+        reapplyOverlayStyleIfActive(view)
+    }
+
+    @ReactProp(name = "barcodeBoundingBoxFillColor")
+    override fun setBarcodeBoundingBoxFillColor(view: VisionCameraView, color: String?) {
+        parseColorOrNull(color)?.let { bboxFillColor = it; reapplyOverlayStyleIfActive(view) }
+    }
+
+    private fun applyShowCodeBoundingBoxes(view: VisionCameraView, enabled: Boolean) {
+        try {
+            // Native overlay rendering needs both flags: multiple-scan mode lets
+            // the overlay's Choreographer/spring loop run, and the focus-settings
+            // flag toggles BarcodeOverlayView.drawingEnabled.
+            if (enabled) {
+                view.setMultipleScanEnabled(true)
+            }
+            // BarcodeOverlayView sets strokePaint.strokeWidth = baseStrokeWidth.toFloat()
+            // directly (raw pixels), so multiply the dp-based prop by density.
+            val focusSettings = io.packagex.visionsdk.config.FocusSettings(
+                context = appContext,
+                showCodeBoundariesInMultipleScan = enabled,
+                validCodeBoundaryBorderColor = bboxBorderColor,
+                validCodeBoundaryBorderWidth = (bboxBorderWidthDp * density).toInt(),
+                validCodeBoundaryFillColor = bboxFillColor,
+            )
+            view.getFocusRegionManager()?.setFocusSettings(focusSettings)
+            Log.d(TAG, "showCodeBoundingBoxes applied: $enabled border=#${"%08X".format(bboxBorderColor)} width=${bboxBorderWidthDp}dp fill=#${"%08X".format(bboxFillColor)}")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to apply showCodeBoundingBoxes: ${e.message}")
+        }
+    }
+
+    private fun reapplyOverlayStyleIfActive(view: VisionCameraView) {
+        if (isCameraReady && pendingShowCodeBoundingBoxes == true) {
+            applyShowCodeBoundingBoxes(view, true)
+        }
+    }
+
+    private fun parseColorOrNull(hex: String?): Int? {
+        if (hex.isNullOrBlank()) return null
+        return try { android.graphics.Color.parseColor(hex) } catch (e: Exception) {
+            Log.w(TAG, "Bad color string: $hex"); null
+        }
     }
 
     @ReactProp(name = "cameraFacing")
@@ -494,13 +565,10 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
         private val context: ReactApplicationContext
     ) : ScannerCallback, CameraLifecycleCallback {
 
-        // Dedup state for onBoundingBoxesUpdate. The native BarcodeOverlayView's
-        // Choreographer emits empty callbacks every frame while no boxes are
-        // visible, which causes JS consumers to thrash setState({ []: [] })
-        // between real detections — visible as overlay flicker. We forward the
-        // first "became-empty" transition only; subsequent empties are dropped
-        // until a non-empty event arrives.
-        private var lastBoundingBoxesEmpty = false
+        // Content-hash dedup state. Set by onIndicationsBoundingBoxes — emits
+        // are skipped when the (sorted scannedCode + 3-dp quantized rect) hash
+        // matches the previous frame. Subsumes the prior empty-only dedup.
+        private var lastContentHash = 0
 
         private fun sendEvent(eventName: String, params: com.facebook.react.bridge.WritableMap) {
             if (view.isAttachedToWindow) {
@@ -602,15 +670,28 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
                 Log.d(TAG, "onIndicationsBoundingBoxes called - barcodes: ${barcodeBoundingBoxes.size}, qr: ${qrCodeBoundingBoxes.size}, doc: ${documentBoundingBox != null}")
             }
 
-            // Suppress repeat empty events. The native overlay fires empty
-            // every idle frame; forwarding them all causes JS overlay flicker.
-            val isEmpty = barcodeBoundingBoxes.isEmpty() &&
-                qrCodeBoundingBoxes.isEmpty() &&
-                documentBoundingBox == null
-            if (isEmpty && lastBoundingBoxesEmpty) {
-                return
+            // Content-hash dedup. Native overlay emits at ~20fps with spring-smoothed
+            // sub-pixel jitter; ~60-80% of frames are visually identical. Quantize the
+            // normalized rect to 3 decimal places (~1 px on a 1080-wide preview) and
+            // skip the bridge work if the payload matches the previous emit. Empties
+            // hash to the same constant — replaces the prior empty-only dedup.
+            val contentHash = run {
+                val sb = StringBuilder()
+                (barcodeBoundingBoxes + qrCodeBoundingBoxes)
+                    .sortedBy { it.scannedCode }
+                    .forEach { c ->
+                        val r = c.normalizedBoundingBox
+                        sb.append(c.scannedCode).append('|')
+                        sb.append("%.3f,%.3f,%.3f,%.3f".format(r.left, r.top, r.width(), r.height()))
+                        sb.append(';')
+                    }
+                documentBoundingBox?.let {
+                    sb.append('D').append(it.left).append(',').append(it.top).append(',').append(it.right).append(',').append(it.bottom)
+                }
+                sb.toString().hashCode()
             }
-            lastBoundingBoxesEmpty = isEmpty
+            if (contentHash == lastContentHash) return
+            lastContentHash = contentHash
             // Build barcode bounding boxes JSON array
             val barcodeRectsJsonArray = org.json.JSONArray()
             barcodeBoundingBoxes.forEach { code ->
@@ -802,6 +883,13 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
                 applyScanArea(view, pendingScanArea)
             } else {
                 Log.d(TAG, "No scan area set, skipping focus settings application")
+            }
+
+            // Apply deferred showCodeBoundingBoxes (set during preallocateView
+            // before getFocusRegionManager was available).
+            pendingShowCodeBoundingBoxes?.let {
+                Log.d(TAG, "Applying pending showCodeBoundingBoxes: $it")
+                applyShowCodeBoundingBoxes(view, it)
             }
         }
 

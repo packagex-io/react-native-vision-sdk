@@ -36,6 +36,10 @@ const Camera = forwardRef<VisionCameraRefProps, VisionCameraProps>(
       zoomLevel = 1.0,
       scanMode = 'photo',
       autoCapture = false,
+      showCodeBoundingBoxes = false,
+      barcodeBoundingBoxBorderColor,
+      barcodeBoundingBoxBorderWidth,
+      barcodeBoundingBoxFillColor,
       scanArea,
       detectionConfig,
       frameSkip,
@@ -199,6 +203,10 @@ const Camera = forwardRef<VisionCameraRefProps, VisionCameraProps>(
           zoomLevel={zoomLevel}
           scanMode={scanMode}
           autoCapture={autoCapture}
+          showCodeBoundingBoxes={showCodeBoundingBoxes}
+          barcodeBoundingBoxBorderColor={barcodeBoundingBoxBorderColor}
+          barcodeBoundingBoxBorderWidth={barcodeBoundingBoxBorderWidth}
+          barcodeBoundingBoxFillColor={barcodeBoundingBoxFillColor}
           scanArea={scanArea}
           detectionConfig={detectionConfig}
           frameSkip={frameSkip}
