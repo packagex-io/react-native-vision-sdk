@@ -52,13 +52,26 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
     private var isCameraReady = false
     private var pendingScanArea: com.facebook.react.bridge.ReadableMap? = null
     private var hasScanAreaBeenSet = false // Track if scanArea prop was explicitly set
-    // Pending value for `showCodeBoundingBoxes` — applied on `onCameraStarted`
-    // because `getFocusRegionManager()` throws during Fabric preallocateView.
-    private var pendingShowCodeBoundingBoxes: Boolean? = null
-    // Native overlay style; defaults match Skia purple from the prior JS path.
-    private var bboxBorderColor: Int = android.graphics.Color.rgb(139, 92, 246)
-    private var bboxBorderWidthDp: Float = 3f
-    private var bboxFillColor: Int = android.graphics.Color.argb(51, 139, 92, 246)
+    // Per-view native-overlay state. A single ViewManager is shared across all
+    // VisionCameraView instances, so storing these as ViewManager fields would
+    // leak the most-recently-configured view's style + pending-enabled flag
+    // into every other camera (and across remounts). WeakHashMap entries clear
+    // when the view is GC'd, so we don't pin destroyed views in memory.
+    private data class OverlayState(
+        // Pending value for `showCodeBoundingBoxes` — applied on
+        // `onCameraStarted` because `getFocusRegionManager()` throws during
+        // Fabric preallocateView.
+        var pendingShowCodeBoundingBoxes: Boolean? = null,
+        // Defaults match Skia purple from the prior JS path.
+        var borderColor: Int = android.graphics.Color.rgb(139, 92, 246),
+        var borderWidthDp: Float = 3f,
+        var fillColor: Int = android.graphics.Color.argb(51, 139, 92, 246),
+    )
+
+    private val overlayStates = java.util.WeakHashMap<VisionCameraView, OverlayState>()
+
+    private fun overlayStateFor(view: VisionCameraView): OverlayState =
+        overlayStates.getOrPut(view) { OverlayState() }
     private var currentDetectionMode: DetectionMode = DetectionMode.Photo // Track current detection mode
     private val density = appContext.resources.displayMetrics.density
 
@@ -230,7 +243,7 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
         Log.d(TAG, "setShowCodeBoundingBoxes: $enabled (cameraReady=$isCameraReady)")
         // Defer until camera ready — getFocusRegionManager() throws
         // FocusRegionManagerNotAvailable during Fabric preallocateView.
-        pendingShowCodeBoundingBoxes = enabled
+        overlayStateFor(view).pendingShowCodeBoundingBoxes = enabled
         if (isCameraReady) {
             applyShowCodeBoundingBoxes(view, enabled)
         }
@@ -238,18 +251,24 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
 
     @ReactProp(name = "barcodeBoundingBoxBorderColor")
     override fun setBarcodeBoundingBoxBorderColor(view: VisionCameraView, color: String?) {
-        parseColorOrNull(color)?.let { bboxBorderColor = it; reapplyOverlayStyleIfActive(view) }
+        parseColorOrNull(color)?.let {
+            overlayStateFor(view).borderColor = it
+            reapplyOverlayStyleIfActive(view)
+        }
     }
 
     @ReactProp(name = "barcodeBoundingBoxBorderWidth", defaultDouble = 3.0)
     override fun setBarcodeBoundingBoxBorderWidth(view: VisionCameraView, widthDp: Double) {
-        bboxBorderWidthDp = widthDp.toFloat()
+        overlayStateFor(view).borderWidthDp = widthDp.toFloat()
         reapplyOverlayStyleIfActive(view)
     }
 
     @ReactProp(name = "barcodeBoundingBoxFillColor")
     override fun setBarcodeBoundingBoxFillColor(view: VisionCameraView, color: String?) {
-        parseColorOrNull(color)?.let { bboxFillColor = it; reapplyOverlayStyleIfActive(view) }
+        parseColorOrNull(color)?.let {
+            overlayStateFor(view).fillColor = it
+            reapplyOverlayStyleIfActive(view)
+        }
     }
 
     private fun applyShowCodeBoundingBoxes(view: VisionCameraView, enabled: Boolean) {
@@ -260,24 +279,25 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
             if (enabled) {
                 view.setMultipleScanEnabled(true)
             }
+            val s = overlayStateFor(view)
             // BarcodeOverlayView sets strokePaint.strokeWidth = baseStrokeWidth.toFloat()
             // directly (raw pixels), so multiply the dp-based prop by density.
             val focusSettings = io.packagex.visionsdk.config.FocusSettings(
                 context = appContext,
                 showCodeBoundariesInMultipleScan = enabled,
-                validCodeBoundaryBorderColor = bboxBorderColor,
-                validCodeBoundaryBorderWidth = (bboxBorderWidthDp * density).toInt(),
-                validCodeBoundaryFillColor = bboxFillColor,
+                validCodeBoundaryBorderColor = s.borderColor,
+                validCodeBoundaryBorderWidth = (s.borderWidthDp * density).toInt(),
+                validCodeBoundaryFillColor = s.fillColor,
             )
             view.getFocusRegionManager()?.setFocusSettings(focusSettings)
-            Log.d(TAG, "showCodeBoundingBoxes applied: $enabled border=#${"%08X".format(bboxBorderColor)} width=${bboxBorderWidthDp}dp fill=#${"%08X".format(bboxFillColor)}")
+            Log.d(TAG, "showCodeBoundingBoxes applied: $enabled border=#${"%08X".format(s.borderColor)} width=${s.borderWidthDp}dp fill=#${"%08X".format(s.fillColor)}")
         } catch (e: Exception) {
             Log.e(TAG, "Failed to apply showCodeBoundingBoxes: ${e.message}")
         }
     }
 
     private fun reapplyOverlayStyleIfActive(view: VisionCameraView) {
-        if (isCameraReady && pendingShowCodeBoundingBoxes == true) {
+        if (isCameraReady && overlayStateFor(view).pendingShowCodeBoundingBoxes == true) {
             applyShowCodeBoundingBoxes(view, true)
         }
     }
@@ -887,7 +907,7 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
 
             // Apply deferred showCodeBoundingBoxes (set during preallocateView
             // before getFocusRegionManager was available).
-            pendingShowCodeBoundingBoxes?.let {
+            overlayStateFor(view).pendingShowCodeBoundingBoxes?.let {
                 Log.d(TAG, "Applying pending showCodeBoundingBoxes: $it")
                 applyShowCodeBoundingBoxes(view, it)
             }
