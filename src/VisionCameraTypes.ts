@@ -396,6 +396,24 @@ export interface VisionCameraViewProps {
 
   /**
    * @optional
+   * @type {boolean}
+   * @description When true, the native `BarcodeOverlayView` paints detected barcode bounding boxes
+   *   directly on the camera surface (Choreographer-driven, spring-smoothed). Use this instead of
+   *   drawing boxes from `onBoundingBoxesUpdate` in JS — eliminates the bridge/render path for
+   *   overlay drawing. Callbacks still fire and can be used for data.
+   * @default false
+   */
+  showCodeBoundingBoxes?: boolean;
+
+  /** Hex color for the native overlay border (default `#8B5CF6`). Only used when `showCodeBoundingBoxes=true`. */
+  barcodeBoundingBoxBorderColor?: string;
+  /** Native overlay border width in dp (default 3). Only used when `showCodeBoundingBoxes=true`. */
+  barcodeBoundingBoxBorderWidth?: number;
+  /** Hex color (with optional alpha) for the native overlay fill (default `#338B5CF6` = purple @ 20%). Only used when `showCodeBoundingBoxes=true`. */
+  barcodeBoundingBoxFillColor?: string;
+
+  /**
+   * @optional
    * @param {VisionCameraCaptureEvent} event
    * @type {(event: VisionCameraCaptureEvent) => void | undefined}
    * @description Event handler for image capture events.
@@ -718,6 +736,21 @@ export interface VisionCameraProps {
    * @default false
    */
   autoCapture?: boolean;
+
+  /**
+   * @optional
+   * @type {boolean | undefined}
+   * @description When true, native `BarcodeOverlayView` paints detected boxes on the camera surface (Choreographer-driven). Skip drawing in JS when this is on.
+   * @default false
+   */
+  showCodeBoundingBoxes?: boolean;
+
+  /** Hex color for the native overlay border (default `#8B5CF6`). Only used when `showCodeBoundingBoxes=true`. */
+  barcodeBoundingBoxBorderColor?: string;
+  /** Native overlay border width in dp (default 3). Only used when `showCodeBoundingBoxes=true`. */
+  barcodeBoundingBoxBorderWidth?: number;
+  /** Hex color (with optional alpha) for the native overlay fill (default `#338B5CF6` = purple @ 20%). Only used when `showCodeBoundingBoxes=true`. */
+  barcodeBoundingBoxFillColor?: string;
 
   /**
    * @optional
