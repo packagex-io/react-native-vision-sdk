@@ -45,7 +45,7 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
       - name: Upgrade npm for trusted publishing
-        run: npm install -g npm@latest
+        run: sudo npm install -g npm@latest
 
       - name: Build package
         run: yarn prepare
