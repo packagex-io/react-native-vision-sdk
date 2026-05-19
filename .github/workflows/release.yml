@@ -1,5 +1,8 @@
 name: Release
 
+# Fires on every push to `main` (which is what PR merges create, regardless of
+# whether you squash, rebase, or merge-commit), and on manual workflow_dispatch.
+# Loop guard further down skips the release commit release-it itself creates.
 on:
   push:
     branches:
@@ -8,11 +11,11 @@ on:
   workflow_dispatch:
     inputs:
       release_type:
-        description: "Release type"
-        required: true
-        default: "patch"
+        description: "Release type (leave empty to use conventional commits)"
+        required: false
         type: choice
         options:
+          - ""
           - patch
           - minor
           - major
@@ -44,7 +47,18 @@ jobs:
       - name: Build package
         run: yarn prepare
 
+      # When `release_type` is set (manual dispatch), use it. Otherwise let
+      # release-it's conventional-changelog plugin pick the bump from commit
+      # messages — `feat:` → minor, `fix:` → patch, `BREAKING CHANGE:` → major.
+      # Hardcoding `patch` previously masked `feat:` commits that should have
+      # been minor releases.
       - name: Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: yarn release ${{ inputs.release_type || 'patch' }} --ci --npm.provenance
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          if [ -n "${{ inputs.release_type }}" ]; then
+            yarn release "${{ inputs.release_type }}" --ci --npm.provenance
+          else
+            yarn release --ci --npm.provenance
+          fi
