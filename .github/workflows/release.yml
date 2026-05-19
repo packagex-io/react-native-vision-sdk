@@ -55,10 +55,9 @@ jobs:
       - name: Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           if [ -n "${{ inputs.release_type }}" ]; then
-            yarn release "${{ inputs.release_type }}" --ci --npm.provenance
+            yarn release "${{ inputs.release_type }}" --ci
           else
-            yarn release --ci --npm.provenance
+            yarn release --ci
           fi
