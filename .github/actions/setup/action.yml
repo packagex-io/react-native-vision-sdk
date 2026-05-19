@@ -6,6 +6,10 @@ runs:
   steps:
     - name: Setup Node.js
       uses: actions/setup-node@v4
+      with:
+        # Writes ~/.npmrc with `//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}`
+        # so any `npm publish` in the workflow picks up the token from env.
+        registry-url: 'https://registry.npmjs.org'
 
     - name: Install Yarn
       run: |
