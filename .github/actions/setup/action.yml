@@ -5,10 +5,8 @@ runs:
   using: composite
   steps:
     - name: Setup Node.js
-      uses: actions/setup-node@v4
+      uses: actions/setup-node@v5
       with:
-        # Pinned for reproducibility across CI runs. Bump deliberately.
-        node-version: '20'
         # Writes ~/.npmrc with `//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}`
         # so any `npm publish` in the workflow picks up the token from env.
         registry-url: 'https://registry.npmjs.org'
