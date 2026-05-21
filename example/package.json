@@ -29,8 +29,15 @@
   },
   "resolutions": {
     "@types/react": "^19.0.0",
-    "brace-expansion": "^1.1.12",
-    "on-headers": "1.1.0"
+    "brace-expansion": "^1.1.13",
+    "on-headers": "1.1.0",
+    "minimatch": "^3.1.5",
+    "babel-plugin-module-resolver/glob/minimatch": "^8.0.6",
+    "@typescript-eslint/typescript-estree/minimatch": "^9.0.7",
+    "picomatch": "^2.3.2",
+    "tinyglobby/picomatch": "^4.0.4",
+    "fast-xml-parser": "^4.5.5",
+    "yaml": "^2.8.3"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
