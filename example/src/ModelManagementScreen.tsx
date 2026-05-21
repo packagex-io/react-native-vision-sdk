@@ -17,7 +17,9 @@ import type { VisionCameraCaptureEvent } from '../../src/VisionCamera';
 
 const CAPTURED_IMAGE_STORAGE_KEY = '@vision_sdk_captured_image';
 
-const api_key = ""; // Add your PackageX API key here
+// Load your PackageX API key from the environment.
+// Set PACKAGEX_API_KEY in a .env file (never commit real keys to source control).
+const api_key: string = (process.env.PACKAGEX_API_KEY as string) ?? "";
 
 // Sample barcodes array with iOS-format properties
 const SAMPLE_BARCODES: DetectedBarcode[] = [
