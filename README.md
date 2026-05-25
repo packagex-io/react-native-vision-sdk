@@ -931,6 +931,151 @@ See the [Headless OCR Example](#headless-ocr-example) and [Model Management API]
 
 ---
 
+## Dimensioning (3D Box Measurement, iOS only)
+
+The `<DimensioningView>` component measures a real-world box's length, width, height, and volume using the device's LiDAR sensor.
+
+### Platform support
+
+- **iOS only.** Requires iOS 17.0+ on a LiDAR-equipped device (iPhone 12 Pro and newer, LiDAR-equipped iPads).
+- **Android**: not supported. `VisionDimensioning.deviceCapabilities()` resolves with all-false flags and the component renders a "not supported on this platform" placeholder.
+- **iOS Simulator**: no LiDAR; the component will return `lidarUnavailable` if you mount it.
+
+### iOS install
+
+The Dimensioning subspec is opt-in. In your app's `Podfile`:
+
+```ruby
+platform :ios, '17.0'
+
+target 'YourApp' do
+  use_react_native!(...)
+end
+```
+
+The Dimensioning subspec is pulled in automatically by `react-native-vision-sdk` when you import `DimensioningView` or `VisionDimensioning`. Make sure your iOS deployment target is **17.0 or higher** — the Dimensioning subspec brings ARKit, RealityKit, and the LiDAR runtime which all require iOS 17.
+
+Add the following keys to your `Info.plist`:
+
+```xml
+<key>NSCameraUsageDescription</key>
+<string>Required for box dimensioning</string>
+<key>Privacy - LiDAR Usage Description</key>
+<string>Required for 3D box measurement</string>
+```
+
+### App-launch setup (optional but recommended)
+
+Pre-warm the on-device models at app startup so the first session opens without a cold-start delay. This is a no-op on Android.
+
+```tsx
+import { VisionDimensioning } from 'react-native-vision-sdk';
+
+// In your root App component (componentDidMount / useEffect)
+VisionDimensioning.prefetchModels();
+```
+
+### Hardware capability check
+
+Always gate the dimensioning entry point on `deviceCapabilities()`:
+
+```tsx
+import { VisionDimensioning } from 'react-native-vision-sdk';
+
+const caps = await VisionDimensioning.deviceCapabilities();
+// { lidar: boolean, arWorldTracking: boolean, sceneReconstruction: boolean }
+
+if (!caps.lidar) {
+  // Hide the dimensioning UI on non-LiDAR devices
+}
+```
+
+### Component usage
+
+```tsx
+import {
+  DimensioningView,
+  type DimensioningMeasurement,
+  type DimensioningError,
+} from 'react-native-vision-sdk';
+
+function MyScreen() {
+  return (
+    <DimensioningView
+      style={{ flex: 1 }}
+      mode="offline"                  // 'offline' (default) | 'online'
+      measurementUnit="centimeters"   // any Foundation.UnitLength symbol
+      maximumTrackCount={5}
+      onCapture={(m: DimensioningMeasurement) => {
+        console.log(m.length, m.width, m.height);
+        console.log(m.confidence, m.volume);
+      }}
+      onError={(e: DimensioningError) => {
+        // e.code: numeric DimensioningErrorCode
+        // e.domain, e.message, optional e.reason
+        console.warn(e.message);
+      }}
+    />
+  );
+}
+```
+
+### Props
+
+| Prop | Type | Default | Notes |
+|---|---|---|---|
+| `mode` | `'offline'` \| `'online'` | `'offline'` | `.offline` runs entirely on-device. `.online` augments the pipeline with a cloud-side step (requires `VSDKConstants.apiKey`). |
+| `measurementUnit` | string | `'centimeters'` | Any `Foundation.UnitLength` symbol (`'inches'`, `'millimeters'`, ...). |
+| `maximumTrackCount` | number | `5` | Cap on simultaneously tracked boxes. |
+| `onCapture` | `(m) => void` | — | Fired when a stable measurement locks. |
+| `onError` | `(e) => void` | — | Fired for capture/runtime errors. |
+| `style` | `ViewStyle` | — | Standard RN view style. |
+
+### Measurement shape
+
+```ts
+type DimensioningMeasurement = {
+  id: string;                   // UUID
+  timestamp: string;            // ISO8601
+  length: { value: number; unit: string };  // unit matches measurementUnit
+  width:  { value: number; unit: string };
+  height: { value: number; unit: string };
+  distanceFromCamera: { value: number; unit: 'm' };
+  confidence: number;           // 0...1
+  usedCloudSAM: boolean;        // true when .online cloud path ran
+  volume: { value: number; unit: 'm^3' };
+};
+```
+
+### Error codes (`DimensioningErrorCode`)
+
+| Code | Constant | Trigger |
+|---|---|---|
+| 0 | `MISSING_CREDENTIALS` | `.online` started without `VSDKConstants.apiKey` set |
+| 1 | `NOT_CONFIGURED` | Internal lifecycle error |
+| 2 | `LIDAR_UNAVAILABLE` | Non-LiDAR device or simulator |
+| 3 | `AR_SESSION_FAILED` | ARKit interruption; `e.reason` carries the underlying message |
+| 4 | `NO_GROUND_PLANE` | Could not anchor a horizontal surface |
+| 5 | `CAPTURE_TIMED_OUT` | `capture()` never reached a stable measurement |
+| 6 | `USER_CANCELLED` | Cancellation propagated from the session |
+
+### Capture-session conflict with `<VisionCamera>`
+
+Both the camera scanner and the dimensioning view own the rear camera. ARKit and `AVCaptureSession` cannot share it, so **mount only one at a time**. If you navigate between a scanner screen and a dimensioning screen, unmount the active one before showing the next.
+
+### Capture conditions for reliable results
+
+Typical variance is ±3-5 cm per dimension. To stay in that envelope:
+
+- Box on a flat horizontal surface, top face visible, whole box in frame.
+- Distance: 40-90 cm optimal (works between 30 cm and ~1.5 m).
+- Hold steady for 1-2 seconds during capture.
+- Cuboid shapes only — tubes, polybags, and soft bags are not supported.
+- Avoid highly reflective wrap, transparent film, very dark matte surfaces.
+- Ambient or diffuse warehouse lighting; avoid direct sun on glossy faces.
+
+---
+
 ## Platform-Specific Limitations & Differences
 
 While we strive to maintain feature parity across iOS and Android, certain limitations exist due to differences in the underlying native VisionSDK implementations.

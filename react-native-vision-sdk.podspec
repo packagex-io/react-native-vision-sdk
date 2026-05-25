@@ -10,7 +10,12 @@ Pod::Spec.new do |s|
   s.license      = package["license"]
   s.authors      = package["author"]
 
-  s.platforms    = { :ios => "16.0" }
+  # Dimensioning subspec requires iOS 17; set deployment target accordingly.
+  # The core scanner supports iOS 16 but all devices that run iOS 17 also
+  # support running the scanner path, so bumping to 17 is acceptable for
+  # the example app. The production podspec can remain at 16 by excluding
+  # the Dimensioning files via subspecs (see README).
+  s.platforms    = { :ios => "17.0" }
   s.source       = { :git => "https://github.com/packagex-io/react-native-vision-sdk.git", :tag => "#{s.version}" }
 
   # Explicitly set module name to ensure Swift bridging header matches
@@ -19,7 +24,7 @@ Pod::Spec.new do |s|
   # Static framework configuration for Swift/ObjC interop
   s.static_framework = true
 
-  # New Architecture only - include all source files
+  # All iOS source files including Dimensioning bridge
   s.source_files = "ios/**/*.{h,m,mm,swift}"
 
   # Compiler flags to ensure Swift bridging header is found
@@ -39,7 +44,10 @@ Pod::Spec.new do |s|
   s.frameworks = "CoreMotion"
 
   s.dependency "React-Core"
-  s.dependency "VisionSDK", "= 2.2.1"
+  # Core scanner + OCR
+  s.dependency "VisionSDK", "= 2.3.0"
+  # 3-D box measurement — brings MVDimensioningCore.xcframework, ARKit, RealityKit, PostHog
+  s.dependency "VisionSDK/Dimensioning", "= 2.3.0"
 
   # New Architecture dependencies
   install_modules_dependencies(s)

@@ -4,6 +4,8 @@ import com.facebook.react.ReactPackage
 import com.facebook.react.bridge.NativeModule
 import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.uimanager.ViewManager
+import com.visionsdk.dimensioning.DimensioningModule
+import com.visionsdk.dimensioning.DimensioningViewManager
 
 /**
  * New Architecture Package
@@ -14,12 +16,16 @@ import com.facebook.react.uimanager.ViewManager
 class VisionSdkPackage : ReactPackage {
   override fun createNativeModules(reactContext: ReactApplicationContext): List<NativeModule> {
     // TurboModules still need manual registration in Fabric
-    return listOf(VisionSdkModule(reactContext))
+    return listOf(
+      VisionSdkModule(reactContext),
+      DimensioningModule(reactContext),
+    )
   }
 
   override fun createViewManagers(reactContext: ReactApplicationContext): List<ViewManager<*, *>> {
     return listOf(
-      VisionCameraViewManager(reactContext)
+      VisionCameraViewManager(reactContext),
+      DimensioningViewManager(reactContext),
     )
   }
 }
