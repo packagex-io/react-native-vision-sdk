@@ -3,8 +3,10 @@ import { TurboModuleRegistry } from 'react-native';
 
 /**
  * TurboModule interface for static dimensioning helpers.
- * NOTE: These methods are iOS-only. Calling from Android returns
- * a rejected promise / default values.
+ * NOTE: Dimensioning is iOS-only. The module is registered on both
+ * platforms; on Android the implementation is a stub that resolves
+ * `deviceCapabilities()` with all-false flags and `prefetchModels()`
+ * with `undefined`.
  */
 export interface Spec extends TurboModule {
   /**

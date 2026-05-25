@@ -1,10 +1,11 @@
 /**
  * VisionDimensioning — static helpers for the dimensioning feature.
  *
- * NOTE: Both methods are iOS-only. On Android the TurboModule is not
- * registered and the calls will throw "Native module DimensioningModule
- * not found". Guard calls with `Platform.OS === 'ios'` at the call site,
- * or catch the error.
+ * **Dimensioning is iOS-only.** On Android the TurboModule is registered
+ * as a stub that resolves with all-false capabilities (and prefetchModels
+ * is a no-op), so these methods are safe to call cross-platform — they
+ * just don't do anything useful on Android. Use the result of
+ * `deviceCapabilities()` to decide whether to expose any dimensioning UI.
  */
 
 import NativeDimensioningModule from '../specs/NativeDimensioningModule';

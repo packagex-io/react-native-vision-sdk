@@ -20,6 +20,8 @@ export enum DimensioningErrorCode {
   NoGroundPlane = 4,
   CaptureTimedOut = 5,
   UserCancelled = 6,
+  /** Bridge / serialization failure (not from the underlying VSDKDimensioningError). */
+  InternalError = 7,
 }
 
 /** A single dimension measurement returned by onCapture. */

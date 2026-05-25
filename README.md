@@ -953,7 +953,7 @@ target 'YourApp' do
 end
 ```
 
-The Dimensioning subspec is pulled in automatically by `react-native-vision-sdk` when you import `DimensioningView` or `VisionDimensioning`. Make sure your iOS deployment target is **17.0 or higher** — the Dimensioning subspec brings ARKit, RealityKit, and the LiDAR runtime which all require iOS 17.
+The `react-native-vision-sdk` podspec depends on `VisionSDK/Core` and `VisionSDK/Dimensioning` directly, so installing the npm package via `pod install` always pulls in both subspecs and links MVDimensioningCore / ARKit / RealityKit. Make sure your iOS deployment target is **17.0 or higher** — the Dimensioning subspec requires it.
 
 Add the following keys to your `Info.plist`:
 
@@ -1007,12 +1007,12 @@ function MyScreen() {
       measurementUnit="centimeters"   // any Foundation.UnitLength symbol
       maximumTrackCount={5}
       onCapture={(m: DimensioningMeasurement) => {
-        console.log(m.length, m.width, m.height);
-        console.log(m.confidence, m.volume);
+        console.log(m.length, m.lengthUnit, m.width, m.widthUnit, m.height, m.heightUnit);
+        console.log('confidence:', m.confidence);
       }}
       onError={(e: DimensioningError) => {
         // e.code: numeric DimensioningErrorCode
-        // e.domain, e.message, optional e.reason
+        // e.message, optional e.reason
         console.warn(e.message);
       }}
     />
@@ -1025,7 +1025,7 @@ function MyScreen() {
 | Prop | Type | Default | Notes |
 |---|---|---|---|
 | `mode` | `'offline'` \| `'online'` | `'offline'` | `.offline` runs entirely on-device. `.online` augments the pipeline with a cloud-side step (requires `VSDKConstants.apiKey`). |
-| `measurementUnit` | string | `'centimeters'` | Any `Foundation.UnitLength` symbol (`'inches'`, `'millimeters'`, ...). |
+| `measurementUnit` | string | `'centimeters'` | **Currently not honored** by the iOS native side — measurements always come back in centimeters (visible on the `lengthUnit` / `widthUnit` / `heightUnit` fields of each capture). Will be wired through `VSDKDimensioningConfiguration` in a follow-up. |
 | `maximumTrackCount` | number | `5` | Cap on simultaneously tracked boxes. |
 | `onCapture` | `(m) => void` | — | Fired when a stable measurement locks. |
 | `onError` | `(e) => void` | — | Fired for capture/runtime errors. |
@@ -1033,31 +1033,39 @@ function MyScreen() {
 
 ### Measurement shape
 
+The native side emits a flat object — each dimension has a numeric value plus a separate unit-symbol string.
+
 ```ts
 type DimensioningMeasurement = {
-  id: string;                   // UUID
-  timestamp: string;            // ISO8601
-  length: { value: number; unit: string };  // unit matches measurementUnit
-  width:  { value: number; unit: string };
-  height: { value: number; unit: string };
-  distanceFromCamera: { value: number; unit: 'm' };
-  confidence: number;           // 0...1
-  usedCloudSAM: boolean;        // true when .online cloud path ran
-  volume: { value: number; unit: 'm^3' };
+  id: string;                 // UUID
+  timestamp: number;          // Unix seconds
+  length: number;             // value in `lengthUnit` (currently always 'cm')
+  lengthUnit: string;
+  width: number;
+  widthUnit: string;
+  height: number;
+  heightUnit: string;
+  distanceFromCamera: number; // value in `distanceFromCameraUnit` (always 'm')
+  distanceFromCameraUnit: string;
+  confidence: number;         // 0...1
+  usedCloudSAM: boolean;      // true when .online cloud path ran
 };
 ```
 
 ### Error codes (`DimensioningErrorCode`)
 
-| Code | Constant | Trigger |
+The exported TS enum uses PascalCase member names; the table below shows both the runtime numeric value (which is what `error.code` will be) and the matching enum member.
+
+| Code | Enum member | Trigger |
 |---|---|---|
-| 0 | `MISSING_CREDENTIALS` | `.online` started without `VSDKConstants.apiKey` set |
-| 1 | `NOT_CONFIGURED` | Internal lifecycle error |
-| 2 | `LIDAR_UNAVAILABLE` | Non-LiDAR device or simulator |
-| 3 | `AR_SESSION_FAILED` | ARKit interruption; `e.reason` carries the underlying message |
-| 4 | `NO_GROUND_PLANE` | Could not anchor a horizontal surface |
-| 5 | `CAPTURE_TIMED_OUT` | `capture()` never reached a stable measurement |
-| 6 | `USER_CANCELLED` | Cancellation propagated from the session |
+| 0 | `MissingCredentials` | `.online` started without `VSDKConstants.apiKey` set |
+| 1 | `NotConfigured` | Internal lifecycle error |
+| 2 | `LidarUnavailable` | Non-LiDAR device or simulator |
+| 3 | `ArSessionFailed` | ARKit interruption; `e.reason` carries the underlying message |
+| 4 | `NoGroundPlane` | Could not anchor a horizontal surface |
+| 5 | `CaptureTimedOut` | `capture()` never reached a stable measurement |
+| 6 | `UserCancelled` | Cancellation propagated from the session |
+| 7 | `InternalError` | Bridge / serialization failure (not from `VSDKDimensioningError`) |
 
 ### Capture-session conflict with `<VisionCamera>`
 

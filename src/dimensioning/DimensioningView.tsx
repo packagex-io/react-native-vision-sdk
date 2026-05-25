@@ -2,8 +2,10 @@
  * DimensioningView
  *
  * NOTE: Dimensioning is iOS-only. On iOS 17+ LiDAR devices this renders the
- * native VSDKDimensioningView. On all other platforms (Android, older iOS,
- * simulator) it renders an empty placeholder View.
+ * native VSDKDimensioningView. On Android the native side renders a
+ * "not supported on this platform" placeholder TextView; capture/error
+ * callbacks never fire there. On non-LiDAR iOS devices the iOS native side
+ * calls onError with LidarUnavailable.
  *
  * Gate rendering at the call site:
  *   const caps = await VisionDimensioning.deviceCapabilities();
@@ -11,7 +13,7 @@
  */
 
 import React from 'react';
-import { Platform, View, type ViewStyle } from 'react-native';
+import { type ViewStyle } from 'react-native';
 import type { DimensioningMeasurement, DimensioningError, DimensioningMode } from './types';
 import NativeDimensioningView from '../specs/DimensioningViewNativeComponent';
 
@@ -21,25 +23,39 @@ export interface DimensioningViewProps {
   /** Processing mode. Default: 'offline'. */
   mode?: DimensioningMode;
 
-  /** Measurement unit requested. Default: 'centimeters'. */
+  /**
+   * Measurement unit requested.
+   *
+   * **Known limitation**: this prop is currently not honored on iOS. The native
+   * SDK's convenience `configure(delegate:mode:maximumTrackCount:)` hard-codes
+   * centimeters. Captures always come back in `cm` (visible on each
+   * measurement's `lengthUnit` / `widthUnit` / `heightUnit` fields).
+   * Will be wired through `VSDKDimensioningConfiguration` in a future release.
+   *
+   * @default 'centimeters'
+   */
   measurementUnit?: string;
 
   /** Maximum number of simultaneous tracked objects. Default: 5. */
   maximumTrackCount?: number;
 
-  /** Called when a stable measurement is captured. */
+  /** Called when a stable measurement is captured. iOS only. */
   onCapture?: (measurement: DimensioningMeasurement) => void;
 
-  /** Called when an error occurs in the native view. */
+  /** Called when an error occurs in the native view. iOS only. */
   onError?: (error: DimensioningError) => void;
 }
 
 /**
- * <DimensioningView> — iOS-only 3-D box measurement component.
+ * <DimensioningView> — 3-D box measurement component.
  *
- * Renders the native VSDKDimensioningView on iOS 17+ LiDAR devices.
- * Falls back to an empty View on Android and non-LiDAR / pre-iOS-17 devices
- * (the JS layer is expected to gate entry via deviceCapabilities()).
+ * Renders the native Fabric component on both iOS and Android:
+ *  - **iOS 17+ LiDAR**: live VSDKDimensioningView with capture/error events.
+ *  - **iOS without LiDAR**: native view calls onError with LidarUnavailable (code 2).
+ *  - **Android**: native side renders a placeholder TextView (no events).
+ *
+ * Gate entry on `VisionDimensioning.deviceCapabilities()` to avoid mounting
+ * the view on unsupported devices.
  */
 export function DimensioningView({
   style,
@@ -49,10 +65,6 @@ export function DimensioningView({
   onCapture,
   onError,
 }: DimensioningViewProps) {
-  if (Platform.OS !== 'ios') {
-    return <View style={style} />;
-  }
-
   const handleCapture = onCapture
     ? (event: { nativeEvent: { measurementJson: string } }) => {
         try {
@@ -60,8 +72,14 @@ export function DimensioningView({
             event.nativeEvent.measurementJson
           );
           onCapture(measurement);
-        } catch {
-          // malformed JSON from native — silently drop
+        } catch (err) {
+          // Surface the parse failure to onError instead of silently swallowing it,
+          // so consumers aren't left waiting for a capture that will never arrive.
+          onError?.({
+            code: 7,
+            message: 'Failed to parse measurement payload from native',
+            reason: err instanceof Error ? err.message : String(err),
+          });
         }
       }
     : undefined;

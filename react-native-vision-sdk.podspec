@@ -10,11 +10,12 @@ Pod::Spec.new do |s|
   s.license      = package["license"]
   s.authors      = package["author"]
 
-  # Dimensioning subspec requires iOS 17; set deployment target accordingly.
-  # The core scanner supports iOS 16 but all devices that run iOS 17 also
-  # support running the scanner path, so bumping to 17 is acceptable for
-  # the example app. The production podspec can remain at 16 by excluding
-  # the Dimensioning files via subspecs (see README).
+  # iOS 17 is required because the `VisionSDK/Dimensioning` subspec we
+  # depend on below links ARKit/RealityKit and the LiDAR pipeline. The
+  # core scanner alone supports iOS 16, but Dimensioning is currently a
+  # hard dependency of this pod, so the deployment target is 17.0 for
+  # all consumers. Splitting Dimensioning into a separate optional pod
+  # (so non-LiDAR consumers can stay on iOS 16) is a follow-up.
   s.platforms    = { :ios => "17.0" }
   s.source       = { :git => "https://github.com/packagex-io/react-native-vision-sdk.git", :tag => "#{s.version}" }
 

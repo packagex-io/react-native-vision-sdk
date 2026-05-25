@@ -157,7 +157,9 @@ extension RNDimensioningView: VSDKDimensioningViewDelegate {
 
     guard let jsonData = try? JSONSerialization.data(withJSONObject: dict),
           let jsonString = String(data: jsonData, encoding: .utf8) else {
-      sendError(code: -1, message: "Failed to serialise measurement", reason: nil)
+      // 7 = DimensioningErrorCode.InternalError (bridge/serialization failure;
+      // not a real VSDKDimensioningError).
+      sendError(code: 7, message: "Failed to serialise measurement", reason: nil)
       return
     }
 
