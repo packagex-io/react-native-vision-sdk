@@ -60,6 +60,11 @@ buck-out/
 android/app/libs
 android/keystores/debug.keystore
 
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
 # Expo
 .expo/
 
@@ -89,3 +94,10 @@ example/.yarn/*
 BACKLOG.md
 .local
 package-lock.json
+
+# Local Claude config and node-path file (machine-specific)
+.claude/
+**/.xcode.env
+
+# npm pack output
+*.tgz

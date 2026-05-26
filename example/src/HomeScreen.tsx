@@ -44,6 +44,17 @@ const HomeScreen = ({ navigation }) => {
             Camera-based barcode scanning and OCR
           </Text>
         </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.primaryButton}
+          onPress={() => navigation.navigate("DimensioningScreen")}
+        >
+          <Text style={styles.primaryButtonText}>Dimensioning</Text>
+          <Text style={styles.buttonDescription}>
+            3-D box measurement (iOS 17+ LiDAR only)
+          </Text>
+        </TouchableOpacity>
+
       </View>
 
       <View style={styles.footerContainer}>

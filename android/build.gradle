@@ -76,7 +76,9 @@ android {
 }
 
 repositories {
-  mavenLocal()
+  if (project.hasProperty('useMavenLocal')) {
+    mavenLocal()
+  }
   mavenCentral()
   google()
   maven { url = uri("https://jitpack.io") }
@@ -153,7 +155,7 @@ dependencies {
   implementation "com.facebook.react:react-native:+"
   implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
 // From node_modules
-  implementation 'com.github.packagexlabs:vision-sdk-android:v2.4.47'
+  implementation 'com.github.packagexlabs:vision-sdk-android:v2.4.48'
   implementation 'com.github.asadullahilyas:HandyUtils:1.1.6'
 }
 

@@ -278,6 +278,39 @@ using namespace facebook::react;
     }
   }
 
+  // Native bounding-box overlay props (requires VisionSDK >= pod bump that adds these properties)
+  if (oldViewProps.showCodeBoundingBoxes != newViewProps.showCodeBoundingBoxes) {
+    SEL setter = NSSelectorFromString(@"setShowCodeBoundingBoxes:");
+    if ([_visionCameraView respondsToSelector:setter]) {
+      BOOL value = newViewProps.showCodeBoundingBoxes;
+      ((void (*)(id, SEL, BOOL))objc_msgSend)(_visionCameraView, setter, value);
+    }
+  }
+
+  if (oldViewProps.barcodeBoundingBoxBorderColor != newViewProps.barcodeBoundingBoxBorderColor) {
+    SEL setter = NSSelectorFromString(@"setBarcodeBoundingBoxBorderColor:");
+    if ([_visionCameraView respondsToSelector:setter]) {
+      NSString *value = [NSString stringWithUTF8String:newViewProps.barcodeBoundingBoxBorderColor.c_str()];
+      ((void (*)(id, SEL, id))objc_msgSend)(_visionCameraView, setter, value);
+    }
+  }
+
+  if (oldViewProps.barcodeBoundingBoxBorderWidth != newViewProps.barcodeBoundingBoxBorderWidth) {
+    SEL setter = NSSelectorFromString(@"setBarcodeBoundingBoxBorderWidth:");
+    if ([_visionCameraView respondsToSelector:setter]) {
+      NSNumber *value = @(newViewProps.barcodeBoundingBoxBorderWidth);
+      ((void (*)(id, SEL, id))objc_msgSend)(_visionCameraView, setter, value);
+    }
+  }
+
+  if (oldViewProps.barcodeBoundingBoxFillColor != newViewProps.barcodeBoundingBoxFillColor) {
+    SEL setter = NSSelectorFromString(@"setBarcodeBoundingBoxFillColor:");
+    if ([_visionCameraView respondsToSelector:setter]) {
+      NSString *value = [NSString stringWithUTF8String:newViewProps.barcodeBoundingBoxFillColor.c_str()];
+      ((void (*)(id, SEL, id))objc_msgSend)(_visionCameraView, setter, value);
+    }
+  }
+
   [super updateProps:props oldProps:oldProps];
 }
 

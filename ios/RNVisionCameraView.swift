@@ -116,6 +116,34 @@ class RNVisionCameraView: UIView {
     }
   }
 
+  @objc var showCodeBoundingBoxes: Bool = false {
+    didSet {
+      cameraView?.showCodeBoundingBoxes = showCodeBoundingBoxes
+    }
+  }
+
+  @objc var barcodeBoundingBoxBorderColor: NSString? {
+    didSet {
+      if let color = Self.parseARGBColor(barcodeBoundingBoxBorderColor as String?) {
+        cameraView?.barcodeBoundingBoxBorderColor = color
+      }
+    }
+  }
+
+  @objc var barcodeBoundingBoxBorderWidth: NSNumber = 3.0 {
+    didSet {
+      cameraView?.barcodeBoundingBoxBorderWidth = CGFloat(truncating: barcodeBoundingBoxBorderWidth)
+    }
+  }
+
+  @objc var barcodeBoundingBoxFillColor: NSString? {
+    didSet {
+      if let color = Self.parseARGBColor(barcodeBoundingBoxFillColor as String?) {
+        cameraView?.barcodeBoundingBoxFillColor = color
+      }
+    }
+  }
+
   // MARK: - VisionSDK Components
   var cameraView: CodeScannerView?
   private var currentScanMode: CodeScannerMode = .photo
@@ -460,6 +488,7 @@ class RNVisionCameraView: UIView {
   }
 
   /// Parses a hex color string (e.g., "#ff0000", "#ff000080") into a UIColor.
+  /// For 8-digit strings, the format is RRGGBBAA (alpha last).
   private static func parseColor(_ hex: String?) -> UIColor? {
     guard let hex = hex else { return nil }
     let cleanHex = hex.trimmingCharacters(in: .whitespacesAndNewlines).replacingOccurrences(of: "#", with: "")
@@ -478,6 +507,33 @@ class RNVisionCameraView: UIView {
       let g = CGFloat((hexValue & 0x00FF0000) >> 16) / 255.0
       let b = CGFloat((hexValue & 0x0000FF00) >> 8) / 255.0
       let a = CGFloat(hexValue & 0x000000FF) / 255.0
+      return UIColor(red: r, green: g, blue: b, alpha: a)
+    }
+    return nil
+  }
+
+  /// Parses a hex color string in Android AARRGGBB format (e.g., "#8B5CF6", "#338B5CF6") into a UIColor.
+  /// For 6-digit strings (#RRGGBB), alpha defaults to 1.0 (fully opaque).
+  /// For 8-digit strings (#AARRGGBB), the first byte is alpha — matching Android's Color.parseColor behaviour.
+  private static func parseARGBColor(_ hex: String?) -> UIColor? {
+    guard let hex = hex else { return nil }
+    let cleanHex = hex.trimmingCharacters(in: .whitespacesAndNewlines).replacingOccurrences(of: "#", with: "")
+
+    var hexValue: UInt64 = 0
+    let scanner = Scanner(string: cleanHex)
+    guard scanner.scanHexInt64(&hexValue) else { return nil }
+
+    if cleanHex.count == 6 {
+      let r = CGFloat((hexValue & 0xFF0000) >> 16) / 255.0
+      let g = CGFloat((hexValue & 0x00FF00) >> 8) / 255.0
+      let b = CGFloat(hexValue & 0x0000FF) / 255.0
+      return UIColor(red: r, green: g, blue: b, alpha: 1.0)
+    } else if cleanHex.count == 8 {
+      // AARRGGBB — alpha occupies the most-significant byte
+      let a = CGFloat((hexValue & 0xFF000000) >> 24) / 255.0
+      let r = CGFloat((hexValue & 0x00FF0000) >> 16) / 255.0
+      let g = CGFloat((hexValue & 0x0000FF00) >> 8) / 255.0
+      let b = CGFloat(hexValue & 0x000000FF) / 255.0
       return UIColor(red: r, green: g, blue: b, alpha: a)
     }
     return nil
