@@ -17,7 +17,7 @@ Pod::Spec.new do |s|
   # all consumers. Splitting Dimensioning into a separate optional pod
   # (so non-LiDAR consumers can stay on iOS 16) is a follow-up.
   s.platforms    = { :ios => "17.0" }
-  s.source       = { :git => "https://github.com/packagex-io/react-native-vision-sdk.git", :tag => "#{s.version}" }
+  s.source       = { :git => "https://github.com/packagex-io/react-native-vision-sdk.git", :tag => "v#{s.version}" }
 
   # Explicitly set module name to ensure Swift bridging header matches
   s.module_name  = "react_native_vision_sdk"
