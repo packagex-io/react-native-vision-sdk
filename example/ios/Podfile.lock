@@ -2942,14 +2942,15 @@ DEPENDENCIES:
   - RNVectorIcons (from `../node_modules/react-native-vector-icons`)
   - RNWorklets (from `../node_modules/react-native-worklets`)
   - SocketRocket (~> 0.7.1)
-  - VisionSDK (from `file:///Users/kashif/Downloads/monorepo/vision-sdk`, tag `2.3.2`)
-  - VisionSDK/Dimensioning (from `file:///Users/kashif/Downloads/monorepo/vision-sdk`, tag `2.3.2`)
+  - VisionSDK (= 2.3.2)
+  - VisionSDK/Dimensioning (= 2.3.2)
   - Yoga (from `../node_modules/react-native/ReactCommon/yoga`)
 
 SPEC REPOS:
   trunk:
     - PostHog
     - SocketRocket
+    - VisionSDK
 
 EXTERNAL SOURCES:
   boost:
@@ -3117,16 +3118,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native-vector-icons"
   RNWorklets:
     :path: "../node_modules/react-native-worklets"
-  VisionSDK:
-    :git: file:///Users/kashif/Downloads/monorepo/vision-sdk
-    :tag: 2.3.2
   Yoga:
     :path: "../node_modules/react-native/ReactCommon/yoga"
-
-CHECKOUT OPTIONS:
-  VisionSDK:
-    :git: file:///Users/kashif/Downloads/monorepo/vision-sdk
-    :tag: 2.3.2
 
 SPEC CHECKSUMS:
   boost: 7e761d76ca2ce687f7cc98e698152abd03a18f90
@@ -3216,6 +3209,6 @@ SPEC CHECKSUMS:
   VisionSDK: f21e8b8234e529b16479159f1cc3f4a0db90a3c2
   Yoga: 689c8e04277f3ad631e60fe2a08e41d411daf8eb
 
-PODFILE CHECKSUM: 22594084046288c6a73e55d47d6b320e204376c0
+PODFILE CHECKSUM: 7dec3027ad7c3607a21c4ef3a86e7f670b455aed
 
 COCOAPODS: 1.16.2

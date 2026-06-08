@@ -55,16 +55,11 @@ end
 target 'VisionSdkExample' do
   config = use_native_modules!
 
-  # VisionSDK 2.3.2 — clean, non-nested VisionSDKDimensioning.xcframework.
-  # It is published to CocoaPods trunk, but the trunk *version index* can lag
-  # the spec upload by up to an hour after `pod trunk push`. Until the index
-  # lists 2.3.2, source the released artifact from the publish repo at tag
-  # 2.3.2 (identical content to trunk). Once `pod search VisionSDK` shows
-  # 2.3.2, replace both lines with:
-  #   pod 'VisionSDK', '= 2.3.2'
-  #   pod 'VisionSDK/Dimensioning', '= 2.3.2'
-  pod 'VisionSDK', :git => 'file:///Users/kashif/Downloads/monorepo/vision-sdk', :tag => '2.3.2'
-  pod 'VisionSDK/Dimensioning', :git => 'file:///Users/kashif/Downloads/monorepo/vision-sdk', :tag => '2.3.2'
+  # VisionSDK 2.3.2 (clean, non-nested VisionSDKDimensioning.xcframework) from
+  # CocoaPods trunk. Matches the deps declared by the react-native-vision-sdk
+  # podspec; pinned explicitly here for clarity.
+  pod 'VisionSDK', '= 2.3.2'
+  pod 'VisionSDK/Dimensioning', '= 2.3.2'
 
   use_react_native!(
     :path => config[:reactNativePath],
