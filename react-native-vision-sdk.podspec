@@ -14,10 +14,9 @@ Pod::Spec.new do |s|
   # depend on below links ARKit/RealityKit and the LiDAR pipeline. The
   # core scanner alone supports iOS 16, but Dimensioning is currently a
   # hard dependency of this pod, so the deployment target is 17.0 for
-  # all consumers. Splitting Dimensioning into a separate optional pod
-  # (so non-LiDAR consumers can stay on iOS 16) is a follow-up.
+  # all consumers.
   s.platforms    = { :ios => "17.0" }
-  s.source       = { :git => "https://github.com/packagex-io/react-native-vision-sdk.git", :tag => "#{s.version}" }
+  s.source       = { :git => "https://github.com/packagex-io/react-native-vision-sdk.git", :tag => "v#{s.version}" }
 
   # Explicitly set module name to ensure Swift bridging header matches
   s.module_name  = "react_native_vision_sdk"
@@ -46,9 +45,9 @@ Pod::Spec.new do |s|
 
   s.dependency "React-Core"
   # Core scanner + OCR
-  s.dependency "VisionSDK", "= 2.3.1"
+  s.dependency "VisionSDK", "= 2.3.2"
   # 3-D box measurement — brings MVDimensioningCore.xcframework, ARKit, RealityKit, PostHog
-  s.dependency "VisionSDK/Dimensioning", "= 2.3.1"
+  s.dependency "VisionSDK/Dimensioning", "= 2.3.2"
 
   # New Architecture dependencies
   install_modules_dependencies(s)

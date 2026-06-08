@@ -118,30 +118,80 @@ class RNVisionCameraView: UIView {
 
   @objc var showCodeBoundingBoxes: Bool = false {
     didSet {
-      cameraView?.showCodeBoundingBoxes = showCodeBoundingBoxes
+      applyCodeBoundingBoxSettings()
     }
   }
 
   @objc var barcodeBoundingBoxBorderColor: NSString? {
     didSet {
-      if let color = Self.parseARGBColor(barcodeBoundingBoxBorderColor as String?) {
-        cameraView?.barcodeBoundingBoxBorderColor = color
-      }
+      applyCodeBoundingBoxSettings()
     }
   }
 
   @objc var barcodeBoundingBoxBorderWidth: NSNumber = 3.0 {
     didSet {
-      cameraView?.barcodeBoundingBoxBorderWidth = CGFloat(truncating: barcodeBoundingBoxBorderWidth)
+      applyCodeBoundingBoxSettings()
     }
   }
 
   @objc var barcodeBoundingBoxFillColor: NSString? {
     didSet {
-      if let color = Self.parseARGBColor(barcodeBoundingBoxFillColor as String?) {
-        cameraView?.barcodeBoundingBoxFillColor = color
-      }
+      applyCodeBoundingBoxSettings()
     }
+  }
+
+  /// Builds a single coherent FocusSettings from the full current prop state:
+  /// - scan-area focus rect (from `scanArea` / `captureType`)
+  /// - bounding-box styling (from `showCodeBoundingBoxes` + `barcodeBoundingBox*`)
+  ///
+  /// Both `applyCodeBoundingBoxSettings()` and `updateScanArea()` route through
+  /// here so the two prop groups can never clobber each other regardless of call order.
+  private func buildFocusSettings() -> VisionSDK.CodeScannerView.FocusSettings {
+    // --- bbox styling ---
+    let borderColor = Self.parseARGBColor(barcodeBoundingBoxBorderColor as String?)
+      ?? UIColor(red: 0.545, green: 0.361, blue: 0.965, alpha: 1.0)
+    let fillColor = Self.parseARGBColor(barcodeBoundingBoxFillColor as String?)
+      ?? UIColor(red: 0.545, green: 0.361, blue: 0.965, alpha: 0.20)
+    let borderWidth = CGFloat(truncating: barcodeBoundingBoxBorderWidth)
+
+    // --- scan-area focus rect ---
+    let focusRect: CGRect
+    let shouldScanInFocusRect: Bool
+    if let scanArea = scanArea {
+      let x = scanArea["x"] as? CGFloat ?? 0
+      let y = scanArea["y"] as? CGFloat ?? 0
+      let width = scanArea["width"] as? CGFloat ?? 0
+      let height = scanArea["height"] as? CGFloat ?? 0
+      focusRect = CGRect(x: x, y: y, width: width, height: height)
+      shouldScanInFocusRect = true
+    } else {
+      focusRect = .zero
+      shouldScanInFocusRect = false
+    }
+
+    return VisionSDK.CodeScannerView.FocusSettings.makeDefault(
+      focusImageRect: focusRect,
+      shouldDisplayFocusImage: false,
+      shouldScanInFocusImageRect: shouldScanInFocusRect,
+      showCodeBoundariesInMultipleScan: showCodeBoundingBoxes,
+      validCodeBoundryBorderColor: borderColor,
+      validCodeBoundryBorderWidth: borderWidth,
+      validCodeBoundryFillColor: fillColor,
+      inValidCodeBoundryBorderColor: borderColor,
+      inValidCodeBoundryBorderWidth: borderWidth,
+      inValidCodeBoundryFillColor: fillColor,
+      showDocumentBoundries: false
+    )
+  }
+
+  /// Applies showCodeBoundingBoxes + color props to the VisionSDK view via the
+  /// FocusSettings API, which is the only bounding-box path exported to ObjC in
+  /// the VisionSDK 2.3.x xcframework binary.  The direct `cameraView.showCode-
+  /// BoundingBoxes` setter exists in the Swift source but is not @objc, so it is
+  /// not reachable from the RN wrapper across the module boundary.
+  private func applyCodeBoundingBoxSettings() {
+    guard let cameraView = cameraView else { return }
+    cameraView.setFocusSettingsTo(buildFocusSettings())
   }
 
   // MARK: - VisionSDK Components
@@ -201,6 +251,7 @@ class RNVisionCameraView: UIView {
         updateFrameSkip()
         updateFlash()
         updateZoom()
+        applyCodeBoundingBoxSettings()
 
         // Start camera immediately - no need to delay
         self.start()
@@ -247,6 +298,9 @@ class RNVisionCameraView: UIView {
 
     // Create fresh camera view
     setupCamera()
+
+    // Re-apply props that may have been set before this recreation
+    applyCodeBoundingBoxSettings()
 
     // Ensure frame is correct
     cameraView?.frame = self.bounds
@@ -449,13 +503,34 @@ class RNVisionCameraView: UIView {
     }
 
     let shouldDisplayFocusImage = settings["shouldDisplayFocusImage"] as? Bool ?? false
-    let shouldScanInFocusImageRect = settings["shouldScanInFocusImageRect"] as? Bool ?? false
-    let showCodeBoundariesInMultipleScan = settings["showCodeBoundariesInMultipleScan"] as? Bool ?? true
+    // showCodeBoundingBoxes prop takes precedence; setFocusSettings cannot turn boxes off
+    // when the dedicated prop has enabled them.
+    let showCodeBoundariesInMultipleScan =
+      showCodeBoundingBoxes || (settings["showCodeBoundariesInMultipleScan"] as? Bool ?? false)
+    // If scanArea is active, always honour the focus rect from the prop — the JSON
+    // caller cannot override it (nor would they know the correct rect).
+    let shouldScanInFocusImageRect: Bool
+    if scanArea != nil {
+      shouldScanInFocusImageRect = true
+    } else {
+      shouldScanInFocusImageRect = settings["shouldScanInFocusImageRect"] as? Bool ?? false
+    }
     let showDocumentBoundaries = settings["showDocumentBoundaries"] as? Bool ?? false
 
-    let validCodeBoundaryBorderColor = Self.parseColor(settings["validCodeBoundaryBorderColor"] as? String) ?? .green
-    let validCodeBoundaryBorderWidth = settings["validCodeBoundaryBorderWidth"] as? CGFloat ?? 2.0
-    let validCodeBoundaryFillColor = Self.parseColor(settings["validCodeBoundaryFillColor"] as? String) ?? UIColor.green.withAlphaComponent(0.3)
+    // When showCodeBoundingBoxes is active the dedicated barcode* props supply the
+    // colors; fall back to the JSON-supplied or default values otherwise.
+    let defaultBorderColor: UIColor = showCodeBoundingBoxes
+      ? (Self.parseARGBColor(barcodeBoundingBoxBorderColor as String?) ?? UIColor(red: 0.545, green: 0.361, blue: 0.965, alpha: 1.0))
+      : .green
+    let defaultFillColor: UIColor = showCodeBoundingBoxes
+      ? (Self.parseARGBColor(barcodeBoundingBoxFillColor as String?) ?? UIColor(red: 0.545, green: 0.361, blue: 0.965, alpha: 0.20))
+      : UIColor.green.withAlphaComponent(0.3)
+    let defaultBorderWidth: CGFloat = showCodeBoundingBoxes
+      ? CGFloat(truncating: barcodeBoundingBoxBorderWidth)
+      : 2.0
+    let validCodeBoundaryBorderColor = Self.parseColor(settings["validCodeBoundaryBorderColor"] as? String) ?? defaultBorderColor
+    let validCodeBoundaryBorderWidth = settings["validCodeBoundaryBorderWidth"] as? CGFloat ?? defaultBorderWidth
+    let validCodeBoundaryFillColor = Self.parseColor(settings["validCodeBoundaryFillColor"] as? String) ?? defaultFillColor
 
     let inValidCodeBoundaryBorderColor = Self.parseColor(settings["inValidCodeBoundaryBorderColor"] as? String) ?? .red
     let inValidCodeBoundaryBorderWidth = settings["inValidCodeBoundaryBorderWidth"] as? CGFloat ?? 2.0
@@ -467,7 +542,20 @@ class RNVisionCameraView: UIView {
     let focusImageTintColor = Self.parseColor(settings["focusImageTintColor"] as? String) ?? .white
     let focusImageHighlightedColor = Self.parseColor(settings["focusImageHighlightedColor"] as? String) ?? .green
 
+    // Carry the scan-area focus rect when active so this JSON path cannot lose it.
+    let jsonFocusRect: CGRect
+    if let scanArea = scanArea {
+      let x = scanArea["x"] as? CGFloat ?? 0
+      let y = scanArea["y"] as? CGFloat ?? 0
+      let width = scanArea["width"] as? CGFloat ?? 0
+      let height = scanArea["height"] as? CGFloat ?? 0
+      jsonFocusRect = CGRect(x: x, y: y, width: width, height: height)
+    } else {
+      jsonFocusRect = .zero
+    }
+
     let focusSettings = VisionSDK.CodeScannerView.FocusSettings.makeDefault(
+      focusImageRect: jsonFocusRect,
       shouldDisplayFocusImage: shouldDisplayFocusImage,
       shouldScanInFocusImageRect: shouldScanInFocusImageRect,
       showCodeBoundariesInMultipleScan: showCodeBoundariesInMultipleScan,
@@ -595,42 +683,21 @@ class RNVisionCameraView: UIView {
   private func updateScanArea() {
     guard let cameraView = cameraView else { return }
 
-    // If no scan area provided, enable multiple scan and disable default SDK boxes
-    guard let scanArea = scanArea else {
+    // Update captureType to match the presence/absence of scanArea, then
+    // apply a single coherent FocusSettings that carries both the focus rect
+    // and the current bbox styling — neither clobbers the other.
+    if scanArea != nil {
+      captureType = .single
+    } else {
       captureType = .multiple
-      cameraView.setCaptureTypeTo(captureType)
-
-      let focusSettings = VisionSDK.CodeScannerView.FocusSettings.makeDefault(
-        shouldDisplayFocusImage: false,
-        shouldScanInFocusImageRect: false,
-        showCodeBoundariesInMultipleScan: true,
-        showDocumentBoundries: false
-      )
-      cameraView.setFocusSettingsTo(focusSettings)
-      return
     }
-
-    // When scan area is defined, use single capture mode
-    captureType = .single
     cameraView.setCaptureTypeTo(captureType)
 
-    let x = scanArea["x"] as? CGFloat ?? 0
-    let y = scanArea["y"] as? CGFloat ?? 0
-    let width = scanArea["width"] as? CGFloat ?? 0
-    let height = scanArea["height"] as? CGFloat ?? 0
+    cameraView.setFocusSettingsTo(buildFocusSettings())
 
-    let focusRect = CGRect(x: x, y: y, width: width, height: height)
-
-    let focusSettings = VisionSDK.CodeScannerView.FocusSettings.makeDefault(
-      focusImageRect: focusRect,
-      shouldDisplayFocusImage: false,
-      shouldScanInFocusImageRect: true,
-      showCodeBoundariesInMultipleScan: true,
-      showDocumentBoundries: false
-    )
-
-    cameraView.setFocusSettingsTo(focusSettings)
-    cameraView.rescan()
+    if scanArea != nil {
+      cameraView.rescan()
+    }
   }
   
   private func updateDetectionConfig() {

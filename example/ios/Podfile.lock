@@ -8,7 +8,7 @@ PODS:
   - hermes-engine (0.82.1):
     - hermes-engine/Pre-built (= 0.82.1)
   - hermes-engine/Pre-built (0.82.1)
-  - PostHog (3.58.3)
+  - PostHog (3.59.3)
   - RCT-Folly (2024.11.18.00):
     - boost
     - DoubleConversion
@@ -1870,7 +1870,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - SocketRocket
     - Yoga
-  - react-native-vision-sdk (3.0.10):
+  - react-native-vision-sdk (3.1.0):
     - boost
     - DoubleConversion
     - fast_float
@@ -1897,8 +1897,8 @@ PODS:
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
     - SocketRocket
-    - VisionSDK (= 2.3.0)
-    - VisionSDK/Dimensioning (= 2.3.0)
+    - VisionSDK (= 2.3.2)
+    - VisionSDK/Dimensioning (= 2.3.2)
     - Yoga
   - React-NativeModulesApple (0.82.1):
     - boost
@@ -2849,10 +2849,10 @@ PODS:
     - SocketRocket
     - Yoga
   - SocketRocket (0.7.1)
-  - VisionSDK (2.3.0):
-    - VisionSDK/Core (= 2.3.0)
-  - VisionSDK/Core (2.3.0)
-  - VisionSDK/Dimensioning (2.3.0):
+  - VisionSDK (2.3.2):
+    - VisionSDK/Core (= 2.3.2)
+  - VisionSDK/Core (2.3.2)
+  - VisionSDK/Dimensioning (2.3.2):
     - PostHog (~> 3.0)
     - VisionSDK/Core
   - Yoga (0.0.0)
@@ -2942,6 +2942,8 @@ DEPENDENCIES:
   - RNVectorIcons (from `../node_modules/react-native-vector-icons`)
   - RNWorklets (from `../node_modules/react-native-worklets`)
   - SocketRocket (~> 0.7.1)
+  - VisionSDK (= 2.3.2)
+  - VisionSDK/Dimensioning (= 2.3.2)
   - Yoga (from `../node_modules/react-native/ReactCommon/yoga`)
 
 SPEC REPOS:
@@ -3127,7 +3129,7 @@ SPEC CHECKSUMS:
   fmt: a40bb5bd0294ea969aaaba240a927bd33d878cdd
   glog: 5683914934d5b6e4240e497e0f4a3b42d1854183
   hermes-engine: 273e30e7fb618279934b0b95ffab60ecedb7acf5
-  PostHog: f6da05611d29a8facb652f7e2ee8389bc3f96b67
+  PostHog: 6c74cc84f3872f4335108ff363aecdeb7c278052
   RCT-Folly: 59ec0ac1f2f39672a0c6e6cecdd39383b764646f
   RCTDeprecation: f17e2ebc07876ca9ab8eb6e4b0a4e4647497ae3a
   RCTRequired: e2c574c1b45231f7efb0834936bd609d75072b63
@@ -3162,7 +3164,7 @@ SPEC CHECKSUMS:
   React-Mapbuffer: 7e7ca4c53288117e7e0406e9eaa804bf259b4b30
   React-microtasksnativemodule: 885bebe5c5f25035e1fd0920776078840a0e3a76
   react-native-safe-area-context: 54d812805f3c4e08a4580ad086cbde1d8780c2e4
-  react-native-vision-sdk: 8f0373bf5dae3df8574082b2ada438f40ee49143
+  react-native-vision-sdk: 54fb4ea04d0339e2dfb2e3c2866a73d2332bf7dd
   React-NativeModulesApple: c4bee6aa736092cd347456488a4f97a8e7517604
   React-oscompat: 95875e81f5d4b3c7b2c888d5bd2c9d83450d8bdb
   React-perflogger: d5b5677902d23a6611b700601634271b29356ac6
@@ -3204,9 +3206,9 @@ SPEC CHECKSUMS:
   RNVectorIcons: 6acc19c833be864e9c70894e101a587fe491150a
   RNWorklets: daa0a3e7946a9c4042f3a962c87a12dc5bc0badd
   SocketRocket: d4aabe649be1e368d1318fdf28a022d714d65748
-  VisionSDK: b09e1ca069b029244f16727921e54a9b445e2a21
+  VisionSDK: f21e8b8234e529b16479159f1cc3f4a0db90a3c2
   Yoga: 689c8e04277f3ad631e60fe2a08e41d411daf8eb
 
-PODFILE CHECKSUM: 5b0f996e4be7dbc819fb164c540f2a83bf176cbf
+PODFILE CHECKSUM: 7dec3027ad7c3607a21c4ef3a86e7f670b455aed
 
 COCOAPODS: 1.16.2
