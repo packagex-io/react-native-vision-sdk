@@ -21,7 +21,7 @@ import {
   type DimensioningCapabilities,
   type DimensioningMeasurement,
   type DimensioningError,
-} from 'react-native-vision-sdk-dimensioning';
+} from 'react-native-vision-sdk';
 import { theme } from '../theme';
 
 interface Props {

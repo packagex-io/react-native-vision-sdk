@@ -1898,35 +1898,6 @@ PODS:
     - ReactCommon/turbomodule/core
     - SocketRocket
     - VisionSDK (= 2.3.2)
-    - Yoga
-  - react-native-vision-sdk-dimensioning (0.1.0):
-    - boost
-    - DoubleConversion
-    - fast_float
-    - fmt
-    - glog
-    - hermes-engine
-    - RCT-Folly
-    - RCT-Folly/Fabric
-    - RCTRequired
-    - RCTTypeSafety
-    - React-Core
-    - React-debug
-    - React-Fabric
-    - React-featureflags
-    - React-graphics
-    - React-ImageManager
-    - React-jsi
-    - React-NativeModulesApple
-    - React-RCTFabric
-    - React-renderercss
-    - React-rendererdebug
-    - React-utils
-    - ReactCodegen
-    - ReactCommon/turbomodule/bridging
-    - ReactCommon/turbomodule/core
-    - SocketRocket
-    - VisionSDK (= 2.3.2)
     - VisionSDK/Dimensioning (= 2.3.2)
     - Yoga
   - React-NativeModulesApple (0.82.1):
@@ -2930,7 +2901,6 @@ DEPENDENCIES:
   - React-microtasksnativemodule (from `../node_modules/react-native/ReactCommon/react/nativemodule/microtasks`)
   - react-native-safe-area-context (from `../node_modules/react-native-safe-area-context`)
   - react-native-vision-sdk (from `../..`)
-  - react-native-vision-sdk-dimensioning (from `../node_modules/react-native-vision-sdk-dimensioning`)
   - React-NativeModulesApple (from `../node_modules/react-native/ReactCommon/react/nativemodule/core/platform/ios`)
   - React-oscompat (from `../node_modules/react-native/ReactCommon/oscompat`)
   - React-perflogger (from `../node_modules/react-native/ReactCommon/reactperflogger`)
@@ -3067,8 +3037,6 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native-safe-area-context"
   react-native-vision-sdk:
     :path: "../.."
-  react-native-vision-sdk-dimensioning:
-    :path: "../node_modules/react-native-vision-sdk-dimensioning"
   React-NativeModulesApple:
     :path: "../node_modules/react-native/ReactCommon/react/nativemodule/core/platform/ios"
   React-oscompat:
@@ -3203,8 +3171,7 @@ SPEC CHECKSUMS:
   React-Mapbuffer: 7e7ca4c53288117e7e0406e9eaa804bf259b4b30
   React-microtasksnativemodule: 885bebe5c5f25035e1fd0920776078840a0e3a76
   react-native-safe-area-context: 54d812805f3c4e08a4580ad086cbde1d8780c2e4
-  react-native-vision-sdk: aed3ed183cfe75eebb7b2591e73526808fe22d72
-  react-native-vision-sdk-dimensioning: 4f59bb1c495548bdc63d3636def3ab99036a1662
+  react-native-vision-sdk: 54fb4ea04d0339e2dfb2e3c2866a73d2332bf7dd
   React-NativeModulesApple: c4bee6aa736092cd347456488a4f97a8e7517604
   React-oscompat: 95875e81f5d4b3c7b2c888d5bd2c9d83450d8bdb
   React-perflogger: d5b5677902d23a6611b700601634271b29356ac6
