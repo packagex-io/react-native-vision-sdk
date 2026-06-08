@@ -77,10 +77,10 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
 
     // Event throttling - timestamps for last emitted events
     private var lastRecognitionUpdateTime = 0L
+    private val RECOGNITION_UPDATE_THROTTLE_MS = 100L // 10 FPS
     private var lastSharpnessScoreUpdateTime = 0L
 
     // Throttle intervals in milliseconds
-    private val RECOGNITION_UPDATE_THROTTLE_MS = 100L // 10 FPS
     private val SHARPNESS_SCORE_UPDATE_THROTTLE_MS = 200L // 5 FPS
 
     override fun getName(): String = REACT_CLASS
@@ -667,6 +667,7 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
             documentDetected: Boolean
         ) {
             Log.d(TAG, "onIndications: barcode=$barcodeDetected qr=$qrCodeDetected text=$textDetected doc=$documentDetected")
+
             // Throttle recognition updates to avoid overwhelming the JS bridge
             if (!shouldEmitThrottledEvent(lastRecognitionUpdateTime, RECOGNITION_UPDATE_THROTTLE_MS)) {
                 return

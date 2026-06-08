@@ -46,8 +46,7 @@
     },
     "ios": {
       "componentProvider": {
-        "VisionCameraView": "VisionCameraViewComponentView",
-        "DimensioningView": "DimensioningViewComponentView"
+        "VisionCameraView": "VisionCameraViewComponentView"
       }
     }
   },

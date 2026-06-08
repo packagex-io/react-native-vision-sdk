@@ -4327,6 +4327,10 @@ react-native-vector-icons@^10.2.0:
     prop-types "^15.7.2"
     yargs "^16.1.1"
 
+"react-native-vision-sdk-dimensioning@link:../../react-native-vision-sdk-dimensioning":
+  version "0.0.0"
+  uid ""
+
 "react-native-vision-sdk@link:..":
   version "0.0.0"
   uid ""

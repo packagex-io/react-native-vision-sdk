@@ -10,13 +10,9 @@ Pod::Spec.new do |s|
   s.license      = package["license"]
   s.authors      = package["author"]
 
-  # iOS 17 is required because the `VisionSDK/Dimensioning` subspec we
-  # depend on below links ARKit/RealityKit and the LiDAR pipeline. The
-  # core scanner alone supports iOS 16, but Dimensioning is currently a
-  # hard dependency of this pod, so the deployment target is 17.0 for
-  # all consumers. Splitting Dimensioning into a separate optional pod
-  # (so non-LiDAR consumers can stay on iOS 16) is a follow-up.
-  s.platforms    = { :ios => "17.0" }
+  # Core scanner and OCR support iOS 16+. LiDAR Dimensioning (iOS 17+) has
+  # been split into the separate `react-native-vision-sdk-dimensioning` pod.
+  s.platforms    = { :ios => "16.0" }
   s.source       = { :git => "https://github.com/packagex-io/react-native-vision-sdk.git", :tag => "v#{s.version}" }
 
   # Explicitly set module name to ensure Swift bridging header matches
@@ -25,7 +21,6 @@ Pod::Spec.new do |s|
   # Static framework configuration for Swift/ObjC interop
   s.static_framework = true
 
-  # All iOS source files including Dimensioning bridge
   s.source_files = "ios/**/*.{h,m,mm,swift}"
 
   # Compiler flags to ensure Swift bridging header is found
@@ -45,10 +40,9 @@ Pod::Spec.new do |s|
   s.frameworks = "CoreMotion"
 
   s.dependency "React-Core"
-  # Core scanner + OCR
-  s.dependency "VisionSDK", "= 2.3.1"
-  # 3-D box measurement — brings MVDimensioningCore.xcframework, ARKit, RealityKit, PostHog
-  s.dependency "VisionSDK/Dimensioning", "= 2.3.1"
+  # Core scanner + OCR. Kept in lockstep with react-native-vision-sdk-dimensioning's
+  # VisionSDK pin so the two packages can be co-installed without a version conflict.
+  s.dependency "VisionSDK", "= 2.3.2"
 
   # New Architecture dependencies
   install_modules_dependencies(s)

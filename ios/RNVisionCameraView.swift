@@ -118,30 +118,50 @@ class RNVisionCameraView: UIView {
 
   @objc var showCodeBoundingBoxes: Bool = false {
     didSet {
-      cameraView?.showCodeBoundingBoxes = showCodeBoundingBoxes
+      applyCodeBoundingBoxSettings()
     }
   }
 
   @objc var barcodeBoundingBoxBorderColor: NSString? {
     didSet {
-      if let color = Self.parseARGBColor(barcodeBoundingBoxBorderColor as String?) {
-        cameraView?.barcodeBoundingBoxBorderColor = color
-      }
+      applyCodeBoundingBoxSettings()
     }
   }
 
   @objc var barcodeBoundingBoxBorderWidth: NSNumber = 3.0 {
     didSet {
-      cameraView?.barcodeBoundingBoxBorderWidth = CGFloat(truncating: barcodeBoundingBoxBorderWidth)
+      applyCodeBoundingBoxSettings()
     }
   }
 
   @objc var barcodeBoundingBoxFillColor: NSString? {
     didSet {
-      if let color = Self.parseARGBColor(barcodeBoundingBoxFillColor as String?) {
-        cameraView?.barcodeBoundingBoxFillColor = color
-      }
+      applyCodeBoundingBoxSettings()
     }
+  }
+
+  /// Applies showCodeBoundingBoxes + color props to the VisionSDK view via the
+  /// FocusSettings API, which is the only bounding-box path exported to ObjC in
+  /// the VisionSDK 2.3.x xcframework binary.  The direct `cameraView.showCode-
+  /// BoundingBoxes` setter exists in the Swift source but is not @objc, so it is
+  /// not reachable from the RN wrapper across the module boundary.
+  private func applyCodeBoundingBoxSettings() {
+    guard let cameraView = cameraView else { return }
+    let borderColor = Self.parseARGBColor(barcodeBoundingBoxBorderColor as String?)
+      ?? UIColor(red: 0.545, green: 0.361, blue: 0.965, alpha: 1.0)
+    let fillColor = Self.parseARGBColor(barcodeBoundingBoxFillColor as String?)
+      ?? UIColor(red: 0.545, green: 0.361, blue: 0.965, alpha: 0.20)
+    let borderWidth = CGFloat(truncating: barcodeBoundingBoxBorderWidth)
+    let focusSettings = VisionSDK.CodeScannerView.FocusSettings.makeDefault(
+      showCodeBoundariesInMultipleScan: showCodeBoundingBoxes,
+      validCodeBoundryBorderColor: borderColor,
+      validCodeBoundryBorderWidth: borderWidth,
+      validCodeBoundryFillColor: fillColor,
+      inValidCodeBoundryBorderColor: borderColor,
+      inValidCodeBoundryBorderWidth: borderWidth,
+      inValidCodeBoundryFillColor: fillColor
+    )
+    cameraView.setFocusSettingsTo(focusSettings)
   }
 
   // MARK: - VisionSDK Components
@@ -201,6 +221,7 @@ class RNVisionCameraView: UIView {
         updateFrameSkip()
         updateFlash()
         updateZoom()
+        applyCodeBoundingBoxSettings()
 
         // Start camera immediately - no need to delay
         self.start()
@@ -247,6 +268,9 @@ class RNVisionCameraView: UIView {
 
     // Create fresh camera view
     setupCamera()
+
+    // Re-apply props that may have been set before this recreation
+    applyCodeBoundingBoxSettings()
 
     // Ensure frame is correct
     cameraView?.frame = self.bounds
@@ -450,12 +474,26 @@ class RNVisionCameraView: UIView {
 
     let shouldDisplayFocusImage = settings["shouldDisplayFocusImage"] as? Bool ?? false
     let shouldScanInFocusImageRect = settings["shouldScanInFocusImageRect"] as? Bool ?? false
-    let showCodeBoundariesInMultipleScan = settings["showCodeBoundariesInMultipleScan"] as? Bool ?? true
+    // showCodeBoundingBoxes prop takes precedence; setFocusSettings cannot turn boxes off
+    // when the dedicated prop has enabled them.
+    let showCodeBoundariesInMultipleScan =
+      showCodeBoundingBoxes || (settings["showCodeBoundariesInMultipleScan"] as? Bool ?? false)
     let showDocumentBoundaries = settings["showDocumentBoundaries"] as? Bool ?? false
 
-    let validCodeBoundaryBorderColor = Self.parseColor(settings["validCodeBoundaryBorderColor"] as? String) ?? .green
-    let validCodeBoundaryBorderWidth = settings["validCodeBoundaryBorderWidth"] as? CGFloat ?? 2.0
-    let validCodeBoundaryFillColor = Self.parseColor(settings["validCodeBoundaryFillColor"] as? String) ?? UIColor.green.withAlphaComponent(0.3)
+    // When showCodeBoundingBoxes is active the dedicated barcode* props supply the
+    // colors; fall back to the JSON-supplied or default values otherwise.
+    let defaultBorderColor: UIColor = showCodeBoundingBoxes
+      ? (Self.parseARGBColor(barcodeBoundingBoxBorderColor as String?) ?? UIColor(red: 0.545, green: 0.361, blue: 0.965, alpha: 1.0))
+      : .green
+    let defaultFillColor: UIColor = showCodeBoundingBoxes
+      ? (Self.parseARGBColor(barcodeBoundingBoxFillColor as String?) ?? UIColor(red: 0.545, green: 0.361, blue: 0.965, alpha: 0.20))
+      : UIColor.green.withAlphaComponent(0.3)
+    let defaultBorderWidth: CGFloat = showCodeBoundingBoxes
+      ? CGFloat(truncating: barcodeBoundingBoxBorderWidth)
+      : 2.0
+    let validCodeBoundaryBorderColor = Self.parseColor(settings["validCodeBoundaryBorderColor"] as? String) ?? defaultBorderColor
+    let validCodeBoundaryBorderWidth = settings["validCodeBoundaryBorderWidth"] as? CGFloat ?? defaultBorderWidth
+    let validCodeBoundaryFillColor = Self.parseColor(settings["validCodeBoundaryFillColor"] as? String) ?? defaultFillColor
 
     let inValidCodeBoundaryBorderColor = Self.parseColor(settings["inValidCodeBoundaryBorderColor"] as? String) ?? .red
     let inValidCodeBoundaryBorderWidth = settings["inValidCodeBoundaryBorderWidth"] as? CGFloat ?? 2.0
