@@ -575,29 +575,15 @@ class RNVisionCameraView: UIView {
     cameraView.setFocusSettingsTo(focusSettings)
   }
 
-  /// Parses a hex color string (e.g., "#ff0000", "#ff000080") into a UIColor.
-  /// For 8-digit strings, the format is RRGGBBAA (alpha last).
+  /// Parses a hex color string into a UIColor. 8-digit strings are `#AARRGGBB`
+  /// (alpha first), matching Android's Color.parseColor and `parseARGBColor` below.
+  ///
+  /// Previously this used RRGGBBAA (alpha last), which disagreed with both Android
+  /// and the barcode-bbox color path (`parseARGBColor`) — the same `#AARRGGBB`
+  /// string rendered differently per platform/field. Unified on `#AARRGGBB` so one
+  /// format is correct everywhere; this delegates to the single implementation.
   private static func parseColor(_ hex: String?) -> UIColor? {
-    guard let hex = hex else { return nil }
-    let cleanHex = hex.trimmingCharacters(in: .whitespacesAndNewlines).replacingOccurrences(of: "#", with: "")
-
-    var hexValue: UInt64 = 0
-    let scanner = Scanner(string: cleanHex)
-    guard scanner.scanHexInt64(&hexValue) else { return nil }
-
-    if cleanHex.count == 6 {
-      let r = CGFloat((hexValue & 0xFF0000) >> 16) / 255.0
-      let g = CGFloat((hexValue & 0x00FF00) >> 8) / 255.0
-      let b = CGFloat(hexValue & 0x0000FF) / 255.0
-      return UIColor(red: r, green: g, blue: b, alpha: 1.0)
-    } else if cleanHex.count == 8 {
-      let r = CGFloat((hexValue & 0xFF000000) >> 24) / 255.0
-      let g = CGFloat((hexValue & 0x00FF0000) >> 16) / 255.0
-      let b = CGFloat((hexValue & 0x0000FF00) >> 8) / 255.0
-      let a = CGFloat(hexValue & 0x000000FF) / 255.0
-      return UIColor(red: r, green: g, blue: b, alpha: a)
-    }
-    return nil
+    return parseARGBColor(hex)
   }
 
   /// Parses a hex color string in Android AARRGGBB format (e.g., "#8B5CF6", "#338B5CF6") into a UIColor.

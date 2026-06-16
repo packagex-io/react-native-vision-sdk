@@ -405,11 +405,17 @@ export interface VisionCameraViewProps {
    */
   showCodeBoundingBoxes?: boolean;
 
-  /** Hex color for the native overlay border (default `#8B5CF6`). Only used when `showCodeBoundingBoxes=true`. */
+  /**
+   * Hex color for the native overlay border (default `#8B5CF6`). Only used when `showCodeBoundingBoxes=true`.
+   *
+   * Color format: `#RRGGBB` or, for alpha, **`#AARRGGBB` (alpha first)** — NOT the
+   * CSS `#RRGGBBAA` convention. Both native parsers (iOS + Android) read the leading
+   * byte as alpha, so e.g. 20%-opacity yellow is `#33FFD60A`, not `#FFD60A33`.
+   */
   barcodeBoundingBoxBorderColor?: string;
   /** Native overlay border width in dp (default 3). Only used when `showCodeBoundingBoxes=true`. */
   barcodeBoundingBoxBorderWidth?: number;
-  /** Hex color (with optional alpha) for the native overlay fill (default `#338B5CF6` = purple @ 20%). Only used when `showCodeBoundingBoxes=true`. */
+  /** Fill color for the native overlay (default `#338B5CF6` = purple @ 20%). Use `#AARRGGBB` (alpha first) for alpha — see `barcodeBoundingBoxBorderColor`. Only used when `showCodeBoundingBoxes=true`. */
   barcodeBoundingBoxFillColor?: string;
 
   /**
@@ -745,11 +751,17 @@ export interface VisionCameraProps {
    */
   showCodeBoundingBoxes?: boolean;
 
-  /** Hex color for the native overlay border (default `#8B5CF6`). Only used when `showCodeBoundingBoxes=true`. */
+  /**
+   * Hex color for the native overlay border (default `#8B5CF6`). Only used when `showCodeBoundingBoxes=true`.
+   *
+   * Color format: `#RRGGBB` or, for alpha, **`#AARRGGBB` (alpha first)** — NOT the
+   * CSS `#RRGGBBAA` convention. Both native parsers (iOS + Android) read the leading
+   * byte as alpha, so e.g. 20%-opacity yellow is `#33FFD60A`, not `#FFD60A33`.
+   */
   barcodeBoundingBoxBorderColor?: string;
   /** Native overlay border width in dp (default 3). Only used when `showCodeBoundingBoxes=true`. */
   barcodeBoundingBoxBorderWidth?: number;
-  /** Hex color (with optional alpha) for the native overlay fill (default `#338B5CF6` = purple @ 20%). Only used when `showCodeBoundingBoxes=true`. */
+  /** Fill color for the native overlay (default `#338B5CF6` = purple @ 20%). Use `#AARRGGBB` (alpha first) for alpha — see `barcodeBoundingBoxBorderColor`. Only used when `showCodeBoundingBoxes=true`. */
   barcodeBoundingBoxFillColor?: string;
 
   /**
