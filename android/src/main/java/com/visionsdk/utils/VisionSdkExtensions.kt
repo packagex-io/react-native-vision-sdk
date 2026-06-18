@@ -79,14 +79,19 @@ fun uriToBitmap(context: Context, uri: Uri, onComplete: (Bitmap?) -> Unit) {
     // Handle local URIs (file://, content://, etc)
     else {
         try {
-            val inputStream = context.contentResolver.openInputStream(uri)
-            if (inputStream != null) {
-                val bitmap = BitmapFactory.decodeStream(inputStream)
-                inputStream.close()
-                onComplete(bitmap)
-            } else {
-                onComplete(null)
-            }
+            // A scheme-less path (e.g. "/data/.../cache/camera_*.jpg" from a capture) has no
+            // content provider, so ContentResolver.openInputStream throws FileNotFoundException
+            // ("No content provider"). Decode such bare/file paths directly via decodeFile
+            // (no stream to leak). content:// still goes through the resolver; use {} closes it.
+            val bitmap =
+                if (scheme == null || scheme == "file") {
+                    BitmapFactory.decodeFile(uri.path ?: uri.toString())
+                } else {
+                    context.contentResolver.openInputStream(uri)?.use {
+                        BitmapFactory.decodeStream(it)
+                    }
+                }
+            onComplete(bitmap)
         } catch (e: FileNotFoundException) {
             android.util.Log.e("VisionSDK", "File not found: ${uri}", e)
             onComplete(null)

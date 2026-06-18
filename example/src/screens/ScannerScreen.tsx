@@ -1277,7 +1277,8 @@ export function ScannerScreen({ navigation }: Props) {
       shouldScanInFocusImageRect: false,
       showCodeBoundariesInMultipleScan: settings.multipleScan,
       documentBoundaryBorderColor: theme.colors.accent,
-      documentBoundaryFillColor: `${theme.colors.accent}4D`,
+      // Native parses 8-digit hex as ARGB (#AARRGGBB) — alpha must lead.
+      documentBoundaryFillColor: `#4D${theme.colors.accent.slice(1)}`,
     });
   }, [settings]);
 
@@ -1415,9 +1416,10 @@ export function ScannerScreen({ navigation }: Props) {
               isTemplateCreateMode ? theme.colors.success : theme.colors.accent
             }
             barcodeBoundingBoxFillColor={
+              // Native parses 8-digit hex as ARGB (#AARRGGBB), not RGBA — alpha must lead.
               isTemplateCreateMode
-                ? `${theme.colors.success}33`
-                : `${theme.colors.accent}2A`
+                ? `#33${theme.colors.success.slice(1)}`
+                : `#2A${theme.colors.accent.slice(1)}`
             }
             template={activeTemplate}
             onCapture={handleCapture}

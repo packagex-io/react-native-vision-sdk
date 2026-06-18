@@ -55,11 +55,10 @@ end
 target 'VisionSdkExample' do
   config = use_native_modules!
 
-  # VisionSDK 2.3.2 (clean, non-nested VisionSDKDimensioning.xcframework) from
-  # CocoaPods trunk. Matches the deps declared by the react-native-vision-sdk
-  # podspec; pinned explicitly here for clarity.
-  pod 'VisionSDK', '= 2.3.2'
-  pod 'VisionSDK/Dimensioning', '= 2.3.2'
+  # VisionSDK from CocoaPods trunk. Matches the deps declared by the
+  # react-native-vision-sdk podspec; pinned explicitly here for clarity.
+  pod 'VisionSDK', '= 2.3.3'
+  pod 'VisionSDK/Dimensioning', '= 2.3.3'
 
   use_react_native!(
     :path => config[:reactNativePath],
