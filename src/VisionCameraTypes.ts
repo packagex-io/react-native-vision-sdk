@@ -565,8 +565,9 @@ export interface FocusSettings {
   /**
    * @optional
    * @type {string}
-   * @description Fill color for valid code boundaries (hex color string with optional alpha, e.g., '#2abd5140').
-   * @default '#00ff004D'
+   * @description Fill color for valid code boundaries. 8-digit hex is `#AARRGGBB` (alpha first),
+   *   NOT CSS `#RRGGBBAA` — e.g. green @ 30% is '#4D00ff00'. `#RRGGBBAA` is not supported.
+   * @default '#4D00ff00'
    */
   validCodeBoundaryFillColor?: string;
 
@@ -589,8 +590,9 @@ export interface FocusSettings {
   /**
    * @optional
    * @type {string}
-   * @description Fill color for invalid code boundaries (hex color string with optional alpha, e.g., '#cc082940').
-   * @default '#ff00004D'
+   * @description Fill color for invalid code boundaries. 8-digit hex is `#AARRGGBB` (alpha first),
+   *   NOT CSS `#RRGGBBAA` — e.g. red @ 30% is '#4Dff0000'. `#RRGGBBAA` is not supported.
+   * @default '#4Dff0000'
    */
   inValidCodeBoundaryFillColor?: string;
 
@@ -613,8 +615,9 @@ export interface FocusSettings {
   /**
    * @optional
    * @type {string}
-   * @description Fill color for document boundaries (hex color string with optional alpha, e.g., '#e3000080').
-   * @default '#0000ff4D'
+   * @description Fill color for document boundaries. 8-digit hex is `#AARRGGBB` (alpha first),
+   *   NOT CSS `#RRGGBBAA` — e.g. blue @ 30% is '#4D0000ff'. `#RRGGBBAA` is not supported.
+   * @default '#4D0000ff'
    */
   documentBoundaryFillColor?: string;
 
