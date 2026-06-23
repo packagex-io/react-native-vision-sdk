@@ -33,7 +33,6 @@ import {
   Modal,
   PanResponder,
   Platform,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -92,6 +91,7 @@ interface BarcodeResultItem {
   scannedCode: string;
   symbology: string;
   gs1ExtractedInfo?: Record<string, string>;
+  normalizedBoundingBox?: { x: number; y: number; width: number; height: number };
 }
 
 // ---------------------------------------------------------------------------
@@ -1004,6 +1004,7 @@ export function ScannerScreen({ navigation }: Props) {
         scannedCode: b.scannedCode,
         symbology: b.symbology ?? '',
         gs1ExtractedInfo: b.gs1ExtractedInfo,
+        normalizedBoundingBox: b.normalizedBoundingBox,
       }));
       setCapturedBarcodes(barcodeData);
 
@@ -1399,7 +1400,7 @@ export function ScannerScreen({ navigation }: Props) {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <View style={styles.cameraContainer}>
         {/* ── Camera fill ── */}
         {hasPermission ? (
@@ -1876,6 +1877,7 @@ export function ScannerScreen({ navigation }: Props) {
         barcodes={capturedBarcodes.map((b) => ({
           ...b,
           boundingBox: { x: 0, y: 0, width: 0, height: 0 },
+          normalizedBoundingBox: b.normalizedBoundingBox,
         }))}
         moduleType={ocrModuleType}
         isProcessing={isProcessing}
@@ -1934,7 +1936,7 @@ export function ScannerScreen({ navigation }: Props) {
           </View>
         </View>
       </Modal>
-    </SafeAreaView>
+    </View>
   );
 }
 
