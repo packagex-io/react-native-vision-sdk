@@ -16,6 +16,7 @@ import {
   Alert,
   Image,
   Keyboard,
+  LayoutChangeEvent,
   Modal,
   SafeAreaView,
   ScrollView,
@@ -508,6 +509,27 @@ export function ResultScreen({
   onClose,
 }: ResultScreenProps) {
   const [showReport, setShowReport] = useState(false);
+  // TEST SCAFFOLD — bbox overlay dimensions
+  const [previewSize, setPreviewSize] = useState({ width: 0, height: 0 });
+  const handlePreviewLayout = (e: LayoutChangeEvent) => {
+    const { width, height } = e.nativeEvent.layout;
+    setPreviewSize({ width, height });
+  };
+  // Drive the container aspect from the actual captured-image dims so the image
+  // fills it exactly (no letterbox) and the normalized-coord overlay math holds.
+  const [imgAspect, setImgAspect] = useState<number | null>(null);
+  React.useEffect(() => {
+    if (!imagePath) {
+      setImgAspect(null);
+      return;
+    }
+    const uri = imagePath.startsWith('file://') ? imagePath : `file://${imagePath}`;
+    Image.getSize(
+      uri,
+      (w, h) => setImgAspect(h > 0 ? w / h : null),
+      () => setImgAspect(null)
+    );
+  }, [imagePath]);
 
   const sections: Section[] = React.useMemo(() => {
     if (!response) return [];
@@ -576,6 +598,46 @@ export function ResultScreen({
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
           >
+            {/* TEST SCAFFOLD — captured-image bbox overlay.
+                Uses resizeMode="contain" so the image fills the container
+                exactly, making normalized-coord multiply straightforward.
+                Remove or gate behind a flag before shipping. */}
+            {imagePath && imgAspect && barcodes.some((b) => b.normalizedBoundingBox) ? (
+              <View style={overlayStyles.card}>
+                <View
+                  style={[overlayStyles.imageContainer, { aspectRatio: imgAspect }]}
+                  onLayout={handlePreviewLayout}
+                >
+                  <Image
+                    source={{ uri: imagePath.startsWith('file://') ? imagePath : `file://${imagePath}` }}
+                    style={overlayStyles.previewImage}
+                    resizeMode="cover"
+                  />
+                  {previewSize.width > 0 && barcodes.map((b, i) => {
+                    const nb = b.normalizedBoundingBox;
+                    if (!nb) return null;
+                    return (
+                      <View
+                        key={i}
+                        style={{
+                          position: 'absolute',
+                          left: nb.x * previewSize.width,
+                          top: nb.y * previewSize.height,
+                          width: nb.width * previewSize.width,
+                          height: nb.height * previewSize.height,
+                          borderWidth: 2,
+                          borderColor: '#39FF14',
+                        }}
+                      />
+                    );
+                  })}
+                </View>
+                <Text style={overlayStyles.label}>
+                  normalizedBoundingBox overlay ({barcodes.filter((b) => b.normalizedBoundingBox).length} bbox)
+                </Text>
+              </View>
+            ) : null}
+
             {/* Document Classification */}
             {docClass ? (
               <View style={styles.dcContainer}>
@@ -733,5 +795,32 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 48,
     fontSize: theme.fontSize.sm,
+  },
+});
+
+// TEST SCAFFOLD styles — bbox overlay card
+const overlayStyles = StyleSheet.create({
+  card: {
+    marginBottom: 16,
+    borderRadius: 8,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(57,255,20,0.35)',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  imageContainer: {
+    width: '100%',
+    position: 'relative',
+  },
+  previewImage: {
+    width: '100%',
+    height: '100%',
+  },
+  label: {
+    color: '#39FF14',
+    fontSize: 11,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    opacity: 0.85,
   },
 });
