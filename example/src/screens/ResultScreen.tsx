@@ -599,8 +599,9 @@ export function ResultScreen({
             showsVerticalScrollIndicator={false}
           >
             {/* TEST SCAFFOLD — captured-image bbox overlay.
-                Uses resizeMode="contain" so the image fills the container
-                exactly, making normalized-coord multiply straightforward.
+                The container's aspectRatio is set to the captured image's own
+                aspect (imgAspect), so resizeMode="cover" fills it with no
+                letterbox — making normalized-coord multiply straightforward.
                 Remove or gate behind a flag before shipping. */}
             {imagePath && imgAspect && barcodes.some((b) => b.normalizedBoundingBox) ? (
               <View style={overlayStyles.card}>
