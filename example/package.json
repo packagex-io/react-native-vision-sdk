@@ -29,6 +29,10 @@
   },
   "resolutions": {
     "@types/react": "^19.0.0",
+    "shell-quote": "^1.8.4",
+    "@babel/core": "^7.29.6",
+    "js-yaml": "^4.2.0",
+    "ws": "^7.5.11",
     "brace-expansion": "^1.1.13",
     "on-headers": "1.1.0",
     "minimatch": "^3.1.5",
