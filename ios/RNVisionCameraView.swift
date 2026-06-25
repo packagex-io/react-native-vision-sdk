@@ -301,6 +301,7 @@ class RNVisionCameraView: UIView {
 
     // Re-apply props that may have been set before this recreation
     applyCodeBoundingBoxSettings()
+    updateZoom()
 
     // Ensure frame is correct
     cameraView?.frame = self.bounds
@@ -459,6 +460,7 @@ class RNVisionCameraView: UIView {
     // Update actual state based on what operation completed
     if actualCameraState == .starting {
       actualCameraState = success ? .running : .stopped
+      if success { updateZoom() }
     } else if actualCameraState == .stopping {
       actualCameraState = .stopped
     }
@@ -641,19 +643,21 @@ class RNVisionCameraView: UIView {
   
   private func updateZoom() {
     guard let videoDevice = try? cameraView?.videoDevice else { return }
-    
-    var zoomValue = zoomLevel.floatValue
-    
+
+    var zoomValue = CGFloat(zoomLevel.floatValue)
+
+    // Normalize so zoomLevel 1.0 = primary (wide) camera on all devices.
+    // On virtual multi-lens devices the first switchover factor is where the wide
+    // lens starts (e.g. 2.0 on iPhone Pro); single-lens devices return empty array.
+    if let wideZoom = videoDevice.virtualDeviceSwitchOverVideoZoomFactors.first {
+      zoomValue *= CGFloat(truncating: wideZoom)
+    }
+
     DispatchQueue.main.async {
       try? videoDevice.lockForConfiguration()
-      
-      if CGFloat(zoomValue) < videoDevice.minAvailableVideoZoomFactor {
-        zoomValue = Float(videoDevice.minAvailableVideoZoomFactor)
-      } else if CGFloat(zoomValue) > videoDevice.maxAvailableVideoZoomFactor {
-        zoomValue = Float(videoDevice.maxAvailableVideoZoomFactor)
-      }
-      
-      videoDevice.videoZoomFactor = CGFloat(zoomValue)
+      zoomValue = min(max(zoomValue, videoDevice.minAvailableVideoZoomFactor),
+                      videoDevice.maxAvailableVideoZoomFactor)
+      videoDevice.videoZoomFactor = zoomValue
       videoDevice.unlockForConfiguration()
     }
   }
