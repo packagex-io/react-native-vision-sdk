@@ -654,11 +654,13 @@ class RNVisionCameraView: UIView {
     }
 
     DispatchQueue.main.async {
-      try? videoDevice.lockForConfiguration()
-      zoomValue = min(max(zoomValue, videoDevice.minAvailableVideoZoomFactor),
-                      videoDevice.maxAvailableVideoZoomFactor)
-      videoDevice.videoZoomFactor = zoomValue
-      videoDevice.unlockForConfiguration()
+      do {
+        try videoDevice.lockForConfiguration()
+        defer { videoDevice.unlockForConfiguration() }
+        zoomValue = min(max(zoomValue, videoDevice.minAvailableVideoZoomFactor),
+                        videoDevice.maxAvailableVideoZoomFactor)
+        videoDevice.videoZoomFactor = zoomValue
+      } catch {}
     }
   }
   
