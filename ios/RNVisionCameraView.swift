@@ -660,7 +660,9 @@ class RNVisionCameraView: UIView {
         zoomValue = min(max(zoomValue, videoDevice.minAvailableVideoZoomFactor),
                         videoDevice.maxAvailableVideoZoomFactor)
         videoDevice.videoZoomFactor = zoomValue
-      } catch {}
+      } catch {
+        print("[RNVisionCameraView] Error setting zoom: \(error)")
+      }
     }
   }
   
