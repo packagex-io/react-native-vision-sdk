@@ -647,9 +647,9 @@ class RNVisionCameraView: UIView {
     var zoomValue = CGFloat(zoomLevel.floatValue)
 
     // Normalize so zoomLevel 1.0 = primary (wide) camera on all devices.
-    // On virtual multi-lens devices the first switchover factor is where the wide
-    // lens starts (e.g. 2.0 on iPhone Pro); single-lens devices return empty array.
-    if let wideZoom = videoDevice.virtualDeviceSwitchOverVideoZoomFactors.first {
+    // On virtual devices that start at ultra-wide, the first switchover factor marks where wide starts.
+    if videoDevice.constituentDevices.first?.deviceType == .builtInUltraWideCamera,
+       let wideZoom = videoDevice.virtualDeviceSwitchOverVideoZoomFactors.first {
       zoomValue *= CGFloat(truncating: wideZoom)
     }
 
