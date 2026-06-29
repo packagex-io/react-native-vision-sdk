@@ -301,6 +301,7 @@ class RNVisionCameraView: UIView {
 
     // Re-apply props that may have been set before this recreation
     applyCodeBoundingBoxSettings()
+    updateZoom()
 
     // Ensure frame is correct
     cameraView?.frame = self.bounds
@@ -459,6 +460,7 @@ class RNVisionCameraView: UIView {
     // Update actual state based on what operation completed
     if actualCameraState == .starting {
       actualCameraState = success ? .running : .stopped
+      if success { updateZoom() }
     } else if actualCameraState == .stopping {
       actualCameraState = .stopped
     }
@@ -641,20 +643,26 @@ class RNVisionCameraView: UIView {
   
   private func updateZoom() {
     guard let videoDevice = try? cameraView?.videoDevice else { return }
-    
-    var zoomValue = zoomLevel.floatValue
-    
+
+    var zoomValue = CGFloat(zoomLevel.floatValue)
+
+    // Normalize so zoomLevel 1.0 = primary (wide) camera on all devices.
+    // On virtual devices that start at ultra-wide, the first switchover factor marks where wide starts.
+    if videoDevice.constituentDevices.first?.deviceType == .builtInUltraWideCamera,
+       let wideZoom = videoDevice.virtualDeviceSwitchOverVideoZoomFactors.first {
+      zoomValue *= CGFloat(truncating: wideZoom)
+    }
+
     DispatchQueue.main.async {
-      try? videoDevice.lockForConfiguration()
-      
-      if CGFloat(zoomValue) < videoDevice.minAvailableVideoZoomFactor {
-        zoomValue = Float(videoDevice.minAvailableVideoZoomFactor)
-      } else if CGFloat(zoomValue) > videoDevice.maxAvailableVideoZoomFactor {
-        zoomValue = Float(videoDevice.maxAvailableVideoZoomFactor)
+      do {
+        try videoDevice.lockForConfiguration()
+        defer { videoDevice.unlockForConfiguration() }
+        zoomValue = min(max(zoomValue, videoDevice.minAvailableVideoZoomFactor),
+                        videoDevice.maxAvailableVideoZoomFactor)
+        videoDevice.videoZoomFactor = zoomValue
+      } catch {
+        print("[RNVisionCameraView] Error setting zoom: \(error)")
       }
-      
-      videoDevice.videoZoomFactor = CGFloat(zoomValue)
-      videoDevice.unlockForConfiguration()
     }
   }
   
