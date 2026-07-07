@@ -421,6 +421,7 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
                             obj.optBoolean("qrcode", false) ||
                             obj.optBoolean("qrCode", false),
                     isDocumentIndicationOn = obj.optBoolean("document", false),
+                    isImageSharpnessIndicationOn = obj.optBoolean("sharpness", false),
                 ),
             )
         } catch (e: Exception) {
