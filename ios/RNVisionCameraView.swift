@@ -701,6 +701,7 @@ class RNVisionCameraView: UIView {
     detectionSettings.isTextIndicationOn = config["text"] as? Bool ?? false
     detectionSettings.isBarCodeOrQRCodeIndicationOn = config["barcode"] as? Bool ?? false
     detectionSettings.isDocumentIndicationOn = config["document"] as? Bool ?? false
+    detectionSettings.isImageSharpnessIndicationOn = config["sharpness"] as? Bool ?? false
     detectionSettings.codeDetectionConfidence = config["barcodeConfidence"] as? Float ?? 0.5
     detectionSettings.documentDetectionConfidence = config["documentConfidence"] as? Float ?? 0.5
     detectionSettings.secondsToWaitBeforeDocumentCapture = config["documentCaptureDelay"] as? Double ?? 2.0
@@ -717,6 +718,7 @@ class RNVisionCameraView: UIView {
       detectionSettings.isTextIndicationOn = config["text"] as? Bool ?? false
       detectionSettings.isBarCodeOrQRCodeIndicationOn = config["barcode"] as? Bool ?? false
       detectionSettings.isDocumentIndicationOn = config["document"] as? Bool ?? false
+      detectionSettings.isImageSharpnessIndicationOn = config["sharpness"] as? Bool ?? false
       detectionSettings.codeDetectionConfidence = config["barcodeConfidence"] as? Float ?? 0.5
       detectionSettings.documentDetectionConfidence = config["documentConfidence"] as? Float ?? 0.5
       detectionSettings.secondsToWaitBeforeDocumentCapture = config["documentCaptureDelay"] as? Double ?? 2.0
