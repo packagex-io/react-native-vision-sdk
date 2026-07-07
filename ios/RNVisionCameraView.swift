@@ -486,6 +486,19 @@ class RNVisionCameraView: UIView {
     cameraView?.rescan()
   }
 
+  /// Mode-agnostic universal pause: stops per-frame detection analysis while
+  /// keeping the camera session/preview alive. See CodeScannerView.pauseDetection()
+  /// (vision-sdk-ios). Does not affect capture()/manual capturePhoto() calls.
+  @objc func pauseDetection() {
+    cameraView?.pauseDetection()
+  }
+
+  /// Resumes detection after a pauseDetection() call. See
+  /// CodeScannerView.resumeDetection() (vision-sdk-ios).
+  @objc func resumeDetection() {
+    cameraView?.resumeDetection()
+  }
+
   @objc func toggleFlash(enabled: Bool) {
     self.enableFlash = enabled
     updateFlash()
