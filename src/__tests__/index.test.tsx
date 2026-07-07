@@ -20,6 +20,8 @@ jest.mock('../specs/VisionCameraViewNativeComponent', () => {
       toggleFlash: jest.fn(),
       setZoom: jest.fn(),
       setFocusSettings: jest.fn(),
+      pauseDetection: jest.fn(),
+      resumeDetection: jest.fn(),
     },
   };
 });
@@ -189,6 +191,30 @@ describe('VisionCamera', () => {
 
       expect(Commands.rescan).toHaveBeenCalledTimes(1);
       expect(Commands.rescan).toHaveBeenCalledWith(expect.anything());
+    });
+
+    it('pauseDetection dispatches Commands.pauseDetection with the view ref', () => {
+      const ref = React.createRef<any>();
+      renderInAct(<VisionCamera ref={ref} />);
+
+      act(() => {
+        ref.current.pauseDetection();
+      });
+
+      expect(Commands.pauseDetection).toHaveBeenCalledTimes(1);
+      expect(Commands.pauseDetection).toHaveBeenCalledWith(expect.anything());
+    });
+
+    it('resumeDetection dispatches Commands.resumeDetection with the view ref', () => {
+      const ref = React.createRef<any>();
+      renderInAct(<VisionCamera ref={ref} />);
+
+      act(() => {
+        ref.current.resumeDetection();
+      });
+
+      expect(Commands.resumeDetection).toHaveBeenCalledTimes(1);
+      expect(Commands.resumeDetection).toHaveBeenCalledWith(expect.anything());
     });
   });
 });
