@@ -473,6 +473,8 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
                 val settingsJson = args?.getString(0) ?: "{}"
                 setFocusSettings(root, settingsJson)
             }
+            "pauseDetection" -> pauseDetection(root)
+            "resumeDetection" -> resumeDetection(root)
             else -> Log.w(TAG, "Unknown command: $commandId")
         }
     }
@@ -520,6 +522,16 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
     override fun setZoom(view: VisionCameraView, level: Float) {
         Log.d(TAG, "setZoom called with level: $level")
         view.setZoomRatio(level)
+    }
+
+    override fun pauseDetection(view: VisionCameraView) {
+        Log.d(TAG, "pauseDetection called")
+        view.pauseDetection()
+    }
+
+    override fun resumeDetection(view: VisionCameraView) {
+        Log.d(TAG, "resumeDetection called")
+        view.resumeDetection()
     }
 
     private fun parseColor(hex: String?, default: Int): Int {
