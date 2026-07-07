@@ -260,6 +260,18 @@ export interface DetectionConfig {
 
   /**
    * @optional
+   * @type {boolean}
+   * @description Enable/disable image sharpness scoring. iOS gates the
+   * Laplacian sharpness computation in the native SDK behind this flag
+   * (opt-in — avoids new Neural Engine/CPU work for existing consumers who
+   * never asked for sharpness feedback). Android already computes sharpness
+   * only when this flag is set.
+   * @default false
+   */
+  sharpness?: boolean;
+
+  /**
+   * @optional
    * @type {number}
    * @description Minimum confidence threshold for barcode detection (0.0-1.0).
    * @default 0.5

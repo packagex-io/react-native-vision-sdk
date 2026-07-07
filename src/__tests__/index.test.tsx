@@ -225,5 +225,30 @@ describe('VisionCameraViewManager', () => {
       expect(nativeView.props.detectionConfig).toBeUndefined();
     });
 
+    it('includes sharpness in detectionConfigJson and recomputes when only sharpness changes', () => {
+      const baseConfig = { text: true, barcode: true, document: false };
+      const tree = renderInAct(
+        <VisionCameraView detectionConfig={{ ...baseConfig, sharpness: false }} />
+      );
+      const getNativeView = () => {
+        const views = tree.root.findAllByType('View' as any);
+        return views[views.length - 1]!;
+      };
+
+      expect(getNativeView().props.detectionConfigJson).toBe(
+        JSON.stringify({ ...baseConfig, sharpness: false })
+      );
+
+      act(() => {
+        tree.update(
+          <VisionCameraView detectionConfig={{ ...baseConfig, sharpness: true }} />
+        );
+      });
+
+      expect(getNativeView().props.detectionConfigJson).toBe(
+        JSON.stringify({ ...baseConfig, sharpness: true })
+      );
+    });
+
   });
 });
