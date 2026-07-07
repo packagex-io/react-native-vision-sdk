@@ -698,9 +698,9 @@ class RNVisionCameraView: UIView {
     guard let cameraView = cameraView, let config = detectionConfig else { return }
 
     let detectionSettings = VisionSDK.CodeScannerView.ObjectDetectionConfiguration()
-    detectionSettings.isTextIndicationOn = config["text"] as? Bool ?? true
-    detectionSettings.isBarCodeOrQRCodeIndicationOn = config["barcode"] as? Bool ?? true
-    detectionSettings.isDocumentIndicationOn = config["document"] as? Bool ?? true
+    detectionSettings.isTextIndicationOn = config["text"] as? Bool ?? false
+    detectionSettings.isBarCodeOrQRCodeIndicationOn = config["barcode"] as? Bool ?? false
+    detectionSettings.isDocumentIndicationOn = config["document"] as? Bool ?? false
     detectionSettings.codeDetectionConfidence = config["barcodeConfidence"] as? Float ?? 0.5
     detectionSettings.documentDetectionConfidence = config["documentConfidence"] as? Float ?? 0.5
     detectionSettings.secondsToWaitBeforeDocumentCapture = config["documentCaptureDelay"] as? Double ?? 2.0
@@ -714,9 +714,9 @@ class RNVisionCameraView: UIView {
 
     // Apply existing detection config settings first
     if let config = detectionConfig {
-      detectionSettings.isTextIndicationOn = config["text"] as? Bool ?? true
-      detectionSettings.isBarCodeOrQRCodeIndicationOn = config["barcode"] as? Bool ?? true
-      detectionSettings.isDocumentIndicationOn = config["document"] as? Bool ?? true
+      detectionSettings.isTextIndicationOn = config["text"] as? Bool ?? false
+      detectionSettings.isBarCodeOrQRCodeIndicationOn = config["barcode"] as? Bool ?? false
+      detectionSettings.isDocumentIndicationOn = config["document"] as? Bool ?? false
       detectionSettings.codeDetectionConfidence = config["barcodeConfidence"] as? Float ?? 0.5
       detectionSettings.documentDetectionConfidence = config["documentConfidence"] as? Float ?? 0.5
       detectionSettings.secondsToWaitBeforeDocumentCapture = config["documentCaptureDelay"] as? Double ?? 2.0
