@@ -55,6 +55,7 @@ import type {
   VisionCameraSharpnessScoreEvent,
   VisionCameraBarcodeDetectedEvent,
   VisionCameraBoundingBoxesUpdateEvent,
+  VisionCameraDetectedCodeBoundingBox,
 } from '../../../src/VisionCameraTypes';
 import { VisionCore } from '../../../src';
 import { SettingsModal } from './SettingsModal';
@@ -735,6 +736,10 @@ export function ScannerScreen({ navigation }: Props) {
   const cbFpsLastTickTime = useRef(0);
   // Tracks the bounding-box code count for the chip label.
   const cbFpsCodeCount = useRef(0);
+  // Live boxes drawn by the JS overlay (callback-driven, not the native BarcodeOverlayView).
+  const [liveBoundingBoxes, setLiveBoundingBoxes] = useState<
+    VisionCameraDetectedCodeBoundingBox[]
+  >([]);
 
   // Recognition indicators
   const [recognition, setRecognition] = useState({
@@ -987,18 +992,28 @@ export function ScannerScreen({ navigation }: Props) {
   );
 
   // onBoundingBoxesUpdate fires only when codes are in frame (not per processed
-  // frame). Used here only to update the code count label — not as a tick source.
+  // frame). Drives the code count label and the JS-rendered box overlay below —
+  // `boundingBox` is already in the VisionCamera view's own point/dp space (native
+  // handles device-rotation there), so no orientation math is needed here.
   const handleBoundingBoxesUpdate = useCallback(
     (e: VisionCameraBoundingBoxesUpdateEvent) => {
-      cbFpsCodeCount.current =
-        (e.barcodeBoundingBoxes?.length ?? 0) +
-        (e.qrCodeBoundingBoxes?.length ?? 0);
+      const boxes = [
+        ...(e.barcodeBoundingBoxes ?? []),
+        ...(e.qrCodeBoundingBoxes ?? []),
+      ];
+      cbFpsCodeCount.current = boxes.length;
+      setLiveBoundingBoxes(boxes.filter((b) => b.boundingBox));
     },
     []
   );
 
   const handleCapture = useCallback(
     async (e: VisionCameraCaptureEvent) => {
+      // Clear stale boxes immediately: they're positioned for whatever orientation
+      // was active before this capture, and nothing repaints them while the result
+      // screen is up. Without this, rotating the device during review and coming
+      // back shows the old, now-mismatched rectangles until a fresh detection fires.
+      setLiveBoundingBoxes([]);
       const imagePath = e.image ?? '';
       const barcodeData: BarcodeResultItem[] = (e.barcodes ?? []).map((b) => ({
         scannedCode: b.scannedCode,
@@ -1412,16 +1427,6 @@ export function ScannerScreen({ navigation }: Props) {
             scanMode={effectiveScanMode}
             autoCapture={autoCapture}
             cameraFacing={cameraFacing}
-            showCodeBoundingBoxes
-            barcodeBoundingBoxBorderColor={
-              isTemplateCreateMode ? theme.colors.success : theme.colors.accent
-            }
-            barcodeBoundingBoxFillColor={
-              // Native parses 8-digit hex as ARGB (#AARRGGBB), not RGBA — alpha must lead.
-              isTemplateCreateMode
-                ? `#33${theme.colors.success.slice(1)}`
-                : `#2A${theme.colors.accent.slice(1)}`
-            }
             template={activeTemplate}
             onCapture={handleCapture}
             onError={(err) => {
@@ -1441,7 +1446,35 @@ export function ScannerScreen({ navigation }: Props) {
             }}
             frameSkip={frameSkip}
           />
-        ) : (
+        ) : null}
+
+        {/* ── JS-rendered bounding boxes (callback-driven, native overlay disabled) ── */}
+        {hasPermission && liveBoundingBoxes.length > 0 && (
+          <View style={StyleSheet.absoluteFill} pointerEvents="none">
+            {liveBoundingBoxes.map((b, i) => (
+              <View
+                key={`${b.scannedCode}-${i}`}
+                style={[
+                  styles.jsBoundingBox,
+                  {
+                    left: b.boundingBox.x,
+                    top: b.boundingBox.y,
+                    width: b.boundingBox.width,
+                    height: b.boundingBox.height,
+                    borderColor: isTemplateCreateMode
+                      ? theme.colors.success
+                      : theme.colors.accent,
+                    backgroundColor: isTemplateCreateMode
+                      ? `${theme.colors.success}33`
+                      : `${theme.colors.accent}2A`,
+                  },
+                ]}
+              />
+            ))}
+          </View>
+        )}
+
+        {!hasPermission && (
           <View style={styles.noPerm}>
             <MCIcon name="camera-off" size={48} color={theme.colors.textMuted} />
             <Text style={styles.noPermText}>Camera permission required</Text>
@@ -1477,8 +1510,22 @@ export function ScannerScreen({ navigation }: Props) {
             <Text style={styles.fpsSuffix}> fps</Text>
           </View>
 
-          {/* Right: sound icon (position absolute) */}
+          {/* Right: sharpness readout (OCR/Photo only — that's the only pipeline
+              the native SDK computes it for) + sound icon (position absolute) */}
           <View style={styles.topRight} pointerEvents="box-none">
+            {scanMode === 'ocr' || scanMode === 'photo' ? (
+              <View style={styles.sharpnessChip} pointerEvents="none">
+                <Text
+                  style={[
+                    styles.fpsText,
+                    { color: sharpness >= SHARPNESS_THRESHOLD ? '#4ADE80' : '#FCA5A5' },
+                  ]}
+                >
+                  {sharpness.toFixed(2)}
+                </Text>
+                <Text style={styles.fpsSuffix}> shrp</Text>
+              </View>
+            ) : null}
             <TouchableOpacity
               style={styles.iconPill}
               onPress={cycleSoundMode}
@@ -2052,6 +2099,11 @@ const styles = StyleSheet.create({
     position: 'relative',
     backgroundColor: theme.colors.bgDeep,
   },
+  jsBoundingBox: {
+    position: 'absolute',
+    borderWidth: 3,
+    borderRadius: 4,
+  },
   noPerm: {
     flex: 1,
     justifyContent: 'center',
@@ -2121,6 +2173,16 @@ const styles = StyleSheet.create({
     color: '#4ADE80',
     fontSize: 9,
     opacity: 0.7,
+  },
+  // Same visual language as fpsChip, but laid out inline (topRight is a flex
+  // row) rather than absolute-positioned against topStrip.
+  sharpnessChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    borderRadius: theme.radii.sm,
+    paddingHorizontal: 7,
+    paddingVertical: 4,
   },
   modePill: {
     flexDirection: 'row',
