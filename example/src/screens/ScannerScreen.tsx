@@ -897,6 +897,9 @@ export function ScannerScreen({ navigation }: Props) {
       // showing "disabled" while detection is actually running again
       // (mirrors MainActivity.kt / BarcodeViewController.swift demo behavior).
       setDetectionEnabled(true);
+      // Boxes from the old mode are stale the instant the scanner rebuilds —
+      // nothing repaints them until a fresh detection fires in the new mode.
+      setLiveBoundingBoxes([]);
       if (settings) {
         const updated = { ...settings, scanMode: mode, autoCapture: false };
         setSettings(updated);
@@ -1332,6 +1335,10 @@ export function ScannerScreen({ navigation }: Props) {
       cameraRef.current?.resumeDetection();
     } else {
       cameraRef.current?.pauseDetection();
+      // Pausing stops native emission entirely, so nothing will arrive to
+      // clear these — without this they'd stay frozen on screen until the
+      // next real detection after resume.
+      setLiveBoundingBoxes([]);
     }
   }, []);
 
@@ -1463,6 +1470,7 @@ export function ScannerScreen({ navigation }: Props) {
               document: true,
               documentConfidence: 0.8,
               documentCaptureDelay: settings.documentAutoCapture ? 3.0 : 9999,
+              sharpness: true,
             }}
             frameSkip={frameSkip}
           />
