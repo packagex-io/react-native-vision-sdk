@@ -238,7 +238,7 @@ export interface DetectionConfig {
    * @optional
    * @type {boolean}
    * @description Enable/disable text detection.
-   * @default true
+   * @default false
    */
   text?: boolean;
 
@@ -246,7 +246,7 @@ export interface DetectionConfig {
    * @optional
    * @type {boolean}
    * @description Enable/disable barcode/QR code detection.
-   * @default true
+   * @default false
    */
   barcode?: boolean;
 
@@ -254,7 +254,7 @@ export interface DetectionConfig {
    * @optional
    * @type {boolean}
    * @description Enable/disable document detection.
-   * @default true
+   * @default false
    */
   document?: boolean;
 

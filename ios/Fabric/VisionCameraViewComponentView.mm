@@ -335,7 +335,6 @@ using namespace facebook::react;
     NSInteger cmdId = [commandId integerValue];
     if (cmdId >= 0 && cmdId < commandNames.count) {
       actualCommandName = commandNames[cmdId];
-      NSLog(@"[VisionCameraViewComponentView] Mapped command ID %ld to '%@'", (long)cmdId, actualCommandName);
     }
   }
 
