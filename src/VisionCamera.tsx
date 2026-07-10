@@ -123,6 +123,18 @@ const Camera = forwardRef<VisionCameraRefProps, VisionCameraProps>(
           Commands.setFocusSettings(VisionCameraViewRef.current, JSON.stringify(settings));
         }
       },
+
+      pauseDetection: () => {
+        if (VisionCameraViewRef.current) {
+          Commands.pauseDetection(VisionCameraViewRef.current);
+        }
+      },
+
+      resumeDetection: () => {
+        if (VisionCameraViewRef.current) {
+          Commands.resumeDetection(VisionCameraViewRef.current);
+        }
+      },
     }), []);
 
     // All handlers use refs — permanently stable, never cause native view prop updates

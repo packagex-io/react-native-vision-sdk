@@ -101,3 +101,5 @@ package-lock.json
 
 # npm pack output
 *.tgz
+
+.worktrees/

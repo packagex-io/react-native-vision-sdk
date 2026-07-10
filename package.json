@@ -1,6 +1,6 @@
 {
   "name": "react-native-vision-sdk",
-  "version": "3.7.0",
+  "version": "3.8.0",
   "description": "VisionSDK for React Native.",
   "main": "lib/commonjs/index",
   "module": "lib/module/index",
@@ -14,6 +14,7 @@
     "ios",
     "cpp",
     "*.podspec",
+    "react-native.config.cjs",
     "!lib/typescript/example",
     "!ios/build",
     "!android/build",
