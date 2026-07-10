@@ -44,8 +44,14 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
+      # Pinned to the 11.x line, not @latest: npm 12.0.0 (released 2026-07-08)
+      # shipped with a packaging bug where the `sigstore` module is missing
+      # from the published npm-12.0.0.tgz even though libnpmpublish still
+      # requires it for provenance/trusted publishing, crashing every publish
+      # with `Cannot find module 'sigstore'`. 11.x still bundles it correctly.
+      # Upstream bug: https://github.com/npm/cli/issues/9722 (open, unfixed).
       - name: Upgrade npm for trusted publishing
-        run: sudo npm install -g npm@latest
+        run: sudo npm install -g npm@11
 
       - name: Build package
         run: yarn prepare
