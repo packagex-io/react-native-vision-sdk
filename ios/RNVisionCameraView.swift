@@ -486,6 +486,19 @@ class RNVisionCameraView: UIView {
     cameraView?.rescan()
   }
 
+  /// Mode-agnostic universal pause: stops per-frame detection analysis while
+  /// keeping the camera session/preview alive. See CodeScannerView.pauseDetection()
+  /// (vision-sdk-ios). Does not affect capture()/manual capturePhoto() calls.
+  @objc func pauseDetection() {
+    cameraView?.pauseDetection()
+  }
+
+  /// Resumes detection after a pauseDetection() call. See
+  /// CodeScannerView.resumeDetection() (vision-sdk-ios).
+  @objc func resumeDetection() {
+    cameraView?.resumeDetection()
+  }
+
   @objc func toggleFlash(enabled: Bool) {
     self.enableFlash = enabled
     updateFlash()
@@ -698,9 +711,10 @@ class RNVisionCameraView: UIView {
     guard let cameraView = cameraView, let config = detectionConfig else { return }
 
     let detectionSettings = VisionSDK.CodeScannerView.ObjectDetectionConfiguration()
-    detectionSettings.isTextIndicationOn = config["text"] as? Bool ?? true
-    detectionSettings.isBarCodeOrQRCodeIndicationOn = config["barcode"] as? Bool ?? true
-    detectionSettings.isDocumentIndicationOn = config["document"] as? Bool ?? true
+    detectionSettings.isTextIndicationOn = config["text"] as? Bool ?? false
+    detectionSettings.isBarCodeOrQRCodeIndicationOn = config["barcode"] as? Bool ?? false
+    detectionSettings.isDocumentIndicationOn = config["document"] as? Bool ?? false
+    detectionSettings.isImageSharpnessIndicationOn = config["sharpness"] as? Bool ?? false
     detectionSettings.codeDetectionConfidence = config["barcodeConfidence"] as? Float ?? 0.5
     detectionSettings.documentDetectionConfidence = config["documentConfidence"] as? Float ?? 0.5
     detectionSettings.secondsToWaitBeforeDocumentCapture = config["documentCaptureDelay"] as? Double ?? 2.0
@@ -714,9 +728,10 @@ class RNVisionCameraView: UIView {
 
     // Apply existing detection config settings first
     if let config = detectionConfig {
-      detectionSettings.isTextIndicationOn = config["text"] as? Bool ?? true
-      detectionSettings.isBarCodeOrQRCodeIndicationOn = config["barcode"] as? Bool ?? true
-      detectionSettings.isDocumentIndicationOn = config["document"] as? Bool ?? true
+      detectionSettings.isTextIndicationOn = config["text"] as? Bool ?? false
+      detectionSettings.isBarCodeOrQRCodeIndicationOn = config["barcode"] as? Bool ?? false
+      detectionSettings.isDocumentIndicationOn = config["document"] as? Bool ?? false
+      detectionSettings.isImageSharpnessIndicationOn = config["sharpness"] as? Bool ?? false
       detectionSettings.codeDetectionConfidence = config["barcodeConfidence"] as? Float ?? 0.5
       detectionSettings.documentDetectionConfidence = config["documentConfidence"] as? Float ?? 0.5
       detectionSettings.secondsToWaitBeforeDocumentCapture = config["documentCaptureDelay"] as? Double ?? 2.0

@@ -329,8 +329,8 @@ using namespace facebook::react;
 
   if (commandId != nil) {
     // Map command IDs to command names based on the order in supportedCommands array
-    // From VisionCameraViewNativeComponent.ts: ['capture', 'stop', 'start', 'rescan', 'toggleFlash', 'setZoom', 'setFocusSettings']
-    NSArray *commandNames = @[@"capture", @"stop", @"start", @"rescan", @"toggleFlash", @"setZoom", @"setFocusSettings"];
+    // From VisionCameraViewNativeComponent.ts: ['capture', 'stop', 'start', 'rescan', 'toggleFlash', 'setZoom', 'setFocusSettings', 'pauseDetection', 'resumeDetection']
+    NSArray *commandNames = @[@"capture", @"stop", @"start", @"rescan", @"toggleFlash", @"setZoom", @"setFocusSettings", @"pauseDetection", @"resumeDetection"];
 
     NSInteger cmdId = [commandId integerValue];
     if (cmdId >= 0 && cmdId < commandNames.count) {
@@ -367,6 +367,20 @@ using namespace facebook::react;
 {
   if ([_visionCameraView respondsToSelector:@selector(rescan)]) {
     [_visionCameraView performSelector:@selector(rescan)];
+  }
+}
+
+- (void)pauseDetection
+{
+  if ([_visionCameraView respondsToSelector:@selector(pauseDetection)]) {
+    [_visionCameraView performSelector:@selector(pauseDetection)];
+  }
+}
+
+- (void)resumeDetection
+{
+  if ([_visionCameraView respondsToSelector:@selector(resumeDetection)]) {
+    [_visionCameraView performSelector:@selector(resumeDetection)];
   }
 }
 

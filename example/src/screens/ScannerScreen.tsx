@@ -35,6 +35,7 @@ import {
   Platform,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   TextInput,
   TouchableOpacity,
@@ -722,6 +723,7 @@ export function ScannerScreen({ navigation }: Props) {
   // Scanning state
   const [scanMode, setScanMode] = useState<VisionCameraScanMode>('barcode');
   const [autoCapture, setAutoCapture] = useState(false);
+  const [detectionEnabled, setDetectionEnabled] = useState(true);
   const [flashEnabled, setFlashEnabled] = useState(false);
   const [cameraFacing, setCameraFacing] = useState<'back' | 'front'>('back');
   const [zoomLevel, setZoomLevel] = useState(DEFAULT_ZOOM);
@@ -890,6 +892,11 @@ export function ScannerScreen({ navigation }: Props) {
       setScanMode(mode);
       setAutoCapture(false);
       setZoomLevel(DEFAULT_ZOOM);
+      // Switching scan mode tears down and rebuilds the native scanner, which
+      // always starts unpaused — resync the toggle so it doesn't keep
+      // showing "disabled" while detection is actually running again
+      // (mirrors MainActivity.kt / BarcodeViewController.swift demo behavior).
+      setDetectionEnabled(true);
       if (settings) {
         const updated = { ...settings, scanMode: mode, autoCapture: false };
         setSettings(updated);
@@ -1316,6 +1323,19 @@ export function ScannerScreen({ navigation }: Props) {
   }, [flashEnabled]);
 
   // ---------------------------------------------------------------------------
+  // Detection enabled toggle — pauses/resumes per-frame detection while the
+  // camera session/preview keeps running (see VisionCameraRefProps.pauseDetection).
+  // ---------------------------------------------------------------------------
+  const handleDetectionToggle = useCallback((enabled: boolean) => {
+    setDetectionEnabled(enabled);
+    if (enabled) {
+      cameraRef.current?.resumeDetection();
+    } else {
+      cameraRef.current?.pauseDetection();
+    }
+  }, []);
+
+  // ---------------------------------------------------------------------------
   // Sound mode cycle
   // ---------------------------------------------------------------------------
   const cycleSoundMode = useCallback(() => {
@@ -1628,6 +1648,22 @@ export function ScannerScreen({ navigation }: Props) {
                 </TouchableOpacity>
               ) : null}
             </TouchableOpacity>
+          </View>
+        ) : null}
+
+        {/* ── DETECTION ENABLED TOGGLE — left edge, below top strip ── */}
+        {!isTemplateCreateMode ? (
+          <View style={[styles.detectionToggleRow, { top: topInset + 44 }]} pointerEvents="box-none">
+            <View style={styles.detectionTogglePill}>
+              <Text style={styles.detectionToggleLabel}>Detection Enabled</Text>
+              <Switch
+                value={detectionEnabled}
+                onValueChange={handleDetectionToggle}
+                trackColor={{ false: theme.colors.indicatorOff, true: theme.colors.accent }}
+                thumbColor={detectionEnabled ? theme.colors.textOnAccent : '#5A5A5E'}
+                style={styles.detectionToggleSwitch}
+              />
+            </View>
           </View>
         ) : null}
 
@@ -2312,6 +2348,32 @@ const styles = StyleSheet.create({
   templateChipTextActive: {
     color: theme.colors.textOnAccent,
     fontWeight: theme.fontWeight.bold,
+  },
+
+  // ── Detection enabled toggle — left edge, below top strip ──────────────────
+  detectionToggleRow: {
+    position: 'absolute',
+    left: 12,
+    zIndex: 20,
+  },
+  detectionTogglePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.colors.bgFrosted,
+    borderRadius: theme.radii.circle,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: theme.colors.btnCircleBorder,
+  },
+  detectionToggleLabel: {
+    color: theme.colors.textSecondary,
+    fontSize: theme.fontSize.xxs,
+    fontWeight: theme.fontWeight.semibold,
+    marginRight: 6,
+  },
+  detectionToggleSwitch: {
+    transform: [{ scale: 0.8 }],
   },
 
   // ── On-device hint ─────────────────────────────────────────────────────────

@@ -260,6 +260,18 @@ export interface DetectionConfig {
 
   /**
    * @optional
+   * @type {boolean}
+   * @description Enable/disable image sharpness scoring. iOS gates the
+   * Laplacian sharpness computation in the native SDK behind this flag
+   * (opt-in — avoids new Neural Engine/CPU work for existing consumers who
+   * never asked for sharpness feedback). Android already computes sharpness
+   * only when this flag is set.
+   * @default false
+   */
+  sharpness?: boolean;
+
+  /**
+   * @optional
    * @type {number}
    * @description Minimum confidence threshold for barcode detection (0.0-1.0).
    * @default 0.5
@@ -689,6 +701,23 @@ export interface VisionCameraRefProps {
    * @param {FocusSettings} settings - The focus settings to apply.
    */
   setFocusSettings: (settings: FocusSettings) => void;
+
+  /**
+   * Pauses detection while keeping the camera session/preview alive.
+   * @description Mode-agnostic universal pause: stops the underlying
+   * per-frame Vision/CoreML (iOS) or MLKit/ONNX (Android) analysis work
+   * without stopping the camera session/preview, and clears any in-flight
+   * detection overlays. Use this instead of stop()/start() for a "captured,
+   * showing loading spinner" moment where the live preview should stay
+   * visible. Does not affect capture()/captureImage() or the Dimensioning
+   * module (out of scope by design).
+   */
+  pauseDetection: () => void;
+
+  /**
+   * Resumes detection after a pauseDetection() call.
+   */
+  resumeDetection: () => void;
 }
 
 /**

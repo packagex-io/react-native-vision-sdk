@@ -20,6 +20,8 @@ jest.mock('../specs/VisionCameraViewNativeComponent', () => {
       toggleFlash: jest.fn(),
       setZoom: jest.fn(),
       setFocusSettings: jest.fn(),
+      pauseDetection: jest.fn(),
+      resumeDetection: jest.fn(),
     },
   };
 });
@@ -190,6 +192,30 @@ describe('VisionCamera', () => {
       expect(Commands.rescan).toHaveBeenCalledTimes(1);
       expect(Commands.rescan).toHaveBeenCalledWith(expect.anything());
     });
+
+    it('pauseDetection dispatches Commands.pauseDetection with the view ref', () => {
+      const ref = React.createRef<any>();
+      renderInAct(<VisionCamera ref={ref} />);
+
+      act(() => {
+        ref.current.pauseDetection();
+      });
+
+      expect(Commands.pauseDetection).toHaveBeenCalledTimes(1);
+      expect(Commands.pauseDetection).toHaveBeenCalledWith(expect.anything());
+    });
+
+    it('resumeDetection dispatches Commands.resumeDetection with the view ref', () => {
+      const ref = React.createRef<any>();
+      renderInAct(<VisionCamera ref={ref} />);
+
+      act(() => {
+        ref.current.resumeDetection();
+      });
+
+      expect(Commands.resumeDetection).toHaveBeenCalledTimes(1);
+      expect(Commands.resumeDetection).toHaveBeenCalledWith(expect.anything());
+    });
   });
 });
 
@@ -223,6 +249,31 @@ describe('VisionCameraViewManager', () => {
       const nativeView = views[views.length - 1]!;
       expect(nativeView.props.detectionConfigJson).toBe(JSON.stringify(detectionConfig));
       expect(nativeView.props.detectionConfig).toBeUndefined();
+    });
+
+    it('includes sharpness in detectionConfigJson and recomputes when only sharpness changes', () => {
+      const baseConfig = { text: true, barcode: true, document: false };
+      const tree = renderInAct(
+        <VisionCameraView detectionConfig={{ ...baseConfig, sharpness: false }} />
+      );
+      const getNativeView = () => {
+        const views = tree.root.findAllByType('View' as any);
+        return views[views.length - 1]!;
+      };
+
+      expect(getNativeView().props.detectionConfigJson).toBe(
+        JSON.stringify({ ...baseConfig, sharpness: false })
+      );
+
+      act(() => {
+        tree.update(
+          <VisionCameraView detectionConfig={{ ...baseConfig, sharpness: true }} />
+        );
+      });
+
+      expect(getNativeView().props.detectionConfigJson).toBe(
+        JSON.stringify({ ...baseConfig, sharpness: true })
+      );
     });
 
   });
