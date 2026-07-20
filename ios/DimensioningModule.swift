@@ -1,5 +1,6 @@
 import Foundation
 import VisionSDK
+import VisionSDKDimensioning
 
 // MARK: - DimensioningModule
 //
