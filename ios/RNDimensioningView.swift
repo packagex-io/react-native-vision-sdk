@@ -1,5 +1,6 @@
 import UIKit
 import VisionSDK
+import VisionSDKDimensioning
 
 // MARK: - RNDimensioningView
 //
