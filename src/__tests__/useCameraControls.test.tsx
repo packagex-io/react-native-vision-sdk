@@ -19,6 +19,7 @@ jest.mock('../VisionCoreWrapper', () => ({
 }));
 
 import { useCameraControls } from '../camera-controls/useCameraControls';
+import { VisionCore } from '../VisionCoreWrapper';
 import type { VisionCameraStateEvent } from '../VisionCameraTypes';
 
 type Controls = ReturnType<typeof useCameraControls>;
@@ -162,6 +163,33 @@ describe('useCameraControls', () => {
     // intermediate "reset to undefined, then repopulated" render.
     expect(renderedStates).toEqual([undefined, runningState]);
     expect(holder.current!.state).toEqual(runningState);
+  });
+
+  it('ignores a stale capabilities fetch that resolves after a newer view attached', async () => {
+    // The two fetches are resolved out of order (newer first, then the older
+    // detached one) — the case that would corrupt capabilities *permanently*,
+    // not just briefly, if the result weren't matched back to its instance.
+    let resolveA: (caps: any) => void = () => { };
+    let resolveB: (caps: any) => void = () => { };
+    (VisionCore.getCameraCapabilities as jest.Mock)
+      .mockImplementationOnce(() => new Promise((res) => { resolveA = res; }))
+      .mockImplementationOnce(() => new Promise((res) => { resolveB = res; }));
+
+    const hook = renderCameraControls();
+    const makeInstance = () =>
+      ({ setZoom: jest.fn(), setTorch: jest.fn(), setFocusPoint: jest.fn() }) as any;
+
+    attach(hook, makeInstance()); // instance A -> fetch A
+    attach(hook, makeInstance()); // instance B -> fetch B (A now detached)
+
+    const capsA = { maxZoomRatio: 4 } as any;
+    const capsB = { maxZoomRatio: 8 } as any;
+
+    await act(async () => { resolveB(capsB); });
+    await act(async () => { resolveA(capsA); });
+
+    // A's late result belongs to a detached view and must be dropped.
+    expect(hook.current.capabilities).toBe(capsB);
   });
 
   it('setZoom/setTorch/setFocusPoint call through to the attached ref instance', () => {

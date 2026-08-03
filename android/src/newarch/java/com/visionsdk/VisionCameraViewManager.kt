@@ -1091,7 +1091,9 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
             textDetected: Boolean,
             documentDetected: Boolean
         ) {
-            Log.d(TAG, "onIndications: barcode=$barcodeDetected qr=$qrCodeDetected text=$textDetected doc=$documentDetected")
+            if (BuildConfig.DEBUG) {
+                Log.d(TAG, "onIndications: barcode=$barcodeDetected qr=$qrCodeDetected text=$textDetected doc=$documentDetected")
+            }
 
             // Recognition updates emitted per native frame (throttle removed) so the
             // JS-side FPS chip reflects the true processing rate. onBarcodeDetected was

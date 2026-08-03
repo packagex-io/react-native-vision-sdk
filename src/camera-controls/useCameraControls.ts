@@ -53,8 +53,16 @@ export function useCameraControls(): {
       setState(undefined);
       setCapabilities(undefined);
       if (instance) {
+        // Capture the instance this fetch belongs to. Without it, a slow fetch for
+        // a detached view can resolve after a newer view attached and overwrite the
+        // newer capabilities — permanently, if the two responses land out of order.
+        const fetchedFor = instance;
         VisionCore.getCameraCapabilities()
-          .then((caps) => setCapabilities(caps))
+          .then((caps) => {
+            if (instanceRef.current === fetchedFor) {
+              setCapabilities(caps);
+            }
+          })
           .catch((err) => {
             // Capabilities are best-effort; the state stream remains authoritative.
             console.warn('[useCameraControls] getCameraCapabilities failed:', err);
