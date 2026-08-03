@@ -155,7 +155,9 @@ dependencies {
   implementation "com.facebook.react:react-native:+"
   implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
 // From node_modules
-  implementation 'com.github.packagexlabs:vision-sdk-android:v2.4.55'
+  // LOCAL-CONSUME PIN (camera-controls-phase3): revert to JitPack coord before npm publish.
+  // implementation 'com.github.packagexlabs:vision-sdk-android:v2.4.55'
+  implementation 'com.packagexlabs:VisionScanner:v2.4.56-local-cc9'
   implementation 'com.github.asadullahilyas:HandyUtils:1.1.6'
 }
 

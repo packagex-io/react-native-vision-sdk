@@ -26,6 +26,7 @@ import React, {
   useMemo,
   useRef,
   useState,
+  useSyncExternalStore,
 } from 'react';
 import {
   Alert,
@@ -59,6 +60,7 @@ import type {
   VisionCameraDetectedCodeBoundingBox,
 } from '../../../src/VisionCameraTypes';
 import { VisionCore } from '../../../src';
+import { useCameraControls } from '../../../src/camera-controls/useCameraControls';
 import { SettingsModal } from './SettingsModal';
 import { ResultScreen } from './ResultScreen';
 import { theme } from '../theme';
@@ -113,6 +115,10 @@ const OCR_MODULE_OPTIONS: { label: string; type: OCRModuleType }[] = [
   { label: 'Doc. Classification', type: 'document_classification' },
 ];
 
+// Fallback zoom-pill stops for while `VisionCore.getCameraCapabilities()`
+// hasn't resolved yet (or reports no stops for the active facing) — the
+// live stops come from `camera.capabilities.zoomStops[cameraFacing]` below
+// (spec §9 "example-app zoom-pill migration to zoomStops").
 const ZOOM_PRESETS = [0.6, 1.0, 2.0];
 const DEFAULT_ZOOM = 1.0;
 const SHARPNESS_THRESHOLD = 0.5;
@@ -536,40 +542,82 @@ interface ZoomSliderProps {
 }
 
 function ZoomSlider({ value, min, max, onValueChange }: ZoomSliderProps) {
+  const trackRef = useRef<View>(null);
   const sliderWidthRef = useRef(200);
+  const trackLeftRef = useRef(0); // track's absolute screen-x (left edge)
+  // Thumb driven by an Animated.Value updated imperatively from the PanResponder
+  // — no React re-render per move.
+  const thumbPct = useRef(new Animated.Value(0)).current;
+  const draggingRef = useRef(false);
+  // PanResponder is created once; read latest min/max/callback from a ref so a
+  // stale closure can't freeze the range (min/max go 1/1 -> e.g. 0.67/8 once the
+  // camera leaves idle).
+  const cfgRef = useRef({ min, max, onValueChange });
+  cfgRef.current = { min, max, onValueChange };
+  // Range frozen at drag-start so a mid-drag lens auto-switch can't shift the
+  // mapping under the finger.
+  const dragRangeRef = useRef<{ lo: number; hi: number } | null>(null);
+
+  // Map an ABSOLUTE screen x (gestureState) to a track fraction. Using the
+  // absolute gesture coord + measured track-left — NOT e.nativeEvent.locationX —
+  // is the fix for the knob "jumping": locationX is reported relative to whichever
+  // child (fill/thumb) sits under the finger and lurches as the finger crosses them.
+  function applyAtAbs(absX: number) {
+    const r = dragRangeRef.current ?? { lo: cfgRef.current.min, hi: cfgRef.current.max };
+    const span = Math.max(r.hi - r.lo, 0.001);
+    const pct = Math.max(0, Math.min(1, (absX - trackLeftRef.current) / sliderWidthRef.current));
+    thumbPct.setValue(pct); // move thumb imperatively — no re-render
+    // Continuous — no rounding — smooth zoom that reaches the exact endpoints.
+    cfgRef.current.onValueChange(r.lo + pct * span);
+  }
+
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: () => true,
-      onPanResponderGrant: (e) => {
-        const { locationX } = e.nativeEvent;
-        const pct = Math.max(0, Math.min(1, locationX / sliderWidthRef.current));
-        const z = min + pct * (max - min);
-        onValueChange(Math.round(z * 10) / 10);
+      onPanResponderGrant: (_e, g) => {
+        draggingRef.current = true;
+        dragRangeRef.current = { lo: cfgRef.current.min, hi: cfgRef.current.max };
+        applyAtAbs(g.x0);
       },
-      onPanResponderMove: (e) => {
-        const { locationX } = e.nativeEvent;
-        const pct = Math.max(0, Math.min(1, locationX / sliderWidthRef.current));
-        const z = min + pct * (max - min);
-        onValueChange(Math.round(z * 10) / 10);
+      onPanResponderMove: (_e, g) => applyAtAbs(g.moveX),
+      onPanResponderRelease: () => {
+        draggingRef.current = false;
+        dragRangeRef.current = null;
+      },
+      onPanResponderTerminate: () => {
+        draggingRef.current = false;
+        dragRangeRef.current = null;
       },
     })
   ).current;
 
-  const pct = (value - min) / (max - min);
+  // When NOT dragging, follow live value; skipped mid-drag so the finger-driven
+  // thumb is never fought by a lagging value.
+  useEffect(() => {
+    if (draggingRef.current) return;
+    thumbPct.setValue(Math.max(0, Math.min(1, (value - min) / Math.max(max - min, 0.001))));
+  }, [value, min, max, thumbPct]);
+
+  const widthStyle = thumbPct.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0%', '100%'],
+  });
 
   return (
     <View
+      ref={trackRef}
       style={zsStyles.track}
       onLayout={(e) => {
         sliderWidthRef.current = e.nativeEvent.layout.width;
+        trackRef.current?.measureInWindow((x) => {
+          trackLeftRef.current = x;
+        });
       }}
       {...panResponder.panHandlers}
     >
-      <View style={[zsStyles.fill, { width: `${pct * 100}%` as `${number}%` }]} />
-      <View
-        style={[zsStyles.thumb, { left: `${pct * 100}%` as `${number}%` }]}
-      />
+      <Animated.View style={[zsStyles.fill, { width: widthStyle }]} />
+      <Animated.View style={[zsStyles.thumb, { left: widthStyle }]} />
     </View>
   );
 }
@@ -714,6 +762,22 @@ interface Props {
 
 export function ScannerScreen({ navigation }: Props) {
   const cameraRef = useRef<VisionCameraRefProps>(null);
+  // Camera Controls API (Phase 3, spec §8/§9) — drives zoom/torch below and
+  // supplies live `capabilities`/`state` for the debug chip. `cameraRef`
+  // above stays the source of truth for capture/start/stop/rescan/
+  // setFocusSettings/pauseDetection/resumeDetection, none of which are part
+  // of this hook's surface.
+  const camera = useCameraControls();
+  const setVisionCameraRef = useCallback(
+    (instance: VisionCameraRefProps | null) => {
+      (cameraRef as React.MutableRefObject<VisionCameraRefProps | null>).current = instance;
+      // `camera.ref` is a real callback ref (see useCameraControls.ts); invoking
+      // it directly is how the hook observes attach/detach when composed with
+      // a second ref like this.
+      camera.ref(instance);
+    },
+    [camera.ref]
+  );
   const insets = useSafeAreaInsets();
 
   const [hasPermission, setHasPermission] = useState(false);
@@ -743,13 +807,24 @@ export function ScannerScreen({ navigation }: Props) {
     VisionCameraDetectedCodeBoundingBox[]
   >([]);
 
-  // Recognition indicators
-  const [recognition, setRecognition] = useState({
+  // Recognition indicators — kept in a ref-backed external store, NOT React
+  // state, so per-frame updates (~20-30Hz once the throttle is removed) re-render
+  // ONLY the IndicatorColumn subtree via useSyncExternalStore, not the whole
+  // ScannerScreen. Re-rendering the entire screen per frame was capping the FPS.
+  const recognitionRef = useRef<RecognitionState>({
     text: false,
     barcode: false,
     qrcode: false,
     document: false,
   });
+  const recognitionListeners = useRef(new Set<() => void>());
+  const subscribeRecognition = useCallback((cb: () => void) => {
+    recognitionListeners.current.add(cb);
+    return () => {
+      recognitionListeners.current.delete(cb);
+    };
+  }, []);
+  const getRecognition = useCallback(() => recognitionRef.current, []);
   const [sharpness, setSharpness] = useState(1);
   const lastSharpnessRef = useRef(0);
   const sharpnessThrottle = 200;
@@ -946,7 +1021,8 @@ export function ScannerScreen({ navigation }: Props) {
   // ---------------------------------------------------------------------------
   const handleRecognitionUpdate = useCallback(
     (e: VisionCameraRecognitionUpdateEvent) => {
-      setRecognition(e);
+      recognitionRef.current = e;
+      recognitionListeners.current.forEach((cb) => cb());
       tickCbFps();
     },
     [tickCbFps]
@@ -1311,10 +1387,18 @@ export function ScannerScreen({ navigation }: Props) {
   // ---------------------------------------------------------------------------
   // Zoom
   // ---------------------------------------------------------------------------
+  // Live per-facing zoom stops from getCameraCapabilities() (fetched by
+  // useCameraControls() on camera attach); falls back to ZOOM_PRESETS while
+  // capabilities haven't resolved yet or report no stops for this facing.
+  const zoomStops = useMemo(() => {
+    const stops = camera.capabilities?.zoomStops?.[cameraFacing];
+    return stops && stops.length > 0 ? stops : ZOOM_PRESETS;
+  }, [camera.capabilities, cameraFacing]);
+
   const handleZoomSelect = useCallback((z: number) => {
     setZoomLevel(z);
-    cameraRef.current?.setZoom(z);
-  }, []);
+    camera.setZoom(z);
+  }, [camera.setZoom]);
 
   // ---------------------------------------------------------------------------
   // Flash
@@ -1322,8 +1406,8 @@ export function ScannerScreen({ navigation }: Props) {
   const toggleFlash = useCallback(() => {
     const next = !flashEnabled;
     setFlashEnabled(next);
-    cameraRef.current?.toggleFlash(next);
-  }, [flashEnabled]);
+    camera.setTorch(next);
+  }, [flashEnabled, camera.setTorch]);
 
   // ---------------------------------------------------------------------------
   // Detection enabled toggle — pauses/resumes per-frame detection while the
@@ -1447,10 +1531,10 @@ export function ScannerScreen({ navigation }: Props) {
         {/* ── Camera fill ── */}
         {hasPermission ? (
           <VisionCamera
-            ref={cameraRef}
+            ref={setVisionCameraRef}
             style={StyleSheet.absoluteFill}
-            enableFlash={flashEnabled}
-            zoomLevel={zoomLevel}
+            torch={flashEnabled}
+            zoomRatio={zoomLevel}
             scanMode={effectiveScanMode}
             autoCapture={autoCapture}
             cameraFacing={cameraFacing}
@@ -1464,6 +1548,7 @@ export function ScannerScreen({ navigation }: Props) {
             onSharpnessScoreUpdate={handleSharpnessUpdate}
             onBarcodeDetected={handleBarcodeDetected}
             onBoundingBoxesUpdate={handleBoundingBoxesUpdate}
+            onCameraStateChanged={camera.onCameraStateChanged}
             detectionConfig={{
               text: true,
               barcode: true,
@@ -1541,6 +1626,20 @@ export function ScannerScreen({ navigation }: Props) {
           {/* Right: sharpness readout (OCR/Photo only — that's the only pipeline
               the native SDK computes it for) + sound icon (position absolute) */}
           <View style={styles.topRight} pointerEvents="box-none">
+            {/* Camera Controls API manual-inspection chip (spec §9) — raw
+                onCameraStateChanged/getCameraCapabilities readout via
+                useCameraControls(), for eyeballing state during on-device
+                verification (never gated on a build flag; harmless no-op
+                text if the native side hasn't wired the event yet). */}
+            {camera.state ? (
+              <View style={styles.sharpnessChip} pointerEvents="none">
+                <Text style={styles.fpsText}>
+                  {camera.state.status} z:{camera.state.zoomRatio.toFixed(1)}{' '}
+                  {camera.state.activeLensId ?? 'auto'}
+                  {camera.state.warningCode ? ` ⚠${camera.state.warningCode}` : ''}
+                </Text>
+              </View>
+            ) : null}
             {scanMode === 'ocr' || scanMode === 'photo' ? (
               <View style={styles.sharpnessChip} pointerEvents="none">
                 <Text
@@ -1575,7 +1674,14 @@ export function ScannerScreen({ navigation }: Props) {
         </View>
 
         {/* ── VERTICAL INDICATOR COLUMN (right edge, below top strip) ── */}
-        <IndicatorColumn recognition={recognition} topInset={topInset} />
+        <IndicatorColumn
+          subscribeRecognition={subscribeRecognition}
+          getRecognition={getRecognition}
+          topInset={topInset}
+          detectionEnabled={detectionEnabled}
+          onDetectionToggle={handleDetectionToggle}
+          showDetectionToggle={!isTemplateCreateMode}
+        />
 
         {/* ── OCR MODULE PILL — large, centered, above Online/On-Device ── */}
         {showOcrRow ? (
@@ -1659,21 +1765,8 @@ export function ScannerScreen({ navigation }: Props) {
           </View>
         ) : null}
 
-        {/* ── DETECTION ENABLED TOGGLE — left edge, below top strip ── */}
-        {!isTemplateCreateMode ? (
-          <View style={[styles.detectionToggleRow, { top: topInset + 44 }]} pointerEvents="box-none">
-            <View style={styles.detectionTogglePill}>
-              <Text style={styles.detectionToggleLabel}>Detection Enabled</Text>
-              <Switch
-                value={detectionEnabled}
-                onValueChange={handleDetectionToggle}
-                trackColor={{ false: theme.colors.indicatorOff, true: theme.colors.accent }}
-                thumbColor={detectionEnabled ? theme.colors.textOnAccent : '#5A5A5E'}
-                style={styles.detectionToggleSwitch}
-              />
-            </View>
-          </View>
-        ) : null}
+        {/* Detection-enabled toggle now lives in the right-edge IndicatorColumn
+            (switch-only, below the document indicator). */}
 
         {/* ── ON-DEVICE HINT ── */}
         {showOnDeviceHint ? (
@@ -1839,14 +1932,14 @@ export function ScannerScreen({ navigation }: Props) {
                 <Text style={styles.zoomValueLabel}>{zoomLevel.toFixed(1)}×</Text>
                 <ZoomSlider
                   value={zoomLevel}
-                  min={ZOOM_PRESETS[0]!}
-                  max={ZOOM_PRESETS[ZOOM_PRESETS.length - 1]!}
+                  min={camera.state?.minZoomRatio ?? zoomStops[0]!}
+                  max={camera.state?.maxZoomRatio ?? zoomStops[zoomStops.length - 1]!}
                   onValueChange={handleZoomSelect}
                 />
               </>
             ) : (
               <View style={styles.zoomPills}>
-                {ZOOM_PRESETS.map((z) => {
+                {zoomStops.map((z) => {
                   const selected = Math.abs(zoomLevel - z) < 0.05;
                   return (
                     <TouchableOpacity
@@ -1858,7 +1951,7 @@ export function ScannerScreen({ navigation }: Props) {
                       <Text
                         style={[styles.zoomPillText, selected && styles.zoomPillTextSelected]}
                       >
-                        {z === 1.0 ? '1×' : `${z}×`}
+                        {z === 1.0 ? '1×' : `${Math.floor(z * 10) / 10}×`}
                       </Text>
                     </TouchableOpacity>
                   );
@@ -1924,16 +2017,21 @@ export function ScannerScreen({ navigation }: Props) {
       <SheetPicker
         visible={showModePicker}
         title="Scan Mode"
-        options={
-          Platform.OS === 'ios'
-            ? [...SCAN_MODES, { label: 'Dimensioning', value: 'dimensioning' as VisionCameraScanMode }]
-            : SCAN_MODES
-        }
+        options={[
+          ...SCAN_MODES,
+          ...(Platform.OS === 'ios'
+            ? [{ label: 'Dimensioning', value: 'dimensioning' as VisionCameraScanMode }]
+            : []),
+          { label: 'Camera Controls QA', value: 'cameraControlsQA' as VisionCameraScanMode },
+        ]}
         current={scanMode === 'barcodesinglecapture' ? 'barcode' : scanMode}
         onSelect={(mode) => {
           if ((mode as string) === 'dimensioning') {
             setShowModePicker(false);
             navigation.navigate('DimensioningScreen');
+          } else if ((mode as string) === 'cameraControlsQA') {
+            setShowModePicker(false);
+            navigation.navigate('CameraControlsQAScreen');
           } else {
             handleModeSelect(mode);
           }
@@ -2049,16 +2147,27 @@ const INDICATOR_DEFS: { key: keyof RecognitionState; icon: string; label: string
 ];
 
 function IndicatorColumn({
-  recognition,
+  subscribeRecognition,
+  getRecognition,
   topInset,
+  detectionEnabled,
+  onDetectionToggle,
+  showDetectionToggle,
 }: {
-  recognition: RecognitionState;
+  subscribeRecognition: (cb: () => void) => () => void;
+  getRecognition: () => RecognitionState;
   topInset: number;
+  detectionEnabled: boolean;
+  onDetectionToggle: (v: boolean) => void;
+  showDetectionToggle: boolean;
 }) {
+  // Subscribes to the per-frame recognition store; only THIS subtree re-renders
+  // on each recognition tick, not the whole ScannerScreen.
+  const recognition = useSyncExternalStore(subscribeRecognition, getRecognition);
   return (
     <View
       style={[indStyles.column, { top: topInset + 48 }]}
-      pointerEvents="none"
+      pointerEvents="box-none"
     >
       {INDICATOR_DEFS.map(({ key, icon, label }) => {
         const active = recognition[key];
@@ -2081,6 +2190,17 @@ function IndicatorColumn({
           </View>
         );
       })}
+      {showDetectionToggle ? (
+        <View style={indStyles.detectionSwitchWrap} pointerEvents="auto">
+          <Switch
+            value={detectionEnabled}
+            onValueChange={onDetectionToggle}
+            trackColor={{ false: theme.colors.indicatorOff, true: theme.colors.accent }}
+            thumbColor={detectionEnabled ? theme.colors.textOnAccent : '#5A5A5E'}
+            style={indStyles.detectionSwitch}
+          />
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -2115,6 +2235,14 @@ const indStyles = StyleSheet.create({
   },
   dotLabelActive: {
     color: theme.colors.indicatorOn,
+  },
+  detectionSwitchWrap: {
+    marginTop: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  detectionSwitch: {
+    transform: [{ scaleX: 0.8 }, { scaleY: 0.8 }],
   },
 });
 

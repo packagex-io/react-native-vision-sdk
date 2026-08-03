@@ -1522,6 +1522,62 @@ class VisionSdkModule(reactContext: ReactApplicationContext) :
         }
     }
 
+    // Camera Controls API (Phase 3, Group F) — enum-string mapping mirrors
+    // VisionCameraViewManager.cameraStateToMap's facing mapping exactly. LensKind has no
+    // equivalent in the view layer (CameraState doesn't carry per-lens kind), so this is a
+    // new mapping — kept camelCase to match the JS `Lens.kind` union (NOT `.name.lowercase()`,
+    // which would yield "ultra_wide" instead of "ultraWide").
+    private fun lensKindToJsString(kind: io.packagex.visionsdk.camera.core.LensKind): String =
+        when (kind) {
+            io.packagex.visionsdk.camera.core.LensKind.ULTRA_WIDE -> "ultraWide"
+            io.packagex.visionsdk.camera.core.LensKind.WIDE -> "wide"
+            io.packagex.visionsdk.camera.core.LensKind.TELEPHOTO -> "telephoto"
+            else -> "unknown"
+        }
+
+    @ReactMethod
+    override fun getCameraCapabilities(promise: Promise) {
+        try {
+            val capabilities = io.packagex.visionsdk.camera.core.CameraCapabilities.snapshot(reactApplicationContext)
+            val facings = listOf(
+                io.packagex.visionsdk.camera.core.LensFacing.BACK to "back",
+                io.packagex.visionsdk.camera.core.LensFacing.FRONT to "front"
+            )
+            val lensesJson = JSONArray()
+            val zoomStopsJson = JSONObject()
+            val hasTorchJson = JSONObject()
+            val supportsFocusPointJson = JSONObject()
+            for ((facing, facingName) in facings) {
+                capabilities.lenses(facing).forEach { lens ->
+                    lensesJson.put(JSONObject().apply {
+                        put("id", lens.id)
+                        put("kind", lensKindToJsString(lens.kind))
+                        put("facing", facingName)
+                        put("minZoomRatio", lens.minZoomRatio.toDouble())
+                        put("maxZoomRatio", lens.maxZoomRatio.toDouble())
+                        put("zoomSwitchPoints", JSONArray(lens.zoomSwitchPoints.map { it.toDouble() }))
+                        put("hasFlash", lens.hasFlash)
+                        put("isLogical", lens.isLogical)
+                        put("isPinnable", lens.isPinnable)
+                    })
+                }
+                zoomStopsJson.put(facingName, JSONArray(capabilities.zoomStops(facing).map { it.toDouble() }))
+                hasTorchJson.put(facingName, capabilities.hasTorch(facing))
+                supportsFocusPointJson.put(facingName, capabilities.supportsFocusPoint(facing))
+            }
+            val result = JSONObject().apply {
+                put("lenses", lensesJson)
+                put("zoomStops", zoomStopsJson)
+                put("hasTorch", hasTorchJson)
+                put("supportsFocusPoint", supportsFocusPointJson)
+            }
+            promise.resolve(result.toString())
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ getCameraCapabilities failed", e)
+            promise.reject("CAPABILITIES_ERROR", e.message, e)
+        }
+    }
+
     @ReactMethod
     override fun addListener(eventName: String) {
         // Required for TurboModule event emitters

@@ -3,3 +3,4 @@ export * from './VisionCore';
 export { VisionCamera } from './VisionCamera';
 export * from './VisionCameraTypes';
 export * from './dimensioning';
+export { useCameraControls } from './camera-controls/useCameraControls';

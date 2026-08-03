@@ -412,6 +412,92 @@ export interface DocumentClassificationErrorFlags {
 }
 
 // ============================================================================
+// CAMERA CONTROLS TYPES (Phase 3)
+// ============================================================================
+// NOTE: `LensFacing` is defined here (rather than imported from
+// `VisionCameraTypes.ts`, which already has an equivalent `CameraFacing` type)
+// to avoid a circular import — `VisionCameraTypes.ts` imports `TemplateData`
+// from this file, so importing back from it here would create a cycle.
+// `VisionCameraTypes.ts`'s `CameraFacing` aliases this type instead.
+
+/**
+ * Camera lens facing direction.
+ * @type {'back' | 'front'}
+ */
+export type LensFacing = 'back' | 'front';
+
+/**
+ * Physical lens kind, as reported by `VisionCore.getCameraCapabilities()`.
+ * @type {'ultraWide' | 'wide' | 'telephoto' | 'unknown'}
+ */
+export type LensKind = 'ultraWide' | 'wide' | 'telephoto' | 'unknown';
+
+/**
+ * Camera focus mode.
+ * @type {'continuous' | 'single' | 'locked'}
+ * @description 'continuous' (AF-C), 'single' (AF-S), or 'locked' (focus fixed at its current position).
+ */
+export type FocusMode = 'continuous' | 'single' | 'locked';
+
+/**
+ * Camera session status, reported via `onCameraStateChanged`.
+ * @type {'idle' | 'starting' | 'running' | 'interrupted' | 'error'}
+ */
+export type CameraStatus = 'idle' | 'starting' | 'running' | 'interrupted' | 'error';
+
+/**
+ * Camera error/warning codes.
+ * @type {'permission-denied' | 'lens-unavailable' | 'configuration-failed'}
+ * @description Used for both `errorCode` (fatal, `status === 'error'`) and
+ * `warningCode` (non-fatal, e.g. an unpinnable `pinnedLensId` falling back to Auto).
+ */
+export type CameraErrorCode =
+  | 'permission-denied'
+  | 'lens-unavailable'
+  | 'configuration-failed';
+
+/**
+ * Describes a single physical or logical camera lens.
+ * @interface
+ */
+export interface Lens {
+  /** Stable identifier for this lens, used with `pinnedLensId`. */
+  id: string;
+  /** Physical lens kind (ultra-wide / wide / telephoto / unknown). */
+  kind: LensKind;
+  /** Which physical camera position this lens belongs to. */
+  facing: LensFacing;
+  /** Minimum supported wide-normalized zoom ratio for this lens. */
+  minZoomRatio: number;
+  /** Maximum supported wide-normalized zoom ratio for this lens. */
+  maxZoomRatio: number;
+  /** Zoom ratios at which the OS switches to/from this lens (logical lenses only). */
+  zoomSwitchPoints: number[];
+  /** Whether this lens has an attached flash/torch unit. */
+  hasFlash: boolean;
+  /** Whether this is a logical (multi-camera fusion) lens vs. a single physical lens. */
+  isLogical: boolean;
+  /** Whether this lens can be targeted directly via `pinnedLensId`. */
+  isPinnable: boolean;
+}
+
+/**
+ * Snapshot of the device's camera capabilities, returned by
+ * `VisionCore.getCameraCapabilities()`.
+ * @interface
+ */
+export interface CameraCapabilities {
+  /** All lenses available on the device, across both facings. */
+  lenses: Lens[];
+  /** Available zoom stops (wide-normalized ratios), keyed by facing. */
+  zoomStops: Record<LensFacing, number[]>;
+  /** Whether a torch/flash is available, keyed by facing. */
+  hasTorch: Record<LensFacing, boolean>;
+  /** Whether tap-to-focus is supported, keyed by facing. */
+  supportsFocusPoint: Record<LensFacing, boolean>;
+}
+
+// ============================================================================
 // MODEL MANAGEMENT TYPES
 // ============================================================================
 

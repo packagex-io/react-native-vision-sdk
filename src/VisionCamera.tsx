@@ -13,6 +13,7 @@ import {
   VisionCameraErrorResult,
   VisionCameraRecognitionUpdateEvent,
   VisionCameraSharpnessScoreEvent,
+  VisionCameraStateEvent,
   FocusSettings,
 } from './VisionCameraTypes';
 
@@ -26,6 +27,38 @@ function parseNativeEvent<T>(event: any): T {
   return event;
 }
 
+// iOS's Fabric typed emitter delivers absent optional strings as '""'; Android
+// sends `undefined`. Normalize once here so JS consumers see identical shapes
+// cross-platform.
+const CAMERA_STATE_OPTIONAL_STRING_KEYS = [
+  'errorCode',
+  'errorMessage',
+  'warningCode',
+  'warningMessage',
+  'activeLensId',
+] as const;
+
+function normalizeCameraStateEvent(event: VisionCameraStateEvent): VisionCameraStateEvent {
+  const normalized: any = { ...event };
+  for (const key of CAMERA_STATE_OPTIONAL_STRING_KEYS) {
+    if (normalized[key] === '') {
+      normalized[key] = undefined;
+    }
+  }
+  return normalized;
+}
+
+// Module-level "warn once" set for dev-mode prop-collision warnings — this
+// repo has no existing precedent for a one-shot dev warning helper, so this
+// introduces the minimal one.
+const warnedOnceKeys = new Set<string>();
+function warnOnce(key: string, message: string) {
+  if (__DEV__ && !warnedOnceKeys.has(key)) {
+    warnedOnceKeys.add(key);
+    console.warn(message);
+  }
+}
+
 // Camera component
 const Camera = forwardRef<VisionCameraRefProps, VisionCameraProps>(
   (
@@ -34,6 +67,10 @@ const Camera = forwardRef<VisionCameraRefProps, VisionCameraProps>(
       style,
       enableFlash = false,
       zoomLevel = 1.0,
+      pinnedLensId,
+      zoomRatio,
+      torch,
+      focusMode = 'continuous',
       scanMode = 'photo',
       autoCapture = false,
       showCodeBoundingBoxes = false,
@@ -51,6 +88,7 @@ const Camera = forwardRef<VisionCameraRefProps, VisionCameraProps>(
       onSharpnessScoreUpdate = () => { },
       onBarcodeDetected = () => { },
       onBoundingBoxesUpdate = () => { },
+      onCameraStateChanged = () => { },
     },
     ref
   ) => {
@@ -65,12 +103,36 @@ const Camera = forwardRef<VisionCameraRefProps, VisionCameraProps>(
     const onSharpnessScoreUpdateRef = useRef(onSharpnessScoreUpdate);
     const onBarcodeDetectedRef = useRef(onBarcodeDetected);
     const onBoundingBoxesUpdateRef = useRef(onBoundingBoxesUpdate);
+    const onCameraStateChangedRef = useRef(onCameraStateChanged);
     onCaptureRef.current = onCapture;
     onErrorRef.current = onError;
     onRecognitionUpdateRef.current = onRecognitionUpdate;
     onSharpnessScoreUpdateRef.current = onSharpnessScoreUpdate;
     onBarcodeDetectedRef.current = onBarcodeDetected;
     onBoundingBoxesUpdateRef.current = onBoundingBoxesUpdate;
+    onCameraStateChangedRef.current = onCameraStateChanged;
+
+    // Prop collision resolution (Camera Controls API, spec §8): the canonical
+    // prop wins when both the deprecated and new prop are set. Distinguishing
+    // "explicitly passed" from "equals its default" isn't reliably knowable
+    // once destructured with defaults, so this is a best-effort heuristic
+    // (warns only when the deprecated prop's value diverges from its own
+    // default while the new prop is also present) — it will under-warn but
+    // will never over-warn on a consumer who only ever uses the new props.
+    const resolvedZoom = zoomRatio !== undefined ? zoomRatio : zoomLevel;
+    if (zoomRatio !== undefined && zoomLevel !== 1.0) {
+      warnOnce(
+        'zoom-collision',
+        '[VisionCamera] Both `zoomLevel` (deprecated) and `zoomRatio` are set — `zoomRatio` wins. Remove `zoomLevel`.'
+      );
+    }
+    const resolvedTorch = torch !== undefined ? torch : enableFlash;
+    if (torch !== undefined && enableFlash !== false) {
+      warnOnce(
+        'torch-collision',
+        '[VisionCamera] Both `enableFlash` (deprecated) and `torch` are set — `torch` wins. Remove `enableFlash`.'
+      );
+    }
 
     // Expose handlers via ref to parent components
     useImperativeHandle(ref, () => ({
@@ -121,6 +183,21 @@ const Camera = forwardRef<VisionCameraRefProps, VisionCameraProps>(
       setFocusSettings: (settings: FocusSettings) => {
         if (VisionCameraViewRef.current) {
           Commands.setFocusSettings(VisionCameraViewRef.current, JSON.stringify(settings));
+        }
+      },
+
+      // Named setTorchEnabled (not setTorch) on the native command layer to
+      // avoid an Android codegen collision with the `torch` prop's generated
+      // setTorch(view, boolean) setter — see src/specs/VisionCameraViewNativeComponent.ts.
+      setTorch: (enabled: boolean) => {
+        if (VisionCameraViewRef.current) {
+          Commands.setTorchEnabled(VisionCameraViewRef.current, enabled);
+        }
+      },
+
+      setFocusPoint: (x: number, y: number) => {
+        if (VisionCameraViewRef.current) {
+          Commands.setFocusPoint(VisionCameraViewRef.current, x, y);
         }
       },
 
@@ -206,13 +283,25 @@ const Camera = forwardRef<VisionCameraRefProps, VisionCameraProps>(
       []
     )
 
+    const onCameraStateChangedHandler = useCallback(
+      (event: any) =>
+        onCameraStateChangedRef.current(
+          normalizeCameraStateEvent(parseNativeEvent<VisionCameraStateEvent>(event))
+        ),
+      []
+    )
+
     return (
       <>
         <VisionCameraView
           ref={VisionCameraViewRef}
           style={[styles.flex, style]}
-          enableFlash={enableFlash}
-          zoomLevel={zoomLevel}
+          enableFlash={resolvedTorch}
+          zoomLevel={resolvedZoom}
+          zoomRatio={resolvedZoom}
+          torch={resolvedTorch}
+          pinnedLensId={pinnedLensId}
+          focusMode={focusMode}
           scanMode={scanMode}
           autoCapture={autoCapture}
           showCodeBoundingBoxes={showCodeBoundingBoxes}
@@ -230,6 +319,7 @@ const Camera = forwardRef<VisionCameraRefProps, VisionCameraProps>(
           onSharpnessScoreUpdate={onSharpnessScoreUpdateHandler}
           onBarcodeDetected={onBarcodeDetectedHandler}
           onBoundingBoxesUpdate={onBoundingBoxesUpdateHandler}
+          onCameraStateChanged={onCameraStateChangedHandler}
         />
         {children}
       </>

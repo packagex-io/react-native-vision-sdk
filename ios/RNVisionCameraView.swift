@@ -1,6 +1,5 @@
 import UIKit
 import VisionSDK
-import AVFoundation
 
 // MARK: - FocusSettings Helper
 @available(iOS 13.0, *)
@@ -58,7 +57,9 @@ class RNVisionCameraView: UIView {
   @objc var onSharpnessScoreUpdate: RCTDirectEventBlock?
   @objc var onBarcodeDetected: RCTDirectEventBlock?
   @objc var onBoundingBoxesUpdate: RCTDirectEventBlock?
-  
+  // Camera Controls API (Phase 3) — throttled full-state event (§8).
+  @objc var onCameraStateChanged: RCTDirectEventBlock?
+
   // MARK: - Properties
   @objc var enableFlash: Bool = false {
     didSet {
@@ -138,6 +139,74 @@ class RNVisionCameraView: UIView {
     didSet {
       applyCodeBoundingBoxSettings()
     }
+  }
+
+  // MARK: - Camera Controls API (Phase 3)
+  // Canonical props; zoomLevel/enableFlash above stay as deprecated aliases feeding
+  // the same native path. C2 fix: once a canonical prop is set here it wins over its
+  // legacy alias for good (isTorchSet/isZoomRatioSet below) — see VisionCamera.tsx
+  // (Task 18) for the JS-side precedence this mirrors.
+
+  @objc var zoomRatio: NSNumber = 1.0 {
+    didSet {
+      isZoomRatioSet = true // C2: canonical prop now wins over zoomLevel, permanently
+      updateZoom() // zoomLevel and zoomRatio converge on the same setter
+    }
+  }
+
+  @objc var torch: Bool = false {
+    didSet {
+      isTorchSet = true // C2: canonical prop now wins over enableFlash, permanently
+      updateFlash() // torch and enableFlash converge on the same setter
+    }
+  }
+
+  // C2 fix: once a canonical prop (`torch`/`zoomRatio`) has been explicitly set by
+  // JS, it wins over the legacy alias (`enableFlash`/`zoomLevel`) for the rest of
+  // this view's lifetime — mirrors Android's ControlPropsState "new prop wins over
+  // legacy" contract. Without this, `updateFlash`/`updateZoom` read the legacy prop
+  // unconditionally, so e.g. setting only `torch=true` got silently overwritten by
+  // `enableFlash`'s default (false) on the very next reassert.
+  private var isTorchSet: Bool = false
+  private var isZoomRatioSet: Bool = false
+
+  private var resolvedTorch: Bool {
+    isTorchSet ? torch : enableFlash
+  }
+
+  private var resolvedZoomRatio: Float {
+    isZoomRatioSet ? zoomRatio.floatValue : zoomLevel.floatValue
+  }
+
+  @objc var focusMode: NSString? {
+    didSet {
+      updateFocusMode()
+    }
+  }
+
+  @objc var pinnedLensId: NSString? {
+    didSet {
+      reassertControlProps()
+    }
+  }
+
+  /// One-shot flag: set when `applyLensSelection()` falls back to `.automatic`
+  /// because `pinnedLensId` named an unknown/unpinnable lens. Consumed (and cleared)
+  /// by the next emitted `onCameraStateChanged` event as `warningCode: "lens-unavailable"`.
+  private var pendingLensUnavailableWarning: Bool = false
+
+  /// Last (facing, pinnedLensId) pair actually applied via `applyLensSelection()`.
+  /// `reassertControlProps()` skips the lens re-apply when this hasn't changed —
+  /// Group B persists the lens via `makeCameraConfiguration()` now, so re-resolving
+  /// it on every RUNNING transition is a needless structural reconcile. `nil` means
+  /// "never applied on the current cameraView" and always forces one application;
+  /// reset in `setupCamera()` so a freshly created cameraView always gets a lens.
+  private var lastAppliedLensKey: String?
+
+  private func currentLensKey() -> String {
+    let facing = (cameraFacing as String?)?.lowercased() == "front" ? "front" : "back"
+    let lensId = (pinnedLensId as String?) ?? ""
+    return "\(facing)|\(lensId)"
   }
 
   /// Builds a single coherent FocusSettings from the full current prop state:
@@ -220,6 +289,17 @@ class RNVisionCameraView: UIView {
   private var isSetupComplete = false
   private var shouldAutoStart = true
 
+  // MARK: - Camera Controls API (Phase 3) — state-event throttling
+  private var lastCameraStateEmitTime: TimeInterval = 0
+  private var lastCameraStateStatus: String?
+  private let cameraStateThrottleSeconds: TimeInterval = 0.1 // 10 Hz, matches Android's CAMERA_STATE_THROTTLE_MS
+  // Trailing-edge guarantee: the throttle above is a drop-throttle, so a burst of
+  // state changes ending mid-window would otherwise leave JS on stale data. This
+  // schedules a single deferred emit of the LATEST state at the window boundary;
+  // a newer skipped emit cancels/replaces it, so exactly one trailing emit lands
+  // with the freshest state.
+  private var trailingCameraStateWorkItem: DispatchWorkItem?
+
   // MARK: - Initialization
   override init(frame: CGRect) {
     super.init(frame: frame)
@@ -249,8 +329,7 @@ class RNVisionCameraView: UIView {
         updateCaptureMode()
         updateDetectionConfig()
         updateFrameSkip()
-        updateFlash()
-        updateZoom()
+        reassertControlProps() // zoomRatio/torch/focusMode/pinnedLensId
         applyCodeBoundingBoxSettings()
 
         // Start camera immediately - no need to delay
@@ -301,7 +380,7 @@ class RNVisionCameraView: UIView {
 
     // Re-apply props that may have been set before this recreation
     applyCodeBoundingBoxSettings()
-    updateZoom()
+    reassertControlProps() // zoomRatio/torch/focusMode/pinnedLensId
 
     // Ensure frame is correct
     cameraView?.frame = self.bounds
@@ -318,6 +397,11 @@ class RNVisionCameraView: UIView {
 
     self.addSubview(cameraView)
 
+    // Fresh cameraView never had a lens applied — force one on the next
+    // reassertControlProps(), regardless of whether (facing, pinnedLensId) happens
+    // to match what was applied to the previous (now-discarded) cameraView.
+    lastAppliedLensKey = nil
+
     // Configure with minimal settings
     cameraView.configure(
       delegate: self,
@@ -329,6 +413,10 @@ class RNVisionCameraView: UIView {
 
     // Disable default SDK bounding boxes
     updateScanArea()
+
+    // Replay-on-attach: emit the current camera state once immediately so
+    // onCameraStateChanged listeners are never stale-undefined (spec §8).
+    emitCameraState(cameraView.currentCameraState, bypassThrottle: true)
 
     // Stop initially, will auto-start after layout
     cameraView.stopRunning()
@@ -460,7 +548,8 @@ class RNVisionCameraView: UIView {
     // Update actual state based on what operation completed
     if actualCameraState == .starting {
       actualCameraState = success ? .running : .stopped
-      if success { updateZoom() }
+      // Re-assert declarative control props on every RUNNING transition (spec §8).
+      if success { reassertControlProps() }
     } else if actualCameraState == .stopping {
       actualCameraState = .stopped
     }
@@ -483,6 +572,19 @@ class RNVisionCameraView: UIView {
   /// isScanning=false until rescan resets it). On iOS this just delegates to
   /// the existing internal cameraView.rescan() — safe to call after each capture.
   @objc func rescan() {
+    // Android parity: rescan() on a stopped/unbound camera must rebuild it, not
+    // silently no-op. CodeScannerView.rescan() only issues a fresh bind when the
+    // underlying VSDKCameraSession is already .idle/.error (see its own doc comment) —
+    // while this view's own actualCameraState tracker is anything but running/starting,
+    // route through start() instead, so targetState/actualCameraState/
+    // reassertControlProps stay in sync with the camera actually coming back up.
+    guard actualCameraState == .running || actualCameraState == .starting else {
+      NSLog("[RNVisionCameraView] rescan: camera not running (state=%@) — routing to start()", String(describing: actualCameraState))
+      start()
+      return
+    }
+    // Running: CodeScannerView.rescan() re-arms detection (clears detected codes/overlays,
+    // shouldReturnDetectedCodes=true) — no visible preview change by design.
     cameraView?.rescan()
   }
 
@@ -500,13 +602,40 @@ class RNVisionCameraView: UIView {
   }
 
   @objc func toggleFlash(enabled: Bool) {
-    self.enableFlash = enabled
-    updateFlash()
+    // Docs review C1 — identical bug class to setZoom below: this wrote only the legacy
+    // `enableFlash` alias, but `resolvedTorch` permanently prefers the canonical `torch`
+    // prop once `isTorchSet` flips true — which happens on EVERY mount (the codegen spec
+    // declares `torch` with WithDefault<boolean, false>, so Fabric dispatches the default
+    // at view creation). updateFlash() then re-applied torch=false, actively forcing the
+    // torch OFF — toggleFlash was not just dead, it was inverted. Route through the
+    // canonical prop's didSet, mirroring setTorchEnabled below.
+    torch = enabled
   }
   
   @objc func setZoom(level: CGFloat) {
-    self.zoomLevel = NSNumber(value: Float(level))
-    updateZoom()
+    // Route through the canonical `zoomRatio` prop's didSet, mirroring setTorchEnabled
+    // below — otherwise this command is a permanent no-op once `isZoomRatioSet` has
+    // flipped true, which happens on EVERY view mount: the codegen spec declares
+    // `zoomRatio` with `WithDefault<Double, 1.0>`, so Fabric dispatches its default
+    // value at view creation regardless of whether JS ever explicitly binds the prop.
+    // Previously this wrote only the legacy `zoomLevel` alias, which `resolvedZoomRatio`
+    // never reads once isZoomRatioSet is true — the imperative setZoom() command (the
+    // zoom slider's drag handler) was silently dropped from the very first frame.
+    zoomRatio = NSNumber(value: Float(level))
+  }
+
+  // Camera Controls API (Phase 3) — commands. setFocusSettings below stays SEPARATE/
+  // unaliased: it configures overlay styling (focus-image display, bbox colors), a
+  // different concern from these one-shot autofocus/torch runtime controls.
+  @objc func setTorchEnabled(_ enabled: Bool) {
+    // Route through the `torch` prop's didSet so this command updates the same
+    // resolved-value store as C2 (isTorchSet + updateFlash) — otherwise the value
+    // is lost on the next reassertControlProps() (facing change / RUNNING transition).
+    torch = enabled
+  }
+
+  @objc func setFocusPoint(_ x: CGFloat, _ y: CGFloat) {
+    cameraView?.setFocusPoint(CGPoint(x: x, y: y))
   }
 
   @objc func setFocusSettings(jsonString: NSString) {
@@ -628,57 +757,119 @@ class RNVisionCameraView: UIView {
     return nil
   }
   
+  // Camera Controls API (Phase 3): both delegate to CodeScannerView, which already
+  // centralizes the switch-over-factor zoom conversion and torch control internally
+  // (core-routed through cameraSession.controller) — no raw AVCaptureDevice access
+  // needed here anymore. Deleted: the videoDevice lockForConfiguration()/torchMode/
+  // virtualDeviceSwitchOverVideoZoomFactors hack this used to hand-roll.
   private func updateFlash() {
     guard let cameraView = cameraView else { return }
-
-    do {
-      let videoDevice = try cameraView.videoDevice
-
-      DispatchQueue.main.async {
-        if videoDevice.isTorchAvailable {
-          do {
-            try videoDevice.lockForConfiguration()
-            if self.enableFlash {
-              try videoDevice.setTorchModeOn(level: 1.0)
-            } else {
-              videoDevice.torchMode = .off
-            }
-            videoDevice.unlockForConfiguration()
-          } catch {
-            print("[RNVisionCameraView] Error setting torch: \(error)")
-          }
-        }
-      }
-    } catch {
-      print("[RNVisionCameraView] Error getting video device: \(error)")
-    }
+    cameraView.setFlashTurnedOn(resolvedTorch)
   }
-  
+
   private func updateZoom() {
-    guard let videoDevice = try? cameraView?.videoDevice else { return }
-
-    var zoomValue = CGFloat(zoomLevel.floatValue)
-
-    // Normalize so zoomLevel 1.0 = primary (wide) camera on all devices.
-    // On virtual devices that start at ultra-wide, the first switchover factor marks where wide starts.
-    if videoDevice.constituentDevices.first?.deviceType == .builtInUltraWideCamera,
-       let wideZoom = videoDevice.virtualDeviceSwitchOverVideoZoomFactors.first {
-      zoomValue *= CGFloat(truncating: wideZoom)
-    }
-
-    DispatchQueue.main.async {
-      do {
-        try videoDevice.lockForConfiguration()
-        defer { videoDevice.unlockForConfiguration() }
-        zoomValue = min(max(zoomValue, videoDevice.minAvailableVideoZoomFactor),
-                        videoDevice.maxAvailableVideoZoomFactor)
-        videoDevice.videoZoomFactor = zoomValue
-      } catch {
-        print("[RNVisionCameraView] Error setting zoom: \(error)")
-      }
-    }
+    guard let cameraView = cameraView else { return }
+    cameraView.setZoomRatio(resolvedZoomRatio)
   }
-  
+
+  private func updateFocusMode() {
+    guard let cameraView = cameraView, let mode = focusMode as String? else { return }
+    let vsdkMode: VSDKFocusMode
+    switch mode.lowercased() {
+    case "single": vsdkMode = .single
+    case "locked": vsdkMode = .locked
+    default: vsdkMode = .continuous
+    }
+    cameraView.setFocusMode(vsdkMode)
+  }
+
+  /// Resolves `pinnedLensId` (a JS-supplied lens id string) against the lenses
+  /// available for EITHER facing and pins it. Unknown/unpinnable ids NEVER throw —
+  /// they fall back to `.automatic` and set a one-shot warning flag that the next
+  /// `onCameraStateChanged` event surfaces (spec §8).
+  ///
+  /// Bug fix (parity with Android QA Group A #2) — a pinnable lens id only ever
+  /// appears under its OWN facing's list (a front lens is never returned by
+  /// `lenses(for: .back)` and vice versa), so gating this lookup to whatever facing
+  /// the `cameraFacing` prop currently holds meant pinning a lens from the OTHER
+  /// facing silently fell back to Auto with a warning — reproduced on-device:
+  /// pinning id=5 (front) while `cameraFacing` is still "back" logged "pinnedLensId
+  /// '5' unknown or unpinnable for facing=back". Search both facings so the pin
+  /// resolves regardless of prop-set order, then bring the camera's facing in line
+  /// with whichever facing the resolved lens actually belongs to.
+  private func applyLensSelection() {
+    guard let cameraView = cameraView else { return }
+    // `CodeScannerView.setLensSelection` builds its `VSDKCameraConfiguration` from
+    // `cameraSettings.cameraPosition` (the facing last applied via
+    // `setCameraSettingsTo`), NOT from this view's `cameraFacing` prop — so facing and
+    // the resolved lens must agree before we hand it off, in EVERY branch below,
+    // otherwise the SDK is asked to select a lens under a facing it doesn't belong to.
+    let currentFacing: VSDKLensFacing = (cameraFacing as String?)?.lowercased() == "front" ? .front : .back
+
+    guard let lensId = pinnedLensId as String?, !lensId.isEmpty else {
+      // Bug fix (parity with Android QA Group A #3) — Auto/unpin must bring facing back
+      // in line with the `cameraFacing` prop. A prior cross-facing pin (below) only ever
+      // touches CodeScannerView's internal cameraSettings.cameraPosition directly, out of
+      // band from this prop; nothing else ever reset it back. Without this, unpinning
+      // after a FRONT lens pin called setLensSelection(.automatic) while the SDK's
+      // internal facing was still front — Auto stayed stuck on the front camera instead
+      // of returning to back. syncFacing(to:) is a no-op at the SDK layer when facing
+      // already matches, so this is safe to call unconditionally.
+      syncFacing(to: currentFacing, on: cameraView)
+      cameraView.setLensSelection(.automatic)
+      return
+    }
+    let capabilities = VSDKCameraCapabilities.snapshot()
+    let lenses = capabilities.lenses(for: .back) + capabilities.lenses(for: .front)
+    guard let lens = lenses.first(where: { $0.id == lensId && $0.isPinnable }),
+          let selection = try? VSDKLensSelection.pin(lens) else {
+      print("[RNVisionCameraView] pinnedLensId '\(lensId)' unknown or unpinnable — falling back to Auto")
+      syncFacing(to: currentFacing, on: cameraView)
+      cameraView.setLensSelection(.automatic)
+      pendingLensUnavailableWarning = true
+      return
+    }
+    // Bug fix (on-device: "pin front, then pin back — never returns to back"): the old
+    // `if lens.facing != currentFacing` gate compared against the cameraFacing PROP, but a
+    // prior cross-facing pin changed CodeScannerView's INTERNAL cameraSettings.cameraPosition
+    // out of band from that prop. Pinning a back lens while prop=back but internal=front
+    // skipped the sync, so setLensSelection built its configuration under FRONT facing and
+    // the back pin never took. syncFacing is a no-op at the SDK layer when facing already
+    // matches (see the Auto branch above), so call it unconditionally with the RESOLVED
+    // lens's facing — the only value that's correct in every ordering.
+    syncFacing(to: lens.facing, on: cameraView)
+    cameraView.setLensSelection(selection)
+  }
+
+  /// Pushes `facing` into CodeScannerView's own `cameraSettings.cameraPosition` — the
+  /// only state `setLensSelection`/`applyLensSelection` actually key off of. Shared by
+  /// every `applyLensSelection()` branch (pinned cross-facing switch, Auto/unpin
+  /// reconciliation, and unknown-lens fallback) so all three agree on one code path.
+  private func syncFacing(to facing: VSDKLensFacing, on cameraView: CodeScannerView) {
+    let cameraSettings = VisionSDK.CodeScannerView.CameraSettings()
+    cameraSettings.cameraPosition = facing == .front ? .front : .back
+    cameraSettings.nthFrameToProcess = frameSkip?.int64Value ?? 10
+    cameraView.setCameraSettingsTo(cameraSettings)
+  }
+
+  /// Re-asserts the current declarative camera-control prop values (pinnedLensId/
+  /// zoomRatio/torch/focusMode) against the native view. A facing or lens change
+  /// resets some of these to SDK defaults (spec §5.4); calling this after such a
+  /// change, and after every transition into `.running`, makes sure the declared
+  /// prop values always converge (spec §8).
+  private func reassertControlProps() {
+    guard cameraView != nil else { return }
+    let lensKey = currentLensKey()
+    if lensKey != lastAppliedLensKey {
+      applyLensSelection()
+      lastAppliedLensKey = lensKey
+    }
+    updateZoom()
+    updateFlash()
+    updateFocusMode()
+  }
+
+
   private func updateCaptureMode() {
     guard let cameraView = cameraView else { return }
 
@@ -799,8 +990,25 @@ class RNVisionCameraView: UIView {
   }
 
   /// Updates camera position dynamically when cameraFacing prop changes.
-  /// This method handles camera position changes after the camera has already started.
-  /// Note: Switching camera position requires stopping and restarting the camera session.
+  ///
+  /// Bug fix (parity with Android QA Group A #2): this used to manually stopRunning()
+  /// then setCameraSettingsTo() then startRunning() after a fixed 0.15s delay — a
+  /// leftover from before CodeScannerView grew its own live in-place facing switch
+  /// (cameraSession.update(with:), spec §11/Task 11's freeze-bridge-masked swapInput).
+  /// That manual stop landed BEFORE setCameraSettingsTo, which flips the underlying
+  /// VSDKCameraSession to .idle; setCameraSettingsTo's own cameraSession.update(with:)
+  /// call is then a same-tick no-op merge-only against an .idle session (see
+  /// SessionReconciler.update(with:)'s `.idle` case) — beginCameraSwitchBridge() still
+  /// fired regardless, freezing a preview that had already gone dark. The subsequent
+  /// facing switch back only ever "worked" by accident, via the delayed startRunning()
+  /// picking up the coalesced pendingConfiguration — a race, not a guarantee, which is
+  /// exactly why Front→Back reproduced as stuck while Back→Front didn't.
+  ///
+  /// Just delegating straight to setCameraSettingsTo (mirroring applyLensSelection's
+  /// facing-switch branch, which never did any manual stop/restart) lets
+  /// CodeScannerView's own live switch run as designed: a same-session in-place input
+  /// swap while RUNNING, or a plain pendingConfiguration merge while idle/starting —
+  /// either way, no lost facing changes.
   private func updateCameraPosition() {
     guard let cameraView = cameraView else { return }
     guard !isDeallocating else { return }
@@ -813,38 +1021,28 @@ class RNVisionCameraView: UIView {
       position = .back
     }
 
-    // IMPORTANT: Camera position change requires stopping and restarting the camera
-    // AVFoundation operations must be on main thread to avoid AutoLayout issues
-    if actualCameraState == .running || actualCameraState == .starting {
-      // Stop camera on main thread
-      DispatchQueue.main.async { [weak self] in
-        guard let self = self, let cameraView = self.cameraView else { return }
+    let cameraSettings = VisionSDK.CodeScannerView.CameraSettings()
+    cameraSettings.cameraPosition = position
+    cameraSettings.nthFrameToProcess = frameSkip?.int64Value ?? 10
+    cameraView.setCameraSettingsTo(cameraSettings)
 
-        self.isTransitioning = true
-        self.actualCameraState = .stopping
-
-        cameraView.stopRunning()
-        self.actualCameraState = .stopped
-
-        // Apply new camera settings on main thread
-        let cameraSettings = VisionSDK.CodeScannerView.CameraSettings()
-        cameraSettings.cameraPosition = position
-        cameraSettings.nthFrameToProcess = self.frameSkip?.int64Value ?? 10
-        cameraView.setCameraSettingsTo(cameraSettings)
-
-        // Small delay to let camera settle
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { [weak self] in
-          guard let self = self, let cameraView = self.cameraView else { return }
-
-          // Restart camera on main thread
-          self.actualCameraState = .starting
-          cameraView.startRunning()
-
-          self.actualCameraState = .running
-          self.targetState = .running
-          self.isTransitioning = false
-        }
-      }
+    // Facing changed — the active lens (and its zoom/torch/focus capabilities) reset
+    // for the new facing (spec §5.4/§8); re-assert declarative control props once the
+    // in-place switch has had time to settle. CodeScannerView exposes no completion
+    // callback for this (didChangeCameraState fires on every intermediate transition
+    // too, and reasserting from inside it would re-trigger itself via applyZoom/
+    // TorchIfRunning's own state emits) — a short settle delay mirrors the pattern
+    // already used elsewhere in this file (e.g. updateScanArea's post-start delay).
+    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
+      self?.reassertControlProps()
+    }
+    // Docs review H1 — the swap is async on the session queue with no completion callback;
+    // if it lands AFTER the 0.3s reassert, its runtimeSettings.resetToDefaults() erases the
+    // torch/zoom the reassert just wrote and nothing re-fires (status stays .running through
+    // an in-place swap). A second, idempotent reassert past any realistic swap duration
+    // closes that window. ponytail: two timers, state-driven reassert if this ever flakes.
+    DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { [weak self] in
+      self?.reassertControlProps()
     }
   }
   
@@ -1026,5 +1224,108 @@ extension RNVisionCameraView: CodeScannerViewDelegate {
       sendError(message: "Failed to save image: \(error.localizedDescription)")
       cameraView?.rescan()
     }
+  }
+
+  // MARK: - Camera Controls API (Phase 3) — state delegate → throttled event
+
+  func codeScannerView(_ scannerView: CodeScannerView, didChangeCameraState state: VSDKCameraState) {
+    // Guards against a state callback landing mid-teardown (deinit sets this first).
+    guard !isDeallocating else { return }
+    emitCameraState(state, bypassThrottle: false)
+  }
+
+  private func cameraStatusString(_ status: VSDKCameraStatus) -> String {
+    switch status {
+    case .idle: return "idle"
+    case .starting: return "starting"
+    case .running: return "running"
+    case .interrupted: return "interrupted"
+    case .error: return "error"
+    @unknown default: return "idle"
+    }
+  }
+
+  private func cameraErrorCodeString(_ error: NSError) -> String {
+    switch VSDKCameraErrorCode(rawValue: error.code) {
+    case .permissionDenied: return "permission-denied"
+    case .lensUnavailable: return "lens-unavailable"
+    case .configurationFailed: return "configuration-failed"
+    default: return "configuration-failed"
+    }
+  }
+
+  /// Builds and emits the `onCameraStateChanged` payload. Throttled to ≤10Hz,
+  /// trailing-edge-guaranteed; status/errorCode/warningCode transitions bypass
+  /// the throttle entirely (spec §8). Payload keys must match Android's emitter
+  /// and the locked `CameraStateChangedEvent` codegen shape exactly.
+  private func emitCameraState(_ state: VSDKCameraState, bypassThrottle: Bool) {
+    let statusString = cameraStatusString(state.status)
+    let statusChanged = lastCameraStateStatus != statusString
+    let now = Date().timeIntervalSince1970
+    let hasError = state.error != nil
+    let hasWarning = state.warning != nil || pendingLensUnavailableWarning
+    let shouldEmit = bypassThrottle || statusChanged || hasError || hasWarning ||
+        (now - lastCameraStateEmitTime) >= cameraStateThrottleSeconds
+
+    guard shouldEmit else {
+      scheduleTrailingCameraStateEmit(state)
+      return
+    }
+
+    // This emit already carries the latest state — any pending trailing emit is stale.
+    trailingCameraStateWorkItem?.cancel()
+    trailingCameraStateWorkItem = nil
+    performCameraStateEmit(state, statusString: statusString)
+  }
+
+  /// Schedules a single deferred emit of `state` at the throttle window boundary
+  /// (trailing edge). Cancels/replaces any previously scheduled trailing emit, so
+  /// only the freshest state from a burst ever lands once the window elapses.
+  private func scheduleTrailingCameraStateEmit(_ state: VSDKCameraState) {
+    trailingCameraStateWorkItem?.cancel()
+    let elapsed = Date().timeIntervalSince1970 - lastCameraStateEmitTime
+    let remaining = max(0, cameraStateThrottleSeconds - elapsed)
+    let workItem = DispatchWorkItem { [weak self] in
+      guard let self = self, !self.isDeallocating else { return }
+      self.trailingCameraStateWorkItem = nil
+      self.performCameraStateEmit(state, statusString: self.cameraStatusString(state.status))
+    }
+    trailingCameraStateWorkItem = workItem
+    DispatchQueue.main.asyncAfter(deadline: .now() + remaining, execute: workItem)
+  }
+
+  private func performCameraStateEmit(_ state: VSDKCameraState, statusString: String) {
+    lastCameraStateEmitTime = Date().timeIntervalSince1970
+    lastCameraStateStatus = statusString
+
+    var payload: [String: Any] = [
+      "status": statusString,
+      "facing": state.facing == .front ? "front" : "back",
+      "zoomRatio": state.zoomRatio,
+      "minZoomRatio": state.minZoomRatio,
+      "maxZoomRatio": state.maxZoomRatio,
+      "torchEnabled": state.isTorchEnabled,
+      "isPreviewActive": state.isPreviewActive,
+    ]
+    switch state.focusMode {
+    case .single: payload["focusMode"] = "single"
+    case .locked: payload["focusMode"] = "locked"
+    default: payload["focusMode"] = "continuous"
+    }
+    if let lens = state.activeLens { payload["activeLensId"] = lens.id }
+    if let error = state.error {
+      payload["errorCode"] = cameraErrorCodeString(error)
+      payload["errorMessage"] = error.localizedDescription
+    }
+    if let warning = state.warning {
+      payload["warningCode"] = cameraErrorCodeString(warning)
+      payload["warningMessage"] = warning.localizedDescription
+    } else if pendingLensUnavailableWarning {
+      payload["warningCode"] = "lens-unavailable"
+      // Matches Android's cameraStateToMap() warningMessage string exactly.
+      payload["warningMessage"] = "pinnedLensId unavailable — falling back to Auto"
+      pendingLensUnavailableWarning = false // one-shot; consumed
+    }
+    onCameraStateChanged?(payload)
   }
 }

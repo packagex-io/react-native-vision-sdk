@@ -967,4 +967,76 @@ class VisionSdkModule: RCTEventEmitter {
     }
   }
 
+  // Camera Controls API (Phase 3, Group F) — "facing" mapping mirrors
+  // RNVisionCameraView.performCameraStateEmit's `state.facing == .front ? "front" : "back"`
+  // exactly. "kind" mapping mirrors VSDKLensKind's own Swift case names (already camelCase),
+  // matching the JS `Lens.kind` union.
+  private func lensKindString(_ kind: VSDKLensKind) -> String {
+    switch kind {
+    case .ultraWide: return "ultraWide"
+    case .wide: return "wide"
+    case .telephoto: return "telephoto"
+    default: return "unknown"
+    }
+  }
+
+  /// Snapshots the device's current camera capabilities (lenses, zoom stops,
+  /// torch/focus support) for both facings, serialized to the same JSON shape
+  /// produced by the Android TurboModule implementation.
+  @objc func getCameraCapabilities(
+    _ resolver: @escaping RCTPromiseResolveBlock,
+    rejecter: @escaping RCTPromiseRejectBlock
+  ) {
+    let capabilities = VSDKCameraCapabilities.snapshot()
+    let facings: [(VSDKLensFacing, String)] = [(.back, "back"), (.front, "front")]
+    var lensesArray: [[String: Any]] = []
+    var zoomStops: [String: [NSNumber]] = [:]
+    var hasTorch: [String: Bool] = [:]
+    var supportsFocusPoint: [String: Bool] = [:]
+    // Crash fix (iPhone 14 Pro, on-mount SIGABRT): NSJSONSerialization aborts the whole
+    // process on a non-finite number (inf/NaN) anywhere in the payload — a zoom division
+    // in the multi-lens capability math produced one. Sanitize EVERY numeric at this
+    // boundary (a capabilities query must never crash the app) and log the offender so
+    // the SDK-level source can be root-caused.
+    func finite(_ value: Float, _ field: String, fallback: Float) -> Float {
+      guard value.isFinite else {
+        NSLog("[VisionSdkModule] getCameraCapabilities: NON-FINITE %@ = %f — replacing with %.2f", field, Double(value), Double(fallback))
+        return fallback
+      }
+      return value
+    }
+    for (facing, name) in facings {
+      for lens in capabilities.lenses(for: facing) {
+        lensesArray.append([
+          "id": lens.id,
+          "kind": lensKindString(lens.kind),
+          "facing": name,
+          "minZoomRatio": finite(lens.minZoomRatio, "lens[\(lens.id)].minZoomRatio", fallback: 1.0),
+          "maxZoomRatio": finite(lens.maxZoomRatio, "lens[\(lens.id)].maxZoomRatio", fallback: 1.0),
+          "zoomSwitchPoints": lens.zoomSwitchPoints.map { finite($0.floatValue, "lens[\(lens.id)].zoomSwitchPoints", fallback: 1.0) },
+          "hasFlash": lens.hasFlash,
+          "isLogical": lens.isLogical,
+          "isPinnable": lens.isPinnable,
+        ])
+      }
+      zoomStops[name] = capabilities.zoomStops(for: facing).map {
+        NSNumber(value: finite($0.floatValue, "zoomStops[\(name)]", fallback: 1.0))
+      }
+      hasTorch[name] = capabilities.hasTorch(for: facing)
+      supportsFocusPoint[name] = capabilities.supportsFocusPoint(for: facing)
+    }
+    let result: [String: Any] = [
+      "lenses": lensesArray,
+      "zoomStops": zoomStops,
+      "hasTorch": hasTorch,
+      "supportsFocusPoint": supportsFocusPoint,
+    ]
+    do {
+      let data = try JSONSerialization.data(withJSONObject: result)
+      resolver(String(data: data, encoding: .utf8))
+    } catch {
+      rejecter("CAPABILITIES_ERROR", error.localizedDescription, error)
+    }
+  }
+
 }
