@@ -1,6 +1,6 @@
 import { ReactNode } from 'react';
 import { StyleProp, ViewStyle } from 'react-native';
-import type { TemplateData } from './types';
+import type { CameraErrorCode, CameraStatus, FocusMode, LensFacing, TemplateData } from './types';
 
 /**
  * Camera scan mode types
@@ -14,9 +14,11 @@ export type VisionCameraScanMode =
   | 'barcodesinglecapture';
 
 /**
- * Camera facing direction types
+ * Camera facing direction types.
+ * Alias of `LensFacing` (`./types`) — kept as a separate exported name for
+ * backwards compatibility with existing consumers of this file.
  */
-export type CameraFacing = 'back' | 'front';
+export type CameraFacing = LensFacing;
 
 /**
  * Event triggered when an image is captured by the camera.
@@ -359,6 +361,94 @@ export interface VisionCameraBoundingBoxesUpdateEvent {
 }
 
 /**
+ * Event payload for the throttled (≤10Hz) camera-state stream (Camera Controls
+ * API, Phase 3). Fires once immediately on listener attach with the current
+ * state (replay), and status/error/warning transitions always bypass the
+ * throttle.
+ */
+export interface VisionCameraStateEvent {
+  /**
+   * @type {CameraStatus}
+   * @description Current camera session status.
+   */
+  status: CameraStatus;
+
+  /**
+   * @type {CameraErrorCode | undefined}
+   * @description Fatal error code, only set when `status === 'error'`.
+   */
+  errorCode?: CameraErrorCode;
+
+  /**
+   * @type {string | undefined}
+   * @description Human-readable message for `errorCode`.
+   */
+  errorMessage?: string;
+
+  /**
+   * @type {CameraErrorCode | undefined}
+   * @description Non-fatal warning code (e.g. an unpinnable `pinnedLensId` falling back to Auto).
+   */
+  warningCode?: CameraErrorCode;
+
+  /**
+   * @type {string | undefined}
+   * @description Human-readable message for `warningCode`.
+   */
+  warningMessage?: string;
+
+  /**
+   * @type {CameraFacing}
+   * @description Which physical camera position is currently active.
+   */
+  facing: CameraFacing;
+
+  /**
+   * @type {string | undefined}
+   * @description Id of the currently active lens (from `getCameraCapabilities()`), if known.
+   */
+  activeLensId?: string;
+
+  /**
+   * @type {number}
+   * @description Current wide-normalized zoom ratio.
+   */
+  zoomRatio: number;
+
+  /**
+   * @type {number}
+   * @description Minimum zoom ratio supported by the active lens/facing.
+   */
+  minZoomRatio: number;
+
+  /**
+   * @type {number}
+   * @description Maximum zoom ratio supported by the active lens/facing.
+   */
+  maxZoomRatio: number;
+
+  /**
+   * @type {boolean}
+   * @description Whether the torch/flash is currently on.
+   */
+  torchEnabled: boolean;
+
+  /**
+   * @type {FocusMode}
+   * @description Currently active focus mode.
+   */
+  focusMode: FocusMode;
+
+  /**
+   * @type {boolean}
+   * @description Whether the camera preview is actively rendering frames.
+   * Ratified as part of this single throttled event — there is no separate
+   * `onCameraReady` event.
+   */
+  isPreviewActive: boolean;
+}
+
+/**
  * Props for the Vision Camera view component.
  */
 export interface VisionCameraViewProps {
@@ -380,6 +470,8 @@ export interface VisionCameraViewProps {
    * @optional
    * @type {boolean}
    * @description Optional flag to enable or disable flash for capturing.
+   * @deprecated Use `torch` instead. Feeds the same native path — if both are
+   * set, `torch` wins and a one-time dev warning fires.
    */
   enableFlash?: boolean;
 
@@ -387,8 +479,59 @@ export interface VisionCameraViewProps {
    * @optional
    * @type {number}
    * @description Optional zoom level for the camera.
+   * @deprecated Use `zoomRatio` instead. Feeds the same native path — if both
+   * are set, `zoomRatio` wins and a one-time dev warning fires.
    */
   zoomLevel?: number;
+
+  /**
+   * @optional
+   * @type {string | undefined}
+   * @description Pin a specific lens by id (from `VisionCore.getCameraCapabilities()`).
+   * Undefined = Auto (OS picks the physical lens per zoom, default behavior).
+   * An unknown or unpinnable id resolves to Auto with `warningCode: 'lens-unavailable'`
+   * in the next `onCameraStateChanged` event — never a native throw.
+   */
+  pinnedLensId?: string;
+
+  /**
+   * @optional
+   * @type {number | undefined}
+   * @description Canonical zoom control. Wide-normalized absolute ratio: 1.0 = wide
+   * lens at 1x, 0.5 = ultra-wide, 3.0 = telephoto territory — identical meaning on
+   * both platforms. Supersedes the deprecated `zoomLevel` (same native path; if both
+   * are set, `zoomRatio` wins and a one-time dev warning fires).
+   * @default 1.0
+   */
+  zoomRatio?: number;
+
+  /**
+   * @optional
+   * @type {boolean | undefined}
+   * @description Canonical torch control. Supersedes the deprecated `enableFlash`
+   * (same native path; if both are set, `torch` wins and a one-time dev warning fires).
+   * @default false
+   */
+  torch?: boolean;
+
+  /**
+   * @optional
+   * @type {FocusMode | undefined}
+   * @description Camera focus mode: 'continuous' (AF-C), 'single' (AF-S), or 'locked'.
+   * @default 'continuous'
+   */
+  focusMode?: FocusMode;
+
+  /**
+   * @optional
+   * @param {VisionCameraStateEvent} event
+   * @description Event handler for the throttled (≤10Hz) camera-state stream —
+   * status, facing, active lens, zoom range, torch, focus mode, and any non-fatal
+   * warning (e.g. an unpinnable `pinnedLensId` falling back to Auto). Fires once
+   * immediately on attach with the current state (replay), and status/error/warning
+   * transitions always bypass the throttle.
+   */
+  onCameraStateChanged?: (event: VisionCameraStateEvent) => void;
 
   /**
    * @optional
@@ -703,6 +846,22 @@ export interface VisionCameraRefProps {
   setFocusSettings: (settings: FocusSettings) => void;
 
   /**
+   * Sets the torch (flash) on/off. Fire-and-forget — the result lands in the
+   * next `onCameraStateChanged` event's `torchEnabled` field.
+   * @param {boolean} enabled - Whether the torch should be on.
+   */
+  setTorch: (enabled: boolean) => void;
+
+  /**
+   * Triggers a one-shot focus+metering pass at the given point (normalized 0-1,
+   * top-left origin), under whatever `focusMode` is currently set. Does not
+   * change `focusMode` itself.
+   * @param {number} x - Normalized x coordinate (0-1).
+   * @param {number} y - Normalized y coordinate (0-1).
+   */
+  setFocusPoint: (x: number, y: number) => void;
+
+  /**
    * Pauses detection while keeping the camera session/preview alive.
    * @description Mode-agnostic universal pause: stops the underlying
    * per-frame Vision/CoreML (iOS) or MLKit/ONNX (Android) analysis work
@@ -749,6 +908,8 @@ export interface VisionCameraProps {
    * @optional
    * @type {boolean | undefined}
    * @description Optional flag to enable or disable flash for capturing.
+   * @deprecated Use `torch` instead. Feeds the same native path — if both are
+   * set, `torch` wins and a one-time dev warning fires.
    */
   enableFlash?: boolean;
 
@@ -756,8 +917,59 @@ export interface VisionCameraProps {
    * @optional
    * @type {number | undefined}
    * @description Optional zoom level for the camera.
+   * @deprecated Use `zoomRatio` instead. Feeds the same native path — if both
+   * are set, `zoomRatio` wins and a one-time dev warning fires.
    */
   zoomLevel?: number;
+
+  /**
+   * @optional
+   * @type {string | undefined}
+   * @description Pin a specific lens by id (from `VisionCore.getCameraCapabilities()`).
+   * Undefined = Auto (OS picks the physical lens per zoom, default behavior).
+   * An unknown or unpinnable id resolves to Auto with `warningCode: 'lens-unavailable'`
+   * in the next `onCameraStateChanged` event — never a native throw.
+   */
+  pinnedLensId?: string;
+
+  /**
+   * @optional
+   * @type {number | undefined}
+   * @description Canonical zoom control. Wide-normalized absolute ratio: 1.0 = wide
+   * lens at 1x, 0.5 = ultra-wide, 3.0 = telephoto territory — identical meaning on
+   * both platforms. Supersedes the deprecated `zoomLevel` (same native path; if both
+   * are set, `zoomRatio` wins and a one-time dev warning fires).
+   * @default 1.0
+   */
+  zoomRatio?: number;
+
+  /**
+   * @optional
+   * @type {boolean | undefined}
+   * @description Canonical torch control. Supersedes the deprecated `enableFlash`
+   * (same native path; if both are set, `torch` wins and a one-time dev warning fires).
+   * @default false
+   */
+  torch?: boolean;
+
+  /**
+   * @optional
+   * @type {FocusMode | undefined}
+   * @description Camera focus mode: 'continuous' (AF-C), 'single' (AF-S), or 'locked'.
+   * @default 'continuous'
+   */
+  focusMode?: FocusMode;
+
+  /**
+   * @optional
+   * @param {VisionCameraStateEvent} event
+   * @description Event handler for the throttled (≤10Hz) camera-state stream —
+   * status, facing, active lens, zoom range, torch, focus mode, and any non-fatal
+   * warning (e.g. an unpinnable `pinnedLensId` falling back to Auto). Fires once
+   * immediately on attach with the current state (replay), and status/error/warning
+   * transitions always bypass the throttle.
+   */
+  onCameraStateChanged?: (event: VisionCameraStateEvent) => void;
 
   /**
    * @optional
