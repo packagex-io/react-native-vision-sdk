@@ -7,6 +7,7 @@ import type {
   DownloadProgress,
   ModelInfo,
   DetectedBarcode,
+  CameraCapabilities,
 } from './types';
 
 // New Architecture only - use TurboModule
@@ -667,6 +668,31 @@ export const VisionCore = {
       return parsedResult;
     } catch (error) {
       throw error;
+    }
+  },
+
+  // ============================================================================
+  // CAMERA CONTROLS API (Phase 3)
+  // ============================================================================
+
+  /**
+   * Snapshots the device's current camera capabilities (lenses, zoom stops,
+   * torch/focus support) for both facings.
+   *
+   * @returns CameraCapabilities describing all lenses and per-facing support.
+   *
+   * @example
+   * const capabilities = await VisionCore.getCameraCapabilities();
+   * console.log(capabilities.lenses.map((lens) => lens.id));
+   */
+  getCameraCapabilities: async (): Promise<CameraCapabilities> => {
+    const result = await VisionSdkModuleNative.getCameraCapabilities();
+    try {
+      return JSON.parse(result);
+    } catch (error) {
+      throw new Error(
+        `VisionCore.getCameraCapabilities: failed to parse native response as JSON: ${error}`
+      );
     }
   },
 

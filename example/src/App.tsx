@@ -14,6 +14,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ScannerScreen } from './screens/ScannerScreen';
 import { DimensioningScreen } from './screens/DimensioningScreen';
+import { CameraControlsQAScreen } from './screens/CameraControlsQAScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -27,6 +28,13 @@ const App = () => {
         >
           <Stack.Screen name="ScannerScreen" component={ScannerScreen} />
           <Stack.Screen name="DimensioningScreen" component={DimensioningScreen} />
+          <Stack.Screen
+            name="CameraControlsQAScreen"
+            component={CameraControlsQAScreen}
+            // The iOS interactive swipe-back competes with the zoom slider's
+            // left-edge drags — back out via the header arrow instead.
+            options={{ gestureEnabled: false }}
+          />
         </Stack.Navigator>
       </NavigationContainer>
     </SafeAreaProvider>

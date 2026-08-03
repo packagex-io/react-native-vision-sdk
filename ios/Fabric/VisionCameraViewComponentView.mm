@@ -87,6 +87,14 @@ using namespace facebook::react;
         };
         ((void (*)(id, SEL, id))objc_msgSend)(_visionCameraView, onBoundingBoxesUpdateSetter, boundingBoxBlock);
       }
+
+      SEL onCameraStateChangedSetter = NSSelectorFromString(@"setOnCameraStateChanged:");
+      if ([_visionCameraView respondsToSelector:onCameraStateChangedSetter]) {
+        id cameraStateBlock = ^(NSDictionary *event) {
+          [weakSelf emitCameraStateChangedEvent:event];
+        };
+        ((void (*)(id, SEL, id))objc_msgSend)(_visionCameraView, onCameraStateChangedSetter, cameraStateBlock);
+      }
     } else {
       // Fallback to placeholder if Swift class not available
       _visionCameraView = [[UIView alloc] initWithFrame:self.bounds];
@@ -311,6 +319,42 @@ using namespace facebook::react;
     }
   }
 
+  // Camera Controls API (Phase 3)
+  if (oldViewProps.zoomRatio != newViewProps.zoomRatio) {
+    SEL setter = NSSelectorFromString(@"setZoomRatio:");
+    if ([_visionCameraView respondsToSelector:setter]) {
+      NSNumber *value = @(newViewProps.zoomRatio);
+      ((void (*)(id, SEL, id))objc_msgSend)(_visionCameraView, setter, value);
+    }
+  }
+
+  if (oldViewProps.torch != newViewProps.torch) {
+    SEL setter = NSSelectorFromString(@"setTorch:");
+    if ([_visionCameraView respondsToSelector:setter]) {
+      BOOL value = newViewProps.torch;
+      ((void (*)(id, SEL, BOOL))objc_msgSend)(_visionCameraView, setter, value);
+    }
+  }
+
+  if (oldViewProps.focusMode != newViewProps.focusMode) {
+    SEL setter = NSSelectorFromString(@"setFocusMode:");
+    if ([_visionCameraView respondsToSelector:setter]) {
+      NSString *value = [NSString stringWithUTF8String:newViewProps.focusMode.c_str()];
+      ((void (*)(id, SEL, id))objc_msgSend)(_visionCameraView, setter, value);
+    }
+  }
+
+  if (oldViewProps.pinnedLensId != newViewProps.pinnedLensId) {
+    SEL setter = NSSelectorFromString(@"setPinnedLensId:");
+    if ([_visionCameraView respondsToSelector:setter]) {
+      NSString *value = nil;
+      if (!newViewProps.pinnedLensId.empty()) {
+        value = [NSString stringWithUTF8String:newViewProps.pinnedLensId.c_str()];
+      }
+      ((void (*)(id, SEL, id))objc_msgSend)(_visionCameraView, setter, value);
+    }
+  }
+
   [super updateProps:props oldProps:oldProps];
 }
 
@@ -329,8 +373,10 @@ using namespace facebook::react;
 
   if (commandId != nil) {
     // Map command IDs to command names based on the order in supportedCommands array
-    // From VisionCameraViewNativeComponent.ts: ['capture', 'stop', 'start', 'rescan', 'toggleFlash', 'setZoom', 'setFocusSettings', 'pauseDetection', 'resumeDetection']
-    NSArray *commandNames = @[@"capture", @"stop", @"start", @"rescan", @"toggleFlash", @"setZoom", @"setFocusSettings", @"pauseDetection", @"resumeDetection"];
+    // From VisionCameraViewNativeComponent.ts: ['capture', 'stop', 'start', 'rescan', 'toggleFlash', 'setZoom', 'setFocusSettings', 'pauseDetection', 'resumeDetection', 'setTorchEnabled', 'setFocusPoint']
+    // Order is locked three-files-in-sync with the TS supportedCommands array and Android's
+    // receiveCommand `when` switch — do not reorder without updating all three.
+    NSArray *commandNames = @[@"capture", @"stop", @"start", @"rescan", @"toggleFlash", @"setZoom", @"setFocusSettings", @"pauseDetection", @"resumeDetection", @"setTorchEnabled", @"setFocusPoint"];
 
     NSInteger cmdId = [commandId integerValue];
     if (cmdId >= 0 && cmdId < commandNames.count) {
@@ -396,7 +442,13 @@ using namespace facebook::react;
   }
 }
 
-- (void)setZoom:(CGFloat)level
+// ABI FIX (on-device: every setZoom command arrived as 0.000, resetting zoom to min —
+// "slider snaps to 1x on release"): the codegen protocol declares `- (void)setZoom:(float)level`
+// (4-byte float, passed in s0). Declaring the implementation with CGFloat (8-byte double on
+// arm64, read from d0) made it read a register the caller never wrote — garbage ≈ 0.0.
+// The parameter type MUST match the generated protocol exactly; widen to CGFloat only for
+// the Swift method's NSInvocation (setZoomWithLevel: takes CGFloat).
+- (void)setZoom:(float)level
 {
   SEL selector = NSSelectorFromString(@"setZoomWithLevel:");
   if ([_visionCameraView respondsToSelector:selector]) {
@@ -404,7 +456,8 @@ using namespace facebook::react;
     NSInvocation *invocation = [NSInvocation invocationWithMethodSignature:signature];
     [invocation setSelector:selector];
     [invocation setTarget:_visionCameraView];
-    [invocation setArgument:&level atIndex:2];
+    CGFloat widened = level;
+    [invocation setArgument:&widened atIndex:2];
     [invocation invoke];
   }
 }
@@ -414,6 +467,43 @@ using namespace facebook::react;
   SEL selector = NSSelectorFromString(@"setFocusSettingsWithJsonString:");
   if ([_visionCameraView respondsToSelector:selector]) {
     ((void (*)(id, SEL, id))objc_msgSend)(_visionCameraView, selector, settingsJson);
+  }
+}
+
+// Camera Controls API (Phase 3). NOTE: named setTorchEnabled (not setTorch) to avoid
+// an Android codegen collision — see the matching comment in
+// VisionCameraViewNativeComponent.ts. Not aliased with the `torch` prop's own
+// synthesized `setTorch:` setter, so no Obj-C selector collision either.
+- (void)setTorchEnabled:(BOOL)enabled
+{
+  SEL selector = NSSelectorFromString(@"setTorchEnabled:");
+  if ([_visionCameraView respondsToSelector:selector]) {
+    NSMethodSignature *signature = [_visionCameraView methodSignatureForSelector:selector];
+    NSInvocation *invocation = [NSInvocation invocationWithMethodSignature:signature];
+    [invocation setSelector:selector];
+    [invocation setTarget:_visionCameraView];
+    [invocation setArgument:&enabled atIndex:2];
+    [invocation invoke];
+  }
+}
+
+// ABI FIX — same float-vs-CGFloat register mismatch as setZoom above: the generated
+// protocol declares `- (void)setFocusPoint:(float)x y:(float)y`, so a CGFloat-typed
+// implementation read both coordinates as garbage ≈ (0,0). Tap-to-focus was silently
+// focusing at the top-left corner on every tap.
+- (void)setFocusPoint:(float)x y:(float)y
+{
+  SEL selector = NSSelectorFromString(@"setFocusPoint::");
+  if ([_visionCameraView respondsToSelector:selector]) {
+    NSMethodSignature *signature = [_visionCameraView methodSignatureForSelector:selector];
+    NSInvocation *invocation = [NSInvocation invocationWithMethodSignature:signature];
+    [invocation setSelector:selector];
+    [invocation setTarget:_visionCameraView];
+    CGFloat widenedX = x;
+    CGFloat widenedY = y;
+    [invocation setArgument:&widenedX atIndex:2];
+    [invocation setArgument:&widenedY atIndex:3];
+    [invocation invoke];
   }
 }
 
@@ -549,6 +639,43 @@ using namespace facebook::react;
     }
 
     emitter->onBoundingBoxesUpdate(event);
+  }
+}
+
+// Camera Controls API (Phase 3). All fields are scalars (string/Float/bool) per the
+// JSON-string convention (§5.10) — no array/object payloads here, so no JSON encoding.
+- (void)emitCameraStateChangedEvent:(NSDictionary *)eventData
+{
+  if (_eventEmitter != nullptr) {
+    auto emitter = std::static_pointer_cast<VisionCameraViewEventEmitter const>(_eventEmitter);
+
+    VisionCameraViewEventEmitter::OnCameraStateChanged event = {};
+    event.status = std::string([[eventData objectForKey:@"status"] UTF8String] ?: "");
+    event.facing = std::string([[eventData objectForKey:@"facing"] UTF8String] ?: "");
+    event.zoomRatio = [[eventData objectForKey:@"zoomRatio"] floatValue];
+    event.minZoomRatio = [[eventData objectForKey:@"minZoomRatio"] floatValue];
+    event.maxZoomRatio = [[eventData objectForKey:@"maxZoomRatio"] floatValue];
+    event.torchEnabled = [[eventData objectForKey:@"torchEnabled"] boolValue];
+    event.focusMode = std::string([[eventData objectForKey:@"focusMode"] UTF8String] ?: "");
+    event.isPreviewActive = [[eventData objectForKey:@"isPreviewActive"] boolValue];
+
+    if ([eventData objectForKey:@"activeLensId"]) {
+      event.activeLensId = std::string([[eventData objectForKey:@"activeLensId"] UTF8String]);
+    }
+    if ([eventData objectForKey:@"errorCode"]) {
+      event.errorCode = std::string([[eventData objectForKey:@"errorCode"] UTF8String]);
+    }
+    if ([eventData objectForKey:@"errorMessage"]) {
+      event.errorMessage = std::string([[eventData objectForKey:@"errorMessage"] UTF8String]);
+    }
+    if ([eventData objectForKey:@"warningCode"]) {
+      event.warningCode = std::string([[eventData objectForKey:@"warningCode"] UTF8String]);
+    }
+    if ([eventData objectForKey:@"warningMessage"]) {
+      event.warningMessage = std::string([[eventData objectForKey:@"warningMessage"] UTF8String]);
+    }
+
+    emitter->onCameraStateChanged(event);
   }
 }
 

@@ -55,10 +55,12 @@ end
 target 'VisionSdkExample' do
   config = use_native_modules!
 
-  # VisionSDK from CocoaPods trunk. Matches the deps declared by the
-  # react-native-vision-sdk podspec; pinned explicitly here for clarity.
-  pod 'VisionSDK', '= 2.3.14'
-  pod 'VisionSDK/Dimensioning', '= 2.3.14'
+  # LOCAL-CONSUME PIN (camera-controls-phase3): points at the freshly-rebuilt local
+  # iOS SDK xcframework (with Group-B camera-controls fixes) instead of the published
+  # CocoaPods trunk version. Revert to `pod 'VisionSDK', '= 2.3.14'` (+ Dimensioning)
+  # before any release-gate / npm publish.
+  pod 'VisionSDK', :path => '/Users/kashif/Downloads/monorepo/vision-sdk-ios/VisionSDK-Local.podspec'
+  pod 'VisionSDK/Dimensioning', :path => '/Users/kashif/Downloads/monorepo/vision-sdk-ios/VisionSDK-Local.podspec'
 
   use_react_native!(
     :path => config[:reactNativePath],

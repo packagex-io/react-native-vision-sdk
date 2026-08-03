@@ -50,6 +50,25 @@ type BoundingBoxesUpdateEvent = Readonly<{
   }>;
 }>;
 
+// Camera Controls API (Phase 3) — throttled full-state event (§8). isPreviewActive is
+// folded into this single event per the ratified "one throttled RN event" decision;
+// there is no separate onCameraReady event.
+type CameraStateChangedEvent = Readonly<{
+  status?: string; // CameraStatus: 'idle' | 'starting' | 'running' | 'interrupted' | 'error'
+  errorCode?: string; // CameraErrorCode
+  errorMessage?: string;
+  warningCode?: string; // CameraErrorCode
+  warningMessage?: string;
+  facing?: string; // LensFacing: 'back' | 'front'
+  activeLensId?: string;
+  zoomRatio?: Float;
+  minZoomRatio?: Float;
+  maxZoomRatio?: Float;
+  torchEnabled?: boolean;
+  focusMode?: string; // FocusMode: 'continuous' | 'single' | 'locked'
+  isPreviewActive?: boolean;
+}>;
+
 // Component props interface
 export interface NativeProps extends ViewProps {
   // Boolean properties
@@ -70,6 +89,13 @@ export interface NativeProps extends ViewProps {
   scanMode?: WithDefault<string, 'photo'>; // 'photo' | 'barcode' | 'qrcode' | 'barcodeorqrcode' | 'ocr' | 'barcodesinglecapture'
   cameraFacing?: WithDefault<string, 'back'>; // 'back' | 'front'
 
+  // Camera Controls API (Phase 3) — canonical props; zoomLevel/enableFlash above stay as
+  // deprecated aliases feeding the same native path (see VisionCamera.tsx).
+  pinnedLensId?: string; // undefined = Auto
+  zoomRatio?: WithDefault<Double, 1.0>;
+  torch?: WithDefault<boolean, false>;
+  focusMode?: WithDefault<string, 'continuous'>; // FocusMode
+
   // Object properties - passed as JSON strings due to codegen limitations
   scanAreaJson?: string;
   detectionConfigJson?: string;
@@ -82,6 +108,7 @@ export interface NativeProps extends ViewProps {
   onSharpnessScoreUpdate?: DirectEventHandler<SharpnessScoreUpdateEvent>;
   onBarcodeDetected?: DirectEventHandler<BarcodeDetectedEvent>;
   onBoundingBoxesUpdate?: DirectEventHandler<BoundingBoxesUpdateEvent>;
+  onCameraStateChanged?: DirectEventHandler<CameraStateChangedEvent>;
 }
 
 // Native commands interface
@@ -95,10 +122,16 @@ interface NativeCommands {
   setFocusSettings: (viewRef: React.ElementRef<HostComponent<NativeProps>>, settingsJson: string) => void;
   pauseDetection: (viewRef: React.ElementRef<HostComponent<NativeProps>>) => void;
   resumeDetection: (viewRef: React.ElementRef<HostComponent<NativeProps>>) => void;
+  // NOTE: named setTorchEnabled (not setTorch) to avoid an Android codegen collision — the
+  // `torch` prop already generates `setTorch(view, boolean)` on VisionCameraViewManagerInterface;
+  // a same-named command with the same erased signature (view, boolean) fails javac
+  // ("method already defined"). Verified via `javac` repro during Task 9 codegen regen.
+  setTorchEnabled: (viewRef: React.ElementRef<HostComponent<NativeProps>>, enabled: boolean) => void;
+  setFocusPoint: (viewRef: React.ElementRef<HostComponent<NativeProps>>, x: Float, y: Float) => void;
 }
 
 export const Commands: NativeCommands = codegenNativeCommands<NativeCommands>({
-  supportedCommands: ['capture', 'stop', 'start', 'rescan', 'toggleFlash', 'setZoom', 'setFocusSettings', 'pauseDetection', 'resumeDetection'],
+  supportedCommands: ['capture', 'stop', 'start', 'rescan', 'toggleFlash', 'setZoom', 'setFocusSettings', 'pauseDetection', 'resumeDetection', 'setTorchEnabled', 'setFocusPoint'],
 });
 
 export default codegenNativeComponent<NativeProps>(
