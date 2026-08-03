@@ -75,9 +75,275 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
     private var currentDetectionMode: DetectionMode = DetectionMode.Photo // Track current detection mode
     private val density = appContext.resources.displayMetrics.density
 
+    // Camera Controls API (Phase 3) — per-view CameraSettings, tracked the same way as
+    // overlayStates above (a single ViewManager instance is shared across all camera views).
+    private val cameraSettingsByView = java.util.WeakHashMap<VisionCameraView, io.packagex.visionsdk.config.CameraSettings>()
+    private fun cameraSettingsFor(view: VisionCameraView): io.packagex.visionsdk.config.CameraSettings =
+        cameraSettingsByView.getOrPut(view) { io.packagex.visionsdk.config.CameraSettings() }
+
+    // Camera Controls API (Phase 3) — last JS-declared value for the "persistent" control
+    // props (torch/zoomRatio/focusMode/pinnedLensId). The underlying native camera core
+    // resets these on a genuine facing/lens change (input-device swap), so we re-apply them
+    // ourselves on every transition into CameraStatus.RUNNING (§8). Legacy aliases
+    // (enableFlash/zoomLevel) and the setTorchEnabled/setZoom commands feed the same
+    // tracked state via applyTorch/applyZoomRatio so reassertion works regardless of
+    // which prop/command name a consumer used. setFocusPoint is a one-shot action and is
+    // deliberately NOT tracked/reasserted here.
+    private data class ControlPropsState(
+        var torch: Boolean = false,
+        var zoomRatio: Double = 1.0,
+        var focusMode: String = "continuous",
+        var pinnedLensId: String? = null,
+        // Review fix (Group D #4) — tracks the lens selection actually applied via
+        // applyLensSelection, so reassertControlProps can skip re-applying an unchanged
+        // selection. setLensSelection -> cameraSession.update -> performReconcile does an
+        // UNCONDITIONAL unbind/rebind, so reasserting on every RUNNING transition (incl.
+        // ordinary start with no pin) was flapping isPreviewActive / double-binding at
+        // startup. The lens already persists across rebinds via cameraConfigurationFromSettings
+        // (Group A), so we only need to re-apply when the resolved selection actually changes.
+        var lastAppliedLensId: String? = null,
+        var lensApplied: Boolean = false,
+        // Review fix (parity #1) — last CameraLensFace delivered via the `cameraFacing`
+        // prop (setCameraFacing), tracked independently of
+        // cameraSettingsByView[view].cameraLensFace because applyLensSelection's
+        // cross-facing pin path overwrites that settings object's facing to match the
+        // PINNED lens. Without a separate record of the prop's own value, unpinning
+        // (Auto) had nothing to restore to and Android was left stuck on whichever
+        // facing the last pin happened to use — iOS's cameraFacing is a plain stored
+        // prop and correctly falls back to it on unpin (see RNVisionCameraView.swift
+        // syncFacing/currentFacing). See applyLensSelection's Auto/unknown-lens branches.
+        var propCameraFacing: io.packagex.visionsdk.core.CameraLensFace = io.packagex.visionsdk.core.CameraLensFace.Back,
+    )
+    private val controlPropsByView = java.util.WeakHashMap<VisionCameraView, ControlPropsState>()
+    private fun controlPropsFor(view: VisionCameraView): ControlPropsState =
+        controlPropsByView.getOrPut(view) { ControlPropsState() }
+
+    private fun applyTorch(view: VisionCameraView, enabled: Boolean) {
+        controlPropsFor(view).torch = enabled
+        view.setFlashTurnedOn(enabled)
+    }
+
+    private fun applyZoomRatio(view: VisionCameraView, ratio: Float) {
+        controlPropsFor(view).zoomRatio = ratio.toDouble()
+        view.setZoomRatio(ratio)
+    }
+
+    private fun focusModeFromString(mode: String?): io.packagex.visionsdk.camera.core.FocusMode =
+        when (mode?.lowercase()) {
+            "single" -> io.packagex.visionsdk.camera.core.FocusMode.SINGLE
+            "locked" -> io.packagex.visionsdk.camera.core.FocusMode.LOCKED
+            else -> io.packagex.visionsdk.camera.core.FocusMode.CONTINUOUS
+        }
+
+    private fun applyFocusMode(view: VisionCameraView, mode: String?) {
+        controlPropsFor(view).focusMode = mode ?: "continuous"
+        view.setFocusMode(focusModeFromString(mode))
+    }
+
+    // Review fix (parity #1, Android/iOS unpin restore) — bring the view's camera
+    // facing back in line with the last `cameraFacing` prop value. Mirrors iOS's
+    // `syncFacing(to: currentFacing, ...)` calls in its Auto/unknown-lens branches:
+    // a cross-facing pin overwrites cameraSettingsByView's facing to match the
+    // PINNED lens (see the bottom of this function), and nothing else ever resets
+    // it back, so unpinning left Android on the wrong camera while iOS correctly
+    // returned to the `cameraFacing` prop. No-op when facing already matches (same
+    // guard style as the cross-facing pin path below).
+    private fun restoreFacingFromProp(view: VisionCameraView) {
+        val propFacing = controlPropsFor(view).propCameraFacing
+        if (cameraSettingsFor(view).cameraLensFace != propFacing) {
+            val updated = cameraSettingsFor(view).copy(cameraLensFace = propFacing)
+            cameraSettingsByView[view] = updated
+            view.setCameraSettings(updated)
+        }
+    }
+
+    private fun applyLensSelection(view: VisionCameraView, lensId: String?) {
+        // Review fix (Group D #5) — a cleared Fabric optional-string prop can arrive as
+        // "" rather than null; treat it the same as unpin/Auto (matches iOS).
+        if (lensId.isNullOrEmpty()) {
+            controlPropsFor(view).apply {
+                lastAppliedLensId = null
+                lensApplied = true
+            }
+            restoreFacingFromProp(view)
+            view.setLensSelection(io.packagex.visionsdk.camera.core.LensSelection.Auto)
+            return
+        }
+        controlPropsFor(view).apply {
+            lastAppliedLensId = lensId
+            lensApplied = true
+        }
+        // Bug fix (QA Group A #2) — a pinnable lens id only ever appears under its OWN
+        // facing's list (a front lens is never returned by lenses(BACK) and vice versa), so
+        // gating this lookup to whatever facing happens to be currently applied meant
+        // pinning a lens from the OTHER facing silently fell back to Auto with a warning —
+        // reproduced on-device: pin id=5 (front) while cameraFacing is still "back" logs
+        // "pinnedLensId '5' unknown or unpinnable for facing=BACK". Search both facings so
+        // the pin resolves regardless of prop-set order, then bring the camera's facing in
+        // line with whichever facing the resolved lens actually belongs to.
+        val snapshot = io.packagex.visionsdk.camera.core.CameraCapabilities.snapshot(appContext)
+        val lens = (
+            snapshot.lenses(io.packagex.visionsdk.camera.core.LensFacing.BACK) +
+                snapshot.lenses(io.packagex.visionsdk.camera.core.LensFacing.FRONT)
+            ).firstOrNull { it.id == lensId && it.isPinnable }
+        if (lens == null) {
+            Log.w(TAG, "pinnedLensId '$lensId' unknown or unpinnable — falling back to Auto")
+            restoreFacingFromProp(view)
+            view.setLensSelection(io.packagex.visionsdk.camera.core.LensSelection.Auto)
+            markPendingLensUnavailableWarning(view)
+            return
+        }
+        // setLensSelection() builds its CameraConfiguration from cameraSettingsFacing()
+        // (see VisionCameraView.setLensSelection), so facing and the pinned lens must agree
+        // before we hand it off — otherwise the SDK is asked to pin a lens under a facing
+        // it doesn't belong to.
+        val neededFacing = if (lens.facing == io.packagex.visionsdk.camera.core.LensFacing.FRONT)
+            io.packagex.visionsdk.core.CameraLensFace.Front
+        else io.packagex.visionsdk.core.CameraLensFace.Back
+        if (cameraSettingsFor(view).cameraLensFace != neededFacing) {
+            val updated = cameraSettingsFor(view).copy(cameraLensFace = neededFacing)
+            cameraSettingsByView[view] = updated
+            view.setCameraSettings(updated)
+        }
+        view.setLensSelection(io.packagex.visionsdk.camera.core.LensSelection.Pin(lens))
+    }
+
+    // Re-apply the last JS-declared control props onto a fresh camera session. Called on
+    // every transition into CameraStatus.RUNNING (initial start, and post facing/lens-switch
+    // stop+start cycles) since the native core resets torch/zoom/focusMode on those (§5.4).
+    // Torch/zoom/focusMode are cheap runtime settings and always reassert. The lens selection
+    // is different — setLensSelection triggers a full unbind/rebind (Group D #4) — so it's
+    // only re-applied when the resolved selection actually differs from what's currently
+    // applied; otherwise an ordinary start-with-no-pin would unbind/rebind for nothing.
+    private fun reassertControlProps(view: VisionCameraView) {
+        val props = controlPropsByView[view] ?: return
+        view.setFlashTurnedOn(props.torch)
+        view.setZoomRatio(props.zoomRatio.toFloat())
+        view.setFocusMode(focusModeFromString(props.focusMode))
+        if (!props.lensApplied || props.lastAppliedLensId != props.pinnedLensId) {
+            applyLensSelection(view, props.pinnedLensId)
+        }
+    }
+
+    // Camera Controls API (Phase 3) — one-shot warning stashed when a requested
+    // pinnedLensId can't be resolved; merged into the very next emitted CameraStateEvent
+    // (bypassing the throttle) rather than fired as its own event.
+    private data class PendingLensWarning(var flagged: Boolean = false)
+    private val pendingLensWarnings = java.util.WeakHashMap<VisionCameraView, PendingLensWarning>()
+    private fun markPendingLensUnavailableWarning(view: VisionCameraView) {
+        pendingLensWarnings.getOrPut(view) { PendingLensWarning() }.flagged = true
+    }
+
+    // Camera Controls API (Phase 3) — throttled onCameraStateChanged emission bookkeeping.
+    private val CAMERA_STATE_THROTTLE_MS = 100L // 10 Hz, matches RECOGNITION_UPDATE_THROTTLE_MS convention
+    private val mainHandler = android.os.Handler(android.os.Looper.getMainLooper())
+    private data class CameraStateEmitState(
+        var lastEmitTime: Long = 0L,
+        var lastStatus: String? = null,
+        // Review fix (Group D #1, trailing-edge throttle) — the runnable scheduled to
+        // deliver the latest dropped state at the window boundary, so a burst ending
+        // mid-window doesn't leave JS stuck on a stale value. Replaced (not queued) on
+        // every subsequent drop so only the LATEST state is ever pending.
+        var pendingTrailingRunnable: Runnable? = null,
+    )
+    private val cameraStateEmitStates = java.util.WeakHashMap<VisionCameraView, CameraStateEmitState>()
+    private val cameraStateListenersByView = java.util.WeakHashMap<VisionCameraView, io.packagex.visionsdk.camera.core.CameraStateListener>()
+
+    private fun mapCameraErrorCode(error: io.packagex.visionsdk.camera.core.CameraError): String =
+        when (error) {
+            is io.packagex.visionsdk.camera.core.CameraError.PermissionDenied -> "permission-denied"
+            is io.packagex.visionsdk.camera.core.CameraError.LensUnavailable -> "lens-unavailable"
+            is io.packagex.visionsdk.camera.core.CameraError.ConfigurationFailed -> "configuration-failed"
+        }
+
+    private fun cameraStateToMap(
+        view: VisionCameraView,
+        state: io.packagex.visionsdk.camera.core.CameraState
+    ): com.facebook.react.bridge.WritableMap {
+        val map = Arguments.createMap()
+        map.putString("status", state.status.name.lowercase())
+        state.error?.let {
+            map.putString("errorCode", mapCameraErrorCode(it))
+            map.putString("errorMessage", it.toString())
+        }
+        val pendingWarning = pendingLensWarnings[view]
+        val warning = state.warning
+        if (warning != null) {
+            map.putString("warningCode", mapCameraErrorCode(warning))
+            map.putString("warningMessage", warning.toString())
+        } else if (pendingWarning?.flagged == true) {
+            map.putString("warningCode", "lens-unavailable")
+            map.putString("warningMessage", "pinnedLensId unavailable — falling back to Auto")
+            pendingWarning.flagged = false // one-shot; consumed
+        }
+        map.putString("facing", if (state.facing == io.packagex.visionsdk.camera.core.LensFacing.FRONT) "front" else "back")
+        state.activeLens?.let { map.putString("activeLensId", it.id) }
+        map.putDouble("zoomRatio", state.zoomRatio.toDouble())
+        map.putDouble("minZoomRatio", state.minZoomRatio.toDouble())
+        map.putDouble("maxZoomRatio", state.maxZoomRatio.toDouble())
+        map.putBoolean("torchEnabled", state.isTorchEnabled)
+        map.putString("focusMode", state.focusMode.name.lowercase())
+        map.putBoolean("isPreviewActive", state.isPreviewActive)
+        return map
+    }
+
+    private fun emitCameraState(view: VisionCameraView, state: io.packagex.visionsdk.camera.core.CameraState, bypassThrottle: Boolean) {
+        val emitState = cameraStateEmitStates.getOrPut(view) { CameraStateEmitState() }
+        val newStatus = state.status.name
+        val statusChanged = emitState.lastStatus != newStatus
+        if (statusChanged && newStatus.equals("RUNNING", ignoreCase = true)) {
+            reassertControlProps(view)
+        }
+        // Review fix (Group D #2) — a pending lens-unavailable warning must bypass the
+        // throttle immediately (it's a one-shot notice, not a value that survives being
+        // superseded), not just ride along on whatever unrelated emission happens next.
+        val hasPendingLensWarning = pendingLensWarnings[view]?.flagged == true
+        val now = System.currentTimeMillis()
+        val bypass = bypassThrottle || statusChanged || state.error != null || state.warning != null || hasPendingLensWarning
+        val shouldEmit = bypass || shouldEmitThrottledEvent(emitState.lastEmitTime, CAMERA_STATE_THROTTLE_MS)
+
+        // Any newer state (emitted or dropped) supersedes a previously scheduled trailing
+        // emit — cancel it so we never deliver a stale value after a fresher one.
+        emitState.pendingTrailingRunnable?.let { mainHandler.removeCallbacks(it) }
+        emitState.pendingTrailingRunnable = null
+
+        if (!shouldEmit) {
+            // Review fix (Group D #1) — trailing-edge throttle. This is a drop-throttle:
+            // without this, a burst ending inside the throttle window leaves JS with a
+            // stale value forever. Schedule the LATEST dropped state to fire at the
+            // window boundary; a later emit (immediate or another scheduled trailing
+            // one) will cancel/replace this via the removeCallbacks above.
+            val delay = (CAMERA_STATE_THROTTLE_MS - (now - emitState.lastEmitTime)).coerceIn(0L, CAMERA_STATE_THROTTLE_MS)
+            val runnable = Runnable { doEmitCameraState(view, state, emitState) }
+            emitState.pendingTrailingRunnable = runnable
+            mainHandler.postDelayed(runnable, delay)
+            return
+        }
+        doEmitCameraState(view, state, emitState)
+    }
+
+    private fun doEmitCameraState(view: VisionCameraView, state: io.packagex.visionsdk.camera.core.CameraState, emitState: CameraStateEmitState) {
+        emitState.lastEmitTime = System.currentTimeMillis()
+        emitState.lastStatus = state.status.name
+        emitState.pendingTrailingRunnable = null
+        // Review fix (C1) — view.context is the FragmentActivity passed into
+        // VisionCameraView(activity, null) at construction (createViewInstance), never a
+        // ThemedReactContext, so `view.context as? ThemedReactContext` always failed and
+        // silently dropped every onCameraStateChanged emission. Resolve the JS module from
+        // the captured ReactApplicationContext instead — the same path ViewCallback.sendEvent
+        // already uses successfully for the other camera events.
+        try {
+            appContext.getJSModule(RCTEventEmitter::class.java)
+                .receiveEvent(view.id, "onCameraStateChanged", cameraStateToMap(view, state))
+        } catch (e: Exception) {
+            // The state callback can arrive after the view/context has been torn down
+            // (e.g. mid onDropViewInstance) — never crash the camera pipeline over a
+            // best-effort JS event.
+            Log.w(TAG, "Failed to emit onCameraStateChanged (view/context likely torn down): ${e.message}")
+        }
+    }
+
     // Event throttling - timestamps for last emitted events
-    private var lastRecognitionUpdateTime = 0L
-    private val RECOGNITION_UPDATE_THROTTLE_MS = 100L // 10 FPS
     private var lastSharpnessScoreUpdateTime = 0L
 
     // Throttle intervals in milliseconds
@@ -115,6 +381,18 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
         newView.setCameraLifecycleCallback(callback)
         newView.setScannerCallback(callback)
 
+        // Camera Controls API (Phase 3) — subscribe to full CameraState changes so
+        // `useCameraControls().state` tracks the camera going forward. The one-shot
+        // replay-on-attach emit (§8) is deliberately NOT done here — see
+        // onAfterUpdateTransaction (Group D review fix #3): at this point Fabric hasn't
+        // assigned the view's react tag yet, so receiveEvent(NO_ID, ...) is silently
+        // discarded and JS never mounted its handlers anyway.
+        val cameraStateListener = io.packagex.visionsdk.camera.core.CameraStateListener { state ->
+            emitCameraState(newView, state, bypassThrottle = false)
+        }
+        newView.addCameraStateListener(cameraStateListener)
+        cameraStateListenersByView[newView] = cameraStateListener
+
         // Update the current view reference and callback
         visionCameraView = newView
         currentCallback = callback
@@ -124,14 +402,46 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
         return newView
     }
 
+    // Review fix (Group D #3) — one-shot guard for the replay-on-attach emit below.
+    // WeakHashMap so a dropped/GC'd view doesn't pin this entry.
+    private val hasReplayedInitialCameraState = java.util.WeakHashMap<VisionCameraView, Boolean>()
+
+    // Bug fix (post QA Group A #1 regression) — the mount-time "start camera once" gate
+    // below used to share `hasStarted` with the stop()/start() command guards. This QA
+    // screen streams CameraState into props at ~10Hz (CAMERA_STATE_THROTTLE_MS), so Fabric
+    // calls onAfterUpdateTransaction continuously. Once stop() started resetting
+    // `hasStarted = false` (so a later start() command actually restarts), the very next
+    // incidental prop-commit hit THIS block instead and silently auto-restarted the camera
+    // behind Stop's back — on a view whose previewView was never detached, which recursively
+    // re-triggers its own attach listener inside VisionCameraView.addViewFun() (SDK-side
+    // reentrancy bug) and freezes the main thread. Reproduced on-device: Stop → camera
+    // silently resumes within ~100ms; a later Stop during heavier re-render traffic instead
+    // hit the SDK recursion and hung the UI. Track "have we auto-started this view on
+    // mount" separately, per-view, so stop()'s hasStarted reset can never re-arm it.
+    private val hasAutoStartedOnMount = java.util.WeakHashMap<VisionCameraView, Boolean>()
+
     override fun onAfterUpdateTransaction(view: VisionCameraView) {
         super.onAfterUpdateTransaction(view)
 
         // Request layout to ensure proper sizing
         view.requestLayout()
 
-        // Only start camera once
-        if (visionCameraView == view && !hasStarted) {
+        // Camera Controls API (Phase 3) — one-shot replay of the current CameraState so
+        // `useCameraControls().state` is never stale-undefined on an already-running
+        // camera (§8 replay-on-attach). Relocated here from createViewInstance (Group D
+        // review fix #3): by the time onAfterUpdateTransaction runs, Fabric has assigned
+        // the view's real react tag and committed initial props, so this is the earliest
+        // point the emit is guaranteed to reach a mounted JS handler.
+        if (hasReplayedInitialCameraState[view] != true) {
+            hasReplayedInitialCameraState[view] = true
+            emitCameraState(view, view.currentCameraState(), bypassThrottle = true)
+        }
+
+        // Only auto-start the camera once per view (on initial mount) — gated on its OWN
+        // flag, deliberately NOT `hasStarted`, so an explicit stop() can never re-arm this
+        // block on the next incidental prop-commit (see hasAutoStartedOnMount comment).
+        if (visionCameraView == view && hasAutoStartedOnMount[view] != true) {
+            hasAutoStartedOnMount[view] = true
             hasStarted = true
             Log.d(TAG, "Starting camera for view id: ${view.id}")
 
@@ -172,6 +482,22 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
             currentCallback = null
         }
 
+        // Cancel any pending trailing-edge emit (Group D #1) — no point delivering a
+        // stale camera state to a view that's already been torn down.
+        cameraStateEmitStates[view]?.pendingTrailingRunnable?.let { mainHandler.removeCallbacks(it) }
+
+        // Camera Controls API (Phase 3) — unregister the state listener. The listener's
+        // callback can still be invoked concurrently/after this point; emitCameraState's
+        // own try/catch keeps that path safe.
+        cameraStateListenersByView[view]?.let {
+            try {
+                view.removeCameraStateListener(it)
+            } catch (e: Exception) {
+                Log.w(TAG, "removeCameraStateListener failed: ${e.message}")
+            }
+        }
+        cameraStateListenersByView.remove(view)
+
         // Stop the camera
         try {
             view.stopCamera()
@@ -198,7 +524,8 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
             "onRecognitionUpdate" to mapOf("registrationName" to "onRecognitionUpdate"),
             "onSharpnessScoreUpdate" to mapOf("registrationName" to "onSharpnessScoreUpdate"),
             "onBarcodeDetected" to mapOf("registrationName" to "onBarcodeDetected"),
-            "onBoundingBoxesUpdate" to mapOf("registrationName" to "onBoundingBoxesUpdate")
+            "onBoundingBoxesUpdate" to mapOf("registrationName" to "onBoundingBoxesUpdate"),
+            "onCameraStateChanged" to mapOf("registrationName" to "onCameraStateChanged")
         )
     }
 
@@ -207,13 +534,47 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
     @ReactProp(name = "enableFlash")
     override fun setEnableFlash(view: VisionCameraView, enabled: Boolean) {
         Log.d(TAG, "setEnableFlash: $enabled")
-        view.setFlashTurnedOn(enabled)
+        applyTorch(view, enabled)
     }
 
     @ReactProp(name = "zoomLevel")
     override fun setZoomLevel(view: VisionCameraView, level: Double) {
         Log.d(TAG, "setZoomLevel: $level")
-        view.setZoomRatio(level.toFloat())
+        applyZoomRatio(view, level.toFloat())
+    }
+
+    // Camera Controls API (Phase 3) — canonical props; enableFlash/zoomLevel above are
+    // deprecated aliases feeding the exact same applyTorch/applyZoomRatio path so
+    // reassertion-after-facing/lens-change (see reassertControlProps) works regardless
+    // of which prop name a consumer uses. Prop-collision precedence ("new wins") is a
+    // JS-layer concern (Group G / Task 12) — this layer only ever sees one value at a time.
+    @ReactProp(name = "torch", defaultBoolean = false)
+    override fun setTorch(view: VisionCameraView, enabled: Boolean) {
+        Log.d(TAG, "setTorch: $enabled")
+        applyTorch(view, enabled)
+    }
+
+    @ReactProp(name = "zoomRatio", defaultDouble = 1.0)
+    override fun setZoomRatio(view: VisionCameraView, ratio: Double) {
+        Log.d(TAG, "setZoomRatio: $ratio")
+        applyZoomRatio(view, ratio.toFloat())
+    }
+
+    @ReactProp(name = "focusMode")
+    override fun setFocusMode(view: VisionCameraView, mode: String?) {
+        Log.d(TAG, "setFocusMode: $mode")
+        applyFocusMode(view, mode)
+    }
+
+    @ReactProp(name = "pinnedLensId")
+    override fun setPinnedLensId(view: VisionCameraView, lensId: String?) {
+        Log.d(TAG, "setPinnedLensId: $lensId")
+        // Review fix (Group D #5) — normalize "" to null (unpin/Auto) at the source so
+        // downstream tracking (reassertControlProps' lastAppliedLensId comparison) never
+        // sees an empty-string/null mismatch loop.
+        val normalized = lensId?.takeIf { it.isNotEmpty() }
+        controlPropsFor(view).pinnedLensId = normalized
+        applyLensSelection(view, normalized)
     }
 
     @ReactProp(name = "scanMode")
@@ -312,10 +673,17 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
     @ReactProp(name = "cameraFacing")
     override fun setCameraFacing(view: VisionCameraView, facing: String?) {
         Log.d(TAG, "setCameraFacing: $facing")
-        // TODO: Implement camera facing/position switching for Android
-        // This will require updating the VisionSDK Android implementation
-        // to support CameraPosition enum (similar to iOS)
-        Log.d(TAG, "Camera facing prop received: $facing (Android implementation pending)")
+        val lensFace = when (facing?.lowercase()) {
+            "front" -> io.packagex.visionsdk.core.CameraLensFace.Front
+            else -> io.packagex.visionsdk.core.CameraLensFace.Back
+        }
+        // Review fix (parity #1) — track the raw prop value separately from
+        // cameraSettingsByView, which applyLensSelection's cross-facing pin path can
+        // overwrite; see restoreFacingFromProp / ControlPropsState.propCameraFacing.
+        controlPropsFor(view).propCameraFacing = lensFace
+        val updated = cameraSettingsFor(view).copy(cameraLensFace = lensFace)
+        cameraSettingsByView[view] = updated
+        view.setCameraSettings(updated)
     }
 
     @ReactProp(name = "frameSkip")
@@ -475,6 +843,15 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
             }
             "pauseDetection" -> pauseDetection(root)
             "resumeDetection" -> resumeDetection(root)
+            "setTorchEnabled" -> {
+                val enabled = args?.getBoolean(0) ?: false
+                setTorchEnabled(root, enabled)
+            }
+            "setFocusPoint" -> {
+                val x = (args?.getDouble(0) ?: 0.0).toFloat()
+                val y = (args?.getDouble(1) ?: 0.0).toFloat()
+                setFocusPoint(root, x, y)
+            }
             else -> Log.w(TAG, "Unknown command: $commandId")
         }
     }
@@ -486,6 +863,12 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
 
     override fun stop(view: VisionCameraView) {
         Log.d(TAG, "stop called")
+        // Bug fix (QA Group A #1) — hasStarted was only ever set (never cleared), so after
+        // an explicit stop() every subsequent start() command hit the guard below and
+        // silently no-opped forever. Reproduced on-device: Stop then Start logs "start
+        // called - camera already started or scheduled, ignoring" and the preview stays
+        // black. Reset it here so a stop+start cycle actually restarts the camera.
+        hasStarted = false
         view.stopCamera()
     }
 
@@ -511,17 +894,32 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
 
     override fun rescan(view: VisionCameraView) {
         Log.d(TAG, "rescan called")
+        // Bug fix (QA — torch/stop/rescan lockup): rescan() resumes scanning on a
+        // BOUND camera (its normal post-capture use). After an explicit stop() the
+        // camera is unbound, so view.rescan() can't rebuild it AND leaves the SDK's
+        // isCameraStarted() stuck true — which makes the next start() command hit its
+        // `hasStarted || isCameraStarted()` guard and silently no-op, wedging the
+        // camera black permanently. Reproduced on-device: torch on → Stop → Rescan →
+        // black, then Start logs "already started or scheduled, ignoring". When we're
+        // not started, treat Rescan as a fresh start instead (start() reasserts torch/
+        // zoom/focus on the RUNNING transition, so torch survives the cycle).
+        if (!hasStarted && !view.isCameraStarted()) {
+            Log.d(TAG, "rescan on a stopped camera — starting instead")
+            start(view)
+            return
+        }
         view.rescan()
     }
 
     override fun toggleFlash(view: VisionCameraView, enabled: Boolean) {
+        // Legacy alias -> torch (§8 "Command collision policy": toggleFlash -> torch).
         Log.d(TAG, "toggleFlash called with enabled: $enabled")
-        view.setFlashTurnedOn(enabled)
+        applyTorch(view, enabled)
     }
 
     override fun setZoom(view: VisionCameraView, level: Float) {
         Log.d(TAG, "setZoom called with level: $level")
-        view.setZoomRatio(level)
+        applyZoomRatio(view, level)
     }
 
     override fun pauseDetection(view: VisionCameraView) {
@@ -532,6 +930,20 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
     override fun resumeDetection(view: VisionCameraView) {
         Log.d(TAG, "resumeDetection called")
         view.resumeDetection()
+    }
+
+    // Camera Controls API (Phase 3) — setTorchEnabled is intentionally NOT named setTorch:
+    // the `torch` prop already generates setTorch(view, boolean) on
+    // VisionCameraViewManagerInterface; a same-named/same-erased-signature command method
+    // fails javac ("method already defined"). See src/specs/VisionCameraViewNativeComponent.ts.
+    override fun setTorchEnabled(view: VisionCameraView, enabled: Boolean) {
+        Log.d(TAG, "setTorchEnabled called with enabled: $enabled")
+        applyTorch(view, enabled)
+    }
+
+    override fun setFocusPoint(view: VisionCameraView, x: Float, y: Float) {
+        Log.d(TAG, "setFocusPoint called with x=$x y=$y")
+        view.setFocusPoint(x, y)
     }
 
     private fun parseColor(hex: String?, default: Int): Int {
@@ -681,12 +1093,9 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
         ) {
             Log.d(TAG, "onIndications: barcode=$barcodeDetected qr=$qrCodeDetected text=$textDetected doc=$documentDetected")
 
-            // Throttle recognition updates to avoid overwhelming the JS bridge
-            if (!shouldEmitThrottledEvent(lastRecognitionUpdateTime, RECOGNITION_UPDATE_THROTTLE_MS)) {
-                return
-            }
-            lastRecognitionUpdateTime = System.currentTimeMillis()
-
+            // Recognition updates emitted per native frame (throttle removed) so the
+            // JS-side FPS chip reflects the true processing rate. onBarcodeDetected was
+            // already unthrottled; the JS consumer must keep its per-event work cheap.
             val event = Arguments.createMap()
             event.putBoolean("text", textDetected)
             event.putBoolean("barcode", barcodeDetected)

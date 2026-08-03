@@ -680,6 +680,25 @@ RCT_EXPORT_METHOD(predictWithModule:(NSString *)moduleJson
   }
 }
 
+RCT_EXPORT_METHOD(getCameraCapabilities:(RCTPromiseResolveBlock)resolve
+                  reject:(RCTPromiseRejectBlock)reject)
+{
+  NSLog(@"[VisionSDK TurboModule] getCameraCapabilities called");
+  id swiftModule = [self getSwiftModule];
+  if (swiftModule) {
+    SEL selector = NSSelectorFromString(@"getCameraCapabilities:rejecter:");
+    if ([swiftModule respondsToSelector:selector]) {
+      ((void (*)(id, SEL, RCTPromiseResolveBlock, RCTPromiseRejectBlock))objc_msgSend)(
+        swiftModule, selector, resolve, reject
+      );
+    } else {
+      reject(@"METHOD_NOT_FOUND", @"getCameraCapabilities method not found", nil);
+    }
+  } else {
+    reject(@"MODULE_NOT_FOUND", @"VisionSdkModule Swift class not found", nil);
+  }
+}
+
 // Required for event emitters
 RCT_EXPORT_METHOD(addListener:(NSString *)eventName)
 {
