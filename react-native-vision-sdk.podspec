@@ -45,9 +45,9 @@ Pod::Spec.new do |s|
 
   s.dependency "React-Core"
   # Core scanner + OCR
-  s.dependency "VisionSDK", "= 2.3.14"
+  s.dependency "VisionSDK", "= 2.4.0"
   # 3-D box measurement — brings MVDimensioningCore.xcframework, ARKit, RealityKit, PostHog
-  s.dependency "VisionSDK/Dimensioning", "= 2.3.14"
+  s.dependency "VisionSDK/Dimensioning", "= 2.4.0"
 
   # New Architecture dependencies
   install_modules_dependencies(s)
