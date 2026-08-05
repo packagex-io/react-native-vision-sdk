@@ -57,8 +57,8 @@ target 'VisionSdkExample' do
 
   # VisionSDK from CocoaPods trunk. Matches the deps declared by the
   # react-native-vision-sdk podspec; pinned explicitly here for clarity.
-  pod 'VisionSDK', '= 2.4.0'
-  pod 'VisionSDK/Dimensioning', '= 2.4.0'
+  pod 'VisionSDK', '= 2.5.0'
+  pod 'VisionSDK/Dimensioning', '= 2.5.0'
 
   use_react_native!(
     :path => config[:reactNativePath],
@@ -100,6 +100,22 @@ target 'VisionSdkExample' do
             '-D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_NONE',
             '-DFMT_USE_CONSTEVAL=0',
           ]
+        end
+      end
+    end
+
+    # react_native_post_install lowers every pod target to React Native's
+    # minimum (15.1). PostHog's own spec allows iOS 13, so it then compiles
+    # below 15.4 and autolinks swiftCompatibility56 -- a Swift 5.6
+    # back-deployment shim current Xcode no longer ships, which fails the link
+    # with an undefined \$_swiftCompatibility56 symbol. This pod requires
+    # iOS 17 anyway (see react-native-vision-sdk.podspec), so raise every pod
+    # target back to 17.0 after RN has had its say.
+    installer.pods_project.targets.each do |target|
+      target.build_configurations.each do |config|
+        current = config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'].to_s
+        if current.empty? || current.to_f < 17.0
+          config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '17.0'
         end
       end
     end
