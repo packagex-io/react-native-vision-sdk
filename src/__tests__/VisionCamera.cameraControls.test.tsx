@@ -20,6 +20,7 @@ jest.mock('../specs/VisionCameraViewNativeComponent', () => {
       rescan: jest.fn(),
       toggleFlash: jest.fn(),
       setZoom: jest.fn(),
+      rampZoomRatio: jest.fn(),
       setFocusSettings: jest.fn(),
       pauseDetection: jest.fn(),
       resumeDetection: jest.fn(),
@@ -31,6 +32,7 @@ jest.mock('../specs/VisionCameraViewNativeComponent', () => {
 
 import { VisionCamera } from '../VisionCamera';
 import { VisionCameraView } from '../VisionCameraViewManager';
+import { Commands } from '../specs/VisionCameraViewNativeComponent';
 
 function renderInAct(element: React.ReactElement): ReactTestRenderer {
   let tree: ReactTestRenderer;
@@ -149,5 +151,58 @@ describe('VisionCamera pinnedLensId fallback (spec §5.3/§8)', () => {
     const event = onCameraStateChanged.mock.calls[0][0];
     expect(event.warningCode).toBe('lens-unavailable');
     expect(event.warningMessage).toBeUndefined();
+  });
+});
+
+describe('VisionCamera rampZoomRatio ref command (PR #199)', () => {
+  it('dispatches Commands.rampZoomRatio with the view ref and the given ratio/durationMs', () => {
+    const ref = React.createRef<any>();
+    renderInAct(<VisionCamera ref={ref} />);
+
+    act(() => {
+      ref.current.rampZoomRatio(2.5, 400);
+    });
+
+    expect(Commands.rampZoomRatio).toHaveBeenCalledTimes(1);
+    expect(Commands.rampZoomRatio).toHaveBeenCalledWith(expect.anything(), 2.5, 400);
+  });
+
+  it('passes ratio/durationMs through unmodified on a second, differently-valued call', () => {
+    const ref = React.createRef<any>();
+    renderInAct(<VisionCamera ref={ref} />);
+
+    act(() => {
+      ref.current.rampZoomRatio(1.0, 1200);
+    });
+
+    expect(Commands.rampZoomRatio).toHaveBeenCalledWith(expect.anything(), 1.0, 1200);
+  });
+});
+
+describe('VisionCamera onCameraStopped event wiring (PR #199)', () => {
+  it('invokes the onCameraStopped prop when the native event fires', () => {
+    const onCameraStopped = jest.fn();
+    const tree = renderInAct(<VisionCamera onCameraStopped={onCameraStopped} />);
+    const viewProps = tree.root.findByType(VisionCameraView as any).props;
+
+    expect(typeof viewProps.onCameraStopped).toBe('function');
+
+    act(() => {
+      viewProps.onCameraStopped({ nativeEvent: {} });
+    });
+
+    expect(onCameraStopped).toHaveBeenCalledTimes(1);
+    expect(onCameraStopped.mock.calls[0]![0]).toEqual({});
+  });
+
+  it('does not throw when the native event fires and no onCameraStopped prop was provided', () => {
+    const tree = renderInAct(<VisionCamera />);
+    const viewProps = tree.root.findByType(VisionCameraView as any).props;
+
+    expect(() => {
+      act(() => {
+        viewProps.onCameraStopped({ nativeEvent: {} });
+      });
+    }).not.toThrow();
   });
 });
