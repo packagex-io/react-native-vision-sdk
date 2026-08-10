@@ -72,6 +72,36 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
 
     private fun overlayStateFor(view: VisionCameraView): OverlayState =
         overlayStates.getOrPut(view) { OverlayState() }
+
+    // Consumer-initiated stop() tracking, per view (same WeakHashMap reasoning as
+    // overlayStates — a single ViewManager instance is shared across all camera views).
+    // Armed by stop() right before tearing the camera down, and consumed (cleared) the
+    // first time ViewCallback.onCameraStopped() runs for that view. The underlying SDK's
+    // CameraLifecycleCallback.onCameraStopped() is driven purely by its state listener's
+    // transition to IDLE (VisionCameraView.kt:549) — it fires for ANY stopCamera() call
+    // that produces that transition, including an internal restart (a facing/lens switch's
+    // stopCamera()+startCamera() cycle inside setCameraSettings). This flag is what lets
+    // the callback tell "the consumer asked for this" apart from "the SDK is mid-restart",
+    // so internal restarts stay silent (I3) while genuine stops always get through.
+    private val pendingConsumerStop = java.util.WeakHashMap<VisionCameraView, Boolean>()
+
+    // Emits onCameraStopped straight to JS, bypassing sendEvent's isAttachedToWindow guard.
+    // onCameraStopped fires precisely during teardown, when the view is commonly already
+    // detached — the guard exists to stop routine repeating events (bounding boxes,
+    // recognition updates) from doing pointless work against a dead view, but this is a
+    // one-shot completion signal a consumer may be awaiting, and dropping it silently
+    // reintroduces the hang the event exists to prevent (I2). Kept as its own narrow path
+    // rather than widening the shared guard, which would also let repeating events through
+    // post-detach.
+    private fun emitCameraStopped(view: VisionCameraView, context: ReactApplicationContext) {
+        try {
+            context.getJSModule(RCTEventEmitter::class.java)
+                .receiveEvent(view.id, "onCameraStopped", Arguments.createMap())
+        } catch (e: Exception) {
+            Log.e(TAG, "Error sending event onCameraStopped: ${e.message}")
+        }
+    }
+
     private var currentDetectionMode: DetectionMode = DetectionMode.Photo // Track current detection mode
     private val density = appContext.resources.displayMetrics.density
 
@@ -850,8 +880,12 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
             }
             "rampZoomRatio" -> {
                 val ratio = (args?.getDouble(0) ?: 1.0).toFloat()
-                val durationMs = (args?.getDouble(1) ?: 0.0).toLong()
-                rampZoomRatio(root, ratio, durationMs.toInt())
+                // Read as Int32 directly (matches the codegen spec) instead of
+                // Double -> Long -> Int -> Long: the old Long->Int narrowing wrapped any
+                // duration above Int.MAX_VALUE ms negative, which both natives treat as
+                // "instant, not ramped".
+                val durationMs = args?.getInt(1) ?: 0
+                rampZoomRatio(root, ratio, durationMs)
             }
             "setFocusSettings" -> {
                 val settingsJson = args?.getString(0) ?: "{}"
@@ -884,7 +918,23 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
         // silently no-opped forever. Reproduced on-device: Stop then Start logs "start
         // called - camera already started or scheduled, ignoring" and the preview stays
         // black. Reset it here so a stop+start cycle actually restarts the camera.
+        val wasRunning = hasStarted || view.isCameraStarted()
         hasStarted = false
+        if (wasRunning) {
+            // Camera is actually bound/scheduled — stopCamera() will drive the SDK's state
+            // listener through a genuine RUNNING(non-IDLE)->IDLE transition, which invokes
+            // CameraLifecycleCallback.onCameraStopped(). Let that callback own the emit so
+            // the event still tracks real teardown completion (see ViewCallback.onCameraStopped).
+            pendingConsumerStop[view] = true
+        } else {
+            // Already idle/interrupted/never started — stopCamera() here produces no
+            // RUNNING->IDLE transition, so the state listener's guard (VisionCameraView.kt:549,
+            // `previousStatus != IDLE`) means CameraLifecycleCallback.onCameraStopped() will
+            // never run. A consumer awaiting onCameraStopped would hang forever (violates I1:
+            // never zero events). Emit directly — a redundant event is far cheaper than a hang.
+            Log.d(TAG, "stop called on an already-stopped camera — emitting onCameraStopped directly")
+            emitCameraStopped(view, appContext)
+        }
         view.stopCamera()
     }
 
@@ -1365,10 +1415,21 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
 
             // Teardown-complete signal (consumer-requested, cross-platform with iOS's
             // stopRunning(completion:) — see VisionCameraTypes.ts `VisionCameraStoppedEvent`
-            // for the timing note). This callback is already driven by the camera state
-            // listener's transition to IDLE (genuine CameraX unbind completion), so no
-            // extra completion plumbing is needed on this side.
-            sendEvent("onCameraStopped", Arguments.createMap())
+            // for the timing note). This callback is driven by the camera state listener's
+            // transition to IDLE (genuine CameraX unbind completion) — but that transition
+            // also happens for an internal restart (e.g. a facing/lens switch's
+            // stopCamera()+startCamera() cycle inside setCameraSettings), which the consumer
+            // never asked to stop. pendingConsumerStop is only armed by stop() (see above),
+            // so it's what tells the two apart: emit for a real consumer stop, stay silent
+            // for an internal one (I3). A start() landing before this fires does NOT clear
+            // the flag, so a superseded stop still delivers instead of hanging (I4). Uses
+            // emitCameraStopped rather than sendEvent because this fires precisely during
+            // teardown, when the view is commonly already detached (I2).
+            if (pendingConsumerStop.remove(view) == true) {
+                emitCameraStopped(view, context)
+            } else {
+                Log.d(TAG, "onCameraStopped fired without a pending consumer stop — internal restart, suppressing")
+            }
         }
     }
 }
