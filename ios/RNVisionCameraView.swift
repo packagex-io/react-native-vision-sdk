@@ -314,6 +314,36 @@ class RNVisionCameraView: UIView {
   // with the freshest state.
   private var trailingCameraStateWorkItem: DispatchWorkItem?
 
+  // MARK: - onCameraStopped contract (I1/I2/I3/I4 — see VisionCameraTypes.ts
+  // `VisionCameraStoppedEvent` for the consumer-facing doc)
+  // Bumped every time a REAL native transition begins (performStart() only —
+  // performStop() can't re-enter while one is already in flight, thanks to
+  // `isTransitioning`). performStop() captures the current value right before the real
+  // AVCaptureSession teardown call; the completion closure compares against it to tell
+  // whether a subsequent start() beat it back to RUNNING before the closure fired (I4) —
+  // the completion still fires either way (never suppressed), just flagged stale.
+  private var operationGeneration: Int = 0
+
+  // Every consumer stop() call registers exactly one callback here, so it resolves
+  // exactly once (I1) regardless of actualCameraState/isTransitioning at call time —
+  // already-stopped, never-started, mid-teardown (a second stop()), and start-failed are
+  // all covered. Flushed either by a genuine AVCaptureSession teardown's completion, or
+  // immediately when there is nothing to tear down.
+  private var pendingStopCallbacks: [(Bool) -> Void] = []
+
+  /// Resolves every currently-queued `stop()` completion callback exactly once, each
+  /// firing its own `onCameraStopped` (I1: never zero events). Called either
+  /// immediately (nothing to tear down) or from the real `stopRunning(completion:)`
+  /// closure once AVCaptureSession has genuinely finished (I2/I4).
+  private func flushPendingStopCallbacks(wasSuperseded: Bool) {
+    guard !pendingStopCallbacks.isEmpty else { return }
+    let callbacks = pendingStopCallbacks
+    pendingStopCallbacks.removeAll()
+    for callback in callbacks {
+      callback(wasSuperseded)
+    }
+  }
+
   // MARK: - Initialization
   override init(frame: CGRect) {
     super.init(frame: frame)
@@ -472,7 +502,20 @@ class RNVisionCameraView: UIView {
   }
 
   @objc func stop() {
-    guard !isDeallocating, cameraView != nil else {
+    guard !isDeallocating else {
+      return
+    }
+
+    // Register this call's own notification up front — resolved exactly once below no
+    // matter how the transition below plays out (I1: a consumer stop() must never go
+    // unanswered — an already-stopped/never-started/mid-teardown camera all count).
+    pendingStopCallbacks.append { [weak self] wasSuperseded in
+      self?.onCameraStopped?(["wasSuperseded": wasSuperseded])
+    }
+
+    guard cameraView != nil else {
+      // Nothing was ever set up to tear down — resolve immediately rather than hang.
+      flushPendingStopCallbacks(wasSuperseded: false)
       return
     }
 
@@ -481,6 +524,13 @@ class RNVisionCameraView: UIView {
 
     // Trigger transition if needed
     executeTransitionIfNeeded()
+
+    // No real teardown is coming to flush the callback just queued — e.g. stop() called
+    // while already .stopped (including right after a failed start(), or a second
+    // stop() call with nothing left in flight). Resolve right away (I1).
+    if !isTransitioning && actualCameraState == .stopped {
+      flushPendingStopCallbacks(wasSuperseded: false)
+    }
   }
 
   private func executeTransitionIfNeeded() {
@@ -507,6 +557,9 @@ class RNVisionCameraView: UIView {
 
     isTransitioning = true
     actualCameraState = .starting
+    // I4: any real start invalidates in-flight stop completions captured before this
+    // point — see performStop()'s `myGeneration` capture and its completion closure.
+    operationGeneration += 1
 
     // Use serial queue to avoid blocking main thread and prevent overlapping operations
     cameraOperationQueue.async { [weak self] in
@@ -531,10 +584,18 @@ class RNVisionCameraView: UIView {
   }
 
   private func performStop() {
-    guard let cameraView = self.cameraView else { return }
+    guard let cameraView = self.cameraView else {
+      // Nothing was ever set up to tear down — don't leave queued stop() callbacks
+      // hanging on a teardown that will never happen (I1).
+      flushPendingStopCallbacks(wasSuperseded: false)
+      return
+    }
 
     isTransitioning = true
     actualCameraState = .stopping
+    // Snapshot BEFORE kicking off the real teardown call below — compared inside its
+    // completion closure to detect a start() that landed while we were mid-teardown (I4).
+    let myGeneration = operationGeneration
 
     // Use serial queue to avoid blocking main thread and prevent overlapping operations
     cameraOperationQueue.async { [weak self] in
@@ -542,6 +603,7 @@ class RNVisionCameraView: UIView {
       guard let cameraView = self.cameraView else {
         DispatchQueue.main.async { [weak self] in
           self?.onTransitionComplete(success: false)
+          self?.flushPendingStopCallbacks(wasSuperseded: false)
         }
         return
       }
@@ -554,7 +616,14 @@ class RNVisionCameraView: UIView {
       // ever guaranteed. See VisionCameraTypes.ts `VisionCameraStoppedEvent`.
       DispatchQueue.main.sync {
         cameraView.stopRunning(completion: { [weak self] in
-          self?.onCameraStopped?([:])
+          DispatchQueue.main.async {
+            guard let self = self else { return }
+            // I4: if operationGeneration moved on, a start() began after this teardown
+            // was kicked off — the completion still fires (never suppressed), just
+            // flagged stale so the consumer doesn't mistake it for "torn down right now".
+            let wasSuperseded = self.operationGeneration != myGeneration
+            self.flushPendingStopCallbacks(wasSuperseded: wasSuperseded)
+          }
         })
       }
 
@@ -566,8 +635,10 @@ class RNVisionCameraView: UIView {
   }
 
   private func onTransitionComplete(success: Bool) {
+    let wasStarting = actualCameraState == .starting
+
     // Update actual state based on what operation completed
-    if actualCameraState == .starting {
+    if wasStarting {
       actualCameraState = success ? .running : .stopped
       // Re-assert declarative control props on every RUNNING transition (spec §8).
       if success { reassertControlProps() }
@@ -580,6 +651,11 @@ class RNVisionCameraView: UIView {
     // Check if we need another transition
     if targetState != actualCameraState {
       executeTransitionIfNeeded()
+    } else if wasStarting && !success && targetState == .stopped {
+      // start() failed (e.g. permission denied) while stop() was the target — there is
+      // no real teardown in flight for any queued stop() callbacks to ride along with,
+      // so resolve them here instead of leaving them hanging (I1).
+      flushPendingStopCallbacks(wasSuperseded: false)
     }
   }
 
