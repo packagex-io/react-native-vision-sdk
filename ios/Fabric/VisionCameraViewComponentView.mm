@@ -17,6 +17,12 @@ using namespace facebook::react;
 
 @implementation VisionCameraViewComponentView {
   UIView *_visionCameraView;
+  // Captured in prepareForRecycle just before `[super prepareForRecycle]` resets
+  // `_eventEmitter` to null (I2 — see prepareForRecycle and emitCameraStoppedEvent:
+  // below). The underlying EventEmitter object's lifetime is independent of this ivar;
+  // holding our own shared_ptr keeps it usable for the one delayed onCameraStopped
+  // event that arrives after this view has already been recycled.
+  facebook::react::SharedViewEventEmitter _pendingTeardownEventEmitter;
 }
 
 // MARK: - Initialization
@@ -155,6 +161,17 @@ using namespace facebook::react;
 
 - (void)prepareForRecycle
 {
+  // Capture our own reference to the event emitter BEFORE calling super, which resets
+  // `_eventEmitter` to null synchronously below. `stop()` (called at the bottom of this
+  // method) kicks off an async teardown whose completion — the onCameraStopped signal —
+  // can land ~126-414ms later, long after this method returns and the view has been
+  // recycled. Without this capture, emitCameraStoppedEvent: would find `_eventEmitter`
+  // already null and silently drop that event every single time (I2) — this is the
+  // unmount path (e.g. navigating between two camera screens) the event exists for.
+  if (_eventEmitter != nullptr) {
+    _pendingTeardownEventEmitter = _eventEmitter;
+  }
+
   [super prepareForRecycle];
 
   NSLog(@"[VisionCameraViewComponentView] prepareForRecycle - stopping camera");
@@ -709,13 +726,27 @@ using namespace facebook::react;
 
 // Teardown-complete signal (consumer-requested) — no payload fields, the event's
 // occurrence IS the signal. See VisionCameraTypes.ts `VisionCameraStoppedEvent`.
+//
+// Falls back to `_pendingTeardownEventEmitter` (captured in prepareForRecycle above)
+// when `_eventEmitter` has already been reset by view recycling — this is the unmount
+// path the event exists for (I2). One-shot: cleared after use so a later, unrelated
+// recycled instance of this view can't accidentally reuse a stale emitter.
+//
+// `wasSuperseded` (set by RNVisionCameraView.swift's stop() when a start() lands
+// mid-teardown, I4) is iOS-only — Android has no equivalent generation counter, so the
+// field is simply absent there. `OnCameraStopped event = {}` value-initializes the bool
+// to false, so "absent" (Android) and "explicitly false" (iOS, not superseded) produce
+// the identical JS-visible value — a consumer must never be able to tell them apart.
 - (void)emitCameraStoppedEvent:(NSDictionary *)eventData
 {
-  if (_eventEmitter != nullptr) {
-    auto emitter = std::static_pointer_cast<VisionCameraViewEventEmitter const>(_eventEmitter);
+  facebook::react::SharedViewEventEmitter emitter = _eventEmitter != nullptr ? _eventEmitter : _pendingTeardownEventEmitter;
+  if (emitter != nullptr) {
+    auto viewEmitter = std::static_pointer_cast<VisionCameraViewEventEmitter const>(emitter);
     VisionCameraViewEventEmitter::OnCameraStopped event = {};
-    emitter->onCameraStopped(event);
+    event.wasSuperseded = [[eventData objectForKey:@"wasSuperseded"] boolValue];
+    viewEmitter->onCameraStopped(event);
   }
+  _pendingTeardownEventEmitter.reset();
 }
 
 @end

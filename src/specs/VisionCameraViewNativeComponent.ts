@@ -40,9 +40,17 @@ type BarcodeDetectedEvent = Readonly<{
 
 // Teardown-complete signal (consumer-requested, iOS-primary): fires once a stop()
 // has genuinely finished tearing down the camera session — see VisionCameraTypes.ts
-// `VisionCameraStoppedEvent` for the cross-platform semantics/timing note. No payload
-// fields are needed; the event's occurrence IS the signal.
-type CameraStoppedEvent = Readonly<{}>;
+// `VisionCameraStoppedEvent` for the cross-platform semantics/timing note. The event's
+// occurrence IS the signal; no payload field is required to know a stop() completed.
+type CameraStoppedEvent = Readonly<{
+  // True when a start() landed while this teardown was still in flight, so the camera
+  // was already running again by the time this (still-genuine, never-suppressed)
+  // completion fired — the consumer should not treat it as "torn down right now".
+  // iOS-only for now (tracks a generation counter bumped on every real start()).
+  // Absent (undefined) on Android and MUST be treated identically to `false` — a
+  // missing field is not itself a signal of anything.
+  wasSuperseded?: boolean;
+}>;
 
 type BoundingBoxesUpdateEvent = Readonly<{
   // Arrays passed as JSON strings due to codegen limitations
