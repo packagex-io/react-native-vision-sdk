@@ -95,6 +95,14 @@ using namespace facebook::react;
         };
         ((void (*)(id, SEL, id))objc_msgSend)(_visionCameraView, onCameraStateChangedSetter, cameraStateBlock);
       }
+
+      SEL onCameraStoppedSetter = NSSelectorFromString(@"setOnCameraStopped:");
+      if ([_visionCameraView respondsToSelector:onCameraStoppedSetter]) {
+        id cameraStoppedBlock = ^(NSDictionary *event) {
+          [weakSelf emitCameraStoppedEvent:event];
+        };
+        ((void (*)(id, SEL, id))objc_msgSend)(_visionCameraView, onCameraStoppedSetter, cameraStoppedBlock);
+      }
     } else {
       // Fallback to placeholder if Swift class not available
       _visionCameraView = [[UIView alloc] initWithFrame:self.bounds];
@@ -373,10 +381,10 @@ using namespace facebook::react;
 
   if (commandId != nil) {
     // Map command IDs to command names based on the order in supportedCommands array
-    // From VisionCameraViewNativeComponent.ts: ['capture', 'stop', 'start', 'rescan', 'toggleFlash', 'setZoom', 'setFocusSettings', 'pauseDetection', 'resumeDetection', 'setTorchEnabled', 'setFocusPoint']
+    // From VisionCameraViewNativeComponent.ts: ['capture', 'stop', 'start', 'rescan', 'toggleFlash', 'setZoom', 'rampZoomRatio', 'setFocusSettings', 'pauseDetection', 'resumeDetection', 'setTorchEnabled', 'setFocusPoint']
     // Order is locked three-files-in-sync with the TS supportedCommands array and Android's
     // receiveCommand `when` switch — do not reorder without updating all three.
-    NSArray *commandNames = @[@"capture", @"stop", @"start", @"rescan", @"toggleFlash", @"setZoom", @"setFocusSettings", @"pauseDetection", @"resumeDetection", @"setTorchEnabled", @"setFocusPoint"];
+    NSArray *commandNames = @[@"capture", @"stop", @"start", @"rescan", @"toggleFlash", @"setZoom", @"rampZoomRatio", @"setFocusSettings", @"pauseDetection", @"resumeDetection", @"setTorchEnabled", @"setFocusPoint"];
 
     NSInteger cmdId = [commandId integerValue];
     if (cmdId >= 0 && cmdId < commandNames.count) {
@@ -458,6 +466,26 @@ using namespace facebook::react;
     [invocation setTarget:_visionCameraView];
     CGFloat widened = level;
     [invocation setArgument:&widened atIndex:2];
+    [invocation invoke];
+  }
+}
+
+// ABI FIX — same float-vs-CGFloat register mismatch as setZoom/setFocusPoint above: the
+// generated protocol declares `ratio` as `float` (4-byte, register s0). `durationMs` is
+// passed as an `NSNumber` object on the Swift side instead of a scalar, sidestepping the
+// same register-width issue for that argument (object pointers pass uniformly).
+- (void)rampZoomRatio:(float)ratio durationMs:(NSInteger)durationMs
+{
+  SEL selector = NSSelectorFromString(@"rampZoomRatioWithRatio:durationMs:");
+  if ([_visionCameraView respondsToSelector:selector]) {
+    NSMethodSignature *signature = [_visionCameraView methodSignatureForSelector:selector];
+    NSInvocation *invocation = [NSInvocation invocationWithMethodSignature:signature];
+    [invocation setSelector:selector];
+    [invocation setTarget:_visionCameraView];
+    CGFloat widenedRatio = ratio;
+    NSNumber *durationNumber = @(durationMs);
+    [invocation setArgument:&widenedRatio atIndex:2];
+    [invocation setArgument:&durationNumber atIndex:3];
     [invocation invoke];
   }
 }
@@ -676,6 +704,17 @@ using namespace facebook::react;
     }
 
     emitter->onCameraStateChanged(event);
+  }
+}
+
+// Teardown-complete signal (consumer-requested) — no payload fields, the event's
+// occurrence IS the signal. See VisionCameraTypes.ts `VisionCameraStoppedEvent`.
+- (void)emitCameraStoppedEvent:(NSDictionary *)eventData
+{
+  if (_eventEmitter != nullptr) {
+    auto emitter = std::static_pointer_cast<VisionCameraViewEventEmitter const>(_eventEmitter);
+    VisionCameraViewEventEmitter::OnCameraStopped event = {};
+    emitter->onCameraStopped(event);
   }
 }
 

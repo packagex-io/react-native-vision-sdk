@@ -449,6 +449,23 @@ export interface VisionCameraStateEvent {
 }
 
 /**
+ * Event payload for `onCameraStopped` — fires once a `stop()` call has genuinely
+ * finished tearing down the camera session (consumer-requested "the old session is
+ * actually gone" signal, e.g. before mounting a second camera screen).
+ *
+ * Timing note (platform difference, not faked parity): on iOS this is driven by
+ * `CodeScannerView.stopRunning(completion:)`, which fires only once
+ * `AVCaptureSession.stopRunning()` has actually returned — meaningfully LATER than
+ * `onCameraStateChanged`'s `status: 'idle'`, which flips synchronously before the real
+ * teardown completes. On Android, `CameraLifecycleCallback.onCameraStopped()` is
+ * already driven by the camera state listener's transition to `IDLE`, which reflects
+ * genuine CameraX unbind completion — so it fires close to (not meaningfully after)
+ * `onCameraStateChanged`'s own `status: 'idle'`. Both platforms guarantee the event
+ * reflects real teardown; only the gap versus `onCameraStateChanged` differs.
+ */
+export interface VisionCameraStoppedEvent {}
+
+/**
  * Props for the Vision Camera view component.
  */
 export interface VisionCameraViewProps {
@@ -532,6 +549,15 @@ export interface VisionCameraViewProps {
    * transitions always bypass the throttle.
    */
   onCameraStateChanged?: (event: VisionCameraStateEvent) => void;
+
+  /**
+   * @optional
+   * @param {VisionCameraStoppedEvent} event
+   * @description Fires once a `stop()` call has genuinely finished tearing down the
+   * camera session — see `VisionCameraStoppedEvent`'s doc for the cross-platform
+   * timing note versus `onCameraStateChanged`'s `status: 'idle'`.
+   */
+  onCameraStopped?: (event: VisionCameraStoppedEvent) => void;
 
   /**
    * @optional
@@ -840,6 +866,20 @@ export interface VisionCameraRefProps {
   setZoom: (level: number) => void;
 
   /**
+   * Ramps the zoom smoothly from whatever's currently applied to `ratio`, over
+   * `durationMs`, instead of jumping there in one tick like `setZoom`. Duration-based
+   * on both platforms: iOS converts `durationMs` to Apple's rate-based
+   * `AVCaptureDevice.ramp(toVideoZoomFactor:withRate:)` internally
+   * (`rate = log2(target/current) / durationSeconds`); Android has no ramp primitive in
+   * CameraX, so it drives a ~60/sec ticker toward the target instead. A new call cancels
+   * any ramp already in flight, and an instant `setZoom`/`zoomRatio` prop change mid-ramp
+   * cancels it too.
+   * @param {number} ratio - Target wide-normalized zoom ratio (same meaning as `zoomRatio`).
+   * @param {number} durationMs - Duration of the ramp in milliseconds.
+   */
+  rampZoomRatio: (ratio: number, durationMs: number) => void;
+
+  /**
    * Configures focus settings including focus image, code boundaries, and document boundaries.
    * @param {FocusSettings} settings - The focus settings to apply.
    */
@@ -970,6 +1010,15 @@ export interface VisionCameraProps {
    * transitions always bypass the throttle.
    */
   onCameraStateChanged?: (event: VisionCameraStateEvent) => void;
+
+  /**
+   * @optional
+   * @param {VisionCameraStoppedEvent} event
+   * @description Fires once a `stop()` call has genuinely finished tearing down the
+   * camera session — see `VisionCameraStoppedEvent`'s doc for the cross-platform
+   * timing note versus `onCameraStateChanged`'s `status: 'idle'`.
+   */
+  onCameraStopped?: (event: VisionCameraStoppedEvent) => void;
 
   /**
    * @optional

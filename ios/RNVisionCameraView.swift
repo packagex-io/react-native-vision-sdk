@@ -59,6 +59,10 @@ class RNVisionCameraView: UIView {
   @objc var onBoundingBoxesUpdate: RCTDirectEventBlock?
   // Camera Controls API (Phase 3) — throttled full-state event (§8).
   @objc var onCameraStateChanged: RCTDirectEventBlock?
+  // Teardown-complete signal (consumer-requested) — fires once stopRunning(completion:)'s
+  // closure runs, i.e. once AVCaptureSession.stopRunning() has genuinely returned. See
+  // VisionCameraTypes.ts `VisionCameraStoppedEvent` for the cross-platform timing note.
+  @objc var onCameraStopped: RCTDirectEventBlock?
 
   // MARK: - Properties
   @objc var enableFlash: Bool = false {
@@ -150,7 +154,13 @@ class RNVisionCameraView: UIView {
   @objc var zoomRatio: NSNumber = 1.0 {
     didSet {
       isZoomRatioSet = true // C2: canonical prop now wins over zoomLevel, permanently
-      updateZoom() // zoomLevel and zoomRatio converge on the same setter
+      // rampZoomRatio(_:durationMs:) below updates this same tracked value (so a later
+      // facing switch reasserts the RAMP TARGET, mirroring Android's controlPropsFor)
+      // without wanting the instant jump updateZoom() would otherwise apply here —
+      // it drives the ramp itself via cameraView.rampZoomRatio(...) instead.
+      if !isApplyingRampZoom {
+        updateZoom() // zoomLevel and zoomRatio converge on the same setter
+      }
     }
   }
 
@@ -169,6 +179,10 @@ class RNVisionCameraView: UIView {
   // `enableFlash`'s default (false) on the very next reassert.
   private var isTorchSet: Bool = false
   private var isZoomRatioSet: Bool = false
+  // Set for the duration of rampZoomRatio(_:durationMs:)'s write to `zoomRatio` below,
+  // so its didSet updates isZoomRatioSet/bookkeeping without also triggering updateZoom()'s
+  // instant jump — the ramp itself is applied via cameraView.rampZoomRatio(...) instead.
+  private var isApplyingRampZoom: Bool = false
 
   private var resolvedTorch: Bool {
     isTorchSet ? torch : enableFlash
@@ -532,9 +546,16 @@ class RNVisionCameraView: UIView {
         return
       }
 
-      // Call stopRunning on main thread (required by AVFoundation)
+      // Call stopRunning on main thread (required by AVFoundation). Uses the
+      // completion-carrying overload (consumer-requested teardown-complete signal) so
+      // `onCameraStopped` fires only once AVCaptureSession.stopRunning() has genuinely
+      // returned — not merely once this call has been scheduled, which is all
+      // `onTransitionComplete` below (and `onCameraStateChanged`'s `status: 'idle'`)
+      // ever guaranteed. See VisionCameraTypes.ts `VisionCameraStoppedEvent`.
       DispatchQueue.main.sync {
-        cameraView.stopRunning()
+        cameraView.stopRunning(completion: { [weak self] in
+          self?.onCameraStopped?([:])
+        })
       }
 
       DispatchQueue.main.async { [weak self] in
@@ -622,6 +643,21 @@ class RNVisionCameraView: UIView {
     // never reads once isZoomRatioSet is true — the imperative setZoom() command (the
     // zoom slider's drag handler) was silently dropped from the very first frame.
     zoomRatio = NSNumber(value: Float(level))
+  }
+
+  /// Duration-based ramped zoom (Android/iOS parity, spec §8 follow-up) — routes to
+  /// `CodeScannerView.rampZoomRatio(_:durationMs:)`, which eases `videoZoomFactor` via
+  /// `AVCaptureDevice.ramp(toVideoZoomFactor:withRate:)` instead of jumping like `setZoom`
+  /// above. Also updates the tracked `zoomRatio` bookkeeping (via `isApplyingRampZoom`,
+  /// see its declaration) so a facing switch mid-ramp reasserts the ramp's TARGET, not a
+  /// stale pre-ramp value.
+  @objc(rampZoomRatioWithRatio:durationMs:)
+  func rampZoomRatio(_ ratio: CGFloat, durationMs: NSNumber) {
+    guard let cameraView = cameraView, !isDeallocating else { return }
+    isApplyingRampZoom = true
+    zoomRatio = NSNumber(value: Float(ratio))
+    isApplyingRampZoom = false
+    cameraView.rampZoomRatio(Float(ratio), durationMs: durationMs.intValue)
   }
 
   // Camera Controls API (Phase 3) — commands. setFocusSettings below stays SEPARATE/
@@ -1250,6 +1286,13 @@ extension RNVisionCameraView: CodeScannerViewDelegate {
     case .permissionDenied: return "permission-denied"
     case .lensUnavailable: return "lens-unavailable"
     case .configurationFailed: return "configuration-failed"
+    // VisionSDK 2.6.0 (consumer-requested surfaced camera errors) — append-only cases
+    // distinguishing an AVCaptureSession interruption/runtime error from a benign
+    // .interrupted status transition. iOS-only: Android's CameraError sealed class has
+    // no equivalent yet (see CameraErrorCode's doc in src/types.ts). Previously these
+    // fell into `default` and were misreported as "configuration-failed".
+    case .sessionInterrupted: return "session-interrupted"
+    case .sessionRuntimeError: return "session-runtime-error"
     default: return "configuration-failed"
     }
   }

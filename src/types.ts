@@ -447,14 +447,24 @@ export type CameraStatus = 'idle' | 'starting' | 'running' | 'interrupted' | 'er
 
 /**
  * Camera error/warning codes.
- * @type {'permission-denied' | 'lens-unavailable' | 'configuration-failed'}
+ * @type {'permission-denied' | 'lens-unavailable' | 'configuration-failed' | 'session-interrupted' | 'session-runtime-error'}
  * @description Used for both `errorCode` (fatal, `status === 'error'`) and
  * `warningCode` (non-fatal, e.g. an unpinnable `pinnedLensId` falling back to Auto).
+ *
+ * `session-interrupted` and `session-runtime-error` are iOS-only as of VisionSDK 2.6.0 /
+ * vision-sdk-android v2.7.0 — a genuine platform difference, not an oversight. iOS's
+ * `VSDKCameraErrorCode` distinguishes an `AVCaptureSession` interruption that arrives
+ * mid-bind (`sessionInterrupted`) from a runtime error while running
+ * (`sessionRuntimeError`); Android's `CameraError` sealed class has no equivalent cases
+ * yet — a CameraX interruption there still surfaces only via `status: 'interrupted'`
+ * with no `errorCode`. Don't assume both codes are reachable cross-platform.
  */
 export type CameraErrorCode =
   | 'permission-denied'
   | 'lens-unavailable'
-  | 'configuration-failed';
+  | 'configuration-failed'
+  | 'session-interrupted'
+  | 'session-runtime-error';
 
 /**
  * Describes a single physical or logical camera lens.

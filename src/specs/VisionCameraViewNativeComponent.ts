@@ -38,6 +38,12 @@ type BarcodeDetectedEvent = Readonly<{
   codesJson?: string;
 }>;
 
+// Teardown-complete signal (consumer-requested, iOS-primary): fires once a stop()
+// has genuinely finished tearing down the camera session — see VisionCameraTypes.ts
+// `VisionCameraStoppedEvent` for the cross-platform semantics/timing note. No payload
+// fields are needed; the event's occurrence IS the signal.
+type CameraStoppedEvent = Readonly<{}>;
+
 type BoundingBoxesUpdateEvent = Readonly<{
   // Arrays passed as JSON strings due to codegen limitations
   barcodeBoundingBoxesJson?: string;
@@ -109,6 +115,7 @@ export interface NativeProps extends ViewProps {
   onBarcodeDetected?: DirectEventHandler<BarcodeDetectedEvent>;
   onBoundingBoxesUpdate?: DirectEventHandler<BoundingBoxesUpdateEvent>;
   onCameraStateChanged?: DirectEventHandler<CameraStateChangedEvent>;
+  onCameraStopped?: DirectEventHandler<CameraStoppedEvent>;
 }
 
 // Native commands interface
@@ -119,6 +126,10 @@ interface NativeCommands {
   rescan: (viewRef: React.ElementRef<HostComponent<NativeProps>>) => void;
   toggleFlash: (viewRef: React.ElementRef<HostComponent<NativeProps>>, enabled: boolean) => void;
   setZoom: (viewRef: React.ElementRef<HostComponent<NativeProps>>, level: Float) => void;
+  // Duration-based ramp — matches both natives' signature (iOS converts to Apple's
+  // rate-based AVCaptureDevice.ramp internally; Android drives a ~60/sec ticker since
+  // CameraX has no ramp primitive). See VisionCameraTypes.ts `rampZoomRatio` doc.
+  rampZoomRatio: (viewRef: React.ElementRef<HostComponent<NativeProps>>, ratio: Float, durationMs: Int32) => void;
   setFocusSettings: (viewRef: React.ElementRef<HostComponent<NativeProps>>, settingsJson: string) => void;
   pauseDetection: (viewRef: React.ElementRef<HostComponent<NativeProps>>) => void;
   resumeDetection: (viewRef: React.ElementRef<HostComponent<NativeProps>>) => void;
@@ -131,7 +142,7 @@ interface NativeCommands {
 }
 
 export const Commands: NativeCommands = codegenNativeCommands<NativeCommands>({
-  supportedCommands: ['capture', 'stop', 'start', 'rescan', 'toggleFlash', 'setZoom', 'setFocusSettings', 'pauseDetection', 'resumeDetection', 'setTorchEnabled', 'setFocusPoint'],
+  supportedCommands: ['capture', 'stop', 'start', 'rescan', 'toggleFlash', 'setZoom', 'rampZoomRatio', 'setFocusSettings', 'pauseDetection', 'resumeDetection', 'setTorchEnabled', 'setFocusPoint'],
 });
 
 export default codegenNativeComponent<NativeProps>(

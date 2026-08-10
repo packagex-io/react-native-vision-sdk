@@ -128,6 +128,16 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
         view.setZoomRatio(ratio)
     }
 
+    // Duration-based ramp — parity with iOS's rampZoomRatio (spec §8 follow-up). Tracks
+    // the FINAL target in controlPropsFor (same as applyZoomRatio) so a facing/lens
+    // switch mid-ramp reasserts the target, not whatever the ticker had reached — the
+    // ramp itself is driven by CameraController/SessionReconciler (see
+    // VisionCameraView.rampZoomRatio's doc), not by this Fabric-facing wrapper.
+    private fun applyRampZoomRatio(view: VisionCameraView, ratio: Float, durationMs: Long) {
+        controlPropsFor(view).zoomRatio = ratio.toDouble()
+        view.rampZoomRatio(ratio, durationMs)
+    }
+
     private fun focusModeFromString(mode: String?): io.packagex.visionsdk.camera.core.FocusMode =
         when (mode?.lowercase()) {
             "single" -> io.packagex.visionsdk.camera.core.FocusMode.SINGLE
@@ -525,7 +535,8 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
             "onSharpnessScoreUpdate" to mapOf("registrationName" to "onSharpnessScoreUpdate"),
             "onBarcodeDetected" to mapOf("registrationName" to "onBarcodeDetected"),
             "onBoundingBoxesUpdate" to mapOf("registrationName" to "onBoundingBoxesUpdate"),
-            "onCameraStateChanged" to mapOf("registrationName" to "onCameraStateChanged")
+            "onCameraStateChanged" to mapOf("registrationName" to "onCameraStateChanged"),
+            "onCameraStopped" to mapOf("registrationName" to "onCameraStopped")
         )
     }
 
@@ -837,6 +848,11 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
                 val level = args?.getDouble(0) ?: 1.0
                 setZoom(root, level.toFloat())
             }
+            "rampZoomRatio" -> {
+                val ratio = (args?.getDouble(0) ?: 1.0).toFloat()
+                val durationMs = (args?.getDouble(1) ?: 0.0).toLong()
+                rampZoomRatio(root, ratio, durationMs.toInt())
+            }
             "setFocusSettings" -> {
                 val settingsJson = args?.getString(0) ?: "{}"
                 setFocusSettings(root, settingsJson)
@@ -920,6 +936,11 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
     override fun setZoom(view: VisionCameraView, level: Float) {
         Log.d(TAG, "setZoom called with level: $level")
         applyZoomRatio(view, level)
+    }
+
+    override fun rampZoomRatio(view: VisionCameraView, ratio: Float, durationMs: Int) {
+        Log.d(TAG, "rampZoomRatio called with ratio: $ratio durationMs: $durationMs")
+        applyRampZoomRatio(view, ratio, durationMs.toLong())
     }
 
     override fun pauseDetection(view: VisionCameraView) {
@@ -1341,6 +1362,13 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
         override fun onCameraStopped() {
             Log.d(TAG, "⏹️ Camera stopped")
             isCameraReady = false
+
+            // Teardown-complete signal (consumer-requested, cross-platform with iOS's
+            // stopRunning(completion:) — see VisionCameraTypes.ts `VisionCameraStoppedEvent`
+            // for the timing note). This callback is already driven by the camera state
+            // listener's transition to IDLE (genuine CameraX unbind completion), so no
+            // extra completion plumbing is needed on this side.
+            sendEvent("onCameraStopped", Arguments.createMap())
         }
     }
 }
