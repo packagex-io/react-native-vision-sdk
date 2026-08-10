@@ -464,14 +464,9 @@ export interface VisionCameraStateEvent {
  *   teardown-and-rebind) never emit this event, on either platform. Only a `stop()`
  *   the consumer actually called counts.
  * - If a `start()` call supersedes an in-flight `stop()` teardown (the consumer changed
- *   their mind mid-teardown), the event is still delivered rather than dropped — and the
- *   payload lets the consumer distinguish "teardown finished, camera is idle" from
- *   "teardown finished, but a `start()` already superseded it and the camera is running
- *   again."
- *   TODO(pr-199-reconcile): the exact shape of that disambiguation (a field added to
- *   this interface, or something else) is still being decided on the iOS side as part
- *   of reconciling the iOS/Android/RN branches for this change — treat `{}` below as a
- *   placeholder, not the final shape.
+ *   their mind mid-teardown), the event is still delivered rather than dropped — never
+ *   suppressed — and `wasSuperseded` (see below) tells the consumer which case they're
+ *   in.
  *
  * Timing (a genuine, intentional platform difference — not faked parity): on iOS this is
  * driven by `CodeScannerView.stopRunning(completion:)`, which fires only once
@@ -482,10 +477,23 @@ export interface VisionCameraStateEvent {
  * CameraX unbind completion — so it fires close to (not meaningfully after)
  * `onCameraStateChanged`'s own `status: 'idle'`. Both platforms guarantee the event
  * reflects real teardown of a consumer-initiated stop; the gap versus
- * `onCameraStateChanged` is the only currently-known timing difference, but see the
- * TODO above for a possible payload-shape difference still being finalized.
+ * `onCameraStateChanged` is the only currently-known timing difference.
  */
-export interface VisionCameraStoppedEvent {}
+export interface VisionCameraStoppedEvent {
+  /**
+   * @optional
+   * @type {boolean}
+   * @description True when a `start()` call landed while this `stop()`'s teardown was
+   * still in flight, superseding it — the camera is running again by the time this
+   * event arrives, rather than idle. iOS tracks this with an operation-generation
+   * counter snapshotted before `stopRunning(completion:)` and compared inside the
+   * completion; Android has no equivalent counter, so the field is simply **absent**
+   * there rather than sent as `false`. Absence means "not superseded," not a distinct
+   * third state — always test with `if (event.wasSuperseded)` rather than
+   * `=== true`/`=== false`, and it will behave correctly on both platforms.
+   */
+  wasSuperseded?: boolean;
+}
 
 /**
  * Props for the Vision Camera view component.
@@ -578,9 +586,10 @@ export interface VisionCameraViewProps {
    * @description Fires exactly once per consumer-initiated `stop()` call — including a
    * `stop()` on an already-stopped camera, and even if the view unmounts mid-teardown.
    * Never fires for internal/automatic restarts the consumer didn't request (e.g. a
-   * facing-switch teardown-and-rebind). See `VisionCameraStoppedEvent`'s doc for the
-   * full contract, the cross-platform timing note versus `onCameraStateChanged`'s
-   * `status: 'idle'`, and a pending TODO on the start()-supersedes-stop() payload shape.
+   * facing-switch teardown-and-rebind). If a `start()` supersedes the teardown, the
+   * event still fires with `wasSuperseded: true`. See `VisionCameraStoppedEvent`'s doc
+   * for the full contract and the cross-platform timing note versus
+   * `onCameraStateChanged`'s `status: 'idle'`.
    */
   onCameraStopped?: (event: VisionCameraStoppedEvent) => void;
 
@@ -1042,9 +1051,10 @@ export interface VisionCameraProps {
    * @description Fires exactly once per consumer-initiated `stop()` call — including a
    * `stop()` on an already-stopped camera, and even if the view unmounts mid-teardown.
    * Never fires for internal/automatic restarts the consumer didn't request (e.g. a
-   * facing-switch teardown-and-rebind). See `VisionCameraStoppedEvent`'s doc for the
-   * full contract, the cross-platform timing note versus `onCameraStateChanged`'s
-   * `status: 'idle'`, and a pending TODO on the start()-supersedes-stop() payload shape.
+   * facing-switch teardown-and-rebind). If a `start()` supersedes the teardown, the
+   * event still fires with `wasSuperseded: true`. See `VisionCameraStoppedEvent`'s doc
+   * for the full contract and the cross-platform timing note versus
+   * `onCameraStateChanged`'s `status: 'idle'`.
    */
   onCameraStopped?: (event: VisionCameraStoppedEvent) => void;
 

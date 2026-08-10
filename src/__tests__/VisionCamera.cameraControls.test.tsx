@@ -195,6 +195,34 @@ describe('VisionCamera onCameraStopped event wiring (PR #199)', () => {
     expect(onCameraStopped.mock.calls[0]![0]).toEqual({});
   });
 
+  it('passes wasSuperseded: true through when a start() superseded the teardown (iOS shape)', () => {
+    const onCameraStopped = jest.fn();
+    const tree = renderInAct(<VisionCamera onCameraStopped={onCameraStopped} />);
+    const viewProps = tree.root.findByType(VisionCameraView as any).props;
+
+    act(() => {
+      viewProps.onCameraStopped({ nativeEvent: { wasSuperseded: true } });
+    });
+
+    expect(onCameraStopped).toHaveBeenCalledTimes(1);
+    expect(onCameraStopped.mock.calls[0]![0].wasSuperseded).toBe(true);
+  });
+
+  it('treats an absent wasSuperseded (Android shape, no generation counter) as falsy — not a distinct third state', () => {
+    const onCameraStopped = jest.fn();
+    const tree = renderInAct(<VisionCamera onCameraStopped={onCameraStopped} />);
+    const viewProps = tree.root.findByType(VisionCameraView as any).props;
+
+    act(() => {
+      viewProps.onCameraStopped({ nativeEvent: {} });
+    });
+
+    expect(onCameraStopped).toHaveBeenCalledTimes(1);
+    const event = onCameraStopped.mock.calls[0]![0];
+    expect(event.wasSuperseded).toBeUndefined();
+    expect(!!event.wasSuperseded).toBe(false); // `if (event.wasSuperseded)` is the documented convention
+  });
+
   it('does not throw when the native event fires and no onCameraStopped prop was provided', () => {
     const tree = renderInAct(<VisionCamera />);
     const viewProps = tree.root.findByType(VisionCameraView as any).props;
