@@ -729,10 +729,18 @@ class RNVisionCameraView: UIView {
   /// stale pre-ramp value.
   @objc(rampZoomRatioWithRatio:durationMs:)
   func rampZoomRatio(_ ratio: CGFloat, durationMs: NSNumber) {
-    guard let cameraView = cameraView, !isDeallocating else { return }
+    guard !isDeallocating else { return }
+    // Record the target unconditionally — mirrors setZoom's existing pattern above.
+    // A call landing before `cameraView` exists (e.g. a mount-effect race) must not
+    // lose the target; reassertControlProps() re-applies it via updateZoom() once the
+    // camera comes up (RUNNING transition), same as any other declarative control prop.
+    // That re-apply is an instant jump rather than a ramp (there's no live session to
+    // animate yet anyway) — matches Android's "stores it and reaches the target" parity.
     isApplyingRampZoom = true
     zoomRatio = NSNumber(value: Float(ratio))
     isApplyingRampZoom = false
+
+    guard let cameraView = cameraView else { return }
     cameraView.rampZoomRatio(Float(ratio), durationMs: durationMs.intValue)
   }
 
