@@ -59,6 +59,10 @@ class RNVisionCameraView: UIView {
   @objc var onBoundingBoxesUpdate: RCTDirectEventBlock?
   // Camera Controls API (Phase 3) — throttled full-state event (§8).
   @objc var onCameraStateChanged: RCTDirectEventBlock?
+  // Teardown-complete signal (consumer-requested) — fires once stopRunning(completion:)'s
+  // closure runs, i.e. once AVCaptureSession.stopRunning() has genuinely returned. See
+  // VisionCameraTypes.ts `VisionCameraStoppedEvent` for the cross-platform timing note.
+  @objc var onCameraStopped: RCTDirectEventBlock?
 
   // MARK: - Properties
   @objc var enableFlash: Bool = false {
@@ -150,7 +154,13 @@ class RNVisionCameraView: UIView {
   @objc var zoomRatio: NSNumber = 1.0 {
     didSet {
       isZoomRatioSet = true // C2: canonical prop now wins over zoomLevel, permanently
-      updateZoom() // zoomLevel and zoomRatio converge on the same setter
+      // rampZoomRatio(_:durationMs:) below updates this same tracked value (so a later
+      // facing switch reasserts the RAMP TARGET, mirroring Android's controlPropsFor)
+      // without wanting the instant jump updateZoom() would otherwise apply here —
+      // it drives the ramp itself via cameraView.rampZoomRatio(...) instead.
+      if !isApplyingRampZoom {
+        updateZoom() // zoomLevel and zoomRatio converge on the same setter
+      }
     }
   }
 
@@ -169,6 +179,10 @@ class RNVisionCameraView: UIView {
   // `enableFlash`'s default (false) on the very next reassert.
   private var isTorchSet: Bool = false
   private var isZoomRatioSet: Bool = false
+  // Set for the duration of rampZoomRatio(_:durationMs:)'s write to `zoomRatio` below,
+  // so its didSet updates isZoomRatioSet/bookkeeping without also triggering updateZoom()'s
+  // instant jump — the ramp itself is applied via cameraView.rampZoomRatio(...) instead.
+  private var isApplyingRampZoom: Bool = false
 
   private var resolvedTorch: Bool {
     isTorchSet ? torch : enableFlash
@@ -299,6 +313,50 @@ class RNVisionCameraView: UIView {
   // a newer skipped emit cancels/replaces it, so exactly one trailing emit lands
   // with the freshest state.
   private var trailingCameraStateWorkItem: DispatchWorkItem?
+
+  // MARK: - onCameraStopped contract (I1/I2/I3/I4 — see VisionCameraTypes.ts
+  // `VisionCameraStoppedEvent` for the consumer-facing doc)
+  // Every consumer stop() call registers exactly one callback here, so it resolves
+  // exactly once (I1) regardless of actualCameraState/isTransitioning at call time —
+  // already-stopped, never-started, mid-teardown (a second stop()), and start-failed are
+  // all covered. Flushed either by a genuine AVCaptureSession teardown's completion, or
+  // immediately when there is nothing to tear down.
+  private var pendingStopCallbacks: [(Bool) -> Void] = []
+
+  /// Resolves every currently-queued `stop()` completion callback exactly once, each
+  /// firing its own `onCameraStopped` (I1: never zero events). Called either
+  /// immediately (nothing to tear down) or from the real `stopRunning(completion:)`
+  /// closure once AVCaptureSession has genuinely finished (I2/I4). Only used where
+  /// there is no specific in-flight teardown to correlate against (nothing was ever
+  /// set up, or the deferred-call fallback in stop()) — performStop() below owns and
+  /// flushes its own snapshot instead, via flushCallbacks(_:wasSuperseded:).
+  private func flushPendingStopCallbacks(wasSuperseded: Bool) {
+    guard !pendingStopCallbacks.isEmpty else { return }
+    let callbacks = pendingStopCallbacks
+    pendingStopCallbacks.removeAll()
+    flushCallbacks(callbacks, wasSuperseded: wasSuperseded)
+  }
+
+  /// Fires an already-dequeued batch of stop() callbacks. Bug fix (on-device):
+  /// performStop() used to flush the shared `pendingStopCallbacks` array directly from
+  /// inside its real `stopRunning(completion:)` closure — so if a SECOND stop() call's
+  /// own performStop() cycle queued more callbacks before the FIRST cycle's real
+  /// completion fired (see the rapid-repeated-tap note in performStop() below), whichever
+  /// real completion happened to fire first drained and answered for EVERY callback
+  /// queued so far with its own single `wasSuperseded` value — including callbacks that
+  /// belonged to a teardown that hadn't genuinely finished yet. Confirmed on-device: 4
+  /// rapid stop/start taps produced a non-deterministic true/false pattern because 3
+  /// stop() calls' callbacks all got resolved together by whichever of their 3 real
+  /// completions arrived first, and 2 of those completions' own (possibly different)
+  /// answers were silently discarded. performStop() now snapshots-and-clears its own
+  /// slice of `pendingStopCallbacks` up front and flushes that specific array here,
+  /// so each real completion only ever answers for the callback(s) that are actually
+  /// its own.
+  private func flushCallbacks(_ callbacks: [(Bool) -> Void], wasSuperseded: Bool) {
+    for callback in callbacks {
+      callback(wasSuperseded)
+    }
+  }
 
   // MARK: - Initialization
   override init(frame: CGRect) {
@@ -458,7 +516,20 @@ class RNVisionCameraView: UIView {
   }
 
   @objc func stop() {
-    guard !isDeallocating, cameraView != nil else {
+    guard !isDeallocating else {
+      return
+    }
+
+    // Register this call's own notification up front — resolved exactly once below no
+    // matter how the transition below plays out (I1: a consumer stop() must never go
+    // unanswered — an already-stopped/never-started/mid-teardown camera all count).
+    pendingStopCallbacks.append { [weak self] wasSuperseded in
+      self?.onCameraStopped?(["wasSuperseded": wasSuperseded])
+    }
+
+    guard cameraView != nil else {
+      // Nothing was ever set up to tear down — resolve immediately rather than hang.
+      flushPendingStopCallbacks(wasSuperseded: false)
       return
     }
 
@@ -467,6 +538,13 @@ class RNVisionCameraView: UIView {
 
     // Trigger transition if needed
     executeTransitionIfNeeded()
+
+    // No real teardown is coming to flush the callback just queued — e.g. stop() called
+    // while already .stopped (including right after a failed start(), or a second
+    // stop() call with nothing left in flight). Resolve right away (I1).
+    if !isTransitioning && actualCameraState == .stopped {
+      flushPendingStopCallbacks(wasSuperseded: false)
+    }
   }
 
   private func executeTransitionIfNeeded() {
@@ -517,7 +595,20 @@ class RNVisionCameraView: UIView {
   }
 
   private func performStop() {
-    guard let cameraView = self.cameraView else { return }
+    // Snapshot-and-clear the callbacks queued so far — THIS performStop() invocation
+    // (and the one real stopRunning(completion:) call it is about to make) owns exactly
+    // these callbacks. See flushCallbacks(_:wasSuperseded:)'s doc for why: a stop() that
+    // arrives after this snapshot starts a fresh pendingStopCallbacks list of its own,
+    // so it can no longer be answered by THIS teardown's completion.
+    let callbacksForThisTeardown = pendingStopCallbacks
+    pendingStopCallbacks = []
+
+    guard let cameraView = self.cameraView else {
+      // Nothing was ever set up to tear down — don't leave queued stop() callbacks
+      // hanging on a teardown that will never happen (I1).
+      flushCallbacks(callbacksForThisTeardown, wasSuperseded: false)
+      return
+    }
 
     isTransitioning = true
     actualCameraState = .stopping
@@ -528,13 +619,59 @@ class RNVisionCameraView: UIView {
       guard let cameraView = self.cameraView else {
         DispatchQueue.main.async { [weak self] in
           self?.onTransitionComplete(success: false)
+          self?.flushCallbacks(callbacksForThisTeardown, wasSuperseded: false)
         }
         return
       }
 
-      // Call stopRunning on main thread (required by AVFoundation)
+      // Call stopRunning on main thread (required by AVFoundation). Uses the
+      // completion-carrying overload (consumer-requested teardown-complete signal) so
+      // `onCameraStopped` fires only once AVCaptureSession.stopRunning() has genuinely
+      // returned — not merely once this call has been scheduled, which is all
+      // `onTransitionComplete` below (and `onCameraStateChanged`'s `status: 'idle'`)
+      // ever guaranteed. See VisionCameraTypes.ts `VisionCameraStoppedEvent`.
+      //
+      // KNOWN LIMITATION (rapid-repeated-tap overlap, pre-existing — not introduced by
+      // this fix): `isTransitioning`/`actualCameraState` settle back to a resting state
+      // in SOFTWARE almost immediately after this call is dispatched (see
+      // onTransitionComplete()'s `main.async` below, which in practice runs and flips
+      // `isTransitioning` back to false well before this real `stopRunning(completion:)`
+      // has genuinely finished tearing down AVCaptureSession). Nothing here blocks a new
+      // start()/stop() cycle from kicking off ITS OWN real hardware call while an older
+      // one is still physically in flight, so calling start()/stop() faster than the
+      // camera can actually teardown (observed ~130-700ms round-trip on iPhone 14 Pro)
+      // can have multiple real stopRunning/startRunning calls overlapping at once.
+      // Confirmed on-device: 4 rapid stop/start taps left 3 real teardowns in flight
+      // simultaneously and the app crashed with AVFoundation's own consistency check —
+      // `Assertion failed: (figCaptureSession == _internal->figCaptureSession)` in
+      // `-[AVCaptureVideoPreviewLayer detachFromFigCaptureSession:]`. The
+      // `callbacksForThisTeardown` snapshot above stops overlapping real completions from
+      // stealing each other's `wasSuperseded` answer, but does not prevent the underlying
+      // overlap. A proper fix means tracking real AVCaptureSession completion — not
+      // software dispatch — before allowing the next transition to start, which is a
+      // bigger change to this state machine than this fix takes on. Until then, callers
+      // should debounce rapid-fire start()/stop() calls at the call site.
       DispatchQueue.main.sync {
-        cameraView.stopRunning()
+        cameraView.stopRunning(completion: { [weak self] in
+          DispatchQueue.main.async {
+            guard let self = self else { return }
+            // I4: a start() that lands mid-teardown must still surface here as
+            // superseded. This used to compare an `operationGeneration` counter that
+            // only got bumped inside performStart() — but a start() arriving while
+            // `isTransitioning` is true (i.e. for this entire teardown, since
+            // `stopRunning(completion:)`'s completion below and the `main.async` that
+            // flips `isTransitioning` back to false via onTransitionComplete() are both
+            // scheduled from this same block, in that order) is DEFERRED: start() only
+            // records `targetState = .running` and returns without ever calling
+            // performStart(), so the generation is never bumped before this closure
+            // runs. On device this made wasSuperseded structurally always false,
+            // regardless of timing. `targetState` reflects the request immediately
+            // (set synchronously in start()/stop()), so check that instead of whether
+            // performStart() has already executed.
+            let wasSuperseded = self.targetState == .running
+            self.flushCallbacks(callbacksForThisTeardown, wasSuperseded: wasSuperseded)
+          }
+        })
       }
 
       DispatchQueue.main.async { [weak self] in
@@ -545,11 +682,30 @@ class RNVisionCameraView: UIView {
   }
 
   private func onTransitionComplete(success: Bool) {
+    let wasStarting = actualCameraState == .starting
+
     // Update actual state based on what operation completed
-    if actualCameraState == .starting {
+    if wasStarting {
       actualCameraState = success ? .running : .stopped
       // Re-assert declarative control props on every RUNNING transition (spec §8).
-      if success { reassertControlProps() }
+      if success {
+        reassertControlProps()
+        // Bug fix (on-device: rampZoomRatio()/zoomRatio set before or immediately
+        // after start() consistently lost its target, settling back at the device
+        // default after several seconds) — same race already patched in
+        // updateCameraPosition()'s H1 fix: CodeScannerView's session/lens
+        // configuration for a cold bind finishes asynchronously with no completion
+        // callback, and if it lands AFTER the reassert above, its own defaults-reset
+        // silently overwrites the zoom/torch we just applied. A couple of delayed
+        // re-asserts past any realistic bind duration close the window, mirroring
+        // updateCameraPosition()'s two-timer pattern below.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
+          self?.reassertControlProps()
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { [weak self] in
+          self?.reassertControlProps()
+        }
+      }
     } else if actualCameraState == .stopping {
       actualCameraState = .stopped
     }
@@ -559,6 +715,11 @@ class RNVisionCameraView: UIView {
     // Check if we need another transition
     if targetState != actualCameraState {
       executeTransitionIfNeeded()
+    } else if wasStarting && !success && targetState == .stopped {
+      // start() failed (e.g. permission denied) while stop() was the target — there is
+      // no real teardown in flight for any queued stop() callbacks to ride along with,
+      // so resolve them here instead of leaving them hanging (I1).
+      flushPendingStopCallbacks(wasSuperseded: false)
     }
   }
 
@@ -622,6 +783,29 @@ class RNVisionCameraView: UIView {
     // never reads once isZoomRatioSet is true — the imperative setZoom() command (the
     // zoom slider's drag handler) was silently dropped from the very first frame.
     zoomRatio = NSNumber(value: Float(level))
+  }
+
+  /// Duration-based ramped zoom (Android/iOS parity, spec §8 follow-up) — routes to
+  /// `CodeScannerView.rampZoomRatio(_:durationMs:)`, which eases `videoZoomFactor` via
+  /// `AVCaptureDevice.ramp(toVideoZoomFactor:withRate:)` instead of jumping like `setZoom`
+  /// above. Also updates the tracked `zoomRatio` bookkeeping (via `isApplyingRampZoom`,
+  /// see its declaration) so a facing switch mid-ramp reasserts the ramp's TARGET, not a
+  /// stale pre-ramp value.
+  @objc(rampZoomRatioWithRatio:durationMs:)
+  func rampZoomRatio(_ ratio: CGFloat, durationMs: NSNumber) {
+    guard !isDeallocating else { return }
+    // Record the target unconditionally — mirrors setZoom's existing pattern above.
+    // A call landing before `cameraView` exists (e.g. a mount-effect race) must not
+    // lose the target; reassertControlProps() re-applies it via updateZoom() once the
+    // camera comes up (RUNNING transition), same as any other declarative control prop.
+    // That re-apply is an instant jump rather than a ramp (there's no live session to
+    // animate yet anyway) — matches Android's "stores it and reaches the target" parity.
+    isApplyingRampZoom = true
+    zoomRatio = NSNumber(value: Float(ratio))
+    isApplyingRampZoom = false
+
+    guard let cameraView = cameraView else { return }
+    cameraView.rampZoomRatio(Float(ratio), durationMs: durationMs.intValue)
   }
 
   // Camera Controls API (Phase 3) — commands. setFocusSettings below stays SEPARATE/
@@ -1250,6 +1434,13 @@ extension RNVisionCameraView: CodeScannerViewDelegate {
     case .permissionDenied: return "permission-denied"
     case .lensUnavailable: return "lens-unavailable"
     case .configurationFailed: return "configuration-failed"
+    // VisionSDK 2.6.0 (consumer-requested surfaced camera errors) — append-only cases
+    // distinguishing an AVCaptureSession interruption/runtime error from a benign
+    // .interrupted status transition. iOS-only: Android's CameraError sealed class has
+    // no equivalent yet (see CameraErrorCode's doc in src/types.ts). Previously these
+    // fell into `default` and were misreported as "configuration-failed".
+    case .sessionInterrupted: return "session-interrupted"
+    case .sessionRuntimeError: return "session-runtime-error"
     default: return "configuration-failed"
     }
   }

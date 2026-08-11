@@ -14,6 +14,7 @@ import {
   VisionCameraRecognitionUpdateEvent,
   VisionCameraSharpnessScoreEvent,
   VisionCameraStateEvent,
+  VisionCameraStoppedEvent,
   FocusSettings,
 } from './VisionCameraTypes';
 
@@ -89,6 +90,7 @@ const Camera = forwardRef<VisionCameraRefProps, VisionCameraProps>(
       onBarcodeDetected = () => { },
       onBoundingBoxesUpdate = () => { },
       onCameraStateChanged = () => { },
+      onCameraStopped = () => { },
     },
     ref
   ) => {
@@ -104,6 +106,7 @@ const Camera = forwardRef<VisionCameraRefProps, VisionCameraProps>(
     const onBarcodeDetectedRef = useRef(onBarcodeDetected);
     const onBoundingBoxesUpdateRef = useRef(onBoundingBoxesUpdate);
     const onCameraStateChangedRef = useRef(onCameraStateChanged);
+    const onCameraStoppedRef = useRef(onCameraStopped);
     onCaptureRef.current = onCapture;
     onErrorRef.current = onError;
     onRecognitionUpdateRef.current = onRecognitionUpdate;
@@ -111,6 +114,7 @@ const Camera = forwardRef<VisionCameraRefProps, VisionCameraProps>(
     onBarcodeDetectedRef.current = onBarcodeDetected;
     onBoundingBoxesUpdateRef.current = onBoundingBoxesUpdate;
     onCameraStateChangedRef.current = onCameraStateChanged;
+    onCameraStoppedRef.current = onCameraStopped;
 
     // Prop collision resolution (Camera Controls API, spec §8): the canonical
     // prop wins when both the deprecated and new prop are set. Distinguishing
@@ -177,6 +181,12 @@ const Camera = forwardRef<VisionCameraRefProps, VisionCameraProps>(
       setZoom: (level: number) => {
         if (VisionCameraViewRef.current) {
           Commands.setZoom(VisionCameraViewRef.current, level);
+        }
+      },
+
+      rampZoomRatio: (ratio: number, durationMs: number) => {
+        if (VisionCameraViewRef.current) {
+          Commands.rampZoomRatio(VisionCameraViewRef.current, ratio, durationMs);
         }
       },
 
@@ -291,6 +301,12 @@ const Camera = forwardRef<VisionCameraRefProps, VisionCameraProps>(
       []
     )
 
+    const onCameraStoppedHandler = useCallback(
+      (event: any) =>
+        onCameraStoppedRef.current(parseNativeEvent<VisionCameraStoppedEvent>(event)),
+      []
+    )
+
     return (
       <>
         <VisionCameraView
@@ -320,6 +336,7 @@ const Camera = forwardRef<VisionCameraRefProps, VisionCameraProps>(
           onBarcodeDetected={onBarcodeDetectedHandler}
           onBoundingBoxesUpdate={onBoundingBoxesUpdateHandler}
           onCameraStateChanged={onCameraStateChangedHandler}
+          onCameraStopped={onCameraStoppedHandler}
         />
         {children}
       </>
