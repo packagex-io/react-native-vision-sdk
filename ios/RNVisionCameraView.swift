@@ -688,7 +688,24 @@ class RNVisionCameraView: UIView {
     if wasStarting {
       actualCameraState = success ? .running : .stopped
       // Re-assert declarative control props on every RUNNING transition (spec §8).
-      if success { reassertControlProps() }
+      if success {
+        reassertControlProps()
+        // Bug fix (on-device: rampZoomRatio()/zoomRatio set before or immediately
+        // after start() consistently lost its target, settling back at the device
+        // default after several seconds) — same race already patched in
+        // updateCameraPosition()'s H1 fix: CodeScannerView's session/lens
+        // configuration for a cold bind finishes asynchronously with no completion
+        // callback, and if it lands AFTER the reassert above, its own defaults-reset
+        // silently overwrites the zoom/torch we just applied. A couple of delayed
+        // re-asserts past any realistic bind duration close the window, mirroring
+        // updateCameraPosition()'s two-timer pattern below.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
+          self?.reassertControlProps()
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { [weak self] in
+          self?.reassertControlProps()
+        }
+      }
     } else if actualCameraState == .stopping {
       actualCameraState = .stopped
     }
