@@ -478,6 +478,17 @@ export interface VisionCameraStateEvent {
  * `onCameraStateChanged`'s own `status: 'idle'`. Both platforms guarantee the event
  * reflects real teardown of a consumer-initiated stop; the gap versus
  * `onCameraStateChanged` is the only currently-known timing difference.
+ *
+ * iOS restart-timing caveat: prefer waiting for this event before calling `start()`
+ * again, rather than restarting after a fixed delay. A `start()` issued before the
+ * real `AVCaptureSession` teardown from a prior `stop()` has completed is what
+ * `wasSuperseded` exists to describe — the event still fires correctly for a single
+ * such restart — but cycling `stop()`/`start()` repeatedly faster than the camera can
+ * physically tear down (confirmed on iPhone hardware: roughly every ~130-700ms) can
+ * overlap multiple real `AVCaptureSession` operations and crash the app on an
+ * AVFoundation-internal consistency check. This is a pre-existing iOS/AVFoundation
+ * characteristic, not something this library can fully guard against — the safe
+ * pattern is to gate the next `start()` on having received this event.
  */
 export interface VisionCameraStoppedEvent {
   /**
@@ -485,12 +496,12 @@ export interface VisionCameraStoppedEvent {
    * @type {boolean}
    * @description True when a `start()` call landed while this `stop()`'s teardown was
    * still in flight, superseding it — the camera is running again by the time this
-   * event arrives, rather than idle. iOS tracks this with an operation-generation
-   * counter snapshotted before `stopRunning(completion:)` and compared inside the
-   * completion; Android has no equivalent counter, so the field is simply **absent**
-   * there rather than sent as `false`. Absence means "not superseded," not a distinct
-   * third state — always test with `if (event.wasSuperseded)` rather than
-   * `=== true`/`=== false`, and it will behave correctly on both platforms.
+   * event arrives, rather than idle. iOS compares the current target state against
+   * "running" at the moment the real `stopRunning(completion:)` callback fires;
+   * Android has no equivalent, so the field is simply **absent** there rather than
+   * sent as `false`. Absence means "not superseded," not a distinct third state —
+   * always test with `if (event.wasSuperseded)` rather than `=== true`/`=== false`,
+   * and it will behave correctly on both platforms.
    */
   wasSuperseded?: boolean;
 }

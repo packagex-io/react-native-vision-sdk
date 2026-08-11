@@ -316,14 +316,6 @@ class RNVisionCameraView: UIView {
 
   // MARK: - onCameraStopped contract (I1/I2/I3/I4 — see VisionCameraTypes.ts
   // `VisionCameraStoppedEvent` for the consumer-facing doc)
-  // Bumped every time a REAL native transition begins (performStart() only —
-  // performStop() can't re-enter while one is already in flight, thanks to
-  // `isTransitioning`). performStop() captures the current value right before the real
-  // AVCaptureSession teardown call; the completion closure compares against it to tell
-  // whether a subsequent start() beat it back to RUNNING before the closure fired (I4) —
-  // the completion still fires either way (never suppressed), just flagged stale.
-  private var operationGeneration: Int = 0
-
   // Every consumer stop() call registers exactly one callback here, so it resolves
   // exactly once (I1) regardless of actualCameraState/isTransitioning at call time —
   // already-stopped, never-started, mid-teardown (a second stop()), and start-failed are
@@ -334,11 +326,33 @@ class RNVisionCameraView: UIView {
   /// Resolves every currently-queued `stop()` completion callback exactly once, each
   /// firing its own `onCameraStopped` (I1: never zero events). Called either
   /// immediately (nothing to tear down) or from the real `stopRunning(completion:)`
-  /// closure once AVCaptureSession has genuinely finished (I2/I4).
+  /// closure once AVCaptureSession has genuinely finished (I2/I4). Only used where
+  /// there is no specific in-flight teardown to correlate against (nothing was ever
+  /// set up, or the deferred-call fallback in stop()) — performStop() below owns and
+  /// flushes its own snapshot instead, via flushCallbacks(_:wasSuperseded:).
   private func flushPendingStopCallbacks(wasSuperseded: Bool) {
     guard !pendingStopCallbacks.isEmpty else { return }
     let callbacks = pendingStopCallbacks
     pendingStopCallbacks.removeAll()
+    flushCallbacks(callbacks, wasSuperseded: wasSuperseded)
+  }
+
+  /// Fires an already-dequeued batch of stop() callbacks. Bug fix (on-device):
+  /// performStop() used to flush the shared `pendingStopCallbacks` array directly from
+  /// inside its real `stopRunning(completion:)` closure — so if a SECOND stop() call's
+  /// own performStop() cycle queued more callbacks before the FIRST cycle's real
+  /// completion fired (see the rapid-repeated-tap note in performStop() below), whichever
+  /// real completion happened to fire first drained and answered for EVERY callback
+  /// queued so far with its own single `wasSuperseded` value — including callbacks that
+  /// belonged to a teardown that hadn't genuinely finished yet. Confirmed on-device: 4
+  /// rapid stop/start taps produced a non-deterministic true/false pattern because 3
+  /// stop() calls' callbacks all got resolved together by whichever of their 3 real
+  /// completions arrived first, and 2 of those completions' own (possibly different)
+  /// answers were silently discarded. performStop() now snapshots-and-clears its own
+  /// slice of `pendingStopCallbacks` up front and flushes that specific array here,
+  /// so each real completion only ever answers for the callback(s) that are actually
+  /// its own.
+  private func flushCallbacks(_ callbacks: [(Bool) -> Void], wasSuperseded: Bool) {
     for callback in callbacks {
       callback(wasSuperseded)
     }
@@ -557,9 +571,6 @@ class RNVisionCameraView: UIView {
 
     isTransitioning = true
     actualCameraState = .starting
-    // I4: any real start invalidates in-flight stop completions captured before this
-    // point — see performStop()'s `myGeneration` capture and its completion closure.
-    operationGeneration += 1
 
     // Use serial queue to avoid blocking main thread and prevent overlapping operations
     cameraOperationQueue.async { [weak self] in
@@ -584,18 +595,23 @@ class RNVisionCameraView: UIView {
   }
 
   private func performStop() {
+    // Snapshot-and-clear the callbacks queued so far — THIS performStop() invocation
+    // (and the one real stopRunning(completion:) call it is about to make) owns exactly
+    // these callbacks. See flushCallbacks(_:wasSuperseded:)'s doc for why: a stop() that
+    // arrives after this snapshot starts a fresh pendingStopCallbacks list of its own,
+    // so it can no longer be answered by THIS teardown's completion.
+    let callbacksForThisTeardown = pendingStopCallbacks
+    pendingStopCallbacks = []
+
     guard let cameraView = self.cameraView else {
       // Nothing was ever set up to tear down — don't leave queued stop() callbacks
       // hanging on a teardown that will never happen (I1).
-      flushPendingStopCallbacks(wasSuperseded: false)
+      flushCallbacks(callbacksForThisTeardown, wasSuperseded: false)
       return
     }
 
     isTransitioning = true
     actualCameraState = .stopping
-    // Snapshot BEFORE kicking off the real teardown call below — compared inside its
-    // completion closure to detect a start() that landed while we were mid-teardown (I4).
-    let myGeneration = operationGeneration
 
     // Use serial queue to avoid blocking main thread and prevent overlapping operations
     cameraOperationQueue.async { [weak self] in
@@ -603,7 +619,7 @@ class RNVisionCameraView: UIView {
       guard let cameraView = self.cameraView else {
         DispatchQueue.main.async { [weak self] in
           self?.onTransitionComplete(success: false)
-          self?.flushPendingStopCallbacks(wasSuperseded: false)
+          self?.flushCallbacks(callbacksForThisTeardown, wasSuperseded: false)
         }
         return
       }
@@ -614,15 +630,46 @@ class RNVisionCameraView: UIView {
       // returned — not merely once this call has been scheduled, which is all
       // `onTransitionComplete` below (and `onCameraStateChanged`'s `status: 'idle'`)
       // ever guaranteed. See VisionCameraTypes.ts `VisionCameraStoppedEvent`.
+      //
+      // KNOWN LIMITATION (rapid-repeated-tap overlap, pre-existing — not introduced by
+      // this fix): `isTransitioning`/`actualCameraState` settle back to a resting state
+      // in SOFTWARE almost immediately after this call is dispatched (see
+      // onTransitionComplete()'s `main.async` below, which in practice runs and flips
+      // `isTransitioning` back to false well before this real `stopRunning(completion:)`
+      // has genuinely finished tearing down AVCaptureSession). Nothing here blocks a new
+      // start()/stop() cycle from kicking off ITS OWN real hardware call while an older
+      // one is still physically in flight, so calling start()/stop() faster than the
+      // camera can actually teardown (observed ~130-700ms round-trip on iPhone 14 Pro)
+      // can have multiple real stopRunning/startRunning calls overlapping at once.
+      // Confirmed on-device: 4 rapid stop/start taps left 3 real teardowns in flight
+      // simultaneously and the app crashed with AVFoundation's own consistency check —
+      // `Assertion failed: (figCaptureSession == _internal->figCaptureSession)` in
+      // `-[AVCaptureVideoPreviewLayer detachFromFigCaptureSession:]`. The
+      // `callbacksForThisTeardown` snapshot above stops overlapping real completions from
+      // stealing each other's `wasSuperseded` answer, but does not prevent the underlying
+      // overlap. A proper fix means tracking real AVCaptureSession completion — not
+      // software dispatch — before allowing the next transition to start, which is a
+      // bigger change to this state machine than this fix takes on. Until then, callers
+      // should debounce rapid-fire start()/stop() calls at the call site.
       DispatchQueue.main.sync {
         cameraView.stopRunning(completion: { [weak self] in
           DispatchQueue.main.async {
             guard let self = self else { return }
-            // I4: if operationGeneration moved on, a start() began after this teardown
-            // was kicked off — the completion still fires (never suppressed), just
-            // flagged stale so the consumer doesn't mistake it for "torn down right now".
-            let wasSuperseded = self.operationGeneration != myGeneration
-            self.flushPendingStopCallbacks(wasSuperseded: wasSuperseded)
+            // I4: a start() that lands mid-teardown must still surface here as
+            // superseded. This used to compare an `operationGeneration` counter that
+            // only got bumped inside performStart() — but a start() arriving while
+            // `isTransitioning` is true (i.e. for this entire teardown, since
+            // `stopRunning(completion:)`'s completion below and the `main.async` that
+            // flips `isTransitioning` back to false via onTransitionComplete() are both
+            // scheduled from this same block, in that order) is DEFERRED: start() only
+            // records `targetState = .running` and returns without ever calling
+            // performStart(), so the generation is never bumped before this closure
+            // runs. On device this made wasSuperseded structurally always false,
+            // regardless of timing. `targetState` reflects the request immediately
+            // (set synchronously in start()/stop()), so check that instead of whether
+            // performStart() has already executed.
+            let wasSuperseded = self.targetState == .running
+            self.flushCallbacks(callbacksForThisTeardown, wasSuperseded: wasSuperseded)
           }
         })
       }
