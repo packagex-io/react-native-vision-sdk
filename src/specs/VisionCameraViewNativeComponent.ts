@@ -150,7 +150,11 @@ interface NativeCommands {
 }
 
 export const Commands: NativeCommands = codegenNativeCommands<NativeCommands>({
-  supportedCommands: ['capture', 'stop', 'start', 'rescan', 'toggleFlash', 'setZoom', 'rampZoomRatio', 'setFocusSettings', 'pauseDetection', 'resumeDetection', 'setTorchEnabled', 'setFocusPoint'],
+  // Append-only. Index position is a wire format: the iOS numeric-command-id
+  // fallback in VisionCameraViewComponentView.mm maps ids to names by this
+  // order, so inserting mid-array renumbers every command after it and a
+  // JS/native version skew would dispatch the wrong one. New commands go last.
+  supportedCommands: ['capture', 'stop', 'start', 'rescan', 'toggleFlash', 'setZoom', 'setFocusSettings', 'pauseDetection', 'resumeDetection', 'setTorchEnabled', 'setFocusPoint', 'rampZoomRatio'],
 });
 
 export default codegenNativeComponent<NativeProps>(
