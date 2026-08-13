@@ -49,6 +49,30 @@ class DimensioningViewManager(
     @ReactProp(name = "maximumTrackCount", defaultInt = 5)
     fun setMaximumTrackCount(view: TextView, count: Int) { /* no-op */ }
 
+    @ReactProp(name = "overlayMode")
+    fun setOverlayMode(view: TextView, mode: String?) { /* no-op */ }
+
+    @ReactProp(name = "cloudUrl")
+    fun setCloudUrl(view: TextView, url: String?) { /* no-op */ }
+
+    @ReactProp(name = "cloudApiKey")
+    fun setCloudApiKey(view: TextView, key: String?) { /* no-op */ }
+
+    @ReactProp(name = "cloudSdkId")
+    fun setCloudSdkId(view: TextView, id: String?) { /* no-op */ }
+
+    @ReactProp(name = "enableTelemetry", defaultBoolean = false)
+    fun setEnableTelemetry(view: TextView, enabled: Boolean) { /* no-op */ }
+
+    // Commands are accepted and ignored — there is no AR session to stop or start.
+    // Declared so a JS call doesn't throw on Android.
+    override fun receiveCommand(view: TextView, commandId: String?, args: com.facebook.react.bridge.ReadableArray?) {
+        when (commandId) {
+            "stop", "start" -> { /* no-op */ }
+            else -> super.receiveCommand(view, commandId, args)
+        }
+    }
+
     private fun Int.dp(ctx: Context): Int =
         (this * ctx.resources.displayMetrics.density).toInt()
 }
