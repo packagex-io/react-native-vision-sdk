@@ -1869,7 +1869,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - SocketRocket
     - Yoga
-  - react-native-vision-sdk (3.13.0):
+  - react-native-vision-sdk (3.15.0):
     - boost
     - DoubleConversion
     - fast_float
@@ -1896,8 +1896,8 @@ PODS:
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
     - SocketRocket
-    - VisionSDK (= 2.6.0)
-    - VisionSDK/Dimensioning (= 2.6.0)
+    - VisionSDK (= 2.7.0)
+    - VisionSDK/Dimensioning (= 2.7.0)
     - Yoga
   - React-NativeModulesApple (0.82.1):
     - boost
@@ -2848,10 +2848,10 @@ PODS:
     - SocketRocket
     - Yoga
   - SocketRocket (0.7.1)
-  - VisionSDK (2.6.0):
-    - VisionSDK/Core (= 2.6.0)
-  - VisionSDK/Core (2.6.0)
-  - VisionSDK/Dimensioning (2.6.0):
+  - VisionSDK (2.7.0):
+    - VisionSDK/Core (= 2.7.0)
+  - VisionSDK/Core (2.7.0)
+  - VisionSDK/Dimensioning (2.7.0):
     - VisionSDK/Core
   - Yoga (0.0.0)
 
@@ -2940,8 +2940,8 @@ DEPENDENCIES:
   - RNVectorIcons (from `../node_modules/react-native-vector-icons`)
   - RNWorklets (from `../node_modules/react-native-worklets`)
   - SocketRocket (~> 0.7.1)
-  - VisionSDK (= 2.6.0)
-  - VisionSDK/Dimensioning (= 2.6.0)
+  - VisionSDK (= 2.7.0)
+  - VisionSDK/Dimensioning (= 2.7.0)
   - Yoga (from `../node_modules/react-native/ReactCommon/yoga`)
 
 SPEC REPOS:
@@ -3160,7 +3160,7 @@ SPEC CHECKSUMS:
   React-Mapbuffer: 06d59c448da7e34eb05b3fb2189e12f6a30fec57
   React-microtasksnativemodule: d1ee999dc9052e23f6488b730fa2d383a4ea40e5
   react-native-safe-area-context: c00143b4823773bba23f2f19f85663ae89ceb460
-  react-native-vision-sdk: 180d98b63e9e97dabfd456608fa7f85244df2da8
+  react-native-vision-sdk: 4850f001a52f158e8cbfe99dcf0f193bde3163aa
   React-NativeModulesApple: 46690a0fe94ec28fc6fc686ec797b911d251ded0
   React-oscompat: 95875e81f5d4b3c7b2c888d5bd2c9d83450d8bdb
   React-perflogger: 2e229bf33e42c094fd64516d89ec1187a2b79b5b
@@ -3202,9 +3202,9 @@ SPEC CHECKSUMS:
   RNVectorIcons: 791f13226ec4a3fd13062eda9e892159f0981fae
   RNWorklets: ab618bf7d1c7fd2cb793b9f0f39c3e29274b3ebf
   SocketRocket: d4aabe649be1e368d1318fdf28a022d714d65748
-  VisionSDK: 505d4b23776df06afef83b42ea5abca73032b8b5
+  VisionSDK: 6db30a20224befd883dab37750fef75dbb8e1a50
   Yoga: 689c8e04277f3ad631e60fe2a08e41d411daf8eb
 
-PODFILE CHECKSUM: ee15884e3df2b8b447d48731523627d2f180e6e9
+PODFILE CHECKSUM: e3c6d473a7c02a7a0cc8253740e23a880a32b19f
 
 COCOAPODS: 1.16.2
