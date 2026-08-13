@@ -1025,7 +1025,7 @@ function MyScreen() {
 | Prop | Type | Default | Notes |
 |---|---|---|---|
 | `mode` | `'offline'` \| `'online'` | `'offline'` | `.offline` runs entirely on-device. `.online` augments the pipeline with a cloud-side step (requires `VSDKConstants.apiKey`). |
-| `measurementUnit` | string | `'centimeters'` | **Currently not honored** by the iOS native side — measurements always come back in centimeters (visible on the `lengthUnit` / `widthUnit` / `heightUnit` fields of each capture). Will be wired through `VSDKDimensioningConfiguration` in a follow-up. |
+| `measurementUnit` | `'centimeters'` \| `'inches'` \| `'meters'` | `'centimeters'` | Honored on iOS as of VisionSDK 2.7.0. Captures come back in this unit — check the `lengthUnit` / `widthUnit` / `heightUnit` fields. Earlier versions ignored the prop and always returned centimeters. |
 | `maximumTrackCount` | number | `5` | Cap on simultaneously tracked boxes. |
 | `onCapture` | `(m) => void` | — | Fired when a stable measurement locks. |
 | `onError` | `(e) => void` | — | Fired for capture/runtime errors. |
@@ -1065,7 +1065,7 @@ The exported TS enum uses PascalCase member names; the table below shows both th
 | 4 | `NoGroundPlane` | Could not anchor a horizontal surface |
 | 5 | `CaptureTimedOut` | `capture()` never reached a stable measurement |
 | 6 | `UserCancelled` | Cancellation propagated from the session |
-| 7 | `InternalError` | Bridge / serialization failure (not from `VSDKDimensioningError`) |
+| 7 | `InternalError` | Bridge / serialization failure (not from the native `DimensioningError`) |
 
 ### Capture-session conflict with `<VisionCamera>`
 
