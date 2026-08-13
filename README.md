@@ -1024,12 +1024,84 @@ function MyScreen() {
 
 | Prop | Type | Default | Notes |
 |---|---|---|---|
-| `mode` | `'offline'` \| `'online'` | `'offline'` | `.offline` runs entirely on-device. `.online` augments the pipeline with a cloud-side step (requires `VSDKConstants.apiKey`). |
+| `mode` | `'offline'` \| `'online'` | `'offline'` | `'offline'` runs entirely on-device. `'online'` augments the pipeline with a cloud-side step — pass `cloudApiKey`/`cloudUrl`/`cloudSdkId`, or leave them unset to fall back to `VSDKConstants`. |
 | `measurementUnit` | `'centimeters'` \| `'inches'` \| `'meters'` | `'centimeters'` | Honored on iOS as of VisionSDK 2.7.0. Captures come back in this unit — check the `lengthUnit` / `widthUnit` / `heightUnit` fields. Earlier versions ignored the prop and always returned centimeters. |
 | `maximumTrackCount` | number | `5` | Cap on simultaneously tracked boxes. |
-| `onCapture` | `(m) => void` | — | Fired when a stable measurement locks. |
-| `onError` | `(e) => void` | — | Fired for capture/runtime errors. |
+| `overlayMode` | `'builtIn'` \| `'none'` \| `'callback'` | `'builtIn'` | `'none'` hides the SDK's graphics. `'callback'` suppresses them and streams every overlay primitive to `onOverlayUpdate` so you can draw your own. |
+| `cloudUrl` | string | — | Cloud segmentation endpoint for `mode="online"`. Falls back to `VSDKConstants` when unset. |
+| `cloudApiKey` | string | — | API key for `mode="online"`. Falls back to `VSDKConstants.apiKey`. |
+| `cloudSdkId` | string | — | SDK id for `mode="online"`. Falls back to the `VSDKConstants` environment. |
+| `enableTelemetry` | boolean | `false` | Gates `onTelemetry`. |
+| `onCapture` | `(m: DimensioningMeasurement) => void` | — | Fired when a stable measurement locks. |
+| `onError` | `(e: DimensioningError) => void` | — | Pre-flight failures only — see the note below. |
+| `onMeasurementUpdate` | `(u: DimensioningUpdate) => void` | — | Live guidance: tracking state plus in-progress dimensions for every tracked box. Fires continuously. |
+| `onOverlayUpdate` | `(f: DimensioningOverlayFrame) => void` | — | Raw overlay geometry in view-space points. **Only fires when `overlayMode="callback"`.** Fires every frame. |
+| `onTelemetry` | `(e: DimensioningTelemetryEvent) => void` | — | Per-capture diagnostics. Requires `enableTelemetry`. |
 | `style` | `ViewStyle` | — | Standard RN view style. |
+
+### Imperative handle
+
+`<DimensioningView>` forwards a ref exposing camera control. ARKit and `AVCaptureSession` cannot share the rear camera, so call `stop()` before mounting `<VisionCamera>`:
+
+```tsx
+const dimRef = useRef<DimensioningViewHandle>(null);
+
+<DimensioningView ref={dimRef} … />
+
+dimRef.current?.stop();   // tears the AR view down, releases the camera
+dimRef.current?.start();  // re-creates it
+```
+
+### Live guidance — `onMeasurementUpdate`
+
+Fires continuously with a coarse tracking state (`searching` → `groundFound` → `boxDetected` → `stable`) and the in-progress dimensions of every tracked box. Use it to drive a "hold steady… ready" HUD:
+
+```tsx
+<DimensioningView
+  onMeasurementUpdate={(u) => {
+    setStatus(u.trackingState);
+    setBoxCount(u.tracks.length);
+    // u.tracks[i].measurement is null until the pipeline has a reading
+    // u.primaryTrackId marks the box the SDK considers primary
+  }}
+/>
+```
+
+### Custom overlays — `onOverlayUpdate`
+
+Set `overlayMode="callback"` to suppress the SDK's own graphics and receive every overlay primitive each frame. All geometry is already in **view-space points**, so it maps 1:1 onto the view:
+
+```tsx
+<DimensioningView
+  overlayMode="callback"
+  onOverlayUpdate={(f) => {
+    f.boxes;   // boxVertices2D, contour2D, boundingBox, isStable, isSelected
+    f.planes;  // boundary2D, center2D — detected support planes
+    f.hud;     // statusText, guidanceText, isCapturing, groundPlanePrompt
+  }}
+/>
+```
+
+This fires on every frame. Keep the handler cheap and avoid setting state you don't render.
+
+### Telemetry — `onTelemetry`
+
+```tsx
+<DimensioningView
+  enableTelemetry
+  onTelemetry={(e) => {
+    if (e.type === 'measurementAborted') {
+      console.log('capture failed:', e.reason); // 'timeout' | 'user_cancel' | 'no_dimensions'
+    } else {
+      console.log(e.lengthCm, e.confidence, e.durationMs, e.consensusLevel);
+    }
+  }}
+/>
+```
+
+`'measurementAborted'` is the **only** signal for a capture that failed mid-session (see the `onError` note below).
+
+> **`onError` scope.** The underlying SDK view exposes no error callback, so `onError` only reports pre-flight problems: iOS < 17, no LiDAR (code 2), and missing online credentials (code 0). In-session failures — `ArSessionFailed` (3), `NoGroundPlane` (4), `CaptureTimedOut` (5), `UserCancelled` (6) — are not delivered. Use `onTelemetry`'s `'measurementAborted'` to detect a capture that gave up.
 
 ### Measurement shape
 
@@ -1049,8 +1121,18 @@ type DimensioningMeasurement = {
   distanceFromCameraUnit: string;
   confidence: number;         // 0...1
   usedCloudSAM: boolean;      // true when .online cloud path ran
+
+  // Added in VisionSDK 2.7.0
+  trackId: string;            // stable id of the physical box; matches DimensioningTrack.id
+  volume: number;             // cubic metres
+  imagePixelSize: { width: number; height: number };
+  boxVertices2D: Array<{ x: number; y: number }>;
 };
 ```
+
+`boxVertices2D` holds the 8 projected box corners in the captured image's pixel space: indices 0–3 are the base face, 4–7 the top face, with corner *k* sitting under corner *k+4*. Together with `imagePixelSize` that's enough to draw the measured box over a photo. Both are empty/zero when the SDK kept no frame.
+
+The raw JPEG (`imageData` on the native type) is deliberately **not** forwarded — shipping an image across the bridge on every capture would dwarf the rest of the payload.
 
 ### Error codes (`DimensioningErrorCode`)
 

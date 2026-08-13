@@ -6,7 +6,10 @@
  */
 
 export { DimensioningView } from './DimensioningView';
-export type { DimensioningViewProps } from './DimensioningView';
+export type {
+  DimensioningViewProps,
+  DimensioningViewHandle,
+} from './DimensioningView';
 export { VisionDimensioning, deviceCapabilities, prefetchModels } from './VisionDimensioning';
 export { DimensioningErrorCode } from './types';
 export type {
@@ -15,4 +18,19 @@ export type {
   DimensioningMode,
   DimensioningMeasurementUnit,
   DimensioningCapabilities,
+  // Live guidance (onMeasurementUpdate)
+  DimensioningUpdate,
+  DimensioningTrack,
+  DimensioningTrackingState,
+  // Custom overlays (overlayMode="callback" + onOverlayUpdate)
+  DimensioningOverlayMode,
+  DimensioningOverlayFrame,
+  DimensioningOverlay,
+  DimensioningPlaneOverlay,
+  DimensioningHUD,
+  DimensioningPoint,
+  // Telemetry (enableTelemetry + onTelemetry)
+  DimensioningTelemetryEvent,
+  DimensioningCapturedTelemetry,
+  DimensioningAbortedTelemetry,
 } from './types';
