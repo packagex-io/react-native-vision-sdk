@@ -45,12 +45,12 @@ Pod::Spec.new do |s|
 
   s.dependency "React-Core"
   # Core scanner + OCR
-  s.dependency "VisionSDK", "= 2.7.0"
+  s.dependency "VisionSDK", "= 2.8.0"
   # 3-D box measurement — brings MVDimensioningCore.xcframework, ARKit, RealityKit.
   # No PostHog: the subspec dropped that dependency in VisionSDK 2.6.0. PostHog
   # 3.69 sets BUILD_LIBRARY_FOR_DISTRIBUTION = YES and breaks clean pod installs,
   # so do not reintroduce it here either.
-  s.dependency "VisionSDK/Dimensioning", "= 2.7.0"
+  s.dependency "VisionSDK/Dimensioning", "= 2.8.0"
 
   # New Architecture dependencies
   install_modules_dependencies(s)
