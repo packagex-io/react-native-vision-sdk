@@ -29,19 +29,21 @@
   },
   "resolutions": {
     "@types/react": "^19.0.0",
-    "shell-quote": "^1.8.4",
+    "shell-quote": "^1.9.0",
     "@babel/core": "^7.29.6",
-    "js-yaml": "^4.2.0",
+    "js-yaml": "^4.3.2",
     "ws": "^7.5.11",
-    "brace-expansion": "^1.1.13",
+    "brace-expansion": "^1.1.18",
     "on-headers": "1.1.0",
     "minimatch": "^3.1.5",
     "babel-plugin-module-resolver/glob/minimatch": "^8.0.6",
     "@typescript-eslint/typescript-estree/minimatch": "^9.0.7",
     "picomatch": "^2.3.2",
     "tinyglobby/picomatch": "^4.0.4",
-    "fast-xml-parser": "^4.5.5",
-    "yaml": "^2.8.3"
+    "fast-xml-parser": "^4.5.7",
+    "yaml": "^2.8.3",
+    "joi": "^17.13.6",
+    "nanoid": "^3.3.18"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
