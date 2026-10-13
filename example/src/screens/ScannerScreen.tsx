@@ -789,6 +789,7 @@ export function ScannerScreen({ navigation }: Props) {
   const [autoCapture, setAutoCapture] = useState(false);
   const [detectionEnabled, setDetectionEnabled] = useState(true);
   const [flashEnabled, setFlashEnabled] = useState(false);
+  const [torchLevel, setTorchLevel] = useState(1);
   const [cameraFacing, setCameraFacing] = useState<'back' | 'front'>('back');
   const [zoomLevel, setZoomLevel] = useState(DEFAULT_ZOOM);
   const [soundMode, setSoundMode] = useState<SoundMode>('Vibrate');
@@ -1534,6 +1535,7 @@ export function ScannerScreen({ navigation }: Props) {
             ref={setVisionCameraRef}
             style={StyleSheet.absoluteFill}
             torch={flashEnabled}
+            torchLevel={torchLevel}
             zoomRatio={zoomLevel}
             scanMode={effectiveScanMode}
             autoCapture={autoCapture}
@@ -1884,6 +1886,18 @@ export function ScannerScreen({ navigation }: Props) {
                 Auto
               </Text>
             </TouchableOpacity>
+          </View>
+        ) : null}
+
+        {/* ── TORCH BRIGHTNESS ROW ── shown above the control row when flash is on */}
+        {flashEnabled && !isTemplateCreateMode ? (
+          // Stacks above the Manual/Auto row (~40pt) when that row shows (every mode but photo).
+          <View style={[styles.torchRow, { bottom: (scanMode === 'photo' ? 162 : (showOcrRow ? 266 : 162) + 48) + bottomOffset }]}>
+            <MCIcon name="brightness-5" size={18} color={theme.colors.textSecondary} />
+            <View style={{ flex: 1 }}>
+              <ZoomSlider value={torchLevel} min={0} max={1} onValueChange={setTorchLevel} />
+            </View>
+            <MCIcon name="brightness-7" size={18} color={theme.colors.textSecondary} />
           </View>
         ) : null}
 
@@ -2682,6 +2696,23 @@ const styles = StyleSheet.create({
   manualAutoBtnTextActive: {
     color: '#000',
     fontWeight: theme.fontWeight.bold,
+  },
+
+  // ── Torch brightness row ───────────────────────────────────────────────────
+  // bottom applied inline: above controlRow, or above the Manual/Auto row when it shows
+  torchRow: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    height: 44,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    gap: 8,
+    zIndex: 20,
+    backgroundColor: theme.colors.bgFrosted,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.divider,
   },
 
   // ── Control row ────────────────────────────────────────────────────────────
