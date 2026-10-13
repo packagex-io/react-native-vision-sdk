@@ -71,6 +71,7 @@ const Camera = forwardRef<VisionCameraRefProps, VisionCameraProps>(
       pinnedLensId,
       zoomRatio,
       torch,
+      torchLevel,
       focusMode = 'continuous',
       scanMode = 'photo',
       autoCapture = false,
@@ -316,6 +317,7 @@ const Camera = forwardRef<VisionCameraRefProps, VisionCameraProps>(
           zoomLevel={resolvedZoom}
           zoomRatio={resolvedZoom}
           torch={resolvedTorch}
+          torchLevel={torchLevel}
           pinnedLensId={pinnedLensId}
           focusMode={focusMode}
           scanMode={scanMode}

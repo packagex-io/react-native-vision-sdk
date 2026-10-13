@@ -361,6 +361,14 @@ using namespace facebook::react;
     }
   }
 
+  if (oldViewProps.torchLevel != newViewProps.torchLevel) {
+    SEL setter = NSSelectorFromString(@"setTorchLevel:");
+    if ([_visionCameraView respondsToSelector:setter]) {
+      NSNumber *value = @(newViewProps.torchLevel);
+      ((void (*)(id, SEL, id))objc_msgSend)(_visionCameraView, setter, value);
+    }
+  }
+
   if (oldViewProps.focusMode != newViewProps.focusMode) {
     SEL setter = NSSelectorFromString(@"setFocusMode:");
     if ([_visionCameraView respondsToSelector:setter]) {

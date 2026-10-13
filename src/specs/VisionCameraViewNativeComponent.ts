@@ -108,6 +108,7 @@ export interface NativeProps extends ViewProps {
   pinnedLensId?: string; // undefined = Auto
   zoomRatio?: WithDefault<Double, 1.0>;
   torch?: WithDefault<boolean, false>;
+  torchLevel?: WithDefault<Double, 1.0>; // brightness while torch is on (0–1); iOS dims the torch, Android: >0 = on, 0 = off
   focusMode?: WithDefault<string, 'continuous'>; // FocusMode
 
   // Object properties - passed as JSON strings due to codegen limitations
