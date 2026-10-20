@@ -1869,7 +1869,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - SocketRocket
     - Yoga
-  - react-native-vision-sdk (3.17.0):
+  - react-native-vision-sdk (3.19.0):
     - boost
     - DoubleConversion
     - fast_float
@@ -3160,7 +3160,7 @@ SPEC CHECKSUMS:
   React-Mapbuffer: 06d59c448da7e34eb05b3fb2189e12f6a30fec57
   React-microtasksnativemodule: d1ee999dc9052e23f6488b730fa2d383a4ea40e5
   react-native-safe-area-context: c00143b4823773bba23f2f19f85663ae89ceb460
-  react-native-vision-sdk: c3b398102fded7f482fe18dbb05cd8807bdb2604
+  react-native-vision-sdk: ac7059b6b7d251120824365bad2a5589ff8ca382
   React-NativeModulesApple: 46690a0fe94ec28fc6fc686ec797b911d251ded0
   React-oscompat: 95875e81f5d4b3c7b2c888d5bd2c9d83450d8bdb
   React-perflogger: 2e229bf33e42c094fd64516d89ec1187a2b79b5b
@@ -3205,6 +3205,6 @@ SPEC CHECKSUMS:
   VisionSDK: c5480d6423a9c670c225e083b5e7360f6a51ab46
   Yoga: 689c8e04277f3ad631e60fe2a08e41d411daf8eb
 
-PODFILE CHECKSUM: c1cfbcda611351af3a00a539b8ed3b7ef18fe850
+PODFILE CHECKSUM: e0712dd8c90c0af04c0ee215e5da980c1bd04618
 
 COCOAPODS: 1.16.2

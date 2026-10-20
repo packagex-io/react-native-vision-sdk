@@ -107,6 +107,9 @@ target 'VisionSdkExample' do
             '-DFMT_USE_CONSTEVAL=0',
           ]
         end
+        # fmt's base.h redefines FMT_USE_CONSTEVAL itself, so the -D above doesn't reach
+        # fmt's own sources; Xcode 27's clang rejects them under C++20. C++17 turns consteval off.
+        config.build_settings['CLANG_CXX_LANGUAGE_STANDARD'] = 'c++17' if target.name == 'fmt'
       end
     end
 
