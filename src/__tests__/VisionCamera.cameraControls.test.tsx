@@ -80,6 +80,17 @@ describe('VisionCamera camera-controls prop collisions (spec §8)', () => {
 
     warnSpy.mockRestore();
   });
+
+  it('forwards torchLevel to native view when set, and leaves it undefined when not set', () => {
+    const tree = renderInAct(<VisionCamera torch={true} torchLevel={0.4} />);
+    const viewProps = tree.root.findByType(VisionCameraView as any).props;
+    expect(viewProps.torchLevel).toBe(0.4);
+    expect(viewProps.torch).toBe(true);
+
+    const tree2 = renderInAct(<VisionCamera torch={true} />);
+    const viewProps2 = tree2.root.findByType(VisionCameraView as any).props;
+    expect(viewProps2.torchLevel).toBeUndefined();
+  });
 });
 
 describe('VisionCamera pinnedLensId fallback (spec §5.3/§8)', () => {

@@ -226,6 +226,7 @@ export function CameraControlsQAScreen({ navigation }: Props) {
   const [facing, setFacing] = useState<CameraFacing>('back');
   const [focusMode, setFocusMode] = useState<FocusMode>('continuous');
   const [pinnedLensId, setPinnedLensId] = useState<string | undefined>(undefined);
+  const [torchLevel, setTorchLevel] = useState(1);
   const [lastFocusTap, setLastFocusTap] = useState<{ x: number; y: number } | null>(null);
   const previewSize = useRef({ width: 0, height: 0 });
 
@@ -318,6 +319,7 @@ export function CameraControlsQAScreen({ navigation }: Props) {
             cameraFacing={facing}
             focusMode={focusMode}
             pinnedLensId={pinnedLensId}
+            torchLevel={torchLevel}
             onCameraStateChanged={camera.onCameraStateChanged}
             onError={(err) => Alert.alert('Camera Error', err.message)}
           />
@@ -401,6 +403,14 @@ export function CameraControlsQAScreen({ navigation }: Props) {
               {state?.torchEnabled ? 'Torch ON' : 'Torch OFF'}
             </Text>
           </TouchableOpacity>
+          <RatioSlider
+            value={torchLevel}
+            min={0}
+            max={1}
+            onValueChange={setTorchLevel}
+            onDraggingChange={(dragging) => setScrollEnabled(!dragging)}
+          />
+          <Text style={styles.helperText}>brightness {torchLevel.toFixed(2)} (iOS; Android is on/off)</Text>
         </Section>
 
         {/* ── Facing ── */}

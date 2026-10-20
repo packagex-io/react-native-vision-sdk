@@ -57,8 +57,14 @@ target 'VisionSdkExample' do
 
   # VisionSDK from CocoaPods trunk. Matches the deps declared by the
   # react-native-vision-sdk podspec; pinned explicitly here for clarity.
-  pod 'VisionSDK', '= 2.10.0'
-  pod 'VisionSDK/Dimensioning', '= 2.10.0'
+  # Set VISION_SDK_IOS_PATH to a local vision-sdk-ios checkout to test against it instead.
+  if (ios_sdk = ENV['VISION_SDK_IOS_PATH'])   # internal testing against a local vision-sdk-ios checkout
+    pod 'VisionSDK', :path => ios_sdk
+    pod 'VisionSDK/Dimensioning', :path => ios_sdk
+  else
+    pod 'VisionSDK', '= 2.10.0'
+    pod 'VisionSDK/Dimensioning', '= 2.10.0'
+  end
 
   use_react_native!(
     :path => config[:reactNativePath],
