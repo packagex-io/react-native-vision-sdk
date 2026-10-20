@@ -171,6 +171,9 @@ class RNVisionCameraView: UIView {
     }
   }
 
+  // Brightness while torch is on (0–1). Level 1.0 == setFlashTurnedOn(true) on the SDK.
+  @objc var torchLevel: NSNumber = 1.0 { didSet { updateFlash() } }
+
   // C2 fix: once a canonical prop (`torch`/`zoomRatio`) has been explicitly set by
   // JS, it wins over the legacy alias (`enableFlash`/`zoomLevel`) for the rest of
   // this view's lifetime — mirrors Android's ControlPropsState "new prop wins over
@@ -948,7 +951,9 @@ class RNVisionCameraView: UIView {
   // virtualDeviceSwitchOverVideoZoomFactors hack this used to hand-roll.
   private func updateFlash() {
     guard let cameraView = cameraView else { return }
-    cameraView.setFlashTurnedOn(resolvedTorch)
+    // Pass level=1 (== setFlashTurnedOn(true)) when resolvedTorch is true and no
+    // explicit torchLevel has been set; otherwise dim to the requested level or off.
+    cameraView.setTorchLevel(resolvedTorch ? torchLevel.floatValue : 0)
   }
 
   private func updateZoom() {

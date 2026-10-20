@@ -121,6 +121,7 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
     // deliberately NOT tracked/reasserted here.
     private data class ControlPropsState(
         var torch: Boolean = false,
+        var torchLevel: Double = 1.0,
         var zoomRatio: Double = 1.0,
         var focusMode: String = "continuous",
         var pinnedLensId: String? = null,
@@ -149,8 +150,10 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
         controlPropsByView.getOrPut(view) { ControlPropsState() }
 
     private fun applyTorch(view: VisionCameraView, enabled: Boolean) {
-        controlPropsFor(view).torch = enabled
-        view.setFlashTurnedOn(enabled)
+        val props = controlPropsFor(view)
+        props.torch = enabled
+        // vision-sdk-android has no brightness API: any torchLevel above 0 is plain on.
+        view.setFlashTurnedOn(enabled && props.torchLevel > 0)
     }
 
     private fun applyZoomRatio(view: VisionCameraView, ratio: Float) {
@@ -257,7 +260,7 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
     // applied; otherwise an ordinary start-with-no-pin would unbind/rebind for nothing.
     private fun reassertControlProps(view: VisionCameraView) {
         val props = controlPropsByView[view] ?: return
-        view.setFlashTurnedOn(props.torch)
+        view.setFlashTurnedOn(props.torch && props.torchLevel > 0)
         view.setZoomRatio(props.zoomRatio.toFloat())
         view.setFocusMode(focusModeFromString(props.focusMode))
         if (!props.lensApplied || props.lastAppliedLensId != props.pinnedLensId) {
@@ -593,6 +596,15 @@ class VisionCameraViewManager(private val appContext: ReactApplicationContext) :
     override fun setTorch(view: VisionCameraView, enabled: Boolean) {
         Log.d(TAG, "setTorch: $enabled")
         applyTorch(view, enabled)
+    }
+
+    @ReactProp(name = "torchLevel", defaultDouble = 1.0)
+    override fun setTorchLevel(view: VisionCameraView, level: Double) {
+        Log.d(TAG, "setTorchLevel: $level")
+        val props = controlPropsFor(view)
+        props.torchLevel = level
+        // vision-sdk-android has no brightness API: any level above 0 is plain on.
+        view.setFlashTurnedOn(props.torch && level > 0)
     }
 
     @ReactProp(name = "zoomRatio", defaultDouble = 1.0)

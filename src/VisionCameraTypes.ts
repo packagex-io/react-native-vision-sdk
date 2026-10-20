@@ -574,6 +574,16 @@ export interface VisionCameraViewProps {
 
   /**
    * @optional
+   * @type {number | undefined}
+   * @description Torch brightness while `torch` is on. Range 0–1 (clamped by the
+   * native layer). iOS dims the hardware torch to the given level. Android has no
+   * brightness control — any value above 0 means on, 0 means off.
+   * @default 1.0
+   */
+  torchLevel?: number;
+
+  /**
+   * @optional
    * @type {FocusMode | undefined}
    * @description Camera focus mode: 'continuous' (AF-C), 'single' (AF-S), or 'locked'.
    * @default 'continuous'
@@ -1036,6 +1046,16 @@ export interface VisionCameraProps {
    * @default false
    */
   torch?: boolean;
+
+  /**
+   * @optional
+   * @type {number | undefined}
+   * @description Torch brightness while `torch` is on. Range 0–1 (clamped by the
+   * native layer). iOS dims the hardware torch to the given level. Android has no
+   * brightness control — any value above 0 means on, 0 means off.
+   * @default 1.0
+   */
+  torchLevel?: number;
 
   /**
    * @optional
