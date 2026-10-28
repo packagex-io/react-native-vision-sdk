@@ -62,8 +62,8 @@ target 'VisionSdkExample' do
     pod 'VisionSDK', :path => ios_sdk
     pod 'VisionSDK/Dimensioning', :path => ios_sdk
   else
-    pod 'VisionSDK', '= 2.10.0'
-    pod 'VisionSDK/Dimensioning', '= 2.10.0'
+    pod 'VisionSDK', '= 2.10.2'
+    pod 'VisionSDK/Dimensioning', '= 2.10.2'
   end
 
   use_react_native!(

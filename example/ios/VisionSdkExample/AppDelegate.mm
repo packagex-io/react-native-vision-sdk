@@ -1,28 +1,20 @@
 #import "AppDelegate.h"
 
+#import <RCTDefaultReactNativeFactoryDelegate.h>
+#import <RCTReactNativeFactory.h>
 #import <React/RCTBundleURLProvider.h>
 #import <ReactAppDependencyProvider/RCTAppDependencyProvider.h>
 
-@implementation AppDelegate
+@interface ReactNativeDelegate : RCTDefaultReactNativeFactoryDelegate
+@end
 
-- (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions
-{
-  self.moduleName = @"VisionSdkExample";
-  // You can add your custom initial props in the dictionary below.
-  // They will be passed down to the ViewController used by React Native.
-  self.initialProps = @{};
-
-  // Required for React Native 0.77+ with Fabric
-  self.dependencyProvider = [RCTAppDependencyProvider new];
-
-  return [super application:application didFinishLaunchingWithOptions:launchOptions];
-}
+@implementation ReactNativeDelegate
 
 - (NSURL *)sourceURLForBridge:(RCTBridge *)bridge
 {
   return [self bundleURL];
 }
- 
+
 - (NSURL *)bundleURL
 {
 #if DEBUG
@@ -30,6 +22,31 @@
 #else
   return [[NSBundle mainBundle] URLForResource:@"main" withExtension:@"jsbundle"];
 #endif
+}
+
+@end
+
+@implementation AppDelegate {
+  ReactNativeDelegate *_reactNativeDelegate;
+}
+
+- (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions
+{
+  _reactNativeDelegate = [ReactNativeDelegate new];
+  // Required for React Native 0.77+ with Fabric
+  _reactNativeDelegate.dependencyProvider = [RCTAppDependencyProvider new];
+  self.reactNativeFactory = [[RCTReactNativeFactory alloc] initWithDelegate:_reactNativeDelegate];
+  return YES;
+}
+
+- (UISceneConfiguration *)application:(UIApplication *)application
+    configurationForConnectingSceneSession:(UISceneSession *)connectingSceneSession
+                                   options:(UISceneConnectionOptions *)options
+{
+  UISceneConfiguration *config = [[UISceneConfiguration alloc] initWithName:@"Default Configuration"
+                                                                sessionRole:connectingSceneSession.role];
+  config.delegateClass = NSClassFromString(@"SceneDelegate");
+  return config;
 }
 
 @end
