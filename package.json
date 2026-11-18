@@ -125,7 +125,7 @@
     "minimatch": "^3.1.5",
     "micromatch/minimatch": "^5.1.8",
     "react-native-builder-bob/glob/minimatch": "^5.1.8",
-    "babel-plugin-module-resolver/glob/minimatch": "^8.0.6",
+    "babel-plugin-module-resolver/glob/minimatch": "^11.0.1",
     "undici": "^6.29.1",
     "basic-ftp": "^6.2.4",
     "lodash": "^4.18.0",
@@ -139,7 +139,8 @@
     "commitlint/**/ajv": "^8.18.0",
     "browserslist": "^4.28.7",
     "@humanfs/node": "^0.16.8",
-    "baseline-browser-mapping": "^2.11.0"
+    "baseline-browser-mapping": "^2.11.0",
+    "image-size": "^2.0.3"
   },
   "peerDependencies": {
     "react": ">=18.0.0",
